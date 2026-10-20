@@ -1,6 +1,23 @@
 # Morning Alpha 單一產品交付主線
 
-更新日期：2026-10-20（Asia/Taipei）。本文件管理原需求、相依性與真實驗收；不是部署授權，也不取代歷史封存。
+更新日期：2026-10-21（Asia/Taipei）。本文件管理原需求、相依性與真實驗收；不是部署授權，也不取代歷史封存。
+
+## 最新增量結論（R5／R6／R7；下方舊輪次紀錄保留）
+
+- 最新已保存正式 V1 結果仍是 **10/20 Universe72／Evaluated0／BLOCKED72／READY0／WATCH0／NONE0**。這不是10/21自然結果，也不是72股分析後被策略拒絕。六類重疊缺口各72，不相加成432檔。
+- R4另修復 `earnings_events.raw_payload` 被正式 loader 的 SELECT 欄位遺漏，以及顯式季度／公告先後／股別／會計基礎等判定。這些是**已修好未發布**的消費端缺陷；正式 earnings／institutional／catalyst／mapping 表仍無相應准入列，不宣稱已解除0/72。
+- 10/20當日官方原件已有 **TWSE61股、TPEx11股、TAIEX1**。以10/21實際新cutoff重算的20日數字覆蓋為 **1368格既有DB＋72格新本機未准入原件＝1440格**；TAIEX20日，72股均有至少兩個完整同時點同業。**不是1440格已核准canonical行情**，不得回填10/20盤前。新原件保留不同的first_seen／available、原始欄位與hash，發布時間／官方版次未知維持null。
+- 已核對政府開放資料實際登錄的四個精確CSV資源；OGL來源及條件與相鄰API、歷史資源、研究發布權分開。R5 catalog可記錄精確資源的附條件用途，**不能自行安裝Source／Quality／Rights authority或會員發布批准**。TPEx11370與11371時段不同，不互補假裝相同序列；量值時段可比性仍須審核。
+- R5 normalizer已保留72股原生OHLCV、實際成交TWD及TAIEX。缺少收盤買賣價、發行股數、次日限價等非必要欄位不再錯擋OHLCVA；保留null與精確缺口，不補零、不推算法人金額。原件離線回放與原始收據完整bytes綁定已驗證；仍為私有未准入證據。
+- R7已把上述原件接入**既有** `event-alignment-refresh` caller，不另建策略：原收據23欄完整保留，修正附加metadata及TAIEX不適用的股票數null遭誤拒；只追加held quotes再走RetainedEvidence，不改造為SourceReceipt、不覆寫舊EvidenceData。真實CLI以10/21新cutoff、原10/17私人收據及4份既存官方原件重播，0 HTTP／0正式寫入，73筆held、0筆新verified、分母1440及V1決策不變。該舊收據基底此時只有1158格可用，不等於上方DB數字盤點的1368格；兩種證據不混報。已有原件的73格改列准入缺口，不為同格重抓；65資源計畫改為64個有界請求＋1個明確未嘗試，不擴大64／150秒／8MB上限，不冒稱完成。22項合成控制與真實原件回放分開記錄；這條私有候選CLI不是正式自然Caller或推薦發布。
+- 2454既有四季原件／8個直接量測保留。另已從既有官方Q2原件驗證4項Q3原生Guidance事實；不能籠統說Guidance完全不存在，也不能將flat-to-up複合指引默認stable。全72股可比較四季、公告前Consensus版本、逐股三法人實際TWD、完整用途及原始發布版本仍未證明。
+- 既有六個盤中V2 jobs在10/20記錄為 `SKIPPED_NO_WATCH`。這是原Caller的Shadow判定，不是V1同日新資料已重評的證據；不移除skip或強迫增加Provider呼叫。20個前一交易日baseline屬原合約，不改成當日不完整日線。
+- 正式Owner `/stocks` 已補做實際375／390／430／768／1440寬度、手機選單及三期間空狀態核對，未見水平溢位；取代下方舊輪次「override仍1470」的**當前手機阻擋**，舊證據保留。這不是全站、Free／Premium／Legacy正式身分E2E；沒有相應已授權身分不報PASS。
+- Producer16／Reader57／Owner Lab9最新唯讀核對 **82/82來源、版本、JWT與ESZIP一致**。六份Consumer candidate／recovery精確包已獨立核對；Reader回復保留57的私有資料strip／Auth／權益邊界，**不退55**。固定SDK功能等效回復不是原實體ESZIP逐位元一致。新Production動作仍須具名核准，不能整包部署PR。
+- R6保留所有舊斷言及可選歷史重現器，以已獨立觀測的精確舊CI明確標記未變證據重用；沒有把歷史測試當本次重跑。新48項准入已實際執行，兩個被中斷的重複歷史replay不算PASS，其專用資源已清理。LINE掃描仍為**INCOMPLETE**，與股票接線隔離，不重試封存冒充完成。
+- 唯讀Cron35/35 ACTIVE僅證明既有Production排程，不單獨證明08:15／15:40外部驗收追蹤已啟用。不宣稱未證實的背景工作持續執行。付款DISABLED、五日0/5不變。
+
+原始交付仍未完成：需完成未准入官方原件的既有caller接線、獨立來源／時段／用途審核、V1必要資料與已核定條件Producer契約、原子Observation與合法發布，再以新自然批次及正式會員身分驗收。不可因以上增量、CI或部署包就宣告產品完成。
 
 ## 判定規則
 

@@ -5,7 +5,7 @@ import {
  verifyIntegrationCandidate,createSourceUnionComposition,sourceUnionParentRead,reuseSourceUnionPinnedProof,SOURCE_UNION_PARENTS,
  integrationPhysicalRead,integrationPhysicalMode,integrationInventory,
  integrationHash,integrationHistoricalRead,SOURCE_UNION_R3_FILES,SOURCE_UNION_R3_BASE,SOURCE_UNION_R4_FILES,
- SOURCE_UNION_R5_FILES,FROZEN_SOURCE_UNION_R4,FROZEN_SOURCE_UNION_R5,INTEGRATION_MANIFEST,
+ SOURCE_UNION_R5_FILES,FROZEN_SOURCE_UNION_R4,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,INTEGRATION_MANIFEST,
 } from './helpers/integrationAdmission.mjs';
 import {assemble as financial,CHANGED,CATALOG} from '../scripts/operations/financial-response-period-20261020/materialize.mjs';
 import {worker4Baseline} from '../scripts/operations/forward-cutoff-20261020/materialize.mjs';
@@ -99,9 +99,10 @@ test('R5 full PR composition adds the old R4 root and three new paths, never a f
  const m=verifyIntegrationCandidate(),old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R4));
  const paths=[...new Set([...old.files.map(r=>r.path),FROZEN_SOURCE_UNION_R4,...SOURCE_UNION_R5_FILES.map(r=>r.path)])].sort();
  assert.equal(old.files.length,515);assert.equal(paths.length,519);
- assert.deepEqual(m.files.filter(r=>r.path!==FROZEN_SOURCE_UNION_R5).map(r=>r.path),paths);
- assert.deepEqual(integrationInventory(),[...paths,FROZEN_SOURCE_UNION_R5,INTEGRATION_MANIFEST].sort());
+ assert.deepEqual(m.files.filter(r=>![FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6].includes(r.path)).map(r=>r.path),paths);
+ assert.deepEqual(integrationInventory(),[...paths,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,INTEGRATION_MANIFEST].sort());
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R5)).files.length,519,'R5 complete assertion stays frozen, not rewritten');
+ assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R6)).files.length,520,'R6 complete assertion stays frozen, not rewritten');
  const candidate=financial('candidate'),recovery=financial('recovery'),base=worker4Baseline();
  assert.equal(candidate.sha256,'7986f277660d0b9a3500d7f45a32be247f1d1d7514c1590b5db2956ace2fd596');
  assert.deepEqual(recovery.bytes,base.bytes);

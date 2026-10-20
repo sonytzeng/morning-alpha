@@ -10,9 +10,10 @@ import {constants,openSync,closeSync,fstatSync,readFileSync,writeFileSync,lstatS
 import {resolve,dirname,relative,sep,isAbsolute} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {ADAPTER_VERSION,fetchSource} from '../../src/features/vnext/dailyAdapter.ts';
-import {snapshotHash} from '../../src/features/vnext/contracts.ts';
-import {historyUrl,tpexDailyUrl} from '../../research/entry-official-history.ts';
-import {eventAlignmentFromDailyReceipts,withObservedCanonicalSectors} from '../../research/recommendation-event-alignment-candidate.ts';
+import {snapshotHash,compareTime,validObservationTime} from '../../src/features/vnext/contracts.ts';
+import {historyUrl,tpexDailyUrl,officialDate} from '../../research/entry-official-history.ts';
+import {eventAlignmentFromDailyReceipts,eventAlignmentFromRetainedEvidence,withObservedCanonicalSectors} from '../../research/recommendation-event-alignment-candidate.ts';
+import {normalizeOfficialDailyOpenDataCandidate,OFFICIAL_DAILY_OPEN_LIMITS} from '../../research/official-daily-open-data-candidate.ts';
 import {emptyEvidenceData} from '../../supabase/functions/_shared/decision-v1-data.ts';
 import {isMarketTradingDate,previousMarketTradingDate} from '../../supabase/functions/_shared/market-session-contract.mjs';
 import {RECOMMENDATION_UNIVERSE} from '../../supabase/functions/_shared/recommendation-stock-evidence.ts';
@@ -29,6 +30,55 @@ const stamp=at=>typeof at==='string'&&/(?:Z|[+-]\d\d:\d\d)$/.test(at)?Date.parse
 export const localDate=at=>{requireFact(Number.isFinite(stamp(at)),'CUTOFF_INVALID');return new Date(stamp(at)+8*3600000).toISOString().slice(0,10);};
 const indexURL=month=>V2_INDEX_URL+'?date='+month.replace('-','')+'01&response=json';
 const sameSymbols=a=>Array.isArray(a)&&JSON.stringify([...a].sort())===JSON.stringify(symbols);
+const object=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
+const exact=(v,keys)=>object(v)&&Object.keys(v).length===keys.length&&keys.every(k=>Object.hasOwn(v,k));
+const openReceiptKeys=['schema','id','url','http','bytes','raw_sha256','first_seen_at','available_at','fields','row_count',
+ 'native_dates','original_published_at','original_version','source_session_scope','source_admission','canonical_admission','publication_approval'];
+const openMetadataKeys=['dataset','request_count','requested_at','universe_symbols','licensing','normalization'];
+const openDatasetURLs=Object.freeze({TWSE_11549:'https://data.gov.tw/dataset/11549',TPEX_11370:'https://data.gov.tw/dataset/11370',
+ TPEX_11371:'https://data.gov.tw/dataset/11371',TAIEX_11555:'https://data.gov.tw/dataset/11555'});
+function validateOpenReceipt(receipt){
+ requireFact(object(receipt)&&openReceiptKeys.every(k=>Object.hasOwn(receipt,k))
+  &&Object.keys(receipt).every(k=>openReceiptKeys.includes(k)||openMetadataKeys.includes(k)),'OPEN_RESOURCE_ENVELOPE_INVALID');
+ // These six retained capture annotations are metadata ONLY. Keep the entire
+ // object in the pinned private input; never interpret them as source/quality/
+ // rights authority or as counts of admitted evidence. Normalizer gates remain.
+ if(Object.hasOwn(receipt,'dataset'))requireFact(typeof receipt.dataset==='string'
+  &&Object.hasOwn(openDatasetURLs,receipt.id)&&receipt.dataset===openDatasetURLs[receipt.id],'OPEN_RESOURCE_METADATA_INVALID');
+ if(Object.hasOwn(receipt,'request_count'))requireFact(Number.isInteger(receipt.request_count)&&receipt.request_count===1,'OPEN_RESOURCE_METADATA_INVALID');
+ if(Object.hasOwn(receipt,'requested_at'))requireFact(typeof receipt.requested_at==='string'&&validObservationTime(receipt.requested_at)
+  &&typeof receipt.first_seen_at==='string'&&validObservationTime(receipt.first_seen_at)
+  &&compareTime(receipt.requested_at,receipt.first_seen_at)<=0,'OPEN_RESOURCE_METADATA_INVALID');
+ if(Object.hasOwn(receipt,'universe_symbols'))requireFact(receipt.id==='TAIEX_11555'&&receipt.universe_symbols===null
+  ||Number.isSafeInteger(receipt.universe_symbols)&&receipt.universe_symbols>=0&&receipt.universe_symbols<=symbols.length,'OPEN_RESOURCE_METADATA_INVALID');
+ if(Object.hasOwn(receipt,'licensing'))requireFact(receipt.licensing==='EXACT_REGISTERED_OGL_V1_RESOURCE_ATTRIBUTION_AND_THIRD_PARTY_CONDITIONS_REMAIN','OPEN_RESOURCE_METADATA_INVALID');
+ if(Object.hasOwn(receipt,'normalization'))requireFact(receipt.normalization==='CSV_SHAPE_ONLY_NOT_ORIGINAL_V1_EVIDENCE','OPEN_RESOURCE_METADATA_INVALID');
+}
+/** Saved bytes only: never fetch a CSV or manufacture a VNext SourceReceipt.
+ * The private input's physical hash binds the original receipt and canonical
+ * base64 together. Existing normalization owns all source/hash/time/scope gates. */
+function officialOpen(input,cutoff){
+ if(!Object.hasOwn(input,'official_open_resources'))return null;
+ const saved=input.official_open_resources;
+ requireFact(Array.isArray(saved)&&saved.length>0&&saved.length<=OFFICIAL_DAILY_OPEN_LIMITS.resources,'OPEN_RESOURCE_LIMIT');
+ const resources=saved.map(resource=>{
+  requireFact(exact(resource,['receipt','response_body_base64']),'OPEN_RESOURCE_ENVELOPE_INVALID');validateOpenReceipt(resource.receipt);
+  const encoded=resource.response_body_base64;
+  requireFact(typeof encoded==='string'&&encoded.length>0&&encoded.length<=4*Math.ceil(OFFICIAL_DAILY_OPEN_LIMITS.bytes_per_resource/3)
+   &&encoded.length%4===0,'OPEN_RESOURCE_BASE64_LIMIT');
+  const bytes=Buffer.from(encoded,'base64');
+  // Round-trip rejects whitespace, URL alphabet, missing/extra padding, invalid
+  // characters and nonzero unused pad bits before any source is normalized.
+  requireFact(bytes.length>0&&bytes.length<=OFFICIAL_DAILY_OPEN_LIMITS.bytes_per_resource
+   &&bytes.toString('base64')===encoded,'OPEN_RESOURCE_BASE64_NONCANONICAL');
+  requireFact(Array.isArray(resource.receipt.native_dates)&&resource.receipt.native_dates.length===1
+   &&typeof resource.receipt.native_dates[0]==='string','OPEN_RESOURCE_DATE_SCOPE_INVALID');
+  return {receipt:resource.receipt,response_body:bytes};
+ });
+ const dates=resources.map(r=>officialDate(r.receipt.native_dates[0]));
+ requireFact(DATE.test(dates[0])&&dates.every(date=>date===dates[0]),'OPEN_RESOURCE_DATE_SCOPE_INVALID');
+ return normalizeOfficialDailyOpenDataCandidate({trading_date:dates[0],cutoff,resources});
+}
 function identity(at){const date=localDate(at);return {report_date:date,today_date:date,generated_at:at,data_as_of:at,
  revision_id:'isolated-event-refresh:'+at,is_trading_day:isMarketTradingDate('TW',date)};}
 function taskValid(t){
@@ -93,16 +143,32 @@ async function latestWhole(receipts){
 async function prove(input,receipts,at){
  const id=identity(at),joined=await withObservedCanonicalSectors(emptyEvidenceData(),id,input.observation,await v2Hash(input.observation));
  requireFact(joined.status==='CURRENT_OBSERVATION_JOINED','CANONICAL_OBSERVATION_UNAVAILABLE');
- const result=await eventAlignmentFromDailyReceipts(id,joined.data,receipts);
- requireFact(result.issues.length===0&&result.same_date_totals.symbols===72&&result.same_date_totals.denominator===1440
+ const base=await eventAlignmentFromDailyReceipts(id,joined.data,receipts),native=officialOpen(input,at);let result=base,openSummary;
+ if(native){
+  const data=structuredClone(base.data);data.quotes.push(...native.data.quotes);
+  result=await eventAlignmentFromRetainedEvidence(data,id,await v2Hash(data));
+  const retainedBase={...result.data,quotes:result.data.quotes.slice(0,base.data.quotes.length)};
+  const baseHash=await v2Hash(base.data),decisionHash=await v2Hash(base.decision);
+  requireFact(await v2Hash(retainedBase)===baseHash&&result.data.quotes.length===base.data.quotes.length+native.data.quotes.length,'HELD_APPEND_CHANGED_BASE');
+  requireFact(await v2Hash(result.decision)===decisionHash,'HELD_APPEND_CHANGED_DECISION');
+  openSummary={classification:'HELD_NATIVE_FACTS_NOT_CANONICAL_ADMISSION',trading_date:native.trading_date,
+   resources:native.sources.length,held_quotes:native.data.quotes.length,stock_facts:native.counts.stocks_with_facts,
+   benchmark_facts:native.counts.benchmark_facts,verified_quotes:0,
+   held_cells:native.data.quotes.map(q=>({symbol:q.symbol,trading_date:q.trading_date})),
+   held_quotes_sha256:await v2Hash(native.data.quotes),base_data_sha256:baseHash,joined_data_sha256:await v2Hash(result.data),
+   base_data_preserved:true,decision_sha256:decisionHash,decision_unchanged:true,
+   evaluated_count:result.decision.phase_evaluation.evaluated_count,
+   source_admission:false,canonical_admission:false,publication_approval:false};
+ }
+ requireFact(base.issues.length===0&&result.issues.length===0&&result.same_date_totals.symbols===72&&result.same_date_totals.denominator===1440
   &&result.coverage.every(c=>c.same_date.calendar_sessions_covered===20),'ADAPTER_REJECTED_OR_DENOMINATOR_CHANGED');
  return {cutoff:at,report_date:id.report_date,same_date_totals:result.same_date_totals,
   taiex_sessions:result.coverage[0].same_date.taiex_close,source_sha256:result.source_sha256,candidate_input_sha256:result.candidate_input_sha256,
   availability:{first:receipts.map(r=>r.available_at).sort((a,b)=>stamp(a)-stamp(b))[0],last:receipts.map(r=>r.available_at).sort((a,b)=>stamp(a)-stamp(b)).at(-1)},
   coverage:result.coverage.map(c=>({symbol:c.symbol,same_date:c.same_date,sector_mapping:c.sector_mapping,causal_review:c.causal_review})),
-  assessment_session:result.assessment_session,decision_action:result.decision.action};
+  assessment_session:result.assessment_session,decision_action:result.decision.action,...(openSummary?{official_open:openSummary}:{})};
 }
-export async function planEventAlignmentRefresh(envelope,cutoff){
+export async function planEventAlignmentRefresh(envelope,cutoff=new Date().toISOString()){
  const input=structuredClone(envelope);localDate(cutoff);
  requireFact(input?.schema==='EVENT_ALIGNMENT_REFRESH_INPUT_V1'&&sameSymbols(input.observation?.rows?.map(r=>r.symbol))
   &&input.observation.rows.every(r=>r.is_active===true)&&(!('inventory_receipt_sha256'in input)||SHA.test(input.inventory_receipt_sha256)),'INPUT_SCOPE_INVALID');
@@ -118,22 +184,38 @@ export async function planEventAlignmentRefresh(envelope,cutoff){
  for(const s of symbols)requireFact(selected.some(r=>r.task.kind!=='BENCHMARK'&&r.payload.rows.some(b=>b.symbol===s&&b.date===warmup)),'EXISTING_WARMUP_MISSING');
  requireFact(selected.some(r=>r.task.kind==='BENCHMARK'&&r.payload.rows.some(b=>b.date===warmup)),'BENCHMARK_WARMUP_MISSING');
  const resources=new Map(),otc=[...exchange].filter(([,e])=>e==='TPEX').map(([s])=>s).sort();
+ const held=new Set((before.official_open?.held_cells??[]).map(c=>c.symbol+':'+c.trading_date)),missingAdmission=[];
+ const heldOnly=(symbol,date)=>{
+  if(!held.has(symbol+':'+date))return false;
+  missingAdmission.push({symbol,trading_date:date,classification:'RAW_PRESENT_CANONICAL_ADMISSION_MISSING'});return true;
+ };
  const add=async t=>{taskValid(t);if(!resources.has(t.url))resources.set(t.url,t);};
  const base={format:'json',scope:'EVENT_ALIGNMENT_REFRESH_V1:'+before.report_date,max_age_days:0};
  for(const c of before.coverage)for(const date of c.same_date.missing_stock_dates){
+  if(heldOnly(c.symbol,date))continue;
   const t=exchange.get(c.symbol)==='TWSE'?{...base,kind:'PRICE',symbols:[c.symbol],exchange:'TWSE',month:date.slice(0,7),url:historyUrl('TWSE',c.symbol,date.slice(0,7))}
    :{...base,kind:'OTC_PRICE',symbols:otc,exchange:'TPEX',date,url:tpexDailyUrl(date)};
   await add({...t,key:'event-refresh:'+await snapshotHash(t)});
  }
- for(const date of before.coverage[0].same_date.missing_taiex_dates){const month=date.slice(0,7),t={...base,kind:'BENCHMARK',symbols:['TAIEX'],month,url:indexURL(month)};
+ for(const date of before.coverage[0].same_date.missing_taiex_dates){if(heldOnly('TAIEX',date))continue;
+  const month=date.slice(0,7),t={...base,kind:'BENCHMARK',symbols:['TAIEX'],month,url:indexURL(month)};
   await add({...t,key:'event-refresh:'+await snapshotHash(t)});
  }
- const tasks=[...resources.values()].sort((a,b)=>a.url.localeCompare(b.url));requireFact(tasks.length<=REFRESH_LIMITS.requests,'PLAN_REQUEST_LIMIT');
- return {input,selected,tasks,warmup,original,before,summary:{schema:'EVENT_ALIGNMENT_REFRESH_PLAN_V1',cutoff,report_date:before.report_date,
+ // A complete20-session inventory may legitimately need65 distinct resources.
+ // Do not raise the64-request budget or reject the entire recoverable plan:
+ // schedule one bounded prefix and expose the rest as UNATTEMPTED, never done.
+ // Existing immutable receipts let the next plan recalculate only actual gaps.
+ const allTasks=[...resources.values()].sort((a,b)=>a.url.localeCompare(b.url));
+ const tasks=allTasks.slice(0,REFRESH_LIMITS.requests),deferred=allTasks.slice(REFRESH_LIMITS.requests);
+ const budget=deferred.length?{classification:'REQUEST_BUDGET_DEFERRED',maximum_requests:REFRESH_LIMITS.requests,
+  total_missing_resources:allTasks.length,scheduled_resources:tasks.length,deferred_resources:deferred.length,
+  deferred_task_keys:deferred.map(t=>t.key),complete_plan_sha256:await v2Hash(allTasks)}:null;
+ return {input,selected,tasks,...(budget?{deferred_tasks:deferred}:{}),warmup,original,before,summary:{schema:'EVENT_ALIGNMENT_REFRESH_PLAN_V1',cutoff,report_date:before.report_date,
   input_sha256:await v2Hash(input),inventory_receipt_sha256:input.inventory_receipt_sha256??null,
   original_receipts:input.receipts.length,overlay_receipts:(input.overlay_receipts??[]).length,selected_receipts:selected.length,
   planned_gets:tasks.length,planned_by_kind:Object.fromEntries(['PRICE','OTC_PRICE','BENCHMARK'].map(k=>[k,tasks.filter(t=>t.kind===k).length])),
-  warmup_date:warmup,original,before,limits:REFRESH_LIMITS,resource_license:LICENSE,production_operations:0,formal_v1_changed:false,reviewed_causal_events:0}};
+  warmup_date:warmup,original,before,...(before.official_open?{missing_admission:missingAdmission}:{}),...(budget?{request_budget:budget}:{}),
+  limits:REFRESH_LIMITS,resource_license:LICENSE,production_operations:0,formal_v1_changed:false,reviewed_causal_events:0}};
 }
 function bounded(work,signal){return new Promise((resolve,reject)=>{
  let done=false;const finish=(f,v)=>{if(done)return;done=true;signal.removeEventListener('abort',abort);f(v);};
@@ -209,10 +291,14 @@ export async function refreshEventAlignment(envelope,directory,{fetcher=globalTh
  }finally{clearTimeout(timer);}
  const cutoff=freshNow();requireFact(plan,'PLAN_NOT_PREPARED');
  const after=await prove(plan.input,await latestWhole([...plan.selected,...newReceipts]),cutoff);
+ for(const task of plan.deferred_tasks??[])attempts.push({task_key:task.key,status:'NOT_ATTEMPTED',reason:'REQUEST_BUDGET_DEFERRED'});
  const summary={schema:'EVENT_ALIGNMENT_REFRESH_RESULT_V1',started_at:started,cutoff,report_date:localDate(cutoff),
   input_sha256:await v2Hash(plan.input),original:plan.original,before:plan.before,after,
+  ...(plan.before.official_open?{missing_admission:plan.summary.missing_admission}:{}),
   requests:state.requests,new_receipts:newReceipts.length,planned_gets:plan.tasks.length,response_bytes_observed:state.bytes,
-  halted:halt,attempts,elapsed_ms:Math.round(monotonic()-began),limits:{...REFRESH_LIMITS,total_ms:deadlineMs},
+  halted:halt??(plan.deferred_tasks?.length?'REQUEST_BUDGET_DEFERRED':null),attempts,
+  ...(plan.summary.request_budget?{request_budget:plan.summary.request_budget}:{}),
+  elapsed_ms:Math.round(monotonic()-began),limits:{...REFRESH_LIMITS,total_ms:deadlineMs},
   source_join_status:after.same_date_totals.stock_ohlcv_and_taiex===1440?'OBSERVED_20_SESSION_SOURCE_JOIN':'HOLD_INCOMPLETE_SOURCE_SAMPLE',
   availability:'ACTUAL_RECEIPT_NOT_EARLIEST_PUBLICATION_NOT_BACKDATED',resource_license:LICENSE,production_operations:0,
   formal_v1_changed:false,reviewed_causal_events:0,forward_sample:0,outcome_sample:0};
@@ -226,9 +312,14 @@ export async function replayEventAlignmentRefresh(bundle){
  requireFact(copy.new_receipts.every(r=>stamp(r.available_at)>=stamp(copy.summary.started_at)
   &&plan.tasks.some(t=>t.url===r.task.url&&t.key===r.task.key)),'NEW_RECEIPT_SCOPE_OR_TIME_INVALID');
  const after=await prove(plan.input,await latestWhole([...plan.selected,...copy.new_receipts]),copy.summary.cutoff);
+ requireFact(await v2Hash(copy.summary.request_budget??null)===await v2Hash(plan.summary.request_budget??null),'REPLAY_PROOF_MISMATCH');
  requireFact(localDate(copy.summary.cutoff)===plan.before.report_date&&await v2Hash(after)===await v2Hash(copy.summary.after)
   &&await v2Hash(plan.original)===await v2Hash(copy.summary.original)&&await v2Hash(plan.before)===await v2Hash(copy.summary.before),'REPLAY_PROOF_MISMATCH');
- return {schema:'EVENT_ALIGNMENT_REFRESH_REPLAY_V1',original:plan.original,before:plan.before,after,resource_license:LICENSE,production_operations:0,
+ if(plan.before.official_open)requireFact(Array.isArray(copy.summary.missing_admission)
+  &&await v2Hash(copy.summary.missing_admission)===await v2Hash(plan.summary.missing_admission),'REPLAY_PROOF_MISMATCH');
+ return {schema:'EVENT_ALIGNMENT_REFRESH_REPLAY_V1',original:plan.original,before:plan.before,after,
+  ...(plan.summary.request_budget?{request_budget:plan.summary.request_budget}:{}),resource_license:LICENSE,production_operations:0,
+  ...(plan.before.official_open?{missing_admission:plan.summary.missing_admission}:{}),
   formal_v1_changed:false,reviewed_causal_events:0,availability:'SAVED_ACTUAL_CUTOFF_NOT_CURRENT_VIEW'};
 }
 export async function runCli(args,{now=()=>new Date().toISOString(),fetcher=globalThis.fetch}={}){

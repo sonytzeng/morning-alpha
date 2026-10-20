@@ -14,7 +14,7 @@ import {promisify} from 'node:util';
 import {readFileSync} from 'node:fs';
 import {randomUUID} from 'node:crypto';
 import {createOriginalRegistryIngress,createOriginalRegistryApprovedReader,ORIGINAL_REGISTRY_READ_RPC,ORIGINAL_REGISTRY_INGRESS_RPC,originalRegistryRowHashes} from '../src/features/vnext/originalRegistryIngress.ts';
-import {registryFixture,sha,cleanupOriginalRegistryContainer} from './fixtures/originalRegistryIngress.mjs';
+import {registryFixture,sha,finishOriginalRegistryRun} from './fixtures/originalRegistryIngress.mjs';
 const name='ma-registry-ingress-'+process.pid+'-'+randomUUID().slice(0,8),checks=[];
 const docker=(args,input)=>execFileSync('docker',args,{input,encoding:'utf8',stdio:['pipe','pipe','pipe'],maxBuffer:16e6,timeout:30000}).trim();
 // The image's temporary initialization server is Unix-socket-only. Loopback
@@ -41,7 +41,7 @@ const rpc=async(name,args)=>{assert.equal(name,ORIGINAL_REGISTRY_INGRESS_RPC);tr
 const authorityIds=[randomUUID(),randomUUID(),randomUUID()];
 const revokeSql=id=>`insert into original_registry_candidate.revocations(id,version_id,reason,document_hash) values('${randomUUID()}','${id}','SYNTHETIC REVOKE','${sha('SYNTHETIC REVOKE')}');`;
 const dbRead=async(name,args)=>{assert.equal(name,ORIGINAL_REGISTRY_READ_RPC);return JSON.parse(sql(`set role service_role;select public.${name}(${quote(args.p_evidence_id)},${quote(args.p_version_id)});`));};
-let number=0,containerId='';
+let number=0,containerId='',phase='IMAGE_CHECK',failure=null;
 async function fixture({horizon='SHORT',omit=[],dbEvidence=r=>r,dbLicense=l=>l,installApproval=true,approval={}}={}){
  const f=await registryFixture({epoch,horizon,symbol:String(8000+number++)});
  const body={id:f.input.c_prediction_id,business_date:sql("select (clock_timestamp() at time zone 'Asia/Taipei')::date"),
@@ -75,15 +75,30 @@ async function fixture({horizon='SHORT',omit=[],dbEvidence=r=>r,dbLicense=l=>l,i
  return f;
 }
 try{
+ // CI prepares this exact existing Dockerfile/image first. Local execution
+ // never builds/pulls; an unavailable image must remain a classified failure.
+ docker(['image','inspect','--format','{{.Id}}','ma-runtime-sparse-ci:latest']);
+ phase='CONTAINER_START';
  // Pre-existing libfaketime image only. The file belongs to this container;
  // neither the host clock nor Production time is changed. No jitter allowance.
  containerId=docker(['run','--pull=never','-d','--name',name,'--network','none','--tmpfs','/var/lib/postgresql/data:rw,size=268435456,uid=999,gid=999,mode=0700',
   '--tmpfs','/tmp:rw,size=16777216,mode=1777','--entrypoint','bash','ma-runtime-sparse-ci:latest','-c',
   'printf "%s\\n" "2026-10-20 00:10:00" > /tmp/registry-clock; initdb -D "$PGDATA" --auth=trust >/dev/null && exec env -u FAKETIME FAKETIME_TIMESTAMP_FILE=/tmp/registry-clock LD_PRELOAD=/usr/local/lib/libfaketime.so.1 postgres -D "$PGDATA" -c listen_addresses=127.0.0.1']);
  assert.match(containerId,/^[a-f0-9]{64}$/,'ISOLATED_CONTAINER_ID_REQUIRED');
+ phase='DB_READY';
  let ready=false;for(let i=0;i<60;i++){try{sql('select 1');ready=true;break;}catch{}await new Promise(r=>setTimeout(r,200));}
  assert(ready,'ISOLATED_FRESH_DB_UNAVAILABLE');assert(sql('show server_version').startsWith('17.'));
  assert.equal(sql("select clock_timestamp()=timestamptz '2026-10-20T00:10:00Z'"),'t','test DB clock is exact and isolated');
+ // Exercise the real Docker CLI failure against THIS captured container only.
+ // An intentionally unsupported flag fails before deletion. The real object
+ // must remain; ordinary exact-ID cleanup still runs once in the outer finally.
+ const cleanupNegative=finishOriginalRegistryRun({name,id:containerId,docker:args=>docker(args[1]==='rm'
+  ?[...args.slice(0,2),'--registry-cleanup-negative-control',...args.slice(2)]:args)});
+ assert.equal(cleanupNegative.cleanup,'FAIL');assert(cleanupNegative.failed);
+ assert.equal(docker(['container','inspect','--format','{{.Id}}',containerId]),containerId);
+ const uncaptured=finishOriginalRegistryRun({name,id:'',docker,failure:{phase:'CONTAINER_START',error:Error('SYNTHETIC_START_FAILURE')}});
+ assert.equal(uncaptured.cleanup,'FAIL','an existing object without captured ID cannot be deleted or called NOT_CREATED');
+ phase='SQL_CONTROLS';
  sql(`create role anon nologin;create role authenticated nologin;create role service_role nologin bypassrls;
  create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql stable as $$select null::uuid$$;
  create function public.is_research_owner_v1() returns boolean language sql stable as $$select false$$;
@@ -232,10 +247,14 @@ try{
  const stopped=count();sql(`revoke execute on function public.${ORIGINAL_REGISTRY_INGRESS_RPC}(uuid,jsonb,jsonb) from service_role`);
  await assert.rejects(()=>rpc(ORIGINAL_REGISTRY_INGRESS_RPC,args),/permission denied/);assert.equal(count(),stopped);
  checks.push('Stopping only wrapper execute preserves all sealed rows');
+}catch(error){
+ failure={phase,error};
 }finally{
- const cleanup=cleanupOriginalRegistryContainer({name,id:containerId,docker});
- console.log(JSON.stringify({cleanup}));
- if(cleanup!=='PASS')throw Error('ORIGINAL_REGISTRY_CLEANUP_FAILED');
+ const result=finishOriginalRegistryRun({name,id:containerId,docker,failure});
+ console.log(JSON.stringify(result));
+ // Both primary and cleanup failures remain nonzero. Throw only a fixed code,
+ // not the child-process exception (which contains raw Docker/SQL arguments).
+ if(result.failed)throw Error('ORIGINAL_REGISTRY_RUN_FAILED');
 }
 // Do not print a successful controls receipt before verified cleanup succeeds.
 console.log(JSON.stringify({scope:'ISOLATED_SYNTHETIC_REGISTRY_TO_ORIGINAL_SQL_NOT_PRODUCTION',checks,production_changed:false,new_private_candidate_schema:true}));

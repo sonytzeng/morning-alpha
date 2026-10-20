@@ -33,6 +33,16 @@ jobs:
         run: npm run build
       - name: Disposable synthetic PostgreSQL and loopback PostgREST only
         run: node --experimental-strip-types tests/vnextOriginalIngressDatabase.integration.mjs
+      - name: Prepare the existing isolated PostgreSQL clock image
+        timeout-minutes: 5
+        run: |
+          if docker build --quiet -t ma-runtime-sparse-ci:latest - < tests/fixtures/runtime-sparse-postgres.Dockerfile >/dev/null 2>&1; then
+            echo '{"phase":"IMAGE_PREPARE","class":"READY"}'
+          else
+            code=$?
+            printf '{"phase":"IMAGE_PREPARE","class":"IMAGE_BUILD_FAILED","exit_code":%s}\n' "$code"
+            exit "$code"
+          fi
       - name: Approved Registry to original atomic RPC, isolated PostgreSQL17 only
         run: node --experimental-strip-types tests/vnextOriginalRegistryIngressDatabase.integration.mjs
   historical-cold-source-proof:

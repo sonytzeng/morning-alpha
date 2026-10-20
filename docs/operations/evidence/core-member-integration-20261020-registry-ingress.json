@@ -58,7 +58,7 @@
     {
       "path": ".github/workflows/original-observation-ingress.yml",
       "before_sha256": null,
-      "after_sha256": "4338ec9da37dcba30bc322c0b1d8c279b3b4312d39f484ee4080916e4d67a0e8",
+      "after_sha256": "8c12f2d3ca2f3b763102eb9e05c95099b9a45e15f29fd58dd23b7285347cdc12",
       "mode": "100644",
       "origin": "composition"
     },
@@ -611,7 +611,7 @@
     {
       "path": "docs/operations/original-registry-ingress-20261020.md",
       "before_sha256": null,
-      "after_sha256": "26e04cfb9741e7876d1244cbe0d9c33898e2b110ccf1759f51642623ab1ace18",
+      "after_sha256": "dead00783a6737ddcef76a0e0a933215afcc76f7bcb139384e7e01965fd2934f",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2403,7 +2403,7 @@
     {
       "path": "tests/fixtures/originalRegistryIngress.mjs",
       "before_sha256": null,
-      "after_sha256": "82e123cd68da161cba8510dc76fafd1c1f22fbd6acf832fe02ca5c4d51706fb2",
+      "after_sha256": "9abf53dd5396f362b105a3133a286b62c0b020b623ff0fc0915b18464c68964f",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3054,14 +3054,14 @@
     {
       "path": "tests/vnextOriginalRegistryIngress.test.mjs",
       "before_sha256": null,
-      "after_sha256": "74e4b409cc281802649a87c31f91451cbaefabbde140063ae5e8b791ba27dd48",
+      "after_sha256": "cac6a73292fc7f4a5c6d1bd7737481f2d8fbe91b43ffe71bc97acd52bc29f9e9",
       "mode": "100644",
       "origin": "composition"
     },
     {
       "path": "tests/vnextOriginalRegistryIngressDatabase.integration.mjs",
       "before_sha256": null,
-      "after_sha256": "32abff3f68d09c93eb88f6a02da0cfd7ae48b349b52156d4c5d7e40a288db9db",
+      "after_sha256": "c472a08c30223ab0a833d9a7c0b0a461855474718349e3e45a3d0b508b316d2b",
       "mode": "100644",
       "origin": "composition"
     },

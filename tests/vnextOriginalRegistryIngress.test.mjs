@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
+import {readFileSync} from 'node:fs';
+import {spawnSync} from 'node:child_process';
 import {createOriginalRegistryIngress,createOriginalRegistryApprovedReader,ORIGINAL_REGISTRY_READ_RPC,ORIGINAL_REGISTRY_INGRESS_RPC,originalRegistryRowHashes} from '../src/features/vnext/originalRegistryIngress.ts';
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
-import {registryFixture,sha,cleanupOriginalRegistryContainer} from './fixtures/originalRegistryIngress.mjs';
+import {registryFixture,sha,cleanupOriginalRegistryContainer,originalRegistryFailure,finishOriginalRegistryRun} from './fixtures/originalRegistryIngress.mjs';
 const run=f=>createOriginalRegistryIngress(f.ports)(randomUUID(),f.input);
 test('DB reader is fixed ID-only and does not turn a successful read into writer authority',async()=>{
  const f=await registryFixture(),calls=[],read=createOriginalRegistryApprovedReader(f.pins,async(name,args)=>{calls.push({name,args});return f.records.get(args.p_evidence_id);});
@@ -156,4 +158,66 @@ test('cleanup refuses unknown ID/name/ownership without deleting any container',
   const calls=[],docker=args=>{calls.push(args);return `${'b'.repeat(64)} /unrelated-container`;};
   assert.equal(cleanupOriginalRegistryContainer({...bad,docker}),'FAIL');assert.equal(calls.filter(a=>a[1]==='rm').length,0);
  }
+});
+test('CI prepares the exact existing clock image before Registry controls without new permissions',()=>{
+ const workflow=readFileSync(new URL('../.github/workflows/original-observation-ingress.yml',import.meta.url),'utf8');
+ const build='docker build --quiet -t ma-runtime-sparse-ci:latest - < tests/fixtures/runtime-sparse-postgres.Dockerfile >/dev/null 2>&1';
+ assert(workflow.indexOf(build)>0);assert(workflow.indexOf(build)<workflow.indexOf('run: node --experimental-strip-types tests/vnextOriginalRegistryIngressDatabase.integration.mjs'));
+ assert.match(workflow,/permissions:\n  contents: read\njobs:/);assert.match(workflow,/Prepare the existing isolated PostgreSQL clock image\n        timeout-minutes: 5/);
+ assert(!workflow.includes('secrets.'));assert(!workflow.includes('clockedPsql.mjs'));
+ const script=workflow.slice(workflow.indexOf('          if docker build --quiet'),workflow.indexOf('      - name: Approved Registry')).replace(/^          /gm,'');
+ for(const code of [0,125]){
+  // Execute the actual workflow shell with a harmless function, not Docker.
+  const result=spawnSync('bash',['--noprofile','--norc','-c',`docker(){ printf 'PRIVATE_DOCKER_LOG\\n'; printf 'PRIVATE_ENV_VALUE\\n' >&2; return ${code}; }\n${script}`],{encoding:'utf8',timeout:1000});
+  assert.equal(result.status,code);assert.equal(result.stderr,'');
+  assert.deepEqual(JSON.parse(result.stdout),code===0?{phase:'IMAGE_PREPARE',class:'READY'}:{phase:'IMAGE_PREPARE',class:'IMAGE_BUILD_FAILED',exit_code:125});
+ }
+});
+test('missing image and startup failure retain bounded primary classification; absent is NOT_CREATED, never PASS',()=>{
+ const name='ma-registry-ingress-123-deadbeef';
+ for(const [phase,stderr,classification] of [
+  ['IMAGE_CHECK','Error response from daemon: No such image: ma-runtime-sparse-ci:latest','LOCAL_IMAGE_MISSING'],
+  ['CONTAINER_START','SYNTHETIC start failure with PRIVATE_ENV_VALUE','CONTAINER_START_FAILED'],
+  ['CONTAINER_START','permission denied at PRIVATE_ENV_VALUE','DOCKER_PERMISSION_DENIED']]){
+  const calls=[],failure={phase,error:Object.assign(Error('PRIVATE_ENV_VALUE'),{status:125,stderr,stdout:'PRIVATE_DOCKER_LOG'})};
+  const docker=args=>{calls.push(args);throw Object.assign(Error('PRIVATE_DOCKER_LOG'),{status:1,stderr:`Error: No such container: ${name}\n`});};
+  const result=finishOriginalRegistryRun({name,id:'',docker,failure});
+  assert.deepEqual(result,{cleanup:'NOT_CREATED',primary:{phase,class:classification,exit_code:125},failed:true});
+  assert.deepEqual(calls,[['container','inspect','--format','{{.Id}}',name]]);
+  assert(!JSON.stringify(result).includes('PRIVATE_'));assert(JSON.stringify(result).length<256);
+ }
+});
+test('startup with an existing object or unknown absence never deletes blindly or claims NOT_CREATED',()=>{
+ const name='ma-registry-ingress-123-deadbeef',failure={phase:'CONTAINER_START',error:Error('SYNTHETIC_START_FAILED')};
+ for(const mode of ['exists','offline','wrong-target','wrong-exit','signaled']){
+  const calls=[],docker=args=>{calls.push(args);if(mode==='exists')return 'a'.repeat(64);
+   throw Object.assign(Error('PRIVATE_DOCKER_LOG'),{status:mode==='wrong-exit'?125:1,signal:mode==='signaled'?'SIGTERM':null,
+    stderr:mode==='offline'?'Cannot connect to the Docker daemon':`Error: No such container: ${mode==='wrong-target'?'other-container':name}`});};
+  const result=finishOriginalRegistryRun({name,id:'',docker,failure});
+  assert.equal(result.cleanup,'FAIL',mode);assert(result.failed);assert.equal(calls.length,1);assert.equal(calls[0][1],'inspect');
+ }
+});
+test('actual cleanup failure remains failure with or without a primary error; primary is not masked',()=>{
+ const name='ma-registry-ingress-123-deadbeef',id='a'.repeat(64);
+ for(const failure of [null,{phase:'SQL_CONTROLS',error:Object.assign(Error('PRIVATE_SQL_PAYLOAD'),{status:3,stderr:'PRIVATE_DOCKER_LOG'})}]){
+  const calls=[],docker=args=>{calls.push(args);if(args.includes('{{.Id}} {{.Name}}'))return `${id} /${name}`;
+   if(args[1]==='rm')throw Error('SYNTHETIC_RM_FAILED');
+   throw Object.assign(Error('SYNTHETIC_MISSING'),{status:1,stderr:`Error: No such container: ${args.at(-1)}`});};
+  const result=finishOriginalRegistryRun({name,id,docker,failure});
+  assert.equal(result.cleanup,'FAIL');assert(result.failed);
+  assert.deepEqual(result.primary,failure?{phase:'SQL_CONTROLS',class:'SQL_CONTROL_FAILED',exit_code:3}:null);
+  assert(!JSON.stringify(result).includes('PRIVATE_'));assert.equal(calls.filter(a=>a[1]==='rm').length,1);
+ }
+});
+test('successful cleanup cannot erase primary failure; invalid ownership cannot authorize deletion',()=>{
+ const name='ma-registry-ingress-123-deadbeef',id='a'.repeat(64),failure={phase:'SQL_CONTROLS',error:Object.assign(Error('PRIVATE_ASSERTION'),{code:'ERR_ASSERTION'})};
+ const docker=args=>{if(args.includes('{{.Id}} {{.Name}}'))return `${id} /${name}`;if(args[1]==='rm')return id;
+  throw Object.assign(Error('SYNTHETIC_MISSING'),{status:1,stderr:`Error: No such container: ${args.at(-1)}`});};
+ const result=finishOriginalRegistryRun({name,id,docker,failure});assert.equal(result.cleanup,'PASS');assert(result.failed);
+ assert.equal(result.primary.class,'CONTROL_ASSERTION_FAILED');
+ for(const bad of [{name:'other-container',id:''},{name,id:'invalid-id'},{name,id}]){
+  const calls=[],unowned=args=>{calls.push(args);return `${'b'.repeat(64)} /other-container`;};
+  assert(finishOriginalRegistryRun({...bad,docker:unowned,failure}).failed);assert(!calls.some(a=>a[1]==='rm'));
+ }
+ assert.deepEqual(originalRegistryFailure({status:999,stderr:'PRIVATE_LOG'},'PRIVATE_PHASE'),{phase:'UNKNOWN',class:'SQL_CONTROL_FAILED',exit_code:null});
 });

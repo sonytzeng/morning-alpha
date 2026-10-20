@@ -20,3 +20,9 @@ SQL 實體是 `src/features/vnext/originalRegistryIngress.candidate.sql`，刻�
 若日後獲精確發布核准，停止方式是撤銷上述read／writer兩個新RPC的service_role EXECUTE，停止新caller；保留新schema、所有來源、Observation、不可變收據及稽核資料。不得重新授予舊直接ingress EXECUTE作回復，否則繞過Registry檢查。不刪歷史資料、不倒退不安全的 Reader、不改會員權益。當前沒有啟用任何 caller，因此本輪沒有正式資源可回復。
 
 **Production GO = NO。** 未取得真實已核准來源、完整原始條件、合法用途與獨立審查前，不提出空 Observation 的正式執行。付款停用，研究不公開。
+
+## GitHub CI 續跑補正
+
+`d74a25d`的Registry FreshDB job揭露CI runner沒有預先建立`ma-runtime-sparse-ci`映像；本機已有映像不代表新runner已有。現於該job使用既有`tests/fixtures/runtime-sparse-postgres.Dockerfile`明確準備相同測試image，執行時仍`--pull=never`、network-none／tmpfs，沒有變更SQL或門檻。
+
+啟動失敗時原本的finally cleanup錯誤會遮蔽primary錯誤；新版本保留有界phase／分類／exit code，不輸出原Docker／SQL錯誤或環境值。沒有捕捉到容器ID時，必須用精確名稱證明不存在才記`NOT_CREATED`，仍是失敗而不是PASS；已有物件、inspect不明或cleanup失敗一律失敗，不盲刪。專屬24項單測與FreshDB16類／cleanup實測通過；修正後GitHub CI另行記錄，不把前次失敗改寫成通過。這是安全scan完成後的獨立CI支援增量，不冒稱同一scan digest。

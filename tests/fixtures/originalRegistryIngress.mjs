@@ -26,6 +26,41 @@ export function cleanupOriginalRegistryContainer({name,id,docker}){
  const idAbsent=absent(id),nameAbsent=absent(name);
  return removed&&idAbsent&&nameAbsent?'PASS':'FAIL';
 }
+/** Fixed, bounded diagnostics only: never return exception messages, Docker/SQL
+ * output, arguments, environment values or container metadata. The primary
+ * phase/class survives even when cleanup ALSO fails. This is not a retry hook.
+ */
+export function originalRegistryFailure(error,phase){
+ const safePhase=['IMAGE_CHECK','CONTAINER_START','DB_READY','SQL_CONTROLS'].includes(phase)?phase:'UNKNOWN';
+ const exit_code=Number.isInteger(error?.status)&&error.status>=0&&error.status<=255?error.status:null;
+ const stderr=String(error?.stderr??'').slice(0,4096);
+ let classification;
+ if(error?.code==='ENOENT')classification='DOCKER_COMMAND_UNAVAILABLE';
+ else if(error?.code==='ETIMEDOUT'||error?.killed||error?.signal)classification='COMMAND_INTERRUPTED';
+ else if(['IMAGE_CHECK','CONTAINER_START'].includes(safePhase)){
+  if(stderr.includes('No such image: ma-runtime-sparse-ci:latest'))classification='LOCAL_IMAGE_MISSING';
+  else if(/permission denied/i.test(stderr)||error?.code==='EACCES')classification='DOCKER_PERMISSION_DENIED';
+  else if(/cannot connect to the docker daemon|is the docker daemon running/i.test(stderr))classification='DOCKER_UNAVAILABLE';
+  else classification=safePhase==='IMAGE_CHECK'?'IMAGE_CHECK_FAILED':'CONTAINER_START_FAILED';
+ }else if(error?.code==='ERR_ASSERTION')classification='CONTROL_ASSERTION_FAILED';
+ else classification=safePhase==='DB_READY'?'DATABASE_READY_FAILED':'SQL_CONTROL_FAILED';
+ return {phase:safePhase,class:classification,exit_code};
+}
+export function finishOriginalRegistryRun({name,id,docker,failure=null}){
+ let cleanup='FAIL';
+ if(id)cleanup=cleanupOriginalRegistryContainer({name,id,docker});
+ else if(failure&&['IMAGE_CHECK','CONTAINER_START'].includes(failure.phase)&&/^ma-registry-ingress-\d+-[a-f0-9]{8}$/.test(name)){
+  // No captured ID means no deletion authority. NOT_CREATED requires an exact
+  // absence proof; an existing/unknown object or failed inspect is still FAIL.
+  try{docker(['container','inspect','--format','{{.Id}}',name]);}
+  catch(error){
+   const missing=[`Error: No such container: ${name}`,`Error: No such object: ${name}`,
+    `Error response from daemon: No such container: ${name}`,`Error response from daemon: No such object: ${name}`];
+   if(error?.status===1&&!error.signal&&missing.includes(String(error.stderr??'').trim()))cleanup='NOT_CREATED';
+  }
+ }
+ return {cleanup,primary:failure?originalRegistryFailure(failure.error,failure.phase):null,failed:!!failure||cleanup!=='PASS'};
+}
 export async function registryFixture({epoch=Date.parse(fixedNow),horizon='SHORT',symbol='7999'}={}){
  const at=ms=>new Date(epoch+ms).toISOString(),artifacts=new Map(),records=new Map();
  const store=text=>{const bytes=new TextEncoder().encode(text),hash=sha(bytes);artifacts.set(hash,bytes);return hash;};

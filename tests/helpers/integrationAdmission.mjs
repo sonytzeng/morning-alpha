@@ -74,6 +74,8 @@ const FROZEN_PRODUCER15_MONTHLY_MANIFEST='docs/operations/evidence/core-member-i
 // Explicitly reviewed composition deltas. No patterns, glob, deployment flags,
 // automatic inventory admission or addition to any previous release catalogue.
 export const INTEGRATION_DELTAS=Object.freeze([
+ 'tests/atomicRowContract20260924Database.integration.mjs',
+ 'tests/helpers/atomicRowForwardFixture.mjs','tests/atomicRowForwardFixture.test.mjs',
  FROZEN_COLD_SOURCE_MANIFEST,
  'src/features/vnext/contracts.ts','src/features/vnext/dailyIntelligence.ts',
  'tests/vnextDailyCpuBudget.test.mjs','tests/cpuBudgetAdmission.test.mjs',

@@ -44,7 +44,7 @@
     {
       "path": ".github/workflows/core-member-integration.yml",
       "before_sha256": null,
-      "after_sha256": "397155873933eb7931753cf4f6613bc9c1f76f907e831ffb2a2e9f9790cd3975",
+      "after_sha256": "06e5eeb6d8f3010125b5355e4ad6105e4fd50d45111369c439bfc0cf23f6e890",
       "mode": "100644",
       "origin": "composition"
     },
@@ -177,7 +177,7 @@
     {
       "path": "docs/operations/cpu-budget-recovery-20261020.md",
       "before_sha256": null,
-      "after_sha256": "4adb19a9c316fb90430dd05cea35f8a208fa33104de53b845b3d37e28af9bfc9",
+      "after_sha256": "f1f44a0a3c031ca859cc0464e2bda6058f63e2572cb479f3fb514c62e8f48747",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2219,6 +2219,20 @@
       "origin": "composition"
     },
     {
+      "path": "tests/atomicRowContract20260924Database.integration.mjs",
+      "before_sha256": "b8c0bf551c51107a56d82f0abdfb9a6e31c22f341502548f75e46e4a612b67e8",
+      "after_sha256": "b6e333cef37e7f485b575de4cbdda0cdca3ad66e0cd406380284ce54cb3eeb5a",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "tests/atomicRowForwardFixture.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "ff05aaa56537a7a1c95028ecba2887baf6358cebd1714942a3a03f5a1a54d14a",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "tests/browser/membership.client.ts",
       "before_sha256": null,
       "after_sha256": "061a7174550dcdbb5a811b6362939f1845679afa22c1db88d875f64b210b6956",
@@ -2333,7 +2347,7 @@
     {
       "path": "tests/cpuBudgetAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "11edfebc7757f057fd3c19cd970beb7619eb94b587173ec2a5df3b486a7032a1",
+      "after_sha256": "946dc74ae8be729f8e25fcf9ce0ac51a0c63618a7053b3355dbe83ab84274c5c",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2387,6 +2401,13 @@
       "origin": "composition"
     },
     {
+      "path": "tests/helpers/atomicRowForwardFixture.mjs",
+      "before_sha256": null,
+      "after_sha256": "3b06993bb0bbc36495909112e979532853170e894220f06c27e9bf5735d5539c",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "tests/helpers/cWorkerLocalSdkNetworkDenied.cjs",
       "before_sha256": null,
       "after_sha256": "f1a58ff2e105971eb2711dfa6619cb61695bc96b649390af8ae2aa94bd1c9e83",
@@ -2417,7 +2438,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "b031bd7f779388d20e52ceb29a0256f902d98c454999b38ce0d71e1dab449b0e",
+      "after_sha256": "66f1971386e568317c888d868cd10e8e773141a47eb2e409784cbff7bdf74849",
       "mode": "100644",
       "origin": "composition"
     },

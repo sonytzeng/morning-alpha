@@ -21,3 +21,7 @@ prepared acquisition保留原evidence_cutoff／snapshot_hash，後續不重讀SO
 獨立安全掃描未列PASS：目前通道能讀security-diff-scan主技能，卻無法讀取其要求的config-preflight.md，也未提供對應Security掃描工具。沒有建立空scan或自簽安全成功。先完成程式、原有反例與精確CI；在可用安全通道完成獨立審閱前保持Draft／不部署。這不是要求Owner重給既有一般修復授權。
 
 第一版遠端HEAD a4944fe的actual-source-only工作有兩項原Worker4來源assertion失敗：季度artifact workflow仍在current CPU來源執行舊Worker4封存proof。修正該job選擇current CPU完整准入，並另外於精確7bfc checkout執行全部原Worker4四項proof。未改原assertions、Runtime、SQL或candidate/recovery bytes；新增workflow路由反例控制，失敗紀錄保留。
+
+第二版a5c633f0的actual-source-only成功，但integration在Deno2.9.7找不到npm:@types/node而失敗；validate的原Atomic回歸在寫死2026-10-20的衍生資料過08:45後遭原截止規則拒絕。CI現在固定相同Deno2.9.7並明確使用全域cache解析（--node-modules-dir=none），不關閉型別檢查、不變更SDK或原發布bytes。Atomic只在原guard確認的隔離DB讀取當地明日建立合成衍生資料，保持原相對日期、秒數／quote epoch一致；保留歷史fixture、原SQL及所有邊界／缺值拒絕。正式環境不改時間、不補跑。新離線日期反例另驗跨年／閏日與歷史fixture不變。本機npm registry沒有Deno2.9.7包，該精確compiler須由新HEAD CI驗證，不能拿本機2.5.4冒稱2.9.7成功。
+
+此增量本機5項日期／准入控制PASS，4項原Atomic row-contract控制PASS。第一次完整歷史premarketAtomicInventory診斷執行中修改了本說明、未同步新seal，得到6PASS／10FAIL，正確拒絕SOURCE_DRIFT；並非可列PASS的結果。先重新封存全部來源，再執行對應原檔，不修改或跳過其assertions。本機沒有Postgres／Docker；原DB回歸待新精確CI。Deno2.5.4使用新cache flag時遭本機registry連線拒絕，未當作compiler PASS；原2.5.4已完成的來源型別證據保留，不覆蓋新2.9.7待驗狀態。此增量Runtime三檔與candidate／recovery payload SHA均不變。

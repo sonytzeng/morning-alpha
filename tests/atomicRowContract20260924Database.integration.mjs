@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { atomicRowForwardFixture } from './helpers/atomicRowForwardFixture.mjs';
 
 const scope = 'ma-atomic-row-contract-20260924';
 const database = process.env.MA_ISOLATED_TEST_DB;
@@ -103,11 +104,12 @@ assert.equal(sql("select count(*) from market_checkpoint_snapshots where trading
 
 // A clock-forward derivative is used only to prove future commit capability;
 // the permanent Production fixture above remains byte-for-byte unchanged.
-const shifted = JSON.parse(JSON.stringify(fixture.rows)
-  .replaceAll('2026-09-24', '2026-10-20')
-  .replaceAll('2026-09-23', '2026-10-19')
-  .replaceAll('2026-09-22', '2026-10-18'));
-const accepted = invoke(shifted, '2026-10-20');
+// Read only this disposable DB's clock. Tomorrow's synthetic derivative keeps
+// the original SQL deadline intact even after today's 08:45 has passed.
+const forwardDate = sql("select ((clock_timestamp() at time zone 'Asia/Taipei')::date + 1)::text;").output;
+const forward = atomicRowForwardFixture(fixture, forwardDate);
+const shifted = forward.rows;
+const accepted = invoke(shifted, forwardDate);
 assert.match(accepted.output, /"row_count": 11/);
 
 function mutated(mutate) {
@@ -116,7 +118,7 @@ function mutated(mutate) {
   return rows;
 }
 function rejected(name, rows) {
-  const result = invoke(rows, '2026-10-20', fixture.correlation_id, true);
+  const result = invoke(rows, forwardDate, fixture.correlation_id, true);
   assert.equal(result.ok, false, name);
   assert.match(result.output, /ATOMIC_CHECKPOINT_(?:ROW_CONTRACT_INVALID|PROVIDER_CARDINALITY|PROVIDER_SET_MISMATCH)/, name);
 }
@@ -124,26 +126,26 @@ function rejected(name, rows) {
 // Minute precision is exact: the complete 05:00 and 13:45 minutes are valid;
 // 05:01 and 13:46 remain rejected. Session/date/freshness invariants stay strict.
 const afterhoursBoundary = mutated((_rows, txf) => {
-  txf.source_timestamp = '2026-10-19T21:00:59.999Z';
+  txf.source_timestamp = forward.at(-1, '21:00:59.999Z');
   txf.raw.source_raw.captured_at = txf.source_timestamp;
 });
-assert.match(invoke(afterhoursBoundary, '2026-10-20').output, /"row_count": 11/);
+assert.match(invoke(afterhoursBoundary, forwardDate).output, /"row_count": 11/);
 rejected('afterhours-after-minute', mutated((_rows, txf) => {
-  txf.source_timestamp = '2026-10-19T21:01:00.000Z';
+  txf.source_timestamp = forward.at(-1, '21:01:00.000Z');
   txf.raw.source_raw.captured_at = txf.source_timestamp;
 }));
 const regularBoundary = mutated((_rows, txf) => {
-  txf.source_timestamp = '2026-10-19T05:45:59.999Z';
+  txf.source_timestamp = forward.at(-1, '05:45:59.999Z');
   txf.raw.source_raw.captured_at = txf.source_timestamp;
-  txf.raw.captured_session_date = '2026-10-19';
+  txf.raw.captured_session_date = forward.at(-1, '00:00:00.000Z').slice(0, 10);
   txf.raw.txf_session_type = 'regular';
   txf.raw.source_raw.session = 'regular';
 });
-assert.match(invoke(regularBoundary, '2026-10-20').output, /"row_count": 11/);
+assert.match(invoke(regularBoundary, forwardDate).output, /"row_count": 11/);
 rejected('regular-after-minute', mutated((_rows, txf) => {
-  txf.source_timestamp = '2026-10-19T05:46:00.000Z';
+  txf.source_timestamp = forward.at(-1, '05:46:00.000Z');
   txf.raw.source_raw.captured_at = txf.source_timestamp;
-  txf.raw.captured_session_date = '2026-10-19';
+  txf.raw.captured_session_date = forward.at(-1, '00:00:00.000Z').slice(0, 10);
   txf.raw.txf_session_type = 'regular';
   txf.raw.source_raw.session = 'regular';
 }));
@@ -152,19 +154,19 @@ rejected('wrong-session', mutated((_rows, txf) => {
   txf.raw.source_raw.session = 'regular';
 }));
 rejected('wrong-session-date', mutated((_rows, txf) => {
-  txf.raw.txf_provider_session_date = '2026-10-16';
-  txf.raw.source_raw.date = '2026-10-16';
+  txf.raw.txf_provider_session_date = forward.at(-4, '00:00:00.000Z').slice(0, 10);
+  txf.raw.source_raw.date = txf.raw.txf_provider_session_date;
 }));
 rejected('future-source', mutated((_rows, txf) => {
-  txf.source_timestamp = '2026-10-20T00:01:00.000Z';
+  txf.source_timestamp = forward.at(0, '00:01:00.000Z');
   txf.raw.source_raw.captured_at = txf.source_timestamp;
 }));
 rejected('stale-source', mutated((_rows, txf) => {
-  txf.source_timestamp = '2026-10-11T21:00:00.084Z';
+  txf.source_timestamp = forward.at(-9, '21:00:00.084Z');
   txf.raw.source_raw.captured_at = txf.source_timestamp;
 }));
 rejected('missing-source-timestamp', mutated((_rows, txf) => { delete txf.source_timestamp; }));
 rejected('partial-batch', shifted.slice(0, 10));
 
-assert.equal(sql("select count(*) from market_checkpoint_snapshots where trading_date in ('2026-09-24','2026-10-20');").output, '0');
+assert.equal(sql(`select count(*) from market_checkpoint_snapshots where trading_date in ('2026-09-24',${q(forwardDate)});`).output, '0');
 console.log('2026_09_24_PROVIDER_PASS_ATOMIC_FAIL_REGRESSION=PASS; REJECTED_PROVIDER=TXF; REJECTED_FIELD=source_timestamp.afterhours_window; EDGE_DB_PARITY=PASS; ATOMIC_0_OR_11=UNCHANGED; EXACT_HISTORY=0; INVALID_ROWS_ACCEPTED=0');

@@ -18,5 +18,12 @@ jobs:
           node-version: 22.14.0
       - name: Complete current tree, exact parents, six support deltas and immutable parent assertions
         run: node --experimental-strip-types --test --test-concurrency=1 tests/originalIngressAdmission.test.mjs tests/officialPublicAdmission.test.mjs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install fixed PDF dependencies after current admission
+        run: python -m pip install --disable-pip-version-check pypdf==6.10.0 pdfplumber==0.11.9
+      - name: Pinned issuer descriptor offline synthetic controls only; no private PDF replay or source admission
+        run: python -B tests/test_issuer_pdf_descriptor.py SyntheticControls -v
       - name: Current Registry, Actual-only and response-period controls; not source admission
         run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextContracts.test.mjs tests/vnextOriginalTimestamp.test.ts tests/vnextOriginalIngress.test.mjs tests/vnextOriginalRegistryIngress.test.mjs tests/v1ActualCanonical.test.mjs tests/vnextFinancialResponsePeriod.test.mjs tests/vnextForwardCutoffRuntime.test.mjs

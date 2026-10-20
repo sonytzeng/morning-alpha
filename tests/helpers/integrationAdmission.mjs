@@ -13,7 +13,14 @@ import {fileURLToPath} from 'node:url';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261020-v1-source-union.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261020-v1-source-union-normalizer.json';
+export const FROZEN_SOURCE_UNION='docs/operations/evidence/core-member-integration-20261020-v1-source-union.json';
+export const SOURCE_UNION_NORMALIZER_BASE='c1318bfe8d32f774ecbc1ba17787832bb745b489';
+export const SOURCE_UNION_NORMALIZER_PARENT='9ff0f90e737484b1235cfb79c43fcaa5bd40d9d9';
+export const SOURCE_UNION_NORMALIZER_FILES=Object.freeze([
+ Object.freeze({path:'scripts/official-actuals/issuer-pdf-descriptor.py',mode:'100644',sha256:'d08f6dd37025be801faadb1d498fb47cdd5c463a68f5fe0b55513f99015b2528'}),
+ Object.freeze({path:'tests/test_issuer_pdf_descriptor.py',mode:'100644',sha256:'439352819ea42c6d9dd7f67f2b5df304c2b23a5debab8ba1ed48bb054aabc595'}),
+]);
 export const SOURCE_UNION_BASE='7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3';
 export const SOURCE_UNION_PARENTS=Object.freeze({actual:'64565b5e44568c5c653bd2007992d482df36e60f',registry:'1db13616337633d4765db4650dd27f5dc68c0bd6'});
 export const REGISTRY_SUPPORT_PARENT='d74a25d803b6fe6a7dc9e21cef06c3e1306ec559';
@@ -197,6 +204,7 @@ export const INTEGRATION_DELTAS=Object.freeze([
  ...OFFICIAL_PUBLIC_DELTAS,
  ...ORIGINAL_INGRESS_DELTAS,
  FROZEN_ACTUAL,FROZEN_REGISTRY,...SOURCE_UNION_SUPPORT,
+ FROZEN_SOURCE_UNION,...SOURCE_UNION_NORMALIZER_FILES.map(row=>row.path),
  FROZEN_PRODUCER15_MONTHLY_MANIFEST,
  'src/features/vnext/dailyAdapter.ts',
  'tests/vnextDailyDatabase.integration.mjs',
@@ -518,18 +526,41 @@ export function sourceUnionParentRead(view,path){
  const row=unionBlob(SOURCE_UNION_PARENTS[view],path);assert(row,'UNION_PARENT_ABSENT:'+path);
  return Buffer.from(row.bytes);
 }
+// This is a two-file code-source pin, NOT PDF/financial/source-rights admission.
+export function sourceUnionNormalizerLineage(){
+ assert.match(SOURCE_UNION_NORMALIZER_PARENT,/^[a-f0-9]{40}$/,'UNION_NORMALIZER_IMMUTABLE_PARENT');
+ assert.match(SOURCE_UNION_NORMALIZER_BASE,/^[a-f0-9]{40}$/,'UNION_NORMALIZER_IMMUTABLE_BASE');
+ assert.deepEqual(git(['rev-list','--parents','-n','1',SOURCE_UNION_NORMALIZER_PARENT]).trim().split(' '),
+  [SOURCE_UNION_NORMALIZER_PARENT,SOURCE_UNION_NORMALIZER_BASE],'UNION_NORMALIZER_PARENT');
+ const fields=git(['diff','--no-renames','--name-status','-z',SOURCE_UNION_NORMALIZER_BASE,SOURCE_UNION_NORMALIZER_PARENT,'--']).split('\0').filter(Boolean);
+ assert.equal(fields.length,4,'UNION_NORMALIZER_EXACT_SCOPE');
+ const delta=[];for(let i=0;i<fields.length;i+=2)delta.push({status:fields[i],path:fields[i+1]});
+ assert.deepEqual(delta,SOURCE_UNION_NORMALIZER_FILES.map(({path})=>({status:'A',path})),'UNION_NORMALIZER_EXACT_SCOPE');
+ for(const file of SOURCE_UNION_NORMALIZER_FILES){
+  assert(!SOURCE_UNION_SUPPORT.includes(file.path),'UNION_NORMALIZER_SUPPORT_OVERLAP');
+  for(const revision of [SOURCE_UNION_NORMALIZER_BASE,...Object.values(SOURCE_UNION_PARENTS)])assert.equal(unionBlob(revision,file.path),null,'UNION_NORMALIZER_NOT_NEW:'+file.path);
+  const row=unionBlob(SOURCE_UNION_NORMALIZER_PARENT,file.path);
+  assert(row,'UNION_NORMALIZER_ABSENT:'+file.path);
+  assert.equal(row.mode,'100644','UNION_NORMALIZER_MODE:'+file.path);
+  assert.equal(row.mode,file.mode,'UNION_NORMALIZER_MODE:'+file.path);
+  assert.equal(row.sha256,file.sha256,'UNION_NORMALIZER_BLOB_DRIFT:'+file.path);
+ }
+ return {parent:SOURCE_UNION_NORMALIZER_PARENT,base:SOURCE_UNION_NORMALIZER_BASE,
+  files:SOURCE_UNION_NORMALIZER_FILES.map(row=>({...row})),source_admission:false,canonical_admission:false};
+}
 export function sourceUnionLineage(){
  const receipts=[
   {view:'actual',revision:SOURCE_UNION_PARENTS.actual,path:FROZEN_ACTUAL,sha256:'c23aa84a894faf51c536d34d51586a3cca6dd24a6c3d44026a7f5fcb9f54d1ee'},
   {view:'registry',revision:SOURCE_UNION_PARENTS.registry,path:FROZEN_REGISTRY,sha256:'0fe3ec91a03ebeeec1ac8d3fa00e44aa295bf74dbe25c6a620d55b4e3ea35c06'},
   {view:'registry_prior',revision:REGISTRY_SUPPORT_PARENT,path:FROZEN_REGISTRY,sha256:'c73698b0e0280e48130e0876e79205c7457916d67fe47d4ff38b1164bf939ba3'},
+  {view:'union_prior',revision:SOURCE_UNION_NORMALIZER_BASE,path:FROZEN_SOURCE_UNION,sha256:'b9869544786b66e75c38e390550494307dabef4c549745a66f84bd79a1b74d0f'},
  ];
  for(const r of receipts)assert.equal(unionBlob(r.revision,r.path)?.sha256,r.sha256,'UNION_PINNED_RECEIPT_DRIFT');
  const historical_proof={revision:'965263fe15dc672cac6c61af06bfd14d69044dd3',path:'tests/integrationAdmission.test.mjs',sha256:'539e44ccda3168a0b0fdb13ef8fb700b93e994d763f8f0a8a981c720a56cdcbf'};
  assert.equal(unionBlob(historical_proof.revision,historical_proof.path)?.sha256,historical_proof.sha256,'UNION_HISTORICAL_PROOF_DRIFT');
  return {schema:'V1_SOURCE_UNION_CANDIDATE_1',base:SOURCE_UNION_BASE,parents:{...SOURCE_UNION_PARENTS},
   registry_support:{parent:REGISTRY_SUPPORT_PARENT,paths:[...REGISTRY_SUPPORT_PATHS]},receipts,
-  historical_proof,support_paths:[...SOURCE_UNION_SUPPORT],source_authorities_shared:false,member_gate_changed:false};
+  historical_proof,normalizer:sourceUnionNormalizerLineage(),support_paths:[...SOURCE_UNION_SUPPORT],source_authorities_shared:false,member_gate_changed:false};
 }
 let unionExpected;
 function sourceUnionExpected(){
@@ -549,6 +580,12 @@ function sourceUnionExpected(){
    const selected=equal(left,right)?left:equal(left,old)?right:equal(right,old)?left:null;
    assert(selected,'UNION_UNRESOLVED_SOURCE_CONFLICT:'+p);
    expected.set(p,selected);
+  }
+  assert(!expected.has(FROZEN_SOURCE_UNION),'UNION_PRIOR_RECEIPT_OVERLAP');
+  expected.set(FROZEN_SOURCE_UNION,unionBlob(SOURCE_UNION_NORMALIZER_BASE,FROZEN_SOURCE_UNION));
+  for(const file of SOURCE_UNION_NORMALIZER_FILES){
+   assert(!expected.has(file.path)&&!support.has(file.path),'UNION_NORMALIZER_SOURCE_OVERLAP:'+file.path);
+   expected.set(file.path,unionBlob(SOURCE_UNION_NORMALIZER_PARENT,file.path));
   }
   for(const p of support)expected.delete(p);
   unionExpected=expected;
@@ -584,6 +621,7 @@ const pinnedProofs=Object.freeze({
  actual:{revision:SOURCE_UNION_PARENTS.actual,tests:['tests/officialPublicAdmission.test.mjs','tests/forwardCutoffAdmission.test.mjs']},
  registry:{revision:SOURCE_UNION_PARENTS.registry,tests:['tests/originalIngressAdmission.test.mjs']},
  historical:{revision:'965263fe15dc672cac6c61af06bfd14d69044dd3',tests:['tests/integrationAdmission.test.mjs']},
+ union:{revision:SOURCE_UNION_NORMALIZER_BASE,tests:['tests/originalIngressAdmission.test.mjs','tests/officialPublicAdmission.test.mjs']},
 });
 export function verifySourceUnionPinnedProof(view){
  assert(Object.hasOwn(pinnedProofs,view),'UNION_UNKNOWN_PARENT');
@@ -601,12 +639,13 @@ export function verifySourceUnionPinnedProof(view){
    const target=join(checkout,'node_modules');mkdirSync(target);
    for(const name of readdirSync(modules))symlinkSync(join(fileURLToPath(modules),name),join(target,name));
   }
-  execFileSync(process.execPath,['--experimental-strip-types','--test','--test-concurrency=1',...proof.tests],{
+  const output=execFileSync(process.execPath,['--experimental-strip-types','--test','--test-reporter=tap','--test-concurrency=1',...proof.tests],{
    cwd:checkout,env:{...env,NODE_OPTIONS:'--experimental-strip-types'},encoding:'utf8',maxBuffer:8e6,timeout:120000,
   });
+  if(view==='union')for(const [name,count]of [['tests',13],['pass',13],['fail',0],['cancelled',0],['skipped',0]])assert.match(output,new RegExp('^# '+name+' '+count+'$','m'),'UNION_PRIOR_ALL_13_ASSERTIONS');
  }finally{rmSync(folder,{recursive:true,force:true});assert(!existsSync(folder),'UNION_PINNED_CLEANUP_FAILED');}
  verifyIntegrationCandidate();
- return {revision:proof.revision,tests:[...proof.tests],cleanup:'VERIFIED_REMOVED'};
+ return {revision:proof.revision,tests:[...proof.tests],cleanup:'VERIFIED_REMOVED',...(view==='union'?{tests_run:13,tests_passed:13}:{})};
 }
 export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=integrationInventory(),mode=integrationPhysicalMode){
  verifySourceUnionBoundary(read,mode);

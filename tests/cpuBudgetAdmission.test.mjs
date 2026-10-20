@@ -31,4 +31,8 @@ test('CPU repair does not change protected evaluators, identity, business RPC or
  const workflow=read('.github/workflows/core-member-integration.yml').toString();assert(workflow.includes('ref: '+base));
  assert(workflow.includes('working-directory: build/cpu-budget-historical-base'));assert(workflow.includes('tests/vnextDailyCpuBudget.test.mjs'));
  assert(workflow.includes('deno check --no-lock supabase/functions/vnext-daily-research-v1/index.ts'));
+ const quarter=read('.github/workflows/owner-quarter-live-candidate.yml').toString();
+ assert(quarter.includes('node --experimental-strip-types --test tests/cpuBudgetAdmission.test.mjs'));
+ assert(quarter.includes('ref: '+base));assert(quarter.includes('working-directory: build/cpu-budget-historical-base'));
+ assert(quarter.includes('node --experimental-strip-types --test tests/coldSourcePriorityAdmission.test.mjs'));
 });

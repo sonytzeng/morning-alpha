@@ -20,7 +20,19 @@ jobs:
           NODE_OPTIONS: --experimental-strip-types
         run: |
           node --input-type=module -e "import {verifyIntegrationCandidate} from './tests/helpers/integrationAdmission.mjs';verifyIntegrationCandidate();"
-          node --experimental-strip-types --test tests/coldSourcePriorityAdmission.test.mjs
+          node --experimental-strip-types --test tests/cpuBudgetAdmission.test.mjs
+      - name: Check out immutable Worker4 source proof
+        uses: actions/checkout@v4
+        with:
+          ref: 7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3
+          path: build/cpu-budget-historical-base
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Original Worker4 full source proof unchanged
+        working-directory: build/cpu-budget-historical-base
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test tests/coldSourcePriorityAdmission.test.mjs
       - name: Check out the immutable quarter packaging baseline only
         uses: actions/checkout@v4
         with:

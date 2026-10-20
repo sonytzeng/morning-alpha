@@ -65,7 +65,7 @@
     {
       "path": ".github/workflows/owner-quarter-live-candidate.yml",
       "before_sha256": null,
-      "after_sha256": "c271a919dab7c06a29aba3f32bce09c38766e2fe00ac30052b6c6637447e0fc0",
+      "after_sha256": "67811fc04b671ce8a1787c2c8d1bfc206cd377e5a4e7aa86f5ae44c1b2bba50d",
       "mode": "100644",
       "origin": "composition"
     },
@@ -177,7 +177,7 @@
     {
       "path": "docs/operations/cpu-budget-recovery-20261020.md",
       "before_sha256": null,
-      "after_sha256": "9e07f43b99583b3a9fc1be5ad008bad80eab6709e236359fbb849908374d39d8",
+      "after_sha256": "4adb19a9c316fb90430dd05cea35f8a208fa33104de53b845b3d37e28af9bfc9",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2333,7 +2333,7 @@
     {
       "path": "tests/cpuBudgetAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "c8c9b14910ab34365d9857313dd63255124a867190b032d3310a6981cd94db90",
+      "after_sha256": "11edfebc7757f057fd3c19cd970beb7619eb94b587173ec2a5df3b486a7032a1",
       "mode": "100644",
       "origin": "composition"
     },

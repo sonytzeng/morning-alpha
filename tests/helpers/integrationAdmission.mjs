@@ -10,8 +10,10 @@ import {URL} from 'node:url';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261020-official-public.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261020-continuous-lifecycle.json';
 export const OFFICIAL_PUBLIC_BASE='7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3';
+const PRIOR_CONTINUOUS_BASE='af22f6b77f564cf9374b2a4415632ea8f38ea1c4';
+const FROZEN_OFFICIAL_PUBLIC='docs/operations/evidence/core-member-integration-20261020-official-public.json';
 const FROZEN_COLD_SOURCE='docs/operations/evidence/core-member-integration-20261019-cold-source-priority.json';
 export const OFFICIAL_PUBLIC_DELTAS=Object.freeze([
  '.github/workflows/core-member-integration.yml',
@@ -38,6 +40,20 @@ export const OFFICIAL_PUBLIC_DELTAS=Object.freeze([
  'src/features/vnext/dailyRuntime.ts',
  'tests/forwardCutoffAdmission.test.mjs',
  'tests/vnextForwardCutoffRuntime.test.mjs',
+ FROZEN_OFFICIAL_PUBLIC,
+ '.github/workflows/continuous-research-lifecycle.yml',
+ 'supabase/functions/_shared/continuous-learning-core.mjs',
+ 'supabase/functions/continuous-learning-engine/index.ts',
+ 'tests/continuousLearningTemporal.test.mjs',
+ 'tests/vnextOutcomeCacheRecovery.test.mjs',
+ 'docs/operations/continuous-research-lifecycle-20261020.md',
+ 'docs/operations/evidence/continuous-research-lifecycle-20261020.json',
+ 'docs/operations/evidence/learning-v17-exact-readback-20261020.json',
+ 'scripts/operations/continuous-learning-20261020/materialize.mjs',
+ 'scripts/operations/continuous-learning-20261020/release-catalog.json',
+ 'tests/continuousLearningRelease.test.mjs',
+ 'tests/vnextContinuousUpdate.test.mjs',
+ 'supabase/functions/_shared/continuous-learning-fixed-sdk.d.ts',
 ].sort());
 const PRIOR_INTEGRATION='8146eb4be02acd1a8ccf55e9b47c48cae762dc5e';
 const FROZEN_INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017.json';
@@ -405,6 +421,7 @@ export function integrationScope(){
 }
 function verifyOfficialPublicBoundary(read,mode){
  assert.equal(mode(INTEGRATION_MANIFEST),'100644','INTEGRATION_MANIFEST_MODE_DRIFT');
+ assert.deepEqual(Buffer.from(read(FROZEN_OFFICIAL_PUBLIC)),frozenReceipt(PRIOR_CONTINUOUS_BASE,FROZEN_OFFICIAL_PUBLIC),'INTEGRATION_OFFICIAL_PUBLIC_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_COLD_SOURCE)),frozenReceipt(OFFICIAL_PUBLIC_BASE,FROZEN_COLD_SOURCE),'INTEGRATION_COLD_SOURCE_RECEIPT_DRIFT');
  const allowed=new Set(OFFICIAL_PUBLIC_DELTAS);
  // A new seal authorizes only the reviewed content delta, not an executable

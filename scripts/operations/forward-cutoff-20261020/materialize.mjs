@@ -15,7 +15,7 @@ export const TIMING_TEST='tests/vnextForwardCutoffRuntime.test.mjs';
 export const TIMING_TEST_SHA256='cb0ef310499dd03d237afb9c3f49679d8050098b367d2de877d3d0d3ea638581';
 export const CATALOG='scripts/operations/forward-cutoff-20261020/release-catalog.json';
 // Exact final-freeze catalogue bytes; never a moving HEAD hash.
-export const CATALOG_SHA256='55cf5dae1047bf8c20943843006cd786f2d3a3962ba5e95f17cb218a258581c8';
+export const CATALOG_SHA256='393c22f2b6a042b80b03552651a6dae2cebebbaaa263e9f31f3f43fcad88f748';
 export const WORKER4_ESZIP_SHA256='91bf73939e5dfde0740f7ba1ebf43830789d08b46cc1f8885583e451764501db';
 export const WORKER4_READBACK=Object.freeze({schema:'WORKER4_EXACT_READBACK_SAFE_V1',scope:'AUTHORIZED_READONLY_PRODUCTION_READBACK',
  physical_sha256:'7d01ded5896cfaecd3f7b41b1f54f2c9b5284f14a9ef3150f6b4112a1edec1e8',

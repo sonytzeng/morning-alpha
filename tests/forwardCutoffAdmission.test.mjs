@@ -31,7 +31,7 @@ test('Worker4 packaging baseline is rebuilt only from 7bfc fixed sources, never 
 });
 test('complete current composition and exact release catalogue are sealed independently of historical proofs',()=>{
  const m=verifyIntegrationCandidate();assert.deepEqual(createForwardCutoffComposition(),m);
- assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261020-official-public.json');
+ assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261020-continuous-lifecycle.json');
  assert.equal(new Set(FORWARD_CUTOFF_DELTAS).size,FORWARD_CUTOFF_DELTAS.length);
  for(const p of FORWARD_CUTOFF_DELTAS){assert(!p.includes('*')&&!p.includes('official-actuals')&&!p.includes('recommendation-official-source-join'));assert(OFFICIAL_PUBLIC_DELTAS.includes(p),'forward subset must be admitted by the complete combined source seal');}
  for(const f of ['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'])assert.equal(m[f],false);

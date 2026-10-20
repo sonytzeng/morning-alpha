@@ -1,6 +1,6 @@
 /** Production-like runner. Persistence is exclusively transactional RPC, never files. */
-import {snapshotHash} from './contracts.ts';
-import {directoryPlan,classifyCompanies,acquisitionPlan,outcomePlan,fetchSource,assembleDaily,type SourceReceipt,type SourceTask} from './dailyAdapter.ts';
+import {snapshotHash,hashValid,validTime} from './contracts.ts';
+import {ADAPTER_VERSION,directoryPlan,classifyCompanies,acquisitionPlan,outcomePlan,fetchSource,assembleDaily,type SourceReceipt,type SourceTask} from './dailyAdapter.ts';
 import {runDailyIntelligence,dailyPublication,verifyDailyLock,type DailyLock,type RunState,type DailyStore} from './dailyIntelligence.ts';
 import {researchOutcome,type OutcomeSource} from './dailyOutcome.ts';
 import {canonical} from '../../../research/entry-opportunity.ts';
@@ -148,8 +148,29 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   // Sweep PRIOR locked predictions, not just the freshly created run. This is
   // independently repeatable across subsequent natural checkpoints/dates.
   const outcomeReceipts:SourceReceipt[]=[];
-  for(const task of await outcomePlan(r.business_date,due,companies,p.clock())){
-   const receipt=await collect(task);if(receipt===false)return finish('QUEUED','OUTCOME_SOURCE_CONTINUATION');
+  const outcomeTasks=await outcomePlan(r.business_date,due,companies,p.clock());
+  // A long-horizon window can have hundreds of already durable receipts. One
+  // SOURCE_BEGIN RPC per cached prefix exhausted every invocation at the same
+  // position, so even a fully acquired window never reached its Outcome. Read
+  // this run's immutable revisions once; only missing tasks spend a reservation
+  // or provider call. Match the complete plan, including PREMARKET/CLOSE scope.
+  const wanted=new Set(outcomeTasks.map(t=>t.key)),retained=new Map<string,SourceReceipt>();
+  // Small windows already fit the existing eight-source bound; do not load the
+  // full source inventory when at most eight targeted reservations suffice.
+  if(outcomeTasks.length>8){
+   for(const receipt of await rpc('SOURCES') as SourceReceipt[]){
+    if(!wanted.has(receipt.task.key))continue;
+    if(retained.has(receipt.task.key))throw Error('OUTCOME_RECEIPT_DUPLICATE');
+    retained.set(receipt.task.key,receipt);
+   }
+  }
+  for(const task of outcomeTasks){
+   if(Date.now()+5000>=deadline)return finish('QUEUED','OUTCOME_SOURCE_CONTINUATION');
+   const receipt=retained.get(task.key)??await collect(task);if(receipt===false)return finish('QUEUED','OUTCOME_SOURCE_CONTINUATION');
+   if(receipt&&(receipt.version!==ADAPTER_VERSION||receipt.status!=='OK'||canonical(receipt.task)!==canonical(task)
+    ||!validTime(receipt.available_at)||!validTime(receipt.first_seen_at)||Date.parse(receipt.first_seen_at)>Date.parse(receipt.available_at)
+    ||Date.parse(receipt.available_at)>Date.parse(p.clock())||!hashValid(receipt.raw_hash)||!hashValid(receipt.payload_hash)
+    ||receipt.payload_hash!==await snapshotHash(receipt.payload)))throw Error('OUTCOME_RECEIPT_INVALID');
    if(receipt)outcomeReceipts.push(receipt);
   }
   const rows=(kind:string)=>outcomeReceipts.filter(s=>s.task.kind===kind&&s.status==='OK').flatMap(s=>s.payload.rows as Record<string,unknown>[]??[]);

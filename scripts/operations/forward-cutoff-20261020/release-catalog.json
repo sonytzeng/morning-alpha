@@ -65,8 +65,8 @@
   "production_authorized": false,
   "payloads": {
     "candidate": {
-      "sha256": "94b54cf59b8303c1ac5c8da08190bb4d527df082b9f1a53d7b2b14555b97720e",
-      "bytes": 926707
+      "sha256": "565d67d93f1ec7cd2c5a9f14f1d226bbd5c287f0109d5df765e5e5899ef81dba",
+      "bytes": 928322
     },
     "recovery": {
       "sha256": "34a0fe4a0b17dc56a72c43d7687738047b59d695ae1bbda676b85f321d9c0762",
@@ -98,8 +98,8 @@
       "type_only": false,
       "before_sha256": "c3c3fc74881831295c4cf19970ba77b77182b6c171e5dde1f3db6610666cea48",
       "before_bytes": 11492,
-      "after_sha256": "629489cba95fa427eb5049460fa07148692649fca2714fc9dd4cd99e48eb8201",
-      "after_bytes": 13994
+      "after_sha256": "01fe2480681368465530cb2feeb039161931051ac55e6f4ea1284a95fe47a2bf",
+      "after_bytes": 15588
     },
     {
       "name": "src/features/vnext/contracts.ts",

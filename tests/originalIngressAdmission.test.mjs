@@ -11,12 +11,16 @@ const expected=[
  'supabase/migrations/20261019123345_original_observation_ingress_candidate_v1.sql',
  'tests/coldSourcePriorityAdmission.test.mjs','tests/helpers/integrationAdmission.mjs','tests/originalIngressAdmission.test.mjs','tests/r10FunctionalSourceClosure.test.mjs',
  'tests/vnextContracts.test.mjs','tests/vnextOriginalIngress.test.mjs','tests/vnextOriginalIngressDatabase.integration.mjs','tests/vnextOriginalTimestamp.test.ts',
+ 'docs/operations/evidence/core-member-integration-20261019-original-ingress.json',
+ 'docs/operations/original-registry-ingress-20261020.md',
+ 'src/features/vnext/originalRegistryIngress.ts','src/features/vnext/originalRegistryIngress.candidate.sql',
+ 'tests/fixtures/originalRegistryIngress.mjs','tests/vnextOriginalRegistryIngress.test.mjs','tests/vnextOriginalRegistryIngressDatabase.integration.mjs',
 ].sort();
 const flags=['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'];
 const frozen=()=>execFileSync('git',['--no-replace-objects','show',ORIGINAL_INGRESS_BASE+':'+FROZEN_COLD_SOURCE_MANIFEST],{maxBuffer:1024*1024});
 test('the actual complete current candidate must be sealed before historical proofs',()=>{
  const m=verifyIntegrationCandidate();
- assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261019-original-ingress.json');
+ assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261020-registry-ingress.json');
  assert.deepEqual(ORIGINAL_INGRESS_DELTAS,expected);
  assert.deepEqual(integrationPhysicalRead(FROZEN_COLD_SOURCE_MANIFEST),frozen());
  assert.equal(integrationHash(frozen()),'c0835bd41c75a3a40e32d2fc63990d0b55b65886a99a7c4da6d3c47f32968c24');

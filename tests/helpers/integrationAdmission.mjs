@@ -10,7 +10,9 @@ import {URL} from 'node:url';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261019-original-ingress.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261020-registry-ingress.json';
+const FROZEN_ORIGINAL_INGRESS='docs/operations/evidence/core-member-integration-20261019-original-ingress.json';
+const ORIGINAL_REGISTRY_PARENT='ccd47f83b06d26f89027e644f31824dfd929b2d4';
 export const ORIGINAL_INGRESS_BASE='7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3';
 export const FROZEN_COLD_SOURCE_MANIFEST='docs/operations/evidence/core-member-integration-20261019-cold-source-priority.json';
 // Exact candidate engineering scope, not a deployment or source-rights grant.
@@ -29,6 +31,13 @@ export const ORIGINAL_INGRESS_DELTAS=Object.freeze([
  'tests/vnextOriginalIngress.test.mjs',
  'tests/vnextOriginalIngressDatabase.integration.mjs',
  'tests/vnextOriginalTimestamp.test.ts',
+ FROZEN_ORIGINAL_INGRESS,
+ 'docs/operations/original-registry-ingress-20261020.md',
+ 'src/features/vnext/originalRegistryIngress.ts',
+ 'src/features/vnext/originalRegistryIngress.candidate.sql',
+ 'tests/fixtures/originalRegistryIngress.mjs',
+ 'tests/vnextOriginalRegistryIngress.test.mjs',
+ 'tests/vnextOriginalRegistryIngressDatabase.integration.mjs',
 ].sort());
 const PRIOR_INTEGRATION='8146eb4be02acd1a8ccf55e9b47c48cae762dc5e';
 const FROZEN_INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017.json';
@@ -395,6 +404,7 @@ export function integrationScope(){
  return [...fixedScope];
 }
 function verifyOriginalIngressBoundary(read,mode){
+ assert.deepEqual(Buffer.from(read(FROZEN_ORIGINAL_INGRESS)),frozenReceipt(ORIGINAL_REGISTRY_PARENT,FROZEN_ORIGINAL_INGRESS),'INTEGRATION_ORIGINAL_INGRESS_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_COLD_SOURCE_MANIFEST)),frozenReceipt(ORIGINAL_INGRESS_BASE,FROZEN_COLD_SOURCE_MANIFEST),'INTEGRATION_COLD_SOURCE_RECEIPT_DRIFT');
  const allowed=new Set(ORIGINAL_INGRESS_DELTAS);
  // A newly rehashed composition must not admit unrelated historical drift.

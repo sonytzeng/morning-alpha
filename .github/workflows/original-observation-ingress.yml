@@ -24,7 +24,7 @@ jobs:
       - name: Install locked candidate dependencies without lifecycle scripts
         run: npm ci --ignore-scripts
       - name: Current original timestamp, contract and ingress unit controls
-        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextContracts.test.mjs tests/vnextOriginalTimestamp.test.ts tests/vnextOriginalIngress.test.mjs
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextContracts.test.mjs tests/vnextOriginalTimestamp.test.ts tests/vnextOriginalIngress.test.mjs tests/vnextOriginalRegistryIngress.test.mjs
       - name: Type check current source
         run: npm run type-check
       - name: Lint current source
@@ -33,6 +33,8 @@ jobs:
         run: npm run build
       - name: Disposable synthetic PostgreSQL and loopback PostgREST only
         run: node --experimental-strip-types tests/vnextOriginalIngressDatabase.integration.mjs
+      - name: Approved Registry to original atomic RPC, isolated PostgreSQL17 only
+        run: node --experimental-strip-types tests/vnextOriginalRegistryIngressDatabase.integration.mjs
   historical-cold-source-proof:
     needs: current-candidate
     runs-on: ubuntu-latest

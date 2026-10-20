@@ -181,7 +181,17 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
+      - name: Current financial-period runtime and cold offline SDK refusal controls
+        run: node --experimental-strip-types --test tests/v1FinancialPeriodRelease.test.mjs
+      - name: Check out the immutable 7bfc cold-order payloads, not current financial sources
+        uses: actions/checkout@v4
+        with:
+          ref: 7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3
+          path: build/cold-source-order-immutable-7bfc
+          fetch-depth: 0
+          persist-credentials: false
       - name: Materialize and check the exact Worker3 plus source-order-only candidate and recovery
+        working-directory: build/cold-source-order-immutable-7bfc
         run: |
           node scripts/operations/cold-source-priority-20261019/materialize.mjs candidate
           node scripts/operations/cold-source-priority-20261019/materialize.mjs recovery

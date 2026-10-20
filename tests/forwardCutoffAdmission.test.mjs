@@ -66,7 +66,11 @@ test('historical timing workflow, SQL, Auth and evaluator stay immutable; later 
  const runtimeAnchor='      - run: deno test --no-lock --allow-read tests/researchOwnerFieldAccess.sdk.test.ts tests/providerCapabilityEntry.sdk.test.ts\n';
  const runtimeAdded='      - name: Materialize and check the exact forward-cutoff candidate and Worker4 recovery\n        run: |\n          node scripts/operations/forward-cutoff-20261020/materialize.mjs candidate\n          node scripts/operations/forward-cutoff-20261020/materialize.mjs recovery\n          deno check --no-lock build/forward-cutoff-20261020/candidate/supabase/functions/vnext-daily-research-v1/index.ts build/forward-cutoff-20261020/recovery/supabase/functions/vnext-daily-research-v1/index.ts\n';
  assert.equal(before.split(runtimeAnchor).length,2);
- assert.equal(read(workflow).toString(),before.replace(anchor,added+anchor).replace(runtimeAnchor,runtimeAnchor+runtimeAdded));
+ const coldAnchor='      - name: Materialize and check the exact Worker3 plus source-order-only candidate and recovery\n';
+ const financialAdded='      - name: Current financial-period runtime and cold offline SDK refusal controls\n        run: node --experimental-strip-types --test tests/v1FinancialPeriodRelease.test.mjs\n      - name: Check out the immutable 7bfc cold-order payloads, not current financial sources\n        uses: actions/checkout@v4\n        with:\n          ref: 7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3\n          path: build/cold-source-order-immutable-7bfc\n          fetch-depth: 0\n          persist-credentials: false\n';
+ assert.equal(before.split(coldAnchor).length,2);
+ assert.equal(read(workflow).toString(),before.replace(anchor,added+anchor).replace(runtimeAnchor,runtimeAnchor+runtimeAdded)
+  .replace(coldAnchor,financialAdded+coldAnchor+'        working-directory: build/cold-source-order-immutable-7bfc\n'));
  const financial=JSON.parse(read('scripts/operations/financial-response-period-20261020/release-catalog.json'));
  const financialOnly=new Set(['src/features/vnext/dailyAdapter.ts','src/features/vnext/dailyIntelligence.ts']);
  for(const path of ['supabase/functions/vnext-daily-research-v1/index.ts','supabase/functions/vnext-daily-research-v1/handler.ts',

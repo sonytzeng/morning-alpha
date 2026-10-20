@@ -73,7 +73,59 @@ export function parseFinancial(text,{kind,year,quarter,symbols,url,exchange},at)
    :{operating_cash_flow:get('營業活動之淨現金流入（流出）'),investing_cash_flow:get('投資活動之淨現金流入（流出）'),financing_cash_flow:get('籌資活動之淨現金流入（流出）'),capex:null};
   if(Object.values(values).every(v=>v===null))throw Error('FINANCIAL_VALUES_MISSING');
   rows.push({...trace(symbol,kind,`${year}-Q${quarter}`,url,at,end(year,quarter*3)+'T23:59:59+08:00',{fields,cells},'AS_REPORTED_YTD',values),exchange,unit:'TWD_THOUSAND_EXCEPT_EPS_TWD_PER_SHARE',restatement_status:'AS_RETRIEVED_NOT_ORIGINAL_VINTAGE',quarter_eps_derivation:'NOT_SUBTRACTED_WEIGHTED_SHARES_UNKNOWN',capex_status:'NOT_INFERRED_FROM_NET_INVESTING_CASH_FLOW'});
- }return {rows,rejected:[],source_rows:seen.size};
+ }
+ // A successful request does not prove the response period. Never attach the
+ // requested year/season to a different filing, form echo, or application shell.
+ const period=financialResponsePeriod(text);
+ if(period===null)return {rows:[],source_rows:seen.size,
+  // Preserve actual reported values, not a fabricated accounting period. A
+  // stable metadata gap is a quarantined successful capture, not a transient
+  // transport error that should consume three more Provider attempts.
+  unverified_rows:rows.map(row=>({...row,
+   requested_period:row.period,period:null,as_of:null,source_period:null,standalone_quarter_actual:false,
+   period_verification:'REQUEST_BINDING_ONLY_NOT_RESPONSE_PROOF',
+   data_quality_status:'FINANCIAL_RESPONSE_PERIOD_UNPROVEN'})),
+  rejected:rows.map(row=>({symbol:row.symbol,reason:'FINANCIAL_RESPONSE_PERIOD_UNPROVEN'}))};
+ if(period.year!==year||period.quarter!==quarter)throw Error('FINANCIAL_RESPONSE_PERIOD_MISMATCH');
+ if(!rows.length)throw Error('FINANCIAL_SOURCE_ROWS_EMPTY');
+ return {rows:rows.map(row=>({...row,source_period:period,
+  period_verification:'RESPONSE_REPORT_HEADING_MATCHED_REQUEST',
+  // Even a matching YTD report is not a standalone-quarter EPS statement.
+  standalone_quarter_actual:false})),rejected:[],source_rows:seen.size};
+}
+/** Only report headings/captions count. Request inputs, scripts and company
+ * data cells are not publication/period evidence. No date or EPS subtraction. */
+export function financialResponsePeriod(text){
+ if(typeof text!=='string'||text.length>8_000_000)throw Error('FINANCIAL_SIZE_LIMIT');
+ const periods=new Map();let open=null,count=0;
+ const tokens=/<!--|<\/?(h[1-6]|caption|script|style|textarea|template)\b[^<>]*>/gi;
+ for(let token;(token=tokens.exec(text))!==null;){
+  if(token[0]==='<!--'){
+   const end=text.indexOf('-->',tokens.lastIndex);if(end<0)throw Error('FINANCIAL_HEADING_STRUCTURE');
+   tokens.lastIndex=end+3;continue;
+  }
+  const tag=token[1].toLowerCase(),closing=token[0][1]==='/';
+  if(['script','style','textarea','template'].includes(tag)){
+   if(closing)throw Error('FINANCIAL_HEADING_STRUCTURE');
+   const close=new RegExp('</'+tag+'\\s*>','gi');close.lastIndex=tokens.lastIndex;
+   const end=close.exec(text);if(!end)throw Error('FINANCIAL_HEADING_STRUCTURE');
+   if(tag==='template'&&/<template\b/i.test(text.slice(tokens.lastIndex,end.index)))throw Error('FINANCIAL_HEADING_STRUCTURE');
+   tokens.lastIndex=close.lastIndex;continue;
+  }
+  if(++count>200)throw Error('FINANCIAL_HEADING_LIMIT');
+  if(!closing){if(open!==null)throw Error('FINANCIAL_HEADING_STRUCTURE');open={tag,start:token.index+token[0].length};continue;}
+  if(open===null||open.tag!==tag)throw Error('FINANCIAL_HEADING_STRUCTURE');
+  if(token.index-open.start>4096)throw Error('FINANCIAL_HEADING_LIMIT');
+  const label=clean(text.slice(open.start,token.index));open=null;
+  for(const m of label.matchAll(/(?:民國\s*)?(\d{3,4})\s*年\s*第?\s*([1-4一二三四])\s*季(?:度)?/g)){
+   const year=Number(m[1])+(m[1].length===3?1911:0),quarter=Number(m[2])||'一二三四'.indexOf(m[2])+1;
+   if(year<2000||year>2100)throw Error('FINANCIAL_RESPONSE_PERIOD_INVALID');
+   periods.set(`${year}-Q${quarter}`,{year,quarter});
+  }
+ }
+ if(open!==null)throw Error('FINANCIAL_HEADING_STRUCTURE');
+ if(periods.size>1)throw Error('FINANCIAL_RESPONSE_PERIOD_CONFLICT');
+ return periods.size===1?[...periods.values()][0]:null;
 }
 export async function acquireStockEvidence({foundationDir,cacheDir}){
  if(process.env.CI)throw Error('PRIVATE_RESEARCH_NOT_CI');const {history}=auditFoundation(foundationDir),dir=privateDirectory(cacheDir),client=createPublicCache(dir,{minimumInterval:2500,maxRequests:300}),rows=[],sources=[],failures=[];

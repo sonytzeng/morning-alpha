@@ -10,7 +10,9 @@ import {URL} from 'node:url';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261019-cold-source-priority.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261020-cpu-budget.json';
+const PRIOR_COLD_SOURCE='7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3';
+const FROZEN_COLD_SOURCE_MANIFEST='docs/operations/evidence/core-member-integration-20261019-cold-source-priority.json';
 const PRIOR_INTEGRATION='8146eb4be02acd1a8ccf55e9b47c48cae762dc5e';
 const FROZEN_INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017.json';
 const PRIOR_R2='cc167304814b2223977a36802b2666ea8203ff36';
@@ -72,6 +74,22 @@ const FROZEN_PRODUCER15_MONTHLY_MANIFEST='docs/operations/evidence/core-member-i
 // Explicitly reviewed composition deltas. No patterns, glob, deployment flags,
 // automatic inventory admission or addition to any previous release catalogue.
 export const INTEGRATION_DELTAS=Object.freeze([
+ 'tests/atomicRowContract20260924Database.integration.mjs',
+ 'tests/helpers/atomicRowForwardFixture.mjs','tests/atomicRowForwardFixture.test.mjs',
+ FROZEN_COLD_SOURCE_MANIFEST,
+ 'src/features/vnext/contracts.ts','src/features/vnext/dailyIntelligence.ts',
+ 'tests/vnextDailyCpuBudget.test.mjs','tests/cpuBudgetAdmission.test.mjs',
+ 'src/features/vnext/dailyParsers.mjs','scripts/vnext/stock-evidence.mjs',
+ 'tests/vnextFinancialResponsePeriod.test.mjs','tests/vnextForwardCutoffRuntime.test.mjs',
+ 'tests/vnextOutcomeCacheRecovery.test.mjs','tests/vnextDailyWiring.test.mjs',
+ 'tests/vnextStockResearch.test.mjs',
+ 'tests/workerCpuPeriodUnionAdmission.test.mjs',
+ 'docs/operations/worker-cpu-period-union-20261021.md',
+ 'scripts/operations/worker-cpu-period-union-20261021/materialize.mjs',
+ 'scripts/operations/worker-cpu-period-union-20261021/release-catalog.json',
+ 'docs/operations/cpu-budget-recovery-20261020.md',
+ 'scripts/operations/cpu-budget-recovery-20261020/materialize.mjs',
+ 'scripts/operations/cpu-budget-recovery-20261020/release-catalog.json',
  FROZEN_PRODUCER15_MONTHLY_MANIFEST,
  'src/features/vnext/dailyAdapter.ts',
  'tests/vnextDailyDatabase.integration.mjs',
@@ -406,6 +424,7 @@ export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=in
  assert.deepEqual(Buffer.from(read(FROZEN_C_WORKER_RPC_DIAGNOSTICS_MANIFEST)),frozenReceipt(PRIOR_C_WORKER_RPC_DIAGNOSTICS,FROZEN_C_WORKER_RPC_DIAGNOSTICS_MANIFEST),'INTEGRATION_C_WORKER_RPC_DIAGNOSTICS_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_RETAINED_QUARTER_FAMILY_MANIFEST)),frozenReceipt(PRIOR_RETAINED_QUARTER_FAMILY,FROZEN_RETAINED_QUARTER_FAMILY_MANIFEST),'INTEGRATION_RETAINED_QUARTER_FAMILY_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_PRODUCER15_MONTHLY_MANIFEST)),frozenReceipt(PRIOR_PRODUCER15_MONTHLY,FROZEN_PRODUCER15_MONTHLY_MANIFEST),'INTEGRATION_PRODUCER15_MONTHLY_RECEIPT_DRIFT');
+ assert(Buffer.from(read(FROZEN_COLD_SOURCE_MANIFEST)).equals(frozenReceipt(PRIOR_COLD_SOURCE,FROZEN_COLD_SOURCE_MANIFEST)),'INTEGRATION_COLD_SOURCE_RECEIPT_DRIFT');
  for(const flag of ['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'])assert.equal(m[flag],false,'INTEGRATION_FORBIDDEN:'+flag);
  const scope=integrationScope();
  assert.deepEqual(m.files.map(r=>r.path),scope,'INTEGRATION_EXACT_SCOPE');

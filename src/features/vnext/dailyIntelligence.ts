@@ -1,5 +1,5 @@
 /** Candidate only: no timer, HTTP endpoint, credential, Production writer or promotion. */
-import {HORIZONS, hashValid, snapshotHash, validTime, type Horizon} from './contracts.ts';
+import {HORIZONS, hashValid, snapshotHash, sharedEntryEvidenceHashes, validTime, type Horizon} from './contracts.ts';
 import {evaluateResearch, RESEARCH_FUNNEL_VERSION, traceIssues, publicationEligibility, type PublicationPolicy, type FunnelInput, type ResearchEvaluation} from './researchFunnel.ts';
 import {evaluateEntry, ENTRY_VERSION, type EntryInput, type EntryEvaluation} from '../../../research/entry-opportunity.ts';
 import {coveredCalendarDate, isMarketTradingDate, MARKET_CALENDAR_VERSION, previousMarketTradingDate} from '../../../supabase/functions/_shared/market-session-contract.mjs';
@@ -83,11 +83,12 @@ async function validateAcquired(a: AcquiredResearch, request: DailyRequest, now:
 }
 /** Runs outside the Core request. Caller enqueues after READY, never awaits this
  * from Report/LINE. Store must provide mutual exclusion + durable checkpoints. */
-export async function runDailyIntelligence(request: DailyRequest, store: DailyStore, ports: DailyPorts, timeoutMs = 20000) {
+export async function runDailyIntelligence(request: DailyRequest, store: DailyStore, ports: DailyPorts, timeoutMs = 20000, yieldAfterPreparation = false) {
  const deadline = Date.now() + 60000;
  if (!/^[A-Z0-9_]{1,40}$/.test(request.checkpoint) || !request.source_revision || request.source_revision.length > 256 || !hashValid(request.source_hash)
   || !['HISTORICAL_REPLAY', 'FORWARD_SHADOW'].includes(request.mode) || !['RETAINED_REAL_EVIDENCE', 'SYNTHETIC_CONTROL'].includes(request.provenance)
-  || !validTime(request.actionable_at) || !validTime(ports.clock()) || !Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 20000) fail('REQUEST_INVALID');
+  || !validTime(request.actionable_at) || !validTime(ports.clock()) || !Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 20000
+  || typeof yieldAfterPreparation !== 'boolean') fail('REQUEST_INVALID');
  if (!coveredCalendarDate('TW', request.business_date)) return {state: 'CALENDAR_UNKNOWN', core_awaits_research: false};
  if (!isMarketTradingDate('TW', request.business_date)) return {state: 'CLOSED_NO_EXECUTION', core_awaits_research: false};
  if (!request.core_ready || request.core_busy) return {state: 'DEFERRED_CORE_PRIORITY', core_awaits_research: false};
@@ -123,12 +124,13 @@ export async function runDailyIntelligence(request: DailyRequest, store: DailySt
       const now = ports.clock();
       if (request.mode === 'FORWARD_SHADOW' && Date.parse(now) >= Date.parse(request.actionable_at)) fail('LATE_LOCK_NOT_FORWARD');
       const locks: DailyLock[] = [];
+      const evidenceHashes = await sharedEntryEvidenceHashes(state.acquired!.inputs, state.acquired!.entry);
+      const evidenceBySymbol = new Map(state.acquired!.inputs.map((input, index) => [input.symbol, evidenceHashes[index]]));
       for (const r of state.research!) {
-       const input = state.acquired!.inputs.find(i => i.symbol === r.symbol)!;
        const body = {id: key + ':' + r.symbol + ':' + r.horizon, business_date: request.business_date, mode: request.mode, provenance: request.provenance,
         symbol: r.symbol, company: r.company, horizon: r.horizon, strategy_version: r.version, entry_version: ENTRY_VERSION,
         generated_at: now, locked_at: now, evidence_cutoff: state.acquired!.evidence_cutoff,
-        evidence_hash: await snapshotHash({input, entry: state.acquired!.entry}), actionable_at: request.actionable_at,
+        evidence_hash: evidenceBySymbol.get(r.symbol)!, actionable_at: request.actionable_at,
         target_sessions: HORIZONS[r.horizon].outcomes, research: r, entry: state.entry?.candidates.filter(c => c.symbol === r.symbol) ?? [],
         entry_gap: state.entry ? null : 'MATCHING_ENTRY_SOURCE_UNAVAILABLE', confirmation: r.confirmation, invalidation: r.invalidation, next_review_at: r.next_review_at};
        locks.push({...body, lock_hash: await snapshotHash(body)});
@@ -146,6 +148,9 @@ export async function runDailyIntelligence(request: DailyRequest, store: DailySt
     }
    }
    if (!ok) return {state: 'BLOCKED', key, checkpoint: state, core_awaits_research: false};
+   // Finish the original lock/outcome/publication sequence together. Yield only
+   // after a durably saved preparation stage, before any prediction exists.
+   if (yieldAfterPreparation && ['ACQUISITION','RESEARCH','ENTRY'].includes(stage)) return {state: 'BUDGET_YIELDED', key, checkpoint: state, core_awaits_research: false};
   }
   state.finished = true; await store.save(state);
   return {state: 'COMPLETE', key, checkpoint: state, core_awaits_research: false};

@@ -77,3 +77,13 @@ export async function snapshotHash(value: unknown): Promise<string> {
   const bytes = new TextEncoder().encode(stable(value));
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('');
 }
+/** Same canonical bytes as snapshotHash({input, entry}), with one shared entry
+ * serialization. Sequential digests avoid retaining72 large buffers at once. */
+export async function sharedEntryEvidenceHashes(inputs: readonly unknown[], entry: unknown): Promise<string[]> {
+  const shared = stable(entry), encoder = new TextEncoder(), hashes: string[] = [];
+  for (const input of inputs) {
+    const bytes = encoder.encode('{"entry":' + shared + ',"input":' + stable(input) + '}');
+    hashes.push(Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join(''));
+  }
+  return hashes;
+}

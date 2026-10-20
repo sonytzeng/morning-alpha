@@ -23,7 +23,23 @@ jobs:
           NODE_OPTIONS: --experimental-strip-types
         run: |
           node --input-type=module -e "import {verifyIntegrationCandidate} from './tests/helpers/integrationAdmission.mjs';verifyIntegrationCandidate();"
-          node --experimental-strip-types --test tests/coldSourcePriorityAdmission.test.mjs
+          node --experimental-strip-types --test tests/cpuBudgetAdmission.test.mjs
+      - name: Check out immutable Worker4 ordering and release proofs
+        uses: actions/checkout@v4
+        with:
+          ref: 7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3
+          path: build/cpu-budget-historical-base
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Historical Worker4 ordering release assertions unchanged
+        working-directory: build/cpu-budget-historical-base
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test tests/coldSourcePriorityAdmission.test.mjs
+      - name: Current CPU workload, exact canonical hash and stage resume controls
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextDailyCpuBudget.test.mjs
       - name: Current cold source ordering and existing recovery regressions
         env:
           NODE_OPTIONS: --experimental-strip-types
@@ -178,10 +194,18 @@ jobs:
         with:
           deno-version: v2.x
       - name: Materialize and check the exact Worker3 plus source-order-only candidate and recovery
+        working-directory: build/cpu-budget-historical-base
         run: |
           node scripts/operations/cold-source-priority-20261019/materialize.mjs candidate
           node scripts/operations/cold-source-priority-20261019/materialize.mjs recovery
           deno check --no-lock build/cold-source-priority-20261019-r2/candidate/supabase/functions/vnext-daily-research-v1/index.ts build/cold-source-priority-20261019-r2/recovery/supabase/functions/vnext-daily-research-v1/index.ts
+      - name: Check current CPU repair Worker source
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: |
+          node scripts/operations/cpu-budget-recovery-20261020/materialize.mjs candidate
+          node scripts/operations/cpu-budget-recovery-20261020/materialize.mjs recovery
+          deno check --no-lock supabase/functions/vnext-daily-research-v1/index.ts build/cpu-budget-recovery-20261020/candidate/supabase/functions/vnext-daily-research-v1/index.ts build/cpu-budget-recovery-20261020/recovery/supabase/functions/vnext-daily-research-v1/index.ts
       - run: deno test --no-lock --allow-read tests/researchOwnerFieldAccess.sdk.test.ts tests/providerCapabilityEntry.sdk.test.ts
       - name: Materialize and type-check the exact current Producer15 candidate and recovery
         run: |

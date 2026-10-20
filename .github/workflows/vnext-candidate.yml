@@ -49,7 +49,7 @@ jobs:
         env:
           NODE_OPTIONS: --experimental-strip-types
         run: |
-          node --experimental-strip-types --test tests/vnextDailyWiring.test.mjs
+          node --experimental-strip-types --test tests/vnextDailyWiring.test.mjs tests/vnextDailyCpuBudget.test.mjs
           node --experimental-strip-types tests/vnextDailyDatabase.integration.mjs
       - uses: denoland/setup-deno@v2
         with:

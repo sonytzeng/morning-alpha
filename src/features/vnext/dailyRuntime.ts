@@ -1,7 +1,7 @@
 /** Production-like runner. Persistence is exclusively transactional RPC, never files. */
 import {snapshotHash} from './contracts.ts';
 import {directoryPlan,classifyCompanies,acquisitionPlan,outcomePlan,fetchSource,assembleDaily,type SourceReceipt,type SourceTask} from './dailyAdapter.ts';
-import {runDailyIntelligence,dailyPublication,verifyDailyLock,type DailyLock,type RunState,type DailyStore} from './dailyIntelligence.ts';
+import {runDailyIntelligence,dailyPublication,verifyDailyLock,type AcquiredResearch,type DailyLock,type RunState,type DailyStore} from './dailyIntelligence.ts';
 import {researchOutcome,type OutcomeSource} from './dailyOutcome.ts';
 import {canonical} from '../../../research/entry-opportunity.ts';
 import type {DailyBar} from './researchFunnel.ts';
@@ -9,7 +9,7 @@ import {entryInputFromV2} from '../../../research/entry-v2-adapter.ts';
 import type {V2Input} from '../../../supabase/functions/_shared/recommendation-shadow-v2-engine.ts';
 export type Rpc=(name:string,args:Record<string,unknown>)=>Promise<unknown>;
 export type RuntimePorts={rpc:Rpc;fetcher:typeof fetch;clock:()=>string;sleep:(ms:number)=>Promise<void>};
-type ClaimedRun={id:string;business_date:string;actionable_at:string;lease:string;lease_until?:string;fence:number;plan:SourceTask[];checkpoint:RunState|Record<string,never>;cursor:number};
+type ClaimedRun={id:string;business_date:string;actionable_at:string;lease:string;lease_until?:string;fence:number;plan:SourceTask[];checkpoint:RunState|{acquired:AcquiredResearch}|Record<string,never>;cursor:number};
 export type LeaseRecoveryPending={status:'LEASE_RECOVERY_PENDING';continue:true;reason:'FINISH_COMMIT_UNCONFIRMED';lease_until:string;not_before:string};
 const object=(v:unknown):Record<string,unknown>=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
 const failure=(e:unknown)=>{const msg=e instanceof Error?e.message:'';return /^[A-Z0-9_]{1,100}$/.test(msg)?msg:'INTEGRATION_FAILED';};
@@ -72,7 +72,7 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   if(!r.plan.length)await rpc('PLAN',plan);
   const due=await rpc('DUE_OUTCOMES') as {prediction:DailyLock;horizons:number[]}[];
   let cursor=r.cursor;
-  for(let i=r.cursor;i<plan.length&&due.length===0;i++){
+  for(let i=r.cursor;i<plan.length&&due.length===0&&(hasLock||!('acquired' in r.checkpoint));i++){
    // Lock a truthful partial-evidence evaluation before the existing 09:00
    // deadline. Long-history bootstrap may continue; never backdate its receipts.
    const current=Date.parse(p.clock()),actionable=Date.parse(r.actionable_at);
@@ -81,12 +81,12 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
    const receipt=await collect(plan[i]);if(receipt===false)return finish('QUEUED','SOURCE_RETRY_PENDING');
    await rpc('CURSOR',{cursor:i+1});cursor=i+1;
   }
-  const sources=await rpc('SOURCES') as SourceReceipt[];
+  const sources='acquired' in r.checkpoint?[]:await rpc('SOURCES') as SourceReceipt[];
   if(Date.now()+30000>=deadline)return finish('QUEUED','EVALUATION_CONTINUATION');
   // Only actual same-cutoff retained market/Entry capsules may enrich this run.
   const evaluationCutoff=p.clock();
-  const lineage=hasLock?{}:object(await rpc('ENTRY_SOURCE',{cutoff:evaluationCutoff}));const market=lineage.market??null;
-  if(!hasLock&&!market&&Date.parse(p.clock())<Date.parse(r.actionable_at)-60000){retryAfter=30;return finish('QUEUED','CANONICAL_PUBLICATION_PENDING');}
+  const lineage=hasLock||'acquired' in r.checkpoint?{}:object(await rpc('ENTRY_SOURCE',{cutoff:evaluationCutoff}));const market=lineage.market??null;
+  if(!hasLock&&!('acquired' in r.checkpoint)&&!market&&Date.parse(p.clock())<Date.parse(r.actionable_at)-60000){retryAfter=30;return finish('QUEUED','CANONICAL_PUBLICATION_PENDING');}
   const acquired='acquired' in r.checkpoint&&r.checkpoint.acquired?r.checkpoint.acquired:await assembleDaily(r.business_date,companies,sources,evaluationCutoff,market as Parameters<typeof assembleDaily>[4]);
   if(!('acquired' in r.checkpoint)&&lineage.evidence&&typeof lineage.hash==='string'&&acquired.entry){
    const capsule=lineage.evidence as V2Input;
@@ -97,13 +97,25 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
    const {snapshot_hash,...body}=acquired;void snapshot_hash;acquired.snapshot_hash=await snapshotHash(body);
   }
   if(!hasLock&&Date.parse(p.clock())<Date.parse(r.actionable_at)){
+   // Existing durable acquired checkpoint, not a new source or altered cutoff.
+   // A large cold bootstrap must not serialize/validate/evaluate every stage in
+   // the same2s CPU request. Never reset a legacy started attempt without input.
+   const largeAcquisition=acquired.inputs.reduce((n,input)=>n+input.bars.length+input.facts.length,0)>4096;
+   if(largeAcquisition&&!('key' in r.checkpoint)&&!('acquired' in r.checkpoint)){
+    await rpc('CHECKPOINT',{acquired});return finish('QUEUED','ACQUISITION_PREPARED');
+   }
    let state='key' in r.checkpoint?r.checkpoint as RunState:null;
-   const store:DailyStore={exclusive:async(_key,work)=>work(),load:async()=>state,save:async s=>{await rpc('CHECKPOINT',s);state=s;},
+   const store:DailyStore={exclusive:async(_key,work)=>work(),load:async()=>state,save:async s=>{
+    // The initial attempt save must retain an already durably prepared source.
+    // SQL binds source_revision once; dropping it would reset that binding.
+    const saved=!s.acquired&&'acquired' in r.checkpoint?{...s,acquired:r.checkpoint.acquired}:s;
+    await rpc('CHECKPOINT',saved);state=saved;},
     lock:async rows=>{await commitLocks(rows);}};
    const result=await runDailyIntelligence({business_date:r.business_date,checkpoint:'NATURAL_MARKET_READY',mode:'FORWARD_SHADOW',provenance:'RETAINED_REAL_EVIDENCE',
     core_ready:true,core_busy:false,source_revision:acquired.snapshot_hash,source_hash:acquired.snapshot_hash,actionable_at:r.actionable_at},store,{
     acquire:async()=>acquired,clock:p.clock,outcomes:async()=>({state:'DURABLE_OUTCOME_QUEUE'}),
-    publication:locks=>dailyPublication(locks,(_,hash)=>({now:p.clock(),audience:'owner',server_entitlement_verified:true,input_hash:hash,approved_hash:null,approved_at:null,quality_reviewed:false,methodology_approved:false,use:'OWN_ANALYSIS',grants:[]}))});
+    publication:locks=>dailyPublication(locks,(_,hash)=>({now:p.clock(),audience:'owner',server_entitlement_verified:true,input_hash:hash,approved_hash:null,approved_at:null,quality_reviewed:false,methodology_approved:false,use:'OWN_ANALYSIS',grants:[]}))},20000,largeAcquisition);
+   if(result.state==='BUDGET_YIELDED')return finish('QUEUED','EVALUATION_CONTINUATION');
    if(!['COMPLETE','ALREADY_COMPLETE'].includes(result.state))return finish('BLOCKED',('checkpoint' in result?result.checkpoint.failure?.reason:null)??result.state);
    hasLock=true;
   }

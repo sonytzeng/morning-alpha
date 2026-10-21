@@ -86,6 +86,13 @@ try{
  }
  let result=await assess();assert.equal(result.phase_evaluation.universe_count,72);assert.equal(result.phase_evaluation.evaluated_count,72);
  assert.doesNotMatch(JSON.stringify(result),/SYNTHETIC_NOT_A_PUBLIC_FIELD|internal_review_ref/,'INTERNAL_EARNINGS_METADATA_LEAKED');
+ // Merge an already-retained source projection with its real PostgreSQL JSONB
+ // reread. They identify ONE canonical row, not a second release/authority.
+ const dbRow=loaded.earnings.find(row=>row.id===target.id);
+ assert.notEqual(JSON.stringify(dbRow.raw_payload),JSON.stringify(target.raw_payload),'FIXTURE_MUST_EXERCISE_REAL_JSONB_REORDERING');
+ const merged=buildEvidenceDecision({...loaded,earnings:[...loaded.earnings,{...dbRow,raw_payload:target.raw_payload}]},IDENTITY);
+ assert.deepEqual(merged.phase_evaluation,result.phase_evaluation,'JSONB_REREAD_CHANGED_EVALUATION_OR_DUPLICATED_EVIDENCE');
+ assert.deepEqual(merged.evidence,result.evidence,'JSONB_REREAD_CHANGED_PUBLIC_EVIDENCE');
  const invalidMeasurements=[
   [{period_basis:'YTD'},'FUNDAMENTAL_PERIOD_BASIS_UNPROVEN'],
   [{period_start:'2026-01-01'},'FUNDAMENTAL_PERIOD_IDENTITY_MISMATCH'],
@@ -125,6 +132,7 @@ try{
   synthetic_users:false,real_members_verified:false,baseline_evaluated:72,canonical_primary_and_unique_keys:'ENFORCED',duplicate_same_release_insert:'DENIED',
   newer_partial_evaluated:71,newer_partial_blocked:1,canonical_history_unchanged:true,
   canonical_jsonb_source_identities_read:288,internal_metadata_projected_to_decision:false,
+  real_jsonb_retained_reread_equivalent:true,duplicate_canonical_id_evidence:'COALESCED',
   explicit_measurement_rejections:invalidMeasurements.length,
   taipei_quarter_end_boundary_controls:2,
   anon_raw:'DENY',authenticated_raw:'DENY',service_write:'DENY',rls_acl_unchanged:true,

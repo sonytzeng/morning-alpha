@@ -28,6 +28,26 @@ function referenceValues(v: unknown): string[] {
   if (Array.isArray(v)) return v.flatMap(referenceValues);
   const r = obj(v); return ['id', 'source_ref', 'source_url', 'url', 'news_event_id'].flatMap(k => typeof r[k] === 'string' ? [String(r[k])] : []);
 }
+/** JSONB preserves values, not object insertion order. Compare the ENTIRE
+ * payload, including unknown metadata and authority flags; array order and
+ * value types remain significant. Non-JSON values/cycles fail closed. This is
+ * representation equality, never source equivalence or approval. */
+function sameJsonPayload(left: unknown, right: unknown): boolean {
+  const encode = (value: unknown, ancestors: Set<object>): string => {
+    if (value === null || typeof value === 'string' || typeof value === 'boolean') return JSON.stringify(value);
+    if (typeof value === 'number' && Number.isFinite(value)) return JSON.stringify(value);
+    if (!value || typeof value !== 'object' || ancestors.has(value)
+      || !Array.isArray(value) && ![Object.prototype, null].includes(Object.getPrototypeOf(value))) throw Error('INVALID_JSON_PAYLOAD');
+    ancestors.add(value);
+    const encoded = Array.isArray(value)
+      ? '[' + Array.from(value, v => encode(v, ancestors)).join(',') + ']'
+      : '{' + Object.keys(value).sort().map(k => JSON.stringify(k) + ':' + encode((value as Row)[k], ancestors)).join(',') + '}';
+    ancestors.delete(value);
+    return encoded;
+  };
+  try { return encode(left ?? null, new Set()) === encode(right ?? null, new Set()); }
+  catch { return false; }
+}
 /** Validate explicitly retained measurement identities, not investment quality.
  * Legacy rows without this metadata retain their old contract; absence is NOT
  * proof of BASIC, consolidated accounts, a source license, or a single quarter.
@@ -219,9 +239,12 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
         || prior.provider !== row.provider || prior.source_ref !== row.source_ref
         || prior.announced_at !== row.announced_at || prior.fiscal_period !== row.fiscal_period
         || ['revenue_actual','revenue_consensus','eps_actual','eps_consensus','guidance_direction'].some(k => prior[k] !== row[k])
-        || JSON.stringify(prior.raw_payload ?? null) !== JSON.stringify(row.raw_payload ?? null))) {
+        || !sameJsonPayload(prior.raw_payload, row.raw_payload))) {
         fundamentalSelectionIssues.set(symbol, 'FUNDAMENTAL_ROW_ID_CONFLICT'); return null;
       }
+      // A reread of the exact canonical identity is not a second observation.
+      // Distinct IDs remain separate evidence; conflicts above still fail closed.
+      if (prior) continue;
       identities.set(str(row.id), row);
       const period = str(row.fiscal_period).match(/^(\d{4})-?Q([1-4])$/);
       if (!period) return null;
@@ -245,7 +268,7 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
       const numeric = ['revenue_actual', 'revenue_consensus', 'eps_actual', 'eps_consensus'] as const;
       if (rows.some(r => numeric.some(k => finite(r[k]) !== finite(first[k]))
         || str(r.guidance_direction) !== str(first.guidance_direction)
-        || JSON.stringify(r.raw_payload ?? null) !== JSON.stringify(first.raw_payload ?? null))) {
+        || !sameJsonPayload(r.raw_payload, first.raw_payload))) {
         fundamentalSelectionIssues.set(symbol, 'FUNDAMENTAL_REVISION_UNRESOLVED'); return null;
       }
       if (rows.some(r => !str(r.id) || !url(r.source_ref) || numeric.some(k => finite(r[k]) === null)

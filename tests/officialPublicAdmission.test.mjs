@@ -11,6 +11,7 @@ import {
  SOURCE_UNION_R10_FILES,FROZEN_SOURCE_UNION_R9,
  FROZEN_SOURCE_UNION_R10,
  FROZEN_SOURCE_UNION_R11,FROZEN_SOURCE_UNION_R12,SOURCE_UNION_R12_FILES,
+ FROZEN_SOURCE_UNION_R13,SOURCE_UNION_R14_FILES,
 } from './helpers/integrationAdmission.mjs';
 import {assemble as financial,CHANGED,CATALOG} from '../scripts/operations/financial-response-period-20261020/materialize.mjs';
 import {worker4Baseline} from '../scripts/operations/forward-cutoff-20261020/materialize.mjs';
@@ -50,7 +51,7 @@ test('current union preserves the7986 four-source Worker packet, never mixing or
 test('R4 admits current evaluator before the unchanged issuer review can reconstruct its exact R9 view',()=>{
  verifyIntegrationCandidate();
  const path='supabase/functions/_shared/decision-v1-evidence.ts',current=integrationPhysicalRead(path);
- assert.equal(integrationHash(current),SOURCE_UNION_R4_FILES.find(r=>r.path===path).after_sha256);
+ assert.equal(integrationHash(current),SOURCE_UNION_R14_FILES.find(r=>r.path===path).after_sha256);
  assert.equal(integrationHash(integrationHistoricalRead('core',path,current)),'2ef106edc162fb28b7579322dff9b89057b184a2166f51ce57ed31781190d848');
  const injected=Buffer.concat([current,Buffer.from('UNREVIEWED_EVALUATOR')]);
  assert.deepEqual(integrationHistoricalRead('core',path,injected),injected,'historical reflection must not erase injected bytes');
@@ -108,8 +109,8 @@ test('R5 full PR composition adds the old R4 root and three new paths, never a f
  const r9Added=SOURCE_UNION_R9_FILES.filter(r=>r.before_sha256===null).map(r=>r.path);
  const r10Added=SOURCE_UNION_R10_FILES.filter(r=>!old.files.some(f=>f.path===r.path)).map(r=>r.path);
  const r12Added=SOURCE_UNION_R12_FILES.filter(r=>r.before_sha256===null).map(r=>r.path);
- assert.deepEqual(m.files.filter(r=>![FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added].includes(r.path)).map(r=>r.path),paths);
- assert.deepEqual(integrationInventory(),[...paths,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,INTEGRATION_MANIFEST].sort());
+ assert.deepEqual(m.files.filter(r=>![FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13].includes(r.path)).map(r=>r.path),paths);
+ assert.deepEqual(integrationInventory(),[...paths,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,INTEGRATION_MANIFEST].sort());
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R5)).files.length,519,'R5 complete assertion stays frozen, not rewritten');
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R6)).files.length,520,'R6 complete assertion stays frozen, not rewritten');
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R11)).files.length,533,'R11 full root stays immutable, not relabelled as current');

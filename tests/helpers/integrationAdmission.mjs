@@ -13,7 +13,16 @@ import {fileURLToPath} from 'node:url';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r13.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r14.json';
+export const FROZEN_SOURCE_UNION_R13='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r13.json';
+export const SOURCE_UNION_R14_BASE='9dcd21603d6f32dad57cfc2f8dfc14f56852ce35';
+// Code-only candidate pins. These do NOT authorize Commit/Push, deployment,
+// canonical facts, source rights, independent review or member publication.
+export const SOURCE_UNION_R14_FILES=Object.freeze([
+ {path:'supabase/functions/_shared/decision-v1-evidence.ts',mode:'100644',before_sha256:'4bfd1f30c216669a623f22fce573885ce8001d5bffcd3d74443a6b0c67834aa0',after_sha256:'6f2c9d067855c888671fd44b083a3dc1aa9b61e4c92614d19ea59ad89a8ced6c'},
+ {path:'tests/v1FundamentalRevisionSelection.test.mjs',mode:'100644',before_sha256:'dc03cb448fb2328de9476c9936060da20838df24fdbb61d4e30ec3fd51feb985',after_sha256:'1df3872032e82a192f48f4d523f913d71c98bd9ed6130761d21013a4bbfa1508'},
+ {path:'tests/v1FundamentalRevisionDatabase.integration.mjs',mode:'100644',before_sha256:'c9b681def92aab2574415fdbac925b7eaae013700ca50eb21f451ab48bc4f04d',after_sha256:'82b04f10ffe9d06b2049e1b66a53d3cd0ef60758881eefee7b2ed1ef3b7deacb'},
+].map(Object.freeze));
 export const FROZEN_SOURCE_UNION_R11='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r11.json';
 export const FROZEN_SOURCE_UNION_R12='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r12.json';
 export const SOURCE_UNION_R12_BASE='3f8ad958105973d64cc7e34ae9391b2804e8ea44';
@@ -328,6 +337,7 @@ export const INTEGRATION_DELTAS=Object.freeze([
  FROZEN_SOURCE_UNION_R9,...SOURCE_UNION_R10_FILES.map(row=>row.path),
  FROZEN_SOURCE_UNION_R10,...SOURCE_UNION_R11_FILES.map(row=>row.path),
  FROZEN_SOURCE_UNION_R11,...SOURCE_UNION_R12_FILES.map(row=>row.path),
+ FROZEN_SOURCE_UNION_R13,...SOURCE_UNION_R14_FILES.map(row=>row.path),
  FROZEN_PRODUCER15_MONTHLY_MANIFEST,
  'src/features/vnext/dailyAdapter.ts',
  'tests/vnextDailyDatabase.integration.mjs',
@@ -785,7 +795,26 @@ export function sourceUnionLineage(){
   assert.equal(row?.sha256,file.sha256,'UNION_PRIOR_NORMALIZER_PROOF_DRIFT');assert.equal(row?.mode,'100644','UNION_PRIOR_NORMALIZER_PROOF_MODE');}
  return {schema:'V1_SOURCE_UNION_CANDIDATE_1',base:SOURCE_UNION_BASE,parents:{...SOURCE_UNION_PARENTS},
   registry_support:{parent:REGISTRY_SUPPORT_PARENT,paths:[...REGISTRY_SUPPORT_PATHS]},receipts,
-  historical_proof,prior_normalizer_proof,normalizer:sourceUnionNormalizerLineage(),r3:sourceUnionR3Lineage(),r4:sourceUnionR4Lineage(),r5:sourceUnionR5Lineage(),r6:sourceUnionR6Lineage(),r7:sourceUnionR7Lineage(),r8:sourceUnionR8Lineage(),r9:sourceUnionR9Lineage(),r10:sourceUnionR10Lineage(),r11:sourceUnionR11Lineage(),r12:sourceUnionR12Lineage(),support_paths:[...SOURCE_UNION_SUPPORT],source_authorities_shared:false,member_gate_changed:false};
+  historical_proof,prior_normalizer_proof,normalizer:sourceUnionNormalizerLineage(),r3:sourceUnionR3Lineage(),r4:sourceUnionR4Lineage(),r5:sourceUnionR5Lineage(),r6:sourceUnionR6Lineage(),r7:sourceUnionR7Lineage(),r8:sourceUnionR8Lineage(),r9:sourceUnionR9Lineage(),r10:sourceUnionR10Lineage(),r11:sourceUnionR11Lineage(),r12:sourceUnionR12Lineage(),r14:sourceUnionR14Lineage(),support_paths:[...SOURCE_UNION_SUPPORT],source_authorities_shared:false,member_gate_changed:false};
+}
+export function sourceUnionR14Lineage(){
+ const prior_root={revision:SOURCE_UNION_R14_BASE,path:FROZEN_SOURCE_UNION_R13,sha256:'5b1bb18cbd821dd3ebb7d11974492f19942b422922a92058e369a6fc8fa105a8'};
+ const root=unionBlob(prior_root.revision,prior_root.path);
+ assert.equal(root?.sha256,prior_root.sha256,'UNION_R14_PRIOR_ROOT_DRIFT');assert.equal(root?.mode,'100644');
+ const old=JSON.parse(root.bytes);assert.equal(old.files.length,536,'UNION_R14_PRIOR_FULL_SCOPE');
+ assert.deepEqual(old.source_union.r12,sourceUnionR12Lineage(),'UNION_R14_R12_LINEAGE_DRIFT');
+ assert.equal(SOURCE_UNION_R14_FILES.length,3);assert.equal(new Set(SOURCE_UNION_R14_FILES.map(r=>r.path)).size,3);
+ for(const row of SOURCE_UNION_R14_FILES){
+  assert(!SOURCE_UNION_SUPPORT.includes(row.path));const before=unionBlob(SOURCE_UNION_R14_BASE,row.path);
+  assert.equal(before?.sha256,row.before_sha256,'UNION_R14_BEFORE_SOURCE_DRIFT:'+row.path);
+  assert.equal(old.files.find(r=>r.path===row.path)?.after_sha256,row.before_sha256,'UNION_R14_PRIOR_ROW_DRIFT:'+row.path);
+  assert.equal(before.mode,row.mode);assert.equal(row.mode,'100644');assert.match(row.after_sha256,/^[a-f0-9]{64}$/);
+  assert.notEqual(row.before_sha256,row.after_sha256);
+ }
+ return {schema:'V1_SOURCE_UNION_R14_JSONB_EVALUATOR_IDENTITY_1',base:SOURCE_UNION_R14_BASE,prior_root,
+  files:SOURCE_UNION_R14_FILES.map(r=>({...r})),scope:'FULL_JSON_VALUE_EQUALITY_AND_EXACT_CANONICAL_REREAD_DEDUP_ONLY',
+  source_admission:false,canonical_admission:false,quality_approval:false,rights_gate_changed:false,
+  publication_approval:false,production_authorized:false,thresholds_changed:false,existing_release_payloads_changed:false};
 }
 export function sourceUnionR12Lineage(){
  const prior_root={revision:SOURCE_UNION_R12_BASE,path:FROZEN_SOURCE_UNION_R11,sha256:'99f045102c0e148164b0b97ad2e568e7e2865905fc54fa8f9fe1c85dde0cd269'};
@@ -1040,6 +1069,12 @@ function sourceUnionExpected(){
   expected.set(FROZEN_SOURCE_UNION_R11,unionBlob(SOURCE_UNION_R12_BASE,FROZEN_SOURCE_UNION_R11));
   for(const file of SOURCE_UNION_R12_FILES){
    assert.equal(expected.get(file.path)?.sha256??null,file.before_sha256,'UNION_R12_BEFORE_COMPOSITION:'+file.path);
+   expected.set(file.path,{mode:file.mode,sha256:file.after_sha256});
+  }
+  assert(!expected.has(FROZEN_SOURCE_UNION_R13),'UNION_R14_PRIOR_RECEIPT_OVERLAP');
+  expected.set(FROZEN_SOURCE_UNION_R13,unionBlob(SOURCE_UNION_R14_BASE,FROZEN_SOURCE_UNION_R13));
+  for(const file of SOURCE_UNION_R14_FILES){
+   assert.equal(expected.get(file.path)?.sha256,file.before_sha256,'UNION_R14_BEFORE_COMPOSITION:'+file.path);
    expected.set(file.path,{mode:file.mode,sha256:file.after_sha256});
   }
   for(const p of support)expected.delete(p);

@@ -121,6 +121,40 @@ function financialReceipt(){return {
   period_basis:'AS_REPORTED_PERIOD_BASIS_UNVERIFIED',direct_single_quarter:false,published_at:null,
   consensus:null,guidance:null,source_admitted:false}]
 };}
+function reorderJsonKeys(value){
+ return Array.isArray(value)?value.map(reorderJsonKeys):value&&typeof value==='object'
+  ?Object.fromEntries(Object.entries(value).reverse().map(([key,v])=>[key,reorderJsonKeys(v)])):value;
+}
+test('a JSONB-shaped financial re-read is idempotent, but every value and held-source flag still binds',async()=>{
+ const {options}=setup(),capture=financialReceipt(),request={...options,announcements:[],reported_financial_receipts:[capture]};
+ const first=await join(request),saved=reorderJsonKeys(first.data),before=structuredClone(saved);
+ const replay=await join({...request,data:saved});
+ assert.deepEqual(replay.data.earnings,saved.earnings);assert.deepEqual(saved,before);
+ assert.deepEqual(replay.after,first.after);assert.equal(replay.after.evaluated,0);
+ assert.equal(replay.production_authorized,false);assert.equal(replay.member_publication_approved,false);
+ assert.deepEqual(replay.business_writes,[]);
+ for(const change of [r=>r.actual_source.reported_fields['營業收入']='1000.00',
+  r=>r.actual_source.response_sha256='c'.repeat(64),r=>r.source_admitted=true,r=>r.announced_at=capture.first_seen_at,
+  r=>r.eps_consensus=0,r=>r.available_at='2026-10-20T00:13:00.000Z',r=>r.extra_unverified_field=true]){
+  const bad=structuredClone(saved);change(bad.earnings.find(r=>r.reported_snapshot_only===true));
+  await assert.rejects(join({...request,data:bad}),/OFFICIAL_FINANCIAL_CONFLICT/);
+ }
+});
+test('a JSONB-shaped event re-read is idempotent without accepting changed evidence, review or publication',async()=>{
+ const {options,payload,input}=setup(),facts=await normalizeCompanyEvents(input.source,payload,input.received_at,['2330']);
+ const review={symbol:'2330',source_hash:facts[0].source_hash,subject:payload[0]['主旨 '],reviewed_at:'2026-10-20T00:12:00.000Z'};
+ const request={...options,subject_reviews:[review]},first=await join(request),saved=reorderJsonKeys(first.data),before=structuredClone(saved);
+ const replay=await join({...request,data:saved});
+ assert.deepEqual(replay.data.news,saved.news);assert.deepEqual(saved,before);assert.deepEqual(replay.after,first.after);
+ assert.equal(replay.data.mappings.length,0);assert.equal(replay.after.evaluated,0);
+ assert.equal(replay.member_publication_approved,false);assert.deepEqual(replay.business_writes,[]);
+ for(const change of [r=>r.title+='changed',r=>r.source_hash='c'.repeat(64),r=>r.publication_approved=true,
+  r=>r.impact='POSITIVE',r=>r.causal_review='APPROVED',r=>r.symbols=['2317'],
+  r=>r.first_seen_at='2026-10-20T00:12:00.000Z',r=>r.extra_unverified_field=true]){
+  const bad=structuredClone(saved);change(bad.news[0]);
+  await assert.rejects(join({...request,data:bad}),/EXISTING_ROW_CONFLICT/);
+ }
+});
 test('financial first-seen before availability retains both instants without inventing publication or relaxing V1',async()=>{
  const {options}=setup(),capture=financialReceipt(),before=structuredClone(capture);
  const out=await join({...options,announcements:[],reported_financial_receipts:[capture]});

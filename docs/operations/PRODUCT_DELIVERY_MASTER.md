@@ -2,6 +2,23 @@
 
 更新日期：2026-10-21（Asia/Taipei）。本文件管理原需求、相依性與真實驗收；不是部署授權，也不取代歷史封存。
 
+## 最新接續：R12 真實單季原件接線與增量重評修復（未提交／未部署）
+
+- 接續 R11 HEAD `3f8ad958105973d64cc7e34ae9391b2804e8ea44`，main `7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3`；32 ahead／0 behind。PR284仍Draft／未Merge，精確舊HEAD CI再次讀回21 SUCCESS＋1既有conditional SKIPPED、0FAIL；**不代表本輪未提交修改已有CI**。完整PR舊HEAD117檔，不把R12增量當整包部署清單。
+- 正式metadata再次讀回Worker5／Producer17／Caller4／Reader57／LINE71／OwnerLab9 ACTIVE；JWT與已封存artifact未漂移。Worker5及Producer17不重複部署；R11公告與增量重評修復尚未部署。10/22既有自然唯讀驗收繼續由已啟用monitor處理，不人工觸發、不回填；不是持續背景工程。
+- 先檢索既有原件與私有cache，確認沒有2379原件後，才從公司正式公開財報連結取得兩份新PDF。Q2原件SHA256 `f2fdab872fd8c67f5220788635b5b82acf2863afde8130c400ad7aa65c32f806`（1,233,619 bytes），Q1 `5e4c1d09f514d5c2f2583a7218b41ad9755b3608178f5f00641424112dc4f290`（1,190,340 bytes）。沒有重抓已保存的2454／2330或行情。Q2瀏覽器下載沒有可見HTTP狀態，故保留null；Q1一般HTTPS有實測200／TLS驗證，不繞過存取限制。
+- 沿用既有PDF descriptor、issuer input、Canonical intake preparer及**原V1** join，補上版本化公開連結收據、原生common-share interim、文字串流及AMOUNT／%欄界。重現並修復同季百分比可能被選成Revenue、原生EPS字型拆段及Q1原生單字拆分造成拒絕；不作OCR、YTD／年度相減、推算EPS、Consensus或Guidance填補。
+- **2026-10-21T11:11:10.251Z** 新cutoff實際零HTTP回放：6份PDF原件各核實完整hash／bytes，連同原2330私有4季，原V1私人earnings共10個季度列／3家公司；2379新增2季／4量測，**不是四季完整**。同原件較新cutoff重評新增0列、原輸入不變，2筆intake僅準備不寫入。安全摘要hash `a31b1d57f8f92a3e65d998338998011093aa8204135a52e9a5c4bbb4b197d0d9`。此回放以空市場底稿＋固定72股Universe驗接線，**不冒充完整行情底稿或正式72股新評估**。
+- 新原件first_seen為10/21台北18:38及18:49以後，正規化可用時間為18:57以後，不能回填當日盤前。原始公告時刻、不可變官方版次、中文原件優先限制及用途未閉合，保持null／HOLD。獨立原件擷取核對與正式Source／Quality／Rights authority分開；沒有自行給予准入或會員公開。
+- 獨立審查已完成指定11頁、2季／4量測、2組common千股分母佐證，80項match均true，未用作者parser自證；結論僅 `EXTRACTION_VERIFIED`，**不是QUALITY_AUTHORITY_PASS**。受控安全收據SHA256 `0e5b21987c5ed1c7f36fe57d69a947091f5f5a6314d7f9d7db2cc392894abb9a`。中文原件未比對，公告／修正版本／權利未知仍保留；不以此自授正式准入。
+- 另外重現原官方財報與事件join的JSONB重讀假衝突：僅物件欄位順序改變會被JSON.stringify錯拒。改用既有完整canonical hash等值判斷，所有金額／來源／時間／陣列／准入旗標仍綁定。兩個red控制先失敗、修後通過；實際fresh本機PG17.11 Unix-only JSONB往返通過，篡改來源准入、事件公開及公司仍拒絕。無業務表，專用cluster停止、socket與目錄移除；其他容器不動，不是正式RLS或E2E。
+- 定向Node39／39、Python77／77、fresh JSONB integration1／1，0FAIL／0SKIP；另未變金融原件suite15 PASS＋4既有可選local-replay SKIPPED，SKIP不計PASS。Type-check／Lint／Build、Deno no-remote check、diff-check通過。未變SQL／RLS沿用原精確證據，未重跑完整五小時驗收。
+- 最終7檔來源／測試安全掃描 `07fc8f2f-546b-4816-bc90-4bc7d7898569` 已完成並讀回，3個managed source＋4個support，0 findings／0deferred。snapshot `9ce8bc036a66fb52759573c050527e0c8f0f11bbd11893b33eba3c9180f2ac8d`；其中4檔逐位元沿用先前封存 `dd166a4b-b3ef-47c5-90d0-4f2a34d8f8c5`，只對3檔新增量核對，不冒稱全PR／Production／資料授權通過。這份Master與新收據是掃描後的非執行文件補充，不混算為掃描程式碼。
+- 正式V1最後保存的業務證據仍為10/21 Universe72／Evaluated0／BLOCKED72／READY0，五項重疊缺口各72；本輪未重查同一業務結果，metadata不是新自然批次證據。逐股原生三法人TWD、公告前Consensus、全72股可比較四季／公告版次、正式來源／用途／因果審查及原三期間Condition Producer仍未閉合。PR281不部署空入口，C QUALIFIED不轉V1。
+- 本輪Commit／Push／Merge／Deploy／Production SQL／Cron／Secrets／Auth／RLS／會員權益／研究公開／人工LINE均0。付款DISABLED，商業穩定0/5，Free／Premium／Legacy正式身份E2E仍未證明。R12完整非敏感增量／回復與剩餘決策見 `evidence/core-member-integration-20261021-v1-source-union-r12.json`；尚需新的精確Commit／Push核准，不沿用已消耗的R11六檔授權。
+
+以下R9及更早段落保留當時原文，不作目前仍須重發Worker／Producer或重做手機驗收的指示。
+
 ## 最新增量結論（R9；R8及更早原文保留）
 
 - 正式六支相關Function再次唯讀核對仍Worker4／Caller4／Producer16／Reader57／LINE71／OwnerLab9，artifact與JWT未漂移。10/21當日V1仍72／0 evaluated／72 blocked，五項重疊原因各72；不是已評估後全部不合格。唯一寫入者為本工作，另一個工作只作唯讀接線review，未修改正式資源。

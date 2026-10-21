@@ -175,6 +175,14 @@ test('unknown native HTTP remains unknown, not fabricated HTTP 200',async()=>{
   assert.equal((await join(data(),identity,[await packet(p)])).appended_rows,1);
   p.http_status=200;await assert.rejects(join(data(),identity,[await packet(p)]),/CAPTURE_KIND/);
 });
+test('public link download remains unknown HTTP through existing V1 private join',async()=>{
+  const p=parsed();p.capture_kind='BROWSER_PUBLIC_LINK_DOWNLOAD_RECEIPT_V1';p.http_status=null;p.http_status_observed=false;
+  const out=await join(data(),identity,[await packet(p)]);
+  assert.equal(out.appended_rows,1);assert.equal(out.canonical_writes,0);assert.equal(out.source_admission,false);
+  assert.equal(out.data.earnings[0].source_admitted,false);assert.equal(out.data.earnings[0].announced_at,null);
+  p.http_status=200;await assert.rejects(join(data(),identity,[await packet(p)]),/CAPTURE_KIND/);
+  p.http_status=null;p.http_status_observed=true;await assert.rejects(join(data(),identity,[await packet(p)]),/CAPTURE_KIND/);
+});
 test('cutoff/size bounds and await-time caller mutation cannot retarget immutable input',async()=>{
   const d=data(),p=await packet(),pending=join(d,identity,[p]);p.parsed.entity='9999';d.universe=[];
   assert.equal((await pending).data.earnings[0].symbol,'2454');

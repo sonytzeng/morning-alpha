@@ -252,6 +252,202 @@ class SyntheticControls(unittest.TestCase):
         return {'contract':M.BROWSER_RECEIPT,'source_admission':False,'quality_admission':False,
                 'member_publication':False,'results':[entry]}
 
+    def link_receipt(self):
+        entry=copy.deepcopy(self.receipt_obj['results'][0])
+        entry.pop('source_received_at')
+        entry.update(capture_method='BROWSER_PUBLIC_LINK_DOWNLOAD',download_status='COMPLETED',
+            request_method='UNOBSERVED',http_status=None,http_status_observed=False,
+            source_page_url='https://issuer.example/financial-index',
+            visible_link={'role':'link','label':'download 3Q 2025','href':'https://issuer.example/report.pdf'},
+            bytes=len(self.pdf.read_bytes()),copy_verified_at=entry['available_at'],
+            first_seen_basis='CONSERVATIVE_FIRST_OBSERVATION_AFTER_BROWSER_LINK_DOWNLOAD',
+            published_at=None,source_version=None,revision_chain=None,
+            secret_or_hidden_form_material_exported=False,provider_response_headers_exported=False)
+        return {'contract':'BROWSER_PUBLIC_LINK_DOWNLOAD_RECEIPT_V1','source_admission':False,
+                'quality_admission':False,'member_publication':False,'results':[entry]}
+
+    def install_link(self,obj):
+        self.put(self.receipt,obj)
+        d=copy.deepcopy(self.d);d['source']['receipt']['sha256']=sha(self.receipt.read_bytes())
+        return d
+
+    def test_public_link_unknown_transport_stays_unknown(self):
+        r=self.run_descriptor(self.install_link(self.link_receipt()))
+        self.assertEqual(r['capture_kind'],'BROWSER_PUBLIC_LINK_DOWNLOAD_RECEIPT_V1')
+        self.assertIsNone(r['http_status']);self.assertFalse(r['http_status_observed'])
+        self.assertIsNone(r['source_received_at']);self.assertIsNone(r['announced_at'])
+        self.assertEqual(r['source_page_url'],'https://issuer.example/financial-index')
+        self.assertEqual(r['raw_document_url'],'https://issuer.example/report.pdf')
+        self.assertFalse(r['source_admission']);self.assertFalse(r['member_publication'])
+
+    def test_public_link_cannot_forge_transport_or_publication(self):
+        for key,value in [('http_status',200),('http_status_observed',True),('request_method','GET'),
+                          ('published_at','2025-11-01T00:00:00Z'),('source_version','HASH_IS_NOT_VERSION'),
+                          ('source_received_at','2026-01-01T01:00:00Z')]:
+            obj=self.link_receipt();obj['results'][0][key]=value
+            self.rejected(self.install_link(obj),'LINK_|DESCRIPTOR_SCHEMA')
+
+    def test_public_link_binds_bytes_path_exact_link_period_and_private_source(self):
+        for key,value in [('bytes',1),('bytes',True),('sha256','0'*64),('download_status','IN_PROGRESS'),
+                          ('raw_path',str(self.base/'other.pdf')),('source_page_url','http://issuer.example/index'),
+                          ('source_page_url','https://other.example/index'),
+                          ('source_page_url','https://user@issuer.example/index')]:
+            obj=self.link_receipt();obj['results'][0][key]=value
+            self.rejected(self.install_link(obj),'LINK_|NATIVE_BYTE_COUNT')
+        for key,value in [('href','https://issuer.example/other.pdf'),('role','button'),('label','download 4Q 2025')]:
+            obj=self.link_receipt();obj['results'][0]['visible_link'][key]=value
+            self.rejected(self.install_link(obj),'LINK_')
+
+    def test_public_link_no_extra_capture_self_approval_headers_or_future_copy(self):
+        for key,value in [('source_admission',True),('quality_admission',True),('unknown',True)]:
+            obj=self.link_receipt();obj[key]=value;self.rejected(self.install_link(obj),'LINK_|DESCRIPTOR_SCHEMA')
+        for key,value in [('first_seen_at','2099-01-01T00:00:00Z'),('copy_verified_at','2026-01-01T01:00:02Z'),
+                          ('provider_response_headers_exported',True),('headers',{})]:
+            obj=self.link_receipt();obj['results'][0][key]=value
+            self.rejected(self.install_link(obj),'LINK_|DESCRIPTOR_SCHEMA')
+        obj=self.link_receipt();obj['results'].append(copy.deepcopy(obj['results'][0]))
+        self.rejected(self.install_link(obj),'LINK_SINGLE_CAPTURE')
+
+    def interim_fixture(self):
+        class Interim(SyntheticDocument):
+            def __init__(self,*a):
+                super().__init__(*a)
+                self.items[1][1]=(200,40,'Three-month periods ended September 30')
+                self.items[1].append((320,65,'2024'))
+                self.items[1].extend([(210,80,'AMOUNT'),(285,80,'%')])
+                self.items[1][3]=(10,80,'Expressed in thousands of New Taiwan dollars, except for earnings per share amount')
+                self.items[1][6]=(10,130,'Basic earnings per share')
+                self.items[1][7]=(220,130,'7.50')
+                self.items[4]=[(200,40,'For the three-month period ended September 30, 2025'),
+                    (10,100,'Basic earnings per share'),(10,130,'Profit attributable to common shareholders of the parent company'),
+                    (220,130,'750'),(320,65,'Weighted average number of common shares outstanding (shares in thousands)'),
+                    (320,130,'100'),(450,65,'Earnings per share (in dollars)'),(450,130,'7.50'),
+                    (10,160,'Diluted earnings per share')]
+                self.items[3].append((10,50,'Expressed in thousands of New Taiwan dollars, except as otherwise indicated'))
+                self.items[3][0]=(10,10,'International Accounting Standard 34 Interim financial reporting endorsed by FSC')
+            def page(self,number):
+                page,words=super().page(number)
+                if number==4:
+                    for w in words:
+                        if w['x0']>=320:
+                            w['x1']=w['x0']+(60 if w['text'][0] in '0123456789.' else 100)
+                if number==1:
+                    for w in words:
+                        if w['text'] in ('AMOUNT','%'):w['x1']=w['x0']+(25 if w['text']=='AMOUNT' else 10)
+                return page,words
+        d=copy.deepcopy(self.d);d['contract']='issuer-pdf-direct-interim-common-note-v1'
+        d['accounting']={'classification':'FSC_ENDORSED_IAS34_INTERIM',
+            'proof':label(3,10,10,'International Accounting Standard 34 Interim financial reporting endorsed by FSC')}
+        d['period']['header']['text']='Three-month periods ended September 30'
+        d['metrics'][0]['unit_proof']['text']='Expressed in thousands of New Taiwan dollars, except for earnings per share amount'
+        m=d['metrics'][1];m['label']['text']='Basic earnings per share'
+        m['unit_proof']=copy.deepcopy(d['metrics'][0]['unit_proof']);m['period']=copy.deepcopy(d['period'])
+        m['share_proof']={'kind':'DIRECT_COMMON_SHARE_NOTE_V1',
+            'period_header':label(4,200,40,'For the three-month period ended September 30, 2025',340),
+            'basic_label':label(4,10,100,'Basic earnings per share'),
+            'profit_label':label(4,10,130,'Profit attributable to common shareholders of the parent company'),
+            'profit_cell':cell(4,130),'share_header':label(4,320,65,'Weighted average number of common shares outstanding (shares in thousands)',100),
+            'share_cell':{'page':4,'bbox':box(320,130,100)},
+            'eps_header':label(4,450,65,'Earnings per share (in dollars)',100),
+            'eps_cell':{'page':4,'bbox':box(450,130,100)},
+            'diluted_label':label(4,10,160,'Diluted earnings per share'),
+            'unit_context':label(3,10,50,'Expressed in thousands of New Taiwan dollars, except as otherwise indicated')}
+        return d,Interim
+
+    def test_direct_interim_common_note_native_pair(self):
+        d,doc=self.interim_fixture();r=self.run_descriptor(d,doc)
+        self.assertEqual(r['descriptor_dialect'],'issuer-pdf-direct-interim-common-note-v1')
+        self.assertEqual(r['rows'][1]['value_decimal'],'7.50')
+        self.assertTrue(r['rows'][1]['share_proof']['denominator_formula_checked'])
+        self.assertFalse(r['source_admission']);self.assertIsNone(r['announced_at'])
+
+    def test_content_flow_is_version_selected_not_global_text_guessing(self):
+        d,base=self.interim_fixture();d['contract']='issuer-pdf-direct-interim-content-flow-v1'
+        class FlowOnly(base):
+            def page(self,n):
+                page,words=super().page(n)
+                if not getattr(self,'content_flow',False) and n==4:
+                    words=[dict(w,text='B a s i c earnings per share') if w['text']=='Basic earnings per share' else w for w in words]
+                return page,words
+        r=self.run_descriptor(d,FlowOnly)
+        self.assertEqual(r['descriptor_dialect'],d['contract'])
+        old=copy.deepcopy(d);old['contract']='issuer-pdf-direct-interim-common-note-v1'
+        self.rejected(old,'LOCATOR_LABEL_MISMATCH',FlowOnly)
+        bad=copy.deepcopy(d);bad['metrics'][1]['share_proof']['profit_label']['text']='Guessed label'
+        self.rejected(bad,'LOCATOR_LABEL_MISMATCH',FlowOnly)
+
+    def test_content_flow_preserves_stated_unit_exception_not_ytd_or_approval(self):
+        d,base=self.interim_fixture();d['contract']='issuer-pdf-direct-interim-content-flow-v1'
+        unit='Expressed in thousands of New Taiwan dollars, except for earnings per share'
+        class FlowUnit(base):
+            def __init__(self,*a):
+                super().__init__(*a);self.items[1][3]=(10,80,unit)
+        d['metrics'][0]['unit_proof']['text']=unit;d['metrics'][1]['unit_proof']['text']=unit
+        r=self.run_descriptor(d,FlowUnit)
+        self.assertFalse(r['source_admission']);self.assertFalse(r['ytd_or_annual_subtraction_used'])
+        bad=copy.deepcopy(d);bad['period']['quarter']=4
+        self.rejected(bad,'DIRECT_THREE_MONTH_HEADER',FlowUnit)
+
+    def test_interim_revenue_must_not_use_the_percentage_cell_in_same_quarter(self):
+        d,base=self.interim_fixture()
+        class Ratio(base):
+            def __init__(self,*a):
+                super().__init__(*a);self.items[1].append((285,100,'100'))
+            def page(self,n):
+                page,words=super().page(n)
+                if n==1:
+                    for w in words:
+                        if w['text']=='100' and w['x0']==285:w['x1']=295
+                return page,words
+        d['metrics'][0]['cell']={'page':1,'bbox':[285,100,295,110]}
+        self.rejected(d,'INTERIM_REVENUE_PERCENT_COLUMN',Ratio)
+
+    def test_interim_cannot_take_ytd_or_prior_year_even_with_expanded_axis(self):
+        d,doc=self.interim_fixture()
+        class Ytd(doc):
+            def __init__(self,*a):
+                super().__init__(*a);self.items[1][1]=(200,40,'Six-month periods ended September 30')
+        bad=copy.deepcopy(d);bad['period']['header']['text']='Six-month periods ended September 30'
+        self.rejected(bad,'DIRECT_THREE_MONTH_HEADER',Ytd)
+        bad=copy.deepcopy(d);bad['period']['column_x']=[200,500];bad['metrics'][0]['cell']['bbox']=box(320,100,160)
+        class Prior(doc):
+            def __init__(self,*a):super().__init__(*a);self.items[1].append((320,100,'999'))
+        self.rejected(bad,'CELL_INTERIM_ACTUAL_COLUMN',Prior)
+
+    def test_interim_note_period_shares_units_and_native_eps_must_agree(self):
+        for replace,code in [(('For the three-month period ended September 30, 2025','For the three-month period ended September 30, 2024'),'NOTE_DIRECT_PERIOD'),
+            (('Weighted average number of common shares outstanding (shares in thousands)','Weighted average number of common shares outstanding (shares)'),'NOTE_COMMON_SHARE_UNIT'),
+            (('100','200'),'EPS_DENOMINATOR_FORMULA_CONFLICT'),(('7.50','7.49'),'STATEMENT_NOTE_EPS_CONFLICT')]:
+            d,base=self.interim_fixture()
+            class Wrong(base):
+                def __init__(self,*a):
+                    super().__init__(*a);self.items[4]=[(x,y,replace[1] if s==replace[0] else s) for x,y,s in self.items[4]]
+            for loc in d['metrics'][1]['share_proof'].values():
+                if isinstance(loc,dict) and loc.get('text')==replace[0]:loc['text']=replace[1]
+            self.rejected(d,code,Wrong)
+
+    def test_interim_no_unrelated_currency_note_or_diluted_row(self):
+        d,base=self.interim_fixture()
+        bad=copy.deepcopy(d);bad['metrics'][1]['unit_proof']=label(3,10,50,'Expressed in thousands of New Taiwan dollars, except as otherwise indicated')
+        self.rejected(bad,'INTERIM_EPS_UNIT_PAGE',base)
+        bad=copy.deepcopy(d);bad['metrics'][1]['share_proof']['profit_cell']['bbox']=box(220,170,60)
+        class Diluted(base):
+            def __init__(self,*a):super().__init__(*a);self.items[4].append((220,170,'750'))
+        self.rejected(bad,'NOTE_BASIC_ROW_GEOMETRY',Diluted)
+
+    def test_adjacent_note_decimal_only_when_native_tokens_touch(self):
+        d,base=self.interim_fixture()
+        class Adjacent(base):
+            def __init__(self,*a):
+                super().__init__(*a);self.items[4][7]=(450,130,'7');self.items[4].append((510,130,'.50'))
+        d['metrics'][1]['share_proof']['eps_cell']['bbox']=box(450,130,150)
+        r=self.run_descriptor(d,Adjacent)
+        self.assertEqual(r['rows'][1]['value_decimal'],'7.50')
+        class Gap(Adjacent):
+            def __init__(self,*a):
+                super().__init__(*a);self.items[4][-1]=(511,130,'.50')
+        self.rejected(d,'NOTE_DECIMAL_NOT_ADJACENT',Gap)
+
     def test_legacy_http_observation_absent_or_strict_true_compatible(self):
         self.assertTrue(self.run_descriptor()['http_status_observed'])
         obj=copy.deepcopy(self.receipt_obj);obj['results'][0]['http_status_observed']=True

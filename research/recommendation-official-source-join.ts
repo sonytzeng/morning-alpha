@@ -87,7 +87,12 @@ export async function buildOfficialV1SourceCandidate(options: {
         eps_consensus: null, revenue_consensus: null, guidance_direction: null, source_admitted: false,
         actual_only: false, reported_snapshot_only: true, actual_source: sourceIdentity };
       const old = data.earnings.filter(r => r.id === joined.id);
-      if (old.some(r => JSON.stringify(r) !== JSON.stringify(joined))) throw Error('OFFICIAL_FINANCIAL_CONFLICT');
+      if (old.length) {
+        // A JSONB round trip may reorder keys, not change the source revision.
+        // Compare complete canonical values: no field or admission flag is ignored.
+        const expected = await snapshotHash(joined);
+        for (const prior of old) if (await snapshotHash(prior) !== expected) throw Error('OFFICIAL_FINANCIAL_CONFLICT');
+      }
       if (!old.length) data.earnings.push(joined);
     }
     receipts.push({ source: capture.source, response_sha256: capture.source_response_sha256,
@@ -142,7 +147,10 @@ export async function buildOfficialV1SourceCandidate(options: {
       response_sha256: receipts.find(r => r.source === e.source_ref)?.response_sha256,
       impact: 'UNKNOWN', causal_review: 'REQUIRED', publication_approved: false };
     const old = data.news.filter(r => r.id === row.id);
-    if (old.some(r => JSON.stringify(r) !== JSON.stringify(row))) throw Error('OFFICIAL_JOIN_EXISTING_ROW_CONFLICT');
+    if (old.length) {
+      const expected = await snapshotHash(row);
+      for (const prior of old) if (await snapshotHash(prior) !== expected) throw Error('OFFICIAL_JOIN_EXISTING_ROW_CONFLICT');
+    }
     if (!old.length) data.news.push(row);
   }
   if (events.some(e => !reviews.some(r => r.source_hash === e.source_hash))) issues.push('ANNOUNCEMENT_SUBJECT_REVIEW_REQUIRED');

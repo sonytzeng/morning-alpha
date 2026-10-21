@@ -37,8 +37,11 @@ from pypdf import PdfReader
 
 CONTRACT = "issuer-pdf-descriptor-v1"
 Q4_CONTRACT = "issuer-pdf-direct-q4-annual-policy-v1"
+INTERIM_CONTRACT = "issuer-pdf-direct-interim-common-note-v1"
+INTERIM_FLOW_CONTRACT = "issuer-pdf-direct-interim-content-flow-v1"
 Q4_SHARE_PROOF = "reviewed-annual-ordinary-policy-v1"
 BROWSER_RECEIPT = "BROWSER_NATIVE_PUBLIC_DOWNLOAD_RECEIPT_V1"
+LINK_RECEIPT = "BROWSER_PUBLIC_LINK_DOWNLOAD_RECEIPT_V1"
 SHA = re.compile(r"[0-9a-f]{64}\Z")
 MULTIPLIERS = {"1": "", "1000": "thousand", "1000000": "million", "1000000000": "billion"}
 CURRENCIES = {"TWD": ("new taiwan dollars", "nt$", "ntd"),
@@ -272,6 +275,8 @@ def bind_receipt(document: object, source: dict, selector: str,
     No hidden form material or provider headers are accepted in this dialect.
     """
     entry = pointer(document, selector)
+    if type(document) is dict and document.get("contract") == LINK_RECEIPT:
+        return bind_link_receipt(document, source, selector, allowed_hosts, fiscal)
     native = type(document) is dict and document.get("contract") == BROWSER_RECEIPT
     if not native:
         require(not any(k in entry for k in ("capture_method", "download_status",
@@ -341,6 +346,60 @@ def bind_receipt(document: object, source: dict, selector: str,
             "provider_response_headers_exported": False}}
 
 
+def bind_link_receipt(document: dict, source: dict, selector: str,
+                      allowed_hosts: frozenset[str], fiscal: dict) -> tuple[dict, dict]:
+    """A visible public PDF link is not a witnessed HTTP response or form POST.
+
+    Keep unknown transport/status/publication unknown. This private receipt
+    dialect cannot grant source authority or approve any use of the document.
+    """
+    envelope = keys(document, {"contract", "source_admission", "quality_admission",
+                               "member_publication", "results"})
+    require(all(envelope[k] is False for k in
+                ("source_admission", "quality_admission", "member_publication")), "LINK_ADMISSION_FLAGS")
+    require(type(envelope["results"]) is list and len(envelope["results"]) == 1
+            and selector == "/results/0", "LINK_SINGLE_CAPTURE")
+    entry = keys(envelope["results"][0], {"capture_method", "download_status", "url", "request_method",
+        "source_page_url", "visible_link", "raw_path", "sha256", "bytes", "http_status",
+        "http_status_observed", "first_seen_at", "first_seen_basis", "available_at", "copy_verified_at",
+        "published_at", "source_version", "revision_chain", "secret_or_hidden_form_material_exported",
+        "provider_response_headers_exported"})
+    require(entry["capture_method"] == "BROWSER_PUBLIC_LINK_DOWNLOAD"
+            and entry["request_method"] == "UNOBSERVED" and entry["download_status"] == "COMPLETED",
+            "LINK_CAPTURE_KIND")
+    require(entry["http_status"] is None and entry["http_status_observed"] is False,
+            "LINK_HTTP_MUST_BE_UNKNOWN")
+    require(entry["secret_or_hidden_form_material_exported"] is False
+            and entry["provider_response_headers_exported"] is False, "LINK_PRIVATE_EXPORT_FORBIDDEN")
+    require(all(entry[k] is None for k in ("published_at", "source_version", "revision_chain")),
+            "LINK_UNOBSERVED_SOURCE_METADATA")
+    for field in ("url", "source_page_url"):
+        u = urlsplit(text(entry[field]))
+        require(u.scheme == "https" and u.hostname in allowed_hosts and not u.fragment
+                and u.username is None and u.password is None and u.port in (None, 443)
+                and bool(u.path), "LINK_SOURCE_URL")
+    require(urlsplit(entry["url"]).path.lower().endswith(".pdf")
+            and not urlsplit(entry["source_page_url"]).path.lower().endswith(".pdf"), "LINK_URL_ROLE")
+    require(entry["url"] == source["url"] and entry["raw_path"] == source["path"]
+            and entry["sha256"] == checked_sha(source["sha256"]), "LINK_SOURCE_BINDING")
+    require(type(entry["bytes"]) is int and entry["bytes"] > 0, "LINK_BYTE_COUNT")
+    link = keys(entry["visible_link"], {"role", "label", "href"})
+    require(link["role"] == "link" and link["href"] == entry["url"]
+            and type(fiscal) is dict and type(fiscal.get("quarter")) is int
+            and type(fiscal.get("year")) is int
+            and link["label"] == f"download {fiscal['quarter']}Q {fiscal['year']}", "LINK_VISIBLE_PERIOD")
+    require(entry["first_seen_basis"] == "CONSERVATIVE_FIRST_OBSERVATION_AFTER_BROWSER_LINK_DOWNLOAD",
+            "LINK_FIRST_SEEN_BASIS")
+    require(timestamp(entry["first_seen_at"]) <= timestamp(entry["available_at"])
+            == timestamp(entry["copy_verified_at"]) <= datetime.now(timezone.utc), "LINK_TIME_ORDER")
+    return entry, {"capture_kind": LINK_RECEIPT, "http_status": None, "http_status_observed": False,
+        "source_url_role": "DOCUMENT_LINK_ON_OFFICIAL_INDEX", "source_page_url": entry["source_page_url"],
+        "raw_document_url": entry["url"], "first_seen_basis": entry["first_seen_basis"],
+        "native_capture": {"capture_method": entry["capture_method"], "request_method": "UNOBSERVED",
+            "download_status": "COMPLETED", "visible_link": link, "copy_verified_at": entry["copy_verified_at"],
+            "secret_or_hidden_form_material_exported": False, "provider_response_headers_exported": False}}
+
+
 class Document:
     def __init__(self, data: bytes, limits: Limits, started: float):
         self.limits, self.started = limits, started
@@ -351,6 +410,7 @@ class Document:
         self.reader = reader
         self.pdf = pdfplumber.open(BytesIO(data))
         self.cache = {}
+        self.content_flow = False
 
     def close(self):
         self.pdf.close()
@@ -364,7 +424,10 @@ class Document:
             require(content is not None and len(content.get_data()) <= self.limits.page_stream_bytes,
                     "PAGE_STREAM_LIMIT")
             pg = self.pdf.pages[number - 1]
-            words = pg.extract_words()
+            # A separate descriptor version may preserve the PDF's native text
+            # stream order. It does not remove spaces, infer glyphs or OCR text;
+            # the same exact-label, geometry and single-token controls follow.
+            words = pg.extract_words(use_text_flow=True) if self.content_flow else pg.extract_words()
             require(len(words) <= self.limits.words and sum(len(w["text"]) for w in words)
                     <= self.limits.page_chars, "PAGE_WORD_LIMIT")
             self.cache[number] = (pg, words)
@@ -396,7 +459,7 @@ class Document:
         return actual, obj
 
 
-def period(doc: Document, obj: object, *, direct_q4: bool = False) -> dict:
+def period(doc: Document, obj: object, *, direct_q4: bool = False, interim: bool = False) -> dict:
     p = keys(obj, {"year", "quarter", "header", "column_x",
                    "quarter_label" if direct_q4 else "year_label"})
     year, quarter = p["year"], p["quarter"]
@@ -415,7 +478,7 @@ def period(doc: Document, obj: object, *, direct_q4: bool = False) -> dict:
         require(re.fullmatch(r"For the Fourth quarter of year " + str(year), header, re.I)
                 is not None, "DIRECT_Q4_HEADER")
     else:
-        require(re.fullmatch(r"(?:for the )?three months ended " + month + r"\s+" + str(day) + r",?",
+        require(re.fullmatch((r"(?:for the )?three-month periods ended " if interim else r"(?:for the )?three months ended ") + month + r"\s+" + str(day) + r",?",
                              header, re.I) is not None, "DIRECT_THREE_MONTH_HEADER")
     axis = p["column_x"]
     require(type(axis) is list and len(axis) == 2 and all(type(v) in (int, float)
@@ -425,6 +488,26 @@ def period(doc: Document, obj: object, *, direct_q4: bool = False) -> dict:
             and a <= y["bbox"][0] < y["bbox"][2] <= b
             and h["bbox"][1] <= y["bbox"][1]
             and h["bbox"][0] <= (a + b) / 2 <= h["bbox"][2], "COLUMN_HEADER_ALIGNMENT")
+    if interim:
+        require(quarter in (1, 2, 3), "INTERIM_QUARTER")
+        words = doc.page(y["page"])[1]
+        years = sorted([w for w in words if y["bbox"][1] - 2 <= w["top"] <= y["bbox"][3] + 2
+                        and re.fullmatch(r"20\d{2}", w["text"])], key=lambda w: w["x0"])
+        require(len(years) in (2, 4) and [w["text"] for w in years] == [str(year), str(year - 1)] * (len(years) // 2)
+                and y["bbox"][0] <= years[0]["x0"] and years[0]["x1"] <= y["bbox"][2],
+                "INTERIM_CURRENT_YEAR_NOT_FIRST")
+        gap = (years[1]["x0"] - years[0]["x1"]) / 2
+        require(gap > 0, "INTERIM_YEAR_COLUMN_OVERLAP")
+        interim_axis = [max(0, years[0]["x0"] - gap), years[0]["x1"] + gap]
+        table_headers = [w for w in words if y["bbox"][3] < w["top"] <= y["bbox"][3] + 30
+                         and interim_axis[0] <= w["x0"] < w["x1"] <= interim_axis[1]]
+        amounts = [w for w in table_headers if w["text"].upper() == "AMOUNT"]
+        ratios = [w for w in table_headers if w["text"] == "%"]
+        require(len(amounts) == len(ratios) == 1 and amounts[0]["x1"] < ratios[0]["x0"]
+                and abs(amounts[0]["top"] - ratios[0]["top"]) <= 2, "INTERIM_AMOUNT_HEADERS")
+        # Native EPS rows span the AMOUNT/% subcolumns, so retain their separate
+        # note reconciliation. Revenue must stay left of the actual % header.
+        amount_axis = [interim_axis[0], ratios[0]["x0"]]
     if direct_q4:
         words = doc.page(h["page"])[1]
         markers = [w for w in words
@@ -451,6 +534,7 @@ def period(doc: Document, obj: object, *, direct_q4: bool = False) -> dict:
                        (right + min(after)) / 2 if after else right]
     return {"year": year, "quarter": quarter, "header": h, "year_label": y,
             **({"quarter_label": y, "native_actual_column_x": native_axis} if direct_q4 else {}),
+            **({"native_interim_column_x": interim_axis, "native_amount_column_x": amount_axis} if interim else {}),
             "column_x": axis, "period_start": f"{year}-{quarter * 3 - 2:02d}-01",
             "period_end": f"{year}-{quarter * 3:02d}-{day:02d}"}
 
@@ -474,13 +558,19 @@ def aligned(cell: dict, label: dict, p: dict) -> None:
     if "native_actual_column_x" in p:
         require(p["native_actual_column_x"][0] <= x0 < x1 <= p["native_actual_column_x"][1],
                 "CELL_Q4_ACTUAL_COLUMN")
+    if "native_interim_column_x" in p:
+        require(p["native_interim_column_x"][0] <= x0 < x1 <= p["native_interim_column_x"][1],
+                "CELL_INTERIM_ACTUAL_COLUMN")
     require(label["bbox"][2] < x0 and label["bbox"][1] - 3 <= (top + bottom) / 2
             <= label["bbox"][3] + 3, "CELL_LABEL_ALIGNMENT")
 
 
-def revenue_scale(unit: str, currency: str) -> str:
+def revenue_scale(unit: str, currency: str, *, interim: bool = False) -> str:
     """Recognise an explicit, narrow unit sentence, never default over a scale."""
     value = norm(unit).lower().strip("() ")
+    if interim and currency == "TWD" and value in ("expressed in thousands of new taiwan dollars, except for earnings per share amount",
+                                                    "expressed in thousands of new taiwan dollars, except for earnings per share"):
+        return "1000"
     scales = re.findall(r"\b(thousand|million|billion)s?\b", value)
     require(len(scales) <= 1, "REVENUE_SCALE_AMBIGUOUS")
     currency_words = "(?:" + "|".join(re.escape(t) for t in CURRENCIES[currency]) + ")"
@@ -492,6 +582,87 @@ def revenue_scale(unit: str, currency: str) -> str:
     scale = match.group(1)
     return "1" if scale is None else {"thousand": "1000", "million": "1000000",
                                       "billion": "1000000000"}[scale.rstrip("s")]
+
+
+def note_decimal(doc: Document, cell: dict) -> tuple[Decimal, int]:
+    """A native decimal may be split at a touching font run, not whitespace.
+
+    Only this note dialect joins exactly integer + decimal suffix. Never join
+    adjacent columns, signs, currencies, totals, exponents or arbitrary tokens.
+    """
+    try:
+        v, _, places = number(doc, cell, "decimal_dot")
+        return v, places
+    except DescriptorError as exc:
+        if str(exc) != "CELL_NOT_SINGLE_TOKEN":
+            raise
+    keys(cell, {"page", "bbox"})
+    pg, words = doc.page(cell["page"])
+    box = cell["bbox"]
+    require(type(box) is list and len(box) == 4 and all(type(x) in (int, float) and math.isfinite(x) for x in box)
+            and 0 <= box[0] < box[2] <= pg.width and 0 <= box[1] < box[3] <= pg.height, "LOCATOR_BOUNDS")
+    chosen = sorted([w for w in words if box[0] - .05 <= w["x0"] and w["x1"] <= box[2] + .05
+                     and box[1] - .05 <= w["top"] and w["bottom"] <= box[3] + .05], key=lambda w: w["x0"])
+    require(len(chosen) == 2 and re.fullmatch(r"-?\d{1,40}", chosen[0]["text"])
+            and re.fullmatch(r"\.\d{1,12}", chosen[1]["text"]), "NOTE_DECIMAL_TOKENS")
+    require(abs(chosen[1]["x0"] - chosen[0]["x1"]) <= .05
+            and abs(chosen[0]["top"] - chosen[1]["top"]) <= .05
+            and abs(chosen[0]["bottom"] - chosen[1]["bottom"]) <= .05, "NOTE_DECIMAL_NOT_ADJACENT")
+    value = chosen[0]["text"] + chosen[1]["text"]
+    return Decimal(value), len(chosen[1]["text"]) - 1
+
+
+def common_note(doc: Document, proof: object, p: dict, value: Decimal, decimals: int) -> dict:
+    """Read, then reconcile a reported basic EPS; never calculate missing EPS."""
+    q = keys(proof, {"kind", "period_header", "basic_label", "profit_label", "profit_cell",
+        "share_header", "share_cell", "eps_header", "eps_cell", "diluted_label", "unit_context"})
+    require(q["kind"] == "DIRECT_COMMON_SHARE_NOTE_V1", "NOTE_COMMON_KIND")
+    loc = {k: doc.select(q[k]) for k in ("period_header", "basic_label", "profit_label",
+                                        "share_header", "eps_header", "diluted_label", "unit_context")}
+    month = calendar.month_name[p["quarter"] * 3]
+    day = calendar.monthrange(p["year"], p["quarter"] * 3)[1]
+    require(re.fullmatch(r"For the three-month period ended " + month + " " + str(day) + ", " + str(p["year"]),
+                         loc["period_header"][0], re.I), "NOTE_DIRECT_PERIOD")
+    require(loc["basic_label"][0].lower() == "basic earnings per share"
+            and loc["diluted_label"][0].lower() == "diluted earnings per share"
+            and loc["profit_label"][0].lower() == "profit attributable to common shareholders of the parent company",
+            "NOTE_COMMON_ATTRIBUTION")
+    require(loc["share_header"][0].lower() == "weighted average number of common shares outstanding (shares in thousands)",
+            "NOTE_COMMON_SHARE_UNIT")
+    require(loc["eps_header"][0].lower() == "earnings per share (in dollars)"
+            and loc["unit_context"][0].lower().strip("() ") == "expressed in thousands of new taiwan dollars, except as otherwise indicated",
+            "NOTE_TWD_UNIT_CONTEXT")
+    page = q["period_header"]["page"]
+    require(all(q[k]["page"] == page for k in q if k not in ("kind", "unit_context")), "NOTE_PAGE_CONFLICT")
+    for k in ("profit_cell", "share_cell"):
+        doc.select(q[k], label=False)
+    # Basic row is bounded by source labels, not a guessed ordinal or matching
+    # numeric equality with a diluted row or the prior-year table below it.
+    basic, stop, profit = (q[k]["bbox"] for k in ("basic_label", "diluted_label", "profit_label"))
+    for k in ("profit_cell", "share_cell", "eps_cell"):
+        c = q[k]["bbox"]
+        require(q["period_header"]["bbox"][3] < basic[1] < c[1] < c[3] < stop[1]
+                and profit[1] - 3 <= (c[1] + c[3]) / 2 <= profit[3] + 3
+                and profit[2] < c[0], "NOTE_BASIC_ROW_GEOMETRY")
+    for field, header in (("share_cell", "share_header"), ("eps_cell", "eps_header")):
+        c, h = q[field]["bbox"], q[header]["bbox"]
+        require(q["period_header"]["bbox"][3] < h[1] < h[3] < basic[1]
+                and h[0] <= (c[0] + c[2]) / 2 <= h[2], "NOTE_HEADER_ALIGNMENT")
+    require(q["profit_cell"]["bbox"][2] < q["share_cell"]["bbox"][0]
+            and q["share_cell"]["bbox"][2] < q["eps_cell"]["bbox"][0], "NOTE_COLUMN_ORDER")
+    num, _, _ = number(doc, q["profit_cell"], "comma_dot")
+    den, _, _ = number(doc, q["share_cell"], "comma_dot")
+    eps, places = note_decimal(doc, q["eps_cell"])
+    require(den > 0 and eps == value and places == decimals, "STATEMENT_NOTE_EPS_CONFLICT")
+    with localcontext() as ctx:
+        ctx.prec = 80
+        # Numerator and denominator are both thousands; only reconcile the
+        # displayed native EPS. Nothing is inferred from annual/YTD values.
+        require((num / den).quantize(Decimal(1).scaleb(-decimals), rounding=ROUND_HALF_UP) == value,
+                "EPS_DENOMINATOR_FORMULA_CONFLICT")
+    return {"share_class": "ORDINARY", "eps_basis": "BASIC", "proof": q,
+            "denominator_formula_checked": True, "numerator_multiplier": "1000", "denominator_multiplier": "1000",
+            "native_eps_read": True, "missing_eps_computed": False}
 
 
 def annual_policy(root: PrivateRoot, d: dict, issuer: str, allowed_hosts: frozenset[str],
@@ -596,9 +767,11 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
     require(digest(raw) == checked_sha(descriptor_sha256), "DESCRIPTOR_SHA_MISMATCH")
     obj = bounded_json(raw, limits.json_bytes, limits)
     q4 = type(obj) is dict and obj.get("contract") == Q4_CONTRACT
+    interim = type(obj) is dict and obj.get("contract") in (INTERIM_CONTRACT, INTERIM_FLOW_CONTRACT)
+    content_flow = type(obj) is dict and obj.get("contract") == INTERIM_FLOW_CONTRACT
     d = keys(obj, {"contract", "entity", "source", "period", "issuer_name", "identity", "accounting", "metrics"}
              | ({"annual_policy_proof"} if q4 else set()))
-    require(d["contract"] in (CONTRACT, Q4_CONTRACT), "DESCRIPTOR_CONTRACT")
+    require(d["contract"] in (CONTRACT, Q4_CONTRACT, INTERIM_CONTRACT, INTERIM_FLOW_CONTRACT), "DESCRIPTOR_CONTRACT")
     require(re.fullmatch(r"[A-Za-z0-9_.-]{1,32}", text(d["entity"], 32)) is not None, "ENTITY")
     source = keys(d["source"], {"path", "url", "sha256", "receipt"})
     url = urlsplit(text(source["url"]))
@@ -616,15 +789,16 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
         require(timestamp(entry["source_received_at"]) <= available, "RECEIPT_TIME_ORDER")
     pdf_data = root.read(Path(text(source["path"])), limits.pdf_bytes)
     require(digest(pdf_data) == source["sha256"], "PDF_SHA_MISMATCH")
-    if capture["capture_kind"] == BROWSER_RECEIPT:
+    if capture["capture_kind"] in (BROWSER_RECEIPT, LINK_RECEIPT):
         require(entry["bytes"] == len(pdf_data), "NATIVE_BYTE_COUNT")
     if q4:
         require(type(entry.get("bytes")) is int and entry["bytes"] == len(pdf_data)
                 and entry.get("period") == f"{d['period']['year']}Q4", "Q4_RECEIPT_BINDING")
     verified = clock()
     doc = Document(pdf_data, limits, started)
+    doc.content_flow = content_flow
     try:
-        p = period(doc, d["period"], direct_q4=q4)
+        p = period(doc, d["period"], direct_q4=q4, interim=interim)
         issuer_name, _ = doc.select(d["issuer_name"])
         require(len(issuer_name) <= 256, "ISSUER_NAME_BOUND")
         identity, _ = doc.select(d["identity"])
@@ -636,15 +810,20 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
                 "ACCOUNTING_CLASSIFICATION")
         annual = annual_policy(root, d, issuer_name, allowed_hosts, limits, started, len(pdf_data), available) if q4 else None
         if not q4:
-            doc.select(accounting["proof"])
+            accounting_text, _ = doc.select(accounting["proof"])
+            if interim:
+                require(accounting["classification"] == "FSC_ENDORSED_IAS34_INTERIM"
+                        and re.search(r"International Accounting Standard 34", accounting_text, re.I)
+                        and re.search(r"Interim financial reporting", accounting_text, re.I)
+                        and re.search(r"endorsed by (?:the )?FSC", accounting_text, re.I), "INTERIM_ACCOUNTING_PROOF")
         require(type(d["metrics"]) is list and 1 <= len(d["metrics"]) <= 2, "METRIC_COUNT")
-        if q4:
+        if q4 or interim:
             require([m.get("metric") for m in d["metrics"] if type(m) is dict] == ["revenue", "basic_eps"],
-                    "Q4_METRIC_PAIR")
+                    "Q4_METRIC_PAIR" if q4 else "INTERIM_METRIC_PAIR")
         result, seen = [], set()
         for raw_metric in d["metrics"]:
             m = keys(raw_metric, {"metric", "label", "cell", "currency", "multiplier",
-                                 "unit_proof", "numeric_format"}, {"share_proof"})
+                                 "unit_proof", "numeric_format"}, {"share_proof"} | ({"period"} if interim else set()))
             metric = m["metric"]
             require(metric in ("revenue", "basic_eps") and metric not in seen, "METRIC_KIND")
             seen.add(metric)
@@ -657,7 +836,9 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
                         label, re.I) is not None),
                     "METRIC_LABEL_NOT_EQUIVALENT")
             value, lexical, decimals = number(doc, m["cell"], m["numeric_format"])
-            aligned(m["cell"], label_loc, p)
+            mp = period(doc, m["period"], interim=True) if interim and "period" in m else p
+            require((mp["year"], mp["quarter"]) == (p["year"], p["quarter"]), "METRIC_PERIOD_CONFLICT")
+            aligned(m["cell"], label_loc, mp)
             unit, unit_locator = doc.select(m["unit_proof"])
             if q4:
                 require(unit_locator["page"] == p["header"]["page"], "Q4_UNIT_PAGE")
@@ -665,9 +846,21 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
                     "CURRENCY_NOT_PROVEN")
             require(type(m["multiplier"]) is str and m["multiplier"] in MULTIPLIERS, "MULTIPLIER")
             if metric == "revenue":
-                require("share_proof" not in m and revenue_scale(unit, m["currency"]) == m["multiplier"],
+                if interim:
+                    require(mp["native_amount_column_x"][0] <= m["cell"]["bbox"][0]
+                            < m["cell"]["bbox"][2] <= mp["native_amount_column_x"][1],
+                            "INTERIM_REVENUE_PERCENT_COLUMN")
+                require("share_proof" not in m and revenue_scale(unit, m["currency"], interim=interim) == m["multiplier"],
                         "REVENUE_SCALE_NOT_PROVEN")
                 share = None
+            elif interim:
+                require(unit_locator["page"] == m["cell"]["page"], "INTERIM_EPS_UNIT_PAGE")
+                require(m["currency"] == "TWD" and m["multiplier"] == "1"
+                        and label.lower() == "basic earnings per share"
+                        and norm(unit).lower().strip("() ") in ("expressed in thousands of new taiwan dollars, except for earnings per share amount",
+                                                               "expressed in thousands of new taiwan dollars, except for earnings per share"),
+                        "INTERIM_EPS_CURRENCY_PROOF")
+                share = common_note(doc, m.get("share_proof"), p, value, decimals)
             elif q4:
                 require(m["currency"] == "TWD" and m["multiplier"] == "1"
                         and unit_locator == label_loc, "EPS_CURRENCY_PROOF_CONFLICT")
@@ -745,6 +938,7 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
             "announced_at": None, "source_version": None, "revision_chain": None,
             "accounting": accounting, "period_evidence": p, "rows": result,
             **({"descriptor_dialect": Q4_CONTRACT, "annual_policy_evidence": annual} if q4 else {}),
+            **({"descriptor_dialect": d["contract"]} if interim else {}),
             "ytd_or_annual_subtraction_used": False, "canonical_writer_invoked": False,
             "source_admission": False, "quality_admission": False, "member_publication": False,
             "legal_reuse_approval": None}

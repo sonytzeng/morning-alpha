@@ -60,7 +60,7 @@ export async function withRetainedIssuerActualInputs(data: EvidenceData, identit
       && ordered(p.conservative_available_at,id.generated_at) && (p.source_received_at === null
         || ordered(p.first_seen_at,p.source_received_at) && ordered(p.source_received_at,p.source_available_at)), 'TIME');
     refuse(p.capture_kind === 'HTTP_RESPONSE_RECEIPT' && p.http_status === 200 && p.http_status_observed === true
-      || p.capture_kind === 'BROWSER_NATIVE_PUBLIC_DOWNLOAD_RECEIPT_V1' && p.http_status === null
+      || ['BROWSER_NATIVE_PUBLIC_DOWNLOAD_RECEIPT_V1','BROWSER_PUBLIC_LINK_DOWNLOAD_RECEIPT_V1'].includes(String(p.capture_kind)) && p.http_status === null
         && p.http_status_observed === false, 'CAPTURE_KIND');
     const year = period.year, quarter = period.quarter;
     refuse(Number.isInteger(year) && Number(year) >= 1900 && Number(year) <= 2200

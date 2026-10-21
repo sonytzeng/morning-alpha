@@ -7,6 +7,7 @@ import { normalizeCompanyEvents, COMPANY_EVENT_SOURCES, type CompanyEvent } from
 import { withMarketInstitutionalEvidence, type MarketFlowCapture } from '../supabase/functions/_shared/recommendation-market-institutional-candidate.ts';
 import { createRetainedQuarterActuals, withRetainedQuarterActuals } from '../supabase/functions/_shared/recommendation-quarter-actuals-candidate.ts';
 import { snapshotHash, validTime } from '../src/features/vnext/contracts.ts';
+import {withRetainedIssuerActualInputs, type RetainedIssuerActualInput} from './issuer-actual-v1-input.ts';
 
 type AnnouncementSource = typeof COMPANY_EVENT_SOURCES[number];
 export type OfficialAnnouncementInput = {
@@ -20,6 +21,7 @@ export type OfficialSubjectReview = {
   symbol: string; source_hash: string; subject: string; reviewed_at: string;
 };
 export type OfficialReportedFinancialReceipt = {
+  /** First acquisition may precede usability; neither instant is publication. */
   source: string; first_seen_at: string; available_at: string; source_response_sha256: string;
   status: string; source_admitted: false; published_at: null; rows: Row[];
 };
@@ -33,6 +35,7 @@ export async function buildOfficialV1SourceCandidate(options: {
   data: EvidenceData; identity: DecisionIdentity; market_flow?: MarketFlowCapture;
   announcements: OfficialAnnouncementInput[]; subject_reviews?: OfficialSubjectReview[];
   reported_financial_receipts?: OfficialReportedFinancialReceipt[];
+  retained_issuer_actuals?: readonly RetainedIssuerActualInput[];
 }) {
   // Capture once before the first await. Later caller mutations must not change
   // the subject/time/source that was verified against the original body hash.
@@ -50,9 +53,10 @@ export async function buildOfficialV1SourceCandidate(options: {
   const financialSymbols = new Set<string>();
   if (financial.length > 3 || new Set(financial.map(r => r.source)).size !== financial.length) throw Error('OFFICIAL_FINANCIAL_SCOPE');
   for (const capture of financial) {
+    const firstSeen = timestamp(capture.first_seen_at), available = timestamp(capture.available_at);
     if (!financialSources.has(capture.source) || capture.status !== 'CAPTURED_REVIEW_REQUIRED' || capture.source_admitted !== false
-      || capture.published_at !== null || !hash(capture.source_response_sha256) || !Number.isFinite(timestamp(capture.available_at))
-      || capture.first_seen_at !== capture.available_at || timestamp(capture.available_at) > cutoff || !Array.isArray(capture.rows)
+      || capture.published_at !== null || !hash(capture.source_response_sha256) || !Number.isFinite(firstSeen) || !Number.isFinite(available)
+      || firstSeen > available || available > cutoff || !Array.isArray(capture.rows)
       || capture.rows.length > 72) throw Error('OFFICIAL_FINANCIAL_RECEIPT');
     const seen = new Set<string>();
     for (const row of capture.rows) {
@@ -65,7 +69,7 @@ export async function buildOfficialV1SourceCandidate(options: {
       seen.add(symbol);
       financialSymbols.add(symbol);
       const fiscalYear = Number(year) + (year.length === 3 ? 1911 : 0);
-      if (Date.UTC(fiscalYear, Number(quarter) * 3, 0, 16) >= timestamp(capture.available_at)) throw Error('OFFICIAL_FINANCIAL_FUTURE_PERIOD');
+      if (Date.UTC(fiscalYear, Number(quarter) * 3, 0, 16) >= available) throw Error('OFFICIAL_FINANCIAL_FUTURE_PERIOD');
       const fields: Row = {};
       for (const key of ['營業收入','營業成本','營業毛利（毛損）','營業利益（損失）','本期淨利（淨損）','基本每股盈餘（元）','淨收益','利息淨收益','利息以外淨收益']) {
         if (Object.hasOwn(row, key)) {
@@ -75,7 +79,7 @@ export async function buildOfficialV1SourceCandidate(options: {
       }
       if (!Object.hasOwn(fields, '基本每股盈餘（元）')) throw Error('OFFICIAL_FINANCIAL_VALUE');
       const sourceIdentity = { source: capture.source, response_sha256: capture.source_response_sha256, symbol,
-        fiscal_period: `${fiscalYear}-Q${quarter}`, first_seen_at: capture.first_seen_at,
+        fiscal_period: `${fiscalYear}-Q${quarter}`, first_seen_at: capture.first_seen_at, available_at: capture.available_at,
         source_date_as_reported: row['出表日期'], reported_fields: fields };
       const joined: Row = { id: 'official-reported:' + await snapshotHash(sourceIdentity), provider: 'OFFICIAL_REPORTED_FINANCIAL_CANDIDATE',
         symbol, fiscal_period: sourceIdentity.fiscal_period, source_ref: capture.source, created_at: capture.available_at,
@@ -87,13 +91,18 @@ export async function buildOfficialV1SourceCandidate(options: {
       if (!old.length) data.earnings.push(joined);
     }
     receipts.push({ source: capture.source, response_sha256: capture.source_response_sha256,
-      normalized_rows_sha256: await snapshotHash(capture.rows), received_at: capture.available_at, rows: capture.rows.length,
+      normalized_rows_sha256: await snapshotHash(capture.rows), received_at: capture.first_seen_at,
+      first_seen_at: capture.first_seen_at, available_at: capture.available_at, rows: capture.rows.length,
       original_publication_time: null, period_basis: 'UNPROVEN_SINGLE_QUARTER_VS_YTD', source_admitted: false });
   }
   if (options.market_flow) data = await withMarketInstitutionalEvidence(data, identity, structuredClone(options.market_flow));
   const capsule = await createRetainedQuarterActuals(identity, identity.generated_at);
   if (capsule) data = (await withRetainedQuarterActuals(data, { report_date: identity.report_date,
     producer_revision_id: identity.revision_id, producer_cutoff: identity.generated_at, evidence_cutoff: identity.generated_at }, capsule)).data;
+  const retainedActuals = await withRetainedIssuerActualInputs(data, identity, options.retained_issuer_actuals ?? []);
+  data = retainedActuals.data;
+  receipts.push(...retainedActuals.source_receipts);
+  for (const gap of retainedActuals.gaps) issues.push(String(gap.reason));
   for (const input of options.announcements) {
     if (!hash(input.response_sha256) || !Number.isFinite(timestamp(input.received_at)) || timestamp(input.received_at) > cutoff
       || !(input.response_body instanceof Uint8Array) || input.response_body.length < 2 || input.response_body.length > 3_000_000)

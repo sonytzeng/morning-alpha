@@ -6,6 +6,7 @@ import {
  integrationPhysicalRead,integrationPhysicalMode,integrationInventory,
  integrationHash,integrationHistoricalRead,SOURCE_UNION_R3_FILES,SOURCE_UNION_R3_BASE,SOURCE_UNION_R4_FILES,
  SOURCE_UNION_R5_FILES,FROZEN_SOURCE_UNION_R4,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,INTEGRATION_MANIFEST,
+ SOURCE_UNION_R8_FILES,FROZEN_SOURCE_UNION_R7,
 } from './helpers/integrationAdmission.mjs';
 import {assemble as financial,CHANGED,CATALOG} from '../scripts/operations/financial-response-period-20261020/materialize.mjs';
 import {worker4Baseline} from '../scripts/operations/forward-cutoff-20261020/materialize.mjs';
@@ -99,8 +100,9 @@ test('R5 full PR composition adds the old R4 root and three new paths, never a f
  const m=verifyIntegrationCandidate(),old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R4));
  const paths=[...new Set([...old.files.map(r=>r.path),FROZEN_SOURCE_UNION_R4,...SOURCE_UNION_R5_FILES.map(r=>r.path)])].sort();
  assert.equal(old.files.length,515);assert.equal(paths.length,519);
- assert.deepEqual(m.files.filter(r=>![FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6].includes(r.path)).map(r=>r.path),paths);
- assert.deepEqual(integrationInventory(),[...paths,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,INTEGRATION_MANIFEST].sort());
+ const r8Added=SOURCE_UNION_R8_FILES.filter(r=>r.before_sha256===null).map(r=>r.path);
+ assert.deepEqual(m.files.filter(r=>![FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added].includes(r.path)).map(r=>r.path),paths);
+ assert.deepEqual(integrationInventory(),[...paths,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,INTEGRATION_MANIFEST].sort());
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R5)).files.length,519,'R5 complete assertion stays frozen, not rewritten');
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R6)).files.length,520,'R6 complete assertion stays frozen, not rewritten');
  const candidate=financial('candidate'),recovery=financial('recovery'),base=worker4Baseline();
@@ -142,4 +144,30 @@ test('R5 CI pins Deno2.9.2 and fully type-checks the exact research source offli
  const block=current.split(/(?=^      - )/m).find(b=>b.includes(command));assert(block);
  assert.doesNotMatch(block,/\bif:|continue-on-error:|--no-check|--allow-|secrets\./);
  assert.deepEqual(integrationPhysicalRead('src/features/vnext/contracts.ts'),sourceUnionParentRead('registry','src/features/vnext/contracts.ts'));
+});
+test('R8 current CI unconditionally runs both current synthetic suites and both research Deno checks AFTER complete admission',()=>{
+ verifyIntegrationCandidate();
+ const workflow=integrationPhysicalRead('.github/workflows/v1-source-integration.yml').toString();
+ const current=workflow.split('  current-union:')[1]?.split('  r3-evaluator-fresh-db:')[0];assert(current);
+ const admission='run: node --experimental-strip-types --test --test-concurrency=1 tests/originalIngressAdmission.test.mjs tests/officialPublicAdmission.test.mjs';
+ const suites=['tests/retainedIssuerActuals.test.mjs','tests/officialV1SourceJoin.test.mjs'];
+ const synthetic='run: node --experimental-strip-types --test --test-concurrency=1 '+suites.join(' ');
+ const command='run: deno check --no-config --no-lock --no-remote --deny-import --no-npm --node-modules-dir=none --sloppy-imports research/issuer-actual-v1-input.ts research/recommendation-official-source-join.ts';
+ const gate=current.indexOf(admission),run=current.indexOf(synthetic),check=current.indexOf(command);
+ assert(gate>=0&&run>gate&&check>run);assert(current.indexOf('uses: denoland/setup-deno@v2')<check);
+ assert.match(current,/uses: denoland\/setup-deno@v2\n        with:\n          deno-version: v2\.9\.2\n/);
+ for(const target of [admission,synthetic,command]){
+  const block=current.split(/(?=^      - )/m).find(b=>b.includes(target));assert(block,'unconditional original-scope step: '+target);
+  assert.doesNotMatch(block,/\bif:|continue-on-error:|working-directory:|--test-skip-pattern|--no-check|--allow-|--replay-manifest|secrets\.|\/private\//);
+ }
+ assert(workflow.includes('contents: read'));assert.doesNotMatch(workflow,/schedule:|contents: write|supabase deploy|supabase db push/);
+ for(const path of suites)assert.doesNotMatch(integrationPhysicalRead(path).toString(),/\btest\.skip\b|\bskip\s*:|\bprocess\.env\b|existsSync\(|\/private\/|realfile/i);
+});
+test('R8 seven source deltas stay outside every sealed Worker packet and never authorize Function or CLE changes',()=>{
+ const m=verifyIntegrationCandidate(),candidate=financial('candidate'),recovery=financial('recovery'),base=worker4Baseline();
+ assert.equal(candidate.sha256,'7986f277660d0b9a3500d7f45a32be247f1d1d7514c1590b5db2956ace2fd596');assert.deepEqual(recovery.bytes,base.bytes);
+ for(const {path}of SOURCE_UNION_R8_FILES)for(const packet of [candidate,recovery,base])assert.equal(packet.payload.files.find(f=>f.name===path),undefined,'R8 source never enters an old Worker packet: '+path);
+ assert(SOURCE_UNION_R8_FILES.every(f=>!f.path.startsWith('supabase/')));
+ for(const flag of ['source_admission','canonical_admission','quality_approval','rights_gate_changed','publication_approval','production_authorized','thresholds_changed','worker_payload_changed','cle_payload_changed'])assert.equal(m.source_union.r8[flag],false);
+ for(const flag of ['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'])assert.equal(m[flag],false);
 });

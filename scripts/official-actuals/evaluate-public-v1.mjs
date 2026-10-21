@@ -41,6 +41,9 @@ async function readSource(url,{fetcher,signal,state,now}){
  return {...result,status:'RECEIVED',bytes:size,sha256:digest(body),received_at:now(),body};
 }
 export async function evaluatePublicV1(bundle,{fetcher=fetch,now=()=>new Date().toISOString(),monotonic=()=>performance.now(),reportedFinancialReceipts=[]}={}){
+ // Bind the retained input before the first await/network request. Caller-side
+ // mutations must not remove/retarget source packets after the original scope.
+ bundle=structuredClone(bundle);reportedFinancialReceipts=structuredClone(reportedFinancialReceipts);
  const began=monotonic(),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),PUBLIC_V1_LIMITS.total_ms);
  const check=()=>{if(controller.signal.aborted||monotonic()-began>=PUBLIC_V1_LIMITS.total_ms)throw Error('PUBLIC_SOURCE_DEADLINE');};
  try{
@@ -80,7 +83,8 @@ export async function evaluatePublicV1(bundle,{fetcher=fetch,now=()=>new Date().
  check();
  const cutoff=now();if(new Date(Date.parse(cutoff)+8*3600000).toISOString().slice(0,10)!==date)throw Error('PUBLIC_V1_CROSSED_DATE');
  const result=await buildOfficialV1SourceCandidate({data:prices.data,identity:{...identity,generated_at:cutoff,data_as_of:cutoff},
-  announcements,reported_financial_receipts:reportedFinancialReceipts});
+  announcements,reported_financial_receipts:reportedFinancialReceipts,
+  retained_issuer_actuals:bundle.input.retained_issuer_actuals??[]});
  check();
  // No subject review or causal mapping is invented. These events are retained
  // as time-stamped source facts; independent content/causal review remains open.
@@ -92,6 +96,9 @@ export async function evaluatePublicV1(bundle,{fetcher=fetch,now=()=>new Date().
   official_event_facts:result.official_events.length,events_by_symbol:Object.fromEntries(prices.data.universe.map(r=>[
    r.symbol,result.official_events.filter(e=>e.symbol===r.symbol).length])),
   actual_rows:result.data.earnings.filter(r=>r.actual_only===true).length,
+  held_issuer_actual_rows:result.data.earnings.filter(r=>r.provider==='RETAINED_ISSUER_PDF_UNADMITTED').length,
+  held_issuer_actual_symbols:new Set(result.data.earnings.filter(r=>r.provider==='RETAINED_ISSUER_PDF_UNADMITTED').map(r=>r.symbol)).size,
+  held_issuer_actual_receipts:result.source_receipts.filter(r=>r.parser_result_sha256),
   reported_financial_snapshot_rows:result.data.earnings.filter(r=>r.reported_snapshot_only===true).length,
   reported_financial_symbols:new Set(result.data.earnings.filter(r=>r.reported_snapshot_only===true).map(r=>r.symbol)).size,
   retained_last_price_date:prices.data.quotes.filter(r=>/^\d/.test(String(r.symbol))).map(r=>r.trading_date).sort().at(-1)??null,

@@ -2,7 +2,17 @@
 
 更新日期：2026-10-21（Asia/Taipei）。本文件管理原需求、相依性與真實驗收；不是部署授權，也不取代歷史封存。
 
-## 最新增量結論（R5／R6／R7；下方舊輪次紀錄保留）
+## 最新增量結論（R8；下方舊輪次紀錄保留）
+
+- **10/21 08:51 台北正式唯讀核對**：當日 V1 72／0 evaluated／72 blocked，READY／WATCH／NONE均0。今天五項重疊阻擋各72：逐股三法人、四季基本面、公司因果映射、事件對齊量價、市場法人；昨天的第六項市場催化不在今日拒絕分布，不沿用舊六項冒充當日。完整逐股來源／時間／格式／canonical接入狀態見 [72股缺口矩陣](evidence/v1-source-gap-matrix-20261021.json)。四個canonical earnings／flows／catalysts／mappings表仍0，不是完成評估後全部不推薦。
+- 當日SourceReceipt庫存增至1653份。72股各有36個營收月及至少20日法人SHARES；66股有事件索引。財報request期間仍無source-heading proof，不能視為單季Actual；股數不當實際TWD。上述是已保存、未准入或必要來源缺失的不同狀態，不重抓既存資料，也不以月營收替代Actual。
+- 已修復官方財報join對 `first_seen_at===available_at` 的錯誤要求，改為嚴格 `first_seen<=available<=cutoff`，來源identity與receipt完整綁定兩時間。無時區、假日曆、反序、晚到仍拒絕，不以任何取得時間冒充公告。
+- 新通用held issuer input沿用既有PDF descriptor結果，接進**原**官方V1 join及 `evaluate-public-v1`，不是第二套選股或canonical寫入器。完整bytes digest、公司／季度／原生單位、普通股Basic EPS、時間／微秒、版本與零准入旗標逐項核對。私有路徑不進入回應；PDF不假扮iXBRL；未知公告／Consensus／Guidance仍null。
+- 真實既存原件零HTTP回放於 `2026-10-21T00:52:24.232Z` 完成：2454四份PDF各核實原件hash／bytes，4季、8個直接量測新增到原V1 earnings輸入；連同既存2330，私有Actual row由4至8。72股V1決策hash前後完全相同，仍0 evaluated／72 blocked，正式寫入／Forward／Outcome／會員公開均0。這是已保存但未接入資料的實際接線，不代表權利／公告證明或正式推薦已完成。
+- 10/21自然C當次唯讀仍RUNNING／EVALUATION_CONTINUATION，cursor1358/1358、invocations37、source_revision null；未保存執行版次仍UNKNOWN，未重新觸發、不重設run。不能以取得游標完成宣稱自然研究或Prediction成功。
+- PR284上個精確R7 HEAD `44baf6b5663d9b7bf251d3f2ab16d2e00fd66e70` CI已終態21 SUCCESS＋1既有conditional SKIP；SKIP不是PASS，不替代本輪新HEAD CI。LINE安全掃描仍INCOMPLETE；本輪不重試或改寫其結果。Runtime／SDK／SQL／Caller／會員權益／付款不變，既有四個Function精確發布包與功能等效回復不從當前研究工作樹重打包。
+
+## R5／R6／R7 歷史增量（原文保留；不是最新業務結論）
 
 - 最新已保存正式 V1 結果仍是 **10/20 Universe72／Evaluated0／BLOCKED72／READY0／WATCH0／NONE0**。這不是10/21自然結果，也不是72股分析後被策略拒絕。六類重疊缺口各72，不相加成432檔。
 - R4另修復 `earnings_events.raw_payload` 被正式 loader 的 SELECT 欄位遺漏，以及顯式季度／公告先後／股別／會計基礎等判定。這些是**已修好未發布**的消費端缺陷；正式 earnings／institutional／catalyst／mapping 表仍無相應准入列，不宣稱已解除0/72。

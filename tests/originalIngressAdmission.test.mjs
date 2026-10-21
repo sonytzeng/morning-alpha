@@ -1,4 +1,4 @@
-// Current R7 admission is mandatory. R4's original 35 assertions and exact
+// Current R8 admission is mandatory. R4's original 35 assertions and exact
 // R5 repro runner remain immutable; historical CI reuse is NOT current execution.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,16 +14,21 @@ import {
  FROZEN_SOURCE_UNION_R4,SOURCE_UNION_R5_BASE,SOURCE_UNION_R5_FILES,sourceUnionR5Lineage,readRegularIntegrationFile,
  FROZEN_SOURCE_UNION_R5,SOURCE_UNION_R6_BASE,SOURCE_UNION_PRIOR_CI,sourceUnionR6Lineage,
  FROZEN_SOURCE_UNION_R6,SOURCE_UNION_R7_BASE,SOURCE_UNION_R7_FILES,sourceUnionR7Lineage,
+ FROZEN_SOURCE_UNION_R7,SOURCE_UNION_R8_BASE,SOURCE_UNION_R8_FILES,sourceUnionR8Lineage,INTEGRATION_BASE,
  integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHash,
  createSourceUnionComposition,verifyIntegrationCandidate,sourceUnionLineage,sourceUnionParentRead,reuseSourceUnionPinnedProof,
 } from './helpers/integrationAdmission.mjs';
 const flags=['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'];
-test('R7 complete physical current union preserves R4/R5/R6 assertions at their immutable parents',()=>{
+test('R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',()=>{
  const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);
- assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r7.json');
+ assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r8.json');
+ assert.equal(FROZEN_SOURCE_UNION_R7,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r7.json');
  assert.equal(FROZEN_SOURCE_UNION,'docs/operations/evidence/core-member-integration-20261020-v1-source-union.json');
  assert.equal(FROZEN_SOURCE_UNION_NORMALIZER,'docs/operations/evidence/core-member-integration-20261020-v1-source-union-normalizer.json');
- assert.equal(m.files.length,521);assert.equal(integrationInventory().length,522);
+ assert.equal(m.files.length,525);assert.equal(integrationInventory().length,526);
+ const r7=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R7));assert.equal(r7.files.length,521);
+ const r7Inventory=execFileSync('git',['--no-replace-objects','diff','--no-renames','--name-only','-z',INTEGRATION_BASE,SOURCE_UNION_R8_BASE,'--'],{cwd:new URL('../',import.meta.url),encoding:'utf8'}).split('\0').filter(Boolean).sort();
+ assert.equal(r7Inventory.length,522);assert.deepEqual(r7Inventory,[...r7.files.map(r=>r.path),FROZEN_SOURCE_UNION_R7].sort());
  assert.deepEqual(SOURCE_UNION_PARENTS,{actual:'64565b5e44568c5c653bd2007992d482df36e60f',registry:'1db13616337633d4765db4650dd27f5dc68c0bd6'});
  assert.equal(REGISTRY_SUPPORT_PARENT,'d74a25d803b6fe6a7dc9e21cef06c3e1306ec559');
  assert.deepEqual(m.source_union,sourceUnionLineage());
@@ -225,7 +230,7 @@ test('all13 original c131 union assertions have verified unchanged prior CI evid
  assert.deepEqual(r.tests,['tests/originalIngressAdmission.test.mjs','tests/officialPublicAdmission.test.mjs']);
  assert.equal(r.prior_tests_total,13);assert.equal(r.prior_tests_passed,13);assert.equal(r.prior_cleanup_evidence,'VERIFIED_REMOVED_BY_PRIOR_EXECUTION');
 });
-test('R3 pins all eight exact sources to8c before/after bytes; only explicit R4/R7 replacements differ in current',()=>{
+test('R3 pins all eight exact sources to8c before/after bytes; only explicit R4/R7/R8 replacements differ in current',()=>{
  const m=verifyIntegrationCandidate(),r3=m.source_union.r3;
  assert.equal(SOURCE_UNION_R3_BASE,'8c110263ddcf83e4471dfc8e32adafd1c47c2c40');
  assert.equal(SOURCE_UNION_SUPPORT.length,5);assert.equal(r3.files.length,8);
@@ -234,7 +239,7 @@ test('R3 pins all eight exact sources to8c before/after bytes; only explicit R4/
   assert(!SOURCE_UNION_SUPPORT.includes(row.path));
   const old=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R4_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
   assert.equal(integrationHash(old),row.after_sha256,'unchanged R3 generation at exact cbb');
-  const replacement=SOURCE_UNION_R7_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R4_FILES.find(r=>r.path===row.path);
+  const replacement=SOURCE_UNION_R8_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R7_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R4_FILES.find(r=>r.path===row.path);
   assert.equal(integrationHash(integrationPhysicalRead(row.path)),replacement?.after_sha256??row.after_sha256);
   assert.equal(integrationPhysicalMode(row.path),'100644');
  }
@@ -500,7 +505,10 @@ test('R7 admits only the existing private refresh caller, its controls and curre
  assert.equal(old.files.length,520);assert.equal(integrationHash(integrationPhysicalRead(FROZEN_SOURCE_UNION_R6)),'561f245b3494020bf1ba6c9aea67adaa08ada8459d10a6ca4316a2d6c0a3a64d');
  assert.deepEqual(r.files.map(f=>f.path),['docs/operations/PRODUCT_DELIVERY_MASTER.md','scripts/vnext/event-alignment-refresh.mjs','tests/eventAlignmentRefresh.test.mjs']);
  for(const row of r.files){
-  assert.equal(integrationHash(integrationPhysicalRead(row.path)),row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);
+  const immutable=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R8_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
+  assert.equal(integrationHash(immutable),row.after_sha256);
+  const replacement=SOURCE_UNION_R8_FILES.find(f=>f.path===row.path);
+  assert.equal(integrationHash(integrationPhysicalRead(row.path)),replacement?.after_sha256??row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);
   assert.equal(old.files.find(f=>f.path===row.path).after_sha256,row.before_sha256);assert(!SOURCE_UNION_SUPPORT.includes(row.path));
  }
  for(const generation of ['normalizer','r3','r4','r5','r6'])assert.deepEqual(m.source_union[generation],old.source_union[generation]);
@@ -523,4 +531,117 @@ test('R7 cannot claim source, rights, quality, Production, payload or method app
   r=>r.worker_payload_changed=true,r=>r.cle_payload_changed=true,r=>r.original_assertions_preserved_at_exact_parents=false]){
   const f=fixture();change(f.manifest.source_union.r7);f.reseal();assert.throws(f.verify,/LINEAGE_DRIFT/);
  }
+});
+test('R8 pins seven independent exact before/after deltas and preserves the full frozen R7 root and lineage',()=>{
+ const m=verifyIntegrationCandidate(),r=m.source_union.r8,old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R7));
+ assert.equal(SOURCE_UNION_R8_BASE,'44baf6b5663d9b7bf251d3f2ab16d2e00fd66e70');assert.deepEqual(r,sourceUnionR8Lineage());
+ assert.equal(integrationHash(integrationPhysicalRead(FROZEN_SOURCE_UNION_R7)),'e64bcc91568afa112ab31bc3d68a5426291cd90dd2a177e4a2352a717b1b9916');
+ assert.equal(old.files.length,521);assert.equal(SOURCE_UNION_R8_FILES.length,7);
+ assert.deepEqual(r.files.map(f=>f.path),['research/issuer-actual-v1-input.ts','research/recommendation-official-source-join.ts',
+  'scripts/official-actuals/evaluate-public-v1.mjs','tests/retainedIssuerActuals.test.mjs','tests/officialV1SourceJoin.test.mjs',
+  'docs/operations/PRODUCT_DELIVERY_MASTER.md','docs/operations/evidence/v1-source-gap-matrix-20261021.json']);
+ const added=r.files.filter(f=>f.before_sha256===null).map(f=>f.path);
+ assert.equal(added.length,3);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R7,...added].sort());
+ assert.equal(m.files.length,525);assert.deepEqual(integrationInventory(),[...m.files.map(f=>f.path),INTEGRATION_MANIFEST].sort());
+ for(const row of r.files){
+  assert.equal(integrationHash(integrationPhysicalRead(row.path)),row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);
+  assert.equal(old.files.find(f=>f.path===row.path)?.after_sha256??null,row.before_sha256);
+  assert(!SOURCE_UNION_SUPPORT.includes(row.path));assert.equal(m.files.find(f=>f.path===row.path).origin,'composition');
+ }
+ for(const generation of ['normalizer','r3','r4','r5','r6','r7'])assert.deepEqual(m.source_union[generation],old.source_union[generation]);
+ const master=r.files.find(f=>f.path==='docs/operations/PRODUCT_DELIVERY_MASTER.md');
+ assert.equal(master.before_sha256,SOURCE_UNION_R7_FILES.find(f=>f.path===master.path).after_sha256);
+ assert.deepEqual(r.supersedes,[{path:master.path,prior_generation:'r7',before_sha256:master.before_sha256,after_sha256:master.after_sha256,
+  prior_root_unchanged:true,prior_assertions:'PRESERVED_AT_EXACT_44BAF6B_PARENT_WITH_CURRENT_DRIFT_CONTROLS'}]);
+ assert.equal(r.current_code_tests_required,true);assert.equal(r.current_historical_execution,false);
+});
+test('R8 every source rejects warm drift and reflected root, R7 and R8 lineage hashes',()=>{
+ for(const row of SOURCE_UNION_R8_FILES){
+  const f=fixture();f.verify();f.bytes.set(row.path,Buffer.concat([f.read(row.path),Buffer.from('\nUNREVIEWED_R8')]));
+  assert.throws(f.verify,/SOURCE_DRIFT/);
+  const reflected=integrationHash(f.read(row.path));f.manifest.files.find(r=>r.path===row.path).after_sha256=reflected;
+  f.manifest.source_union.r8.files.find(r=>r.path===row.path).after_sha256=reflected;
+  const previous=f.manifest.source_union.r7.files.find(r=>r.path===row.path);if(previous)previous.after_sha256=reflected;
+  f.reseal();assert.throws(f.verify,/SOURCE_DRIFT/);assert.throws(()=>createSourceUnionComposition(f.read,f.paths,f.mode),/SOURCE_DRIFT/);
+ }
+});
+test('R8 all seven paths reject deletion, executable/symlink modes, renamed rows and unknown inventory',()=>{
+ for(const {path}of SOURCE_UNION_R8_FILES){
+  const f=fixture();
+  assert.throws(()=>verifyIntegrationCandidate(p=>{if(p===path)throw Error('R8_MISSING');return f.read(p);},f.paths,f.mode),/R8_MISSING/);
+  for(const mode of ['100755','120000']){
+   f.modes.set(path,mode);f.manifest.files.find(r=>r.path===path).mode=mode;f.reseal();assert.throws(f.verify,/MODE_DRIFT/);
+  }
+  const renamed=fixture();renamed.manifest.files.find(r=>r.path===path).path=path+'.renamed';renamed.reseal();assert.throws(renamed.verify,/EXACT_SCOPE/);
+  for(const paths of [f.paths.filter(p=>p!==path),[...f.paths,path+'.unknown']])assert.throws(()=>verifyIntegrationCandidate(f.read,paths,integrationPhysicalMode),/UNKNOWN_PATH/);
+ }
+});
+test('R8 physical symlinks cannot impersonate any of the seven exact source files',()=>{
+ const folder=mkdtempSync(join(tmpdir(),'ma-r8-symlink-'));
+ try{
+  for(const {path}of SOURCE_UNION_R8_FILES){
+   const link=join(folder,basename(path));symlinkSync(new URL('../'+path,import.meta.url),link);
+   assert(lstatSync(link).isSymbolicLink());assert.throws(()=>readRegularIntegrationFile(link),/REGULAR_FILE/);
+   assert.throws(()=>verifyIntegrationCandidate(p=>p===path?readRegularIntegrationFile(link):integrationPhysicalRead(p)),/REGULAR_FILE/);
+  }
+ }finally{rmSync(folder,{recursive:true,force:true});assert(!existsSync(folder));}
+});
+test('R8 refuses each exact R7 rollback and mixed old generations despite reflected hashes',()=>{
+ const existing=SOURCE_UNION_R8_FILES.filter(r=>r.before_sha256!==null);
+ for(const rows of [...existing.map(r=>[r]),existing]){
+  const f=fixture();f.verify();
+  for(const row of rows){
+   const old=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R8_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
+   assert.equal(integrationHash(old),row.before_sha256);f.bytes.set(row.path,old);
+   f.manifest.files.find(r=>r.path===row.path).after_sha256=row.before_sha256;
+   f.manifest.source_union.r8.files.find(r=>r.path===row.path).after_sha256=row.before_sha256;
+  }
+  f.reseal();assert.throws(f.verify,/SOURCE_DRIFT/);assert.throws(()=>createSourceUnionComposition(f.read,f.paths,f.mode),/SOURCE_DRIFT/);
+ }
+});
+test('R8 frozen R7 root bytes, mode and historical proof identities cannot be resealed or substituted',()=>{
+ const f=fixture(),path=FROZEN_SOURCE_UNION_R7;f.verify();f.bytes.set(path,Buffer.concat([f.read(path),Buffer.from('\n')]));
+ const reflected=integrationHash(f.read(path));f.manifest.files.find(r=>r.path===path).after_sha256=reflected;
+ f.manifest.source_union.r8.prior_root.sha256=reflected;f.reseal();assert.throws(f.verify,/SOURCE_DRIFT/);
+ assert.throws(()=>createSourceUnionComposition(f.read,f.paths,f.mode),/SOURCE_DRIFT/);
+ const mode=fixture();mode.modes.set(path,'100755');mode.manifest.files.find(r=>r.path===path).mode='100755';mode.reseal();assert.throws(mode.verify,/MODE_DRIFT/);
+ for(const mutate of [r=>r.prior_root.revision=SOURCE_UNION_R7_BASE,r=>r.prior_root.path=FROZEN_SOURCE_UNION_R6,
+  r=>r.prior_proof.revision='HEAD',r=>r.prior_proof.tests=0,r=>r.prior_proof.files.pop(),r=>r.prior_proof.files[0].sha256='0'.repeat(64)]){
+  const g=fixture();mutate(g.manifest.source_union.r8);g.reseal();assert.throws(g.verify,/LINEAGE_DRIFT/);
+ }
+});
+test('R8 cannot self-certify altered pins, Master supersession, business review, rights, deployment or payload approval',()=>{
+ for(const mutate of [r=>r.base='HEAD',r=>r.files.pop(),r=>r.files[0].after_sha256='0'.repeat(64),r=>r.files[1].before_sha256=null,
+  r=>r.supersedes=[],r=>r.supersedes[0].before_sha256='0'.repeat(64),r=>r.supersedes[0].prior_root_unchanged=false,
+  r=>r.input_scope='BUSINESS_DATA_REVIEW_PASSED',r=>r.current_code_tests_required=false,r=>r.current_historical_execution=true,
+  r=>r.original_assertions_preserved_at_exact_parents=false,r=>r.source_admission=true,r=>r.canonical_admission=true,
+  r=>r.quality_approval=true,r=>r.rights_gate_changed=true,r=>r.publication_approval=true,r=>r.production_authorized=true,
+  r=>r.thresholds_changed=true,r=>r.worker_payload_changed=true,r=>r.cle_payload_changed=true]){
+  const f=fixture();mutate(f.manifest.source_union.r8);f.reseal();assert.throws(f.verify,/LINEAGE_DRIFT/);
+ }
+ const subset=fixture();subset.manifest.files=subset.manifest.files.filter(r=>SOURCE_UNION_R8_FILES.some(f=>f.path===r.path));subset.reseal();assert.throws(subset.verify,/EXACT_SCOPE/);
+});
+test('R8 retains every R7 admission test and all unadapted assertion bodies; exact R7 source is never rewritten',()=>{
+ const adapted=new Set(['R7 complete physical current union preserves R4/R5/R6 assertions at their immutable parents',
+  'R3 pins all eight exact sources to8c before/after bytes; only explicit R4/R7 replacements differ in current',
+  'R7 admits only the existing private refresh caller, its controls and current Master over frozen R6',
+  'R5 full PR composition adds the old R4 root and three new paths, never a four-file-only seal or Worker grant']);
+ const renamed=new Map([
+  ['R7 complete physical current union preserves R4/R5/R6 assertions at their immutable parents','R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents'],
+  ['R3 pins all eight exact sources to8c before/after bytes; only explicit R4/R7 replacements differ in current','R3 pins all eight exact sources to8c before/after bytes; only explicit R4/R7/R8 replacements differ in current'],
+ ]);
+ const bodies=text=>{const starts=[...text.matchAll(/^test\('([^']+)'/gm)];return new Map(starts.map((r,i)=>[r[1],text.slice(r.index,starts[i+1]?.index??text.length).trimEnd()]));};
+ let count=0;
+ for(const path of ['tests/originalIngressAdmission.test.mjs','tests/officialPublicAdmission.test.mjs']){
+  const old=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R8_BASE+':'+path],{cwd:new URL('../',import.meta.url),encoding:'utf8'});
+  const pin=sourceUnionR8Lineage().prior_proof.files.find(r=>r.path===path);assert.equal(integrationHash(Buffer.from(old)),pin.sha256);
+  const before=bodies(old),after=bodies(integrationPhysicalRead(path).toString());count+=before.size;
+  for(const [name,body]of before){
+   const current=after.get(renamed.get(name)??name);assert(current,'every original test remains: '+name);
+   if(!adapted.has(name))assert.equal(current,body,'unchanged original assertions: '+name);
+   else assert((current.match(/\bassert[.(]/g)??[]).length>=(body.match(/\bassert[.(]/g)??[]).length,'no adapted assertion count reduction: '+name);
+   assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
+  }
+ }
+ assert.equal(count,51);assert.equal(adapted.size,4);
 });

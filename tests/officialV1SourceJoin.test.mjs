@@ -6,6 +6,7 @@ import {buildOfficialV1SourceCandidate as join} from '../research/recommendation
 import {evidenceRows} from './fixtures/decision-evidence-rows.mjs';
 import {COMPANY_EVENT_SOURCES,normalizeCompanyEvents} from '../supabase/functions/_shared/recommendation-company-events.ts';
 import {buildEvidenceDecision} from '../supabase/functions/_shared/decision-v1-evidence.ts';
+import {snapshotHash} from '../src/features/vnext/contracts.ts';
 const identity={report_date:'2026-10-20',today_date:'2026-10-20',revision_id:'isolated-official-v1-test',
  generated_at:'2026-10-20T00:48:00.000Z',data_as_of:'2026-10-20T00:48:00.000Z',is_trading_day:true};
 function setup(){
@@ -110,5 +111,85 @@ test('official financial snapshot feeds original earnings without presenting YTD
  for(const mutate of [r=>r.available_at='2099-01-01T00:00:00.000Z',r=>r.rows[0].direct_single_quarter=true,
   r=>r.rows[0]['季別']='4',r=>r.rows[0]['基本每股盈餘（元）']='EMAIL@example.test']){
   const bad=structuredClone(capture);mutate(bad);await assert.rejects(join({...options,reported_financial_receipts:[bad]}));
+ }
+});
+function financialReceipt(){return {
+ source:'https://openapi.twse.com.tw/v1/opendata/t187ap06_L_ci',
+ first_seen_at:'2026-10-20T00:11:00.000Z',available_at:'2026-10-20T00:12:00.000Z',source_response_sha256:'b'.repeat(64),
+ status:'CAPTURED_REVIEW_REQUIRED',published_at:null,source_admitted:false,rows:[{
+  '公司代號':'2330','出表日期':'1151020','年度':'115','季別':'2','營業收入':'999.00','基本每股盈餘（元）':'1.23',
+  period_basis:'AS_REPORTED_PERIOD_BASIS_UNVERIFIED',direct_single_quarter:false,published_at:null,
+  consensus:null,guidance:null,source_admitted:false}]
+};}
+test('financial first-seen before availability retains both instants without inventing publication or relaxing V1',async()=>{
+ const {options}=setup(),capture=financialReceipt(),before=structuredClone(capture);
+ const out=await join({...options,announcements:[],reported_financial_receipts:[capture]});
+ const row=out.data.earnings.find(r=>r.reported_snapshot_only===true),receipt=out.source_receipts[0];
+ assert.equal(row.actual_source.first_seen_at,capture.first_seen_at);
+ assert.equal(row.actual_source.available_at,capture.available_at);
+ assert.equal(row.id,'official-reported:'+await snapshotHash(row.actual_source));
+ assert.equal(row.created_at,capture.available_at);assert.equal(row.available_at,capture.available_at);
+ assert.equal(receipt.received_at,capture.first_seen_at);assert.equal(receipt.first_seen_at,capture.first_seen_at);
+ assert.equal(receipt.available_at,capture.available_at);assert.equal(receipt.original_publication_time,null);
+ assert.equal(row.announced_at,null);assert.equal(row.eps_actual,null);assert.equal(row.revenue_actual,null);
+ assert.equal(row.eps_consensus,null);assert.equal(row.revenue_consensus,null);assert.equal(row.guidance_direction,null);
+ assert.equal(row.source_admitted,false);assert.equal(receipt.source_admitted,false);assert.equal(row.actual_only,false);
+ assert.equal(receipt.period_basis,'UNPROVEN_SINGLE_QUARTER_VS_YTD');
+ assert.deepEqual(out.decision,buildEvidenceDecision(out.data,identity));assert.deepEqual(out.after,out.before);
+ assert.equal(out.after.evaluated,0);assert.equal(out.after.blocked,3);assert.equal(out.after.ready,0);
+ assert.equal(out.original_thresholds_changed,false);assert.equal(out.member_publication_approved,false);
+ assert.equal(out.production_authorized,false);assert.deepEqual(out.business_writes,[]);
+ assert.deepEqual(capture,before);
+});
+test('financial chronology compares instants across offsets and accepts availability exactly at cutoff',async()=>{
+ const {options}=setup();
+ for(const [first_seen_at,available_at] of [
+  ['2026-10-20T08:11:00.000+08:00','2026-10-20T00:12:00.000Z'],
+  ['2026-10-20T08:11:00.000+08:00','2026-10-20T00:11:00.000Z'],
+  ['2026-10-20T00:11:00.000Z',identity.generated_at],
+  [identity.generated_at,identity.generated_at],
+  ['2026-10-20T00:11:00.001Z','2026-10-20T00:11:00.002Z']]){
+  const capture={...financialReceipt(),first_seen_at,available_at};
+  const out=await join({...options,announcements:[],reported_financial_receipts:[capture]});
+  const row=out.data.earnings.find(r=>r.reported_snapshot_only===true),receipt=out.source_receipts[0];
+  assert.equal(row.actual_source.first_seen_at,first_seen_at);assert.equal(row.actual_source.available_at,available_at);
+  assert.equal(receipt.first_seen_at,first_seen_at);assert.equal(receipt.available_at,available_at);
+  assert.equal(receipt.received_at,first_seen_at);assert.equal(row.created_at,available_at);
+ }
+});
+test('each financial receipt instant independently binds row identity and candidate input hash',async()=>{
+ const {options}=setup(),capture=financialReceipt();
+ const run=receipt=>join({...options,announcements:[],reported_financial_receipts:[receipt]});
+ const base=await run(capture),replay=await run(capture);
+ assert.equal(replay.input_sha256,base.input_sha256);assert.deepEqual(replay.data.earnings,base.data.earnings);
+ const baseRow=base.data.earnings.find(r=>r.reported_snapshot_only===true);
+ for(const patch of [{first_seen_at:'2026-10-20T00:10:00.000Z'},{available_at:'2026-10-20T00:13:00.000Z'}]){
+  const out=await run({...capture,...patch}),row=out.data.earnings.find(r=>r.reported_snapshot_only===true);
+  assert.notEqual(row.id,baseRow.id);assert.notEqual(out.input_sha256,base.input_sha256);
+  assert.deepEqual(row.actual_source,{...baseRow.actual_source,...patch});
+  assert.equal(out.source_receipts[0].normalized_rows_sha256,base.source_receipts[0].normalized_rows_sha256);
+ }
+ const conflict=structuredClone(options.data);conflict.earnings.push({...baseRow,created_at:capture.first_seen_at});
+ await assert.rejects(join({...options,data:conflict,announcements:[],reported_financial_receipts:[capture]}),/OFFICIAL_FINANCIAL_CONFLICT/);
+});
+test('both financial timestamps require a timezone and real calendar and reject reversed or future availability',async()=>{
+ const {options}=setup();
+ const run=capture=>join({...options,announcements:[],reported_financial_receipts:[capture]});
+ for(const key of ['first_seen_at','available_at']){
+  for(const value of [undefined,null,'','2026-10-20T00:11:00','2026-02-30T00:11:00Z',
+   '2026-02-29T00:11:00Z','2026-04-31T00:11:00+08:00','2026-13-01T00:11:00Z',
+   '2026-10-20T24:00:00Z','2026-10-20T00:11:00+24:00','2026-10-20T00:11:00+08:60']){
+   await assert.rejects(run({...financialReceipt(),[key]:value}),/OFFICIAL_FINANCIAL_RECEIPT/,`${key}: ${value}`);
+  }
+ }
+ for(const patch of [
+  {first_seen_at:'2026-10-20T00:12:00.001Z'},
+  {first_seen_at:'2026-10-20T00:11:00.002Z',available_at:'2026-10-20T00:11:00.001Z'},
+  {first_seen_at:'2026-10-20T00:12:00.000Z',available_at:'2026-10-20T08:11:00.000+08:00'},
+  {available_at:'2026-10-20T00:48:00.001Z'},
+  {first_seen_at:'2026-10-20T00:48:00.001Z',available_at:'2026-10-20T00:48:00.002Z'},
+  {available_at:'2026-10-20T00:48:00.000001Z'},
+  {first_seen_at:'2099-01-01T00:00:00.000Z',available_at:'2099-01-01T00:00:00.000Z'}]){
+  await assert.rejects(run({...financialReceipt(),...patch}),/OFFICIAL_FINANCIAL_RECEIPT/);
  }
 });

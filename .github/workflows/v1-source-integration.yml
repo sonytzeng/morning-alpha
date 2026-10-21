@@ -16,8 +16,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22.14.0
-      - name: Complete current R7 admission; retained official-data caller, exact source pins and explicit historical CI reuse
+      - name: Complete current R8 admission; seven exact source deltas, frozen R7 root and full composition
         run: node --experimental-strip-types --test --test-concurrency=1 tests/originalIngressAdmission.test.mjs tests/officialPublicAdmission.test.mjs
+      - name: R8 current retained issuer input and official financial chronology synthetic controls; no source or publication grant
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/retainedIssuerActuals.test.mjs tests/officialV1SourceJoin.test.mjs
       - name: R5 offline exact daily open-data and license-scope synthetic controls only; no source or publication grant
         run: node --experimental-strip-types --test --test-concurrency=1 tests/officialDailyOpenDataCandidate.test.mjs tests/officialDailyLicenseScope.test.mjs
       - uses: denoland/setup-deno@v2
@@ -25,6 +27,8 @@ jobs:
           deno-version: v2.9.2
       - name: R5 offline type check; sloppy-imports resolves the existing extensionless type import only
         run: deno check --no-config --no-lock --no-remote --deny-import --no-npm --node-modules-dir=none --sloppy-imports research/official-daily-open-data-candidate.ts
+      - name: R8 offline type check of both exact research sources in their original scope after admission
+        run: deno check --no-config --no-lock --no-remote --deny-import --no-npm --node-modules-dir=none --sloppy-imports research/issuer-actual-v1-input.ts research/recommendation-official-source-join.ts
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -34,7 +38,7 @@ jobs:
         run: python -B tests/test_issuer_pdf_descriptor.py SyntheticControls -v
       - name: Current capacity, evaluator and loader metadata controls; synthetic only, not Production capacity or source admission
         run: node --experimental-strip-types --test --test-concurrency=1 tests/memberCapacityModel.test.mjs tests/v1FundamentalRevisionSelection.test.mjs tests/v1EarningsMetadataRead.test.mjs
-      - name: Unchanged issuer R9 assertions through fresh complete R7 admission; no source activation
+      - name: Unchanged issuer R9 assertions through fresh complete R8 admission; no source activation
         run: node --experimental-strip-types --test tests/recommendationIssuerEventReview.test.mjs
       - name: Current Registry, Actual-only and response-period controls; not source admission
         run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextContracts.test.mjs tests/vnextOriginalTimestamp.test.ts tests/vnextOriginalIngress.test.mjs tests/vnextOriginalRegistryIngress.test.mjs tests/v1ActualCanonical.test.mjs tests/vnextFinancialResponsePeriod.test.mjs tests/vnextForwardCutoffRuntime.test.mjs

@@ -13,7 +13,24 @@ import {fileURLToPath} from 'node:url';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r11.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r13.json';
+export const FROZEN_SOURCE_UNION_R11='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r11.json';
+export const FROZEN_SOURCE_UNION_R12='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r12.json';
+export const SOURCE_UNION_R12_BASE='3f8ad958105973d64cc7e34ae9391b2804e8ea44';
+export const SOURCE_UNION_R12_HEAD='b7bfeba3a6047c792246bdf8393ef0ebd46bcefc';
+// Exact Owner-approved nine-file Commit/Push scope. These independently pinned
+// bytes admit code identity only, never source/quality/rights or Production use.
+export const SOURCE_UNION_R12_FILES=Object.freeze([
+ {"path":"docs/operations/PRODUCT_DELIVERY_MASTER.md","mode":"100644","before_sha256":"16f174d068847e23373940aea72bac6d10ec4c374664964ad751be1708d533a8","after_sha256":"4744662a54d0edf96194ebc617345b2a7b4c71ed80bb1a79e8bde9800037d28c"},
+ {"path":"research/issuer-actual-v1-input.ts","mode":"100644","before_sha256":"bcace17dab7b9df097826f9c78971c37d73513bc05919dfcb7906f03cd630eeb","after_sha256":"9859a908e507f05f9e242ed177f91f6fd2f0a5e8989b55eac7f61937b42b75fe"},
+ {"path":"research/recommendation-official-source-join.ts","mode":"100644","before_sha256":"0432c38c5e6e52011a231b1618f7ddd1741bf92f9f6ce6544830d98d7195c4e2","after_sha256":"a83b147d8f63f056fd808064eb9bc8dbadb6718be2ddeb49e0c8a6a12df36560"},
+ {"path":"scripts/official-actuals/issuer-pdf-descriptor.py","mode":"100644","before_sha256":"7bd1404ddebe07ee270710cfe0b1ca28beca265df41c427508a836dc9be6f023","after_sha256":"b966b63723c65f3fdb103fd05ec026381a0e467be436ae49ca60db5a4914de20"},
+ {"path":"tests/officialV1SourceJoin.test.mjs","mode":"100644","before_sha256":"6b1aae738db148b5ca121cc12c550b792ad2939fdf40b84e918b26508451dbb9","after_sha256":"a96472c706b13f4acc2c2d4c132f04ee4d186ce9cff709dfde61557a9460990c"},
+ {"path":"tests/officialV1SourceJoinJsonb.integration.mjs","mode":"100644","before_sha256":null,"after_sha256":"94bc7d7a30bd77c3f118f663cbbfea94b09d328eee9ed1fc4c0dbae94f33f7d6"},
+ {"path":"tests/retainedIssuerActuals.test.mjs","mode":"100644","before_sha256":"e8066eb81292f4295f883711d3698e112f5e99b326d48ca77235bd1cec420302","after_sha256":"a60472a9fcc678bbc58c559104e3d764eda7d3fd0a19188aa0d401e7a896b4a6"},
+ {"path":"tests/test_issuer_pdf_descriptor.py","mode":"100644","before_sha256":"8cf96a4b157d2793456484e1b79283312585e51c42048f0ba26946edac3381eb","after_sha256":"5a9e0b70584a6f8cdc952eadfc50270da45152baa99d542f390f3b6a34a5c46a"},
+ {"path":"docs/operations/evidence/core-member-integration-20261021-v1-source-union-r12.json","mode":"100644","before_sha256":null,"after_sha256":"3f77e92bda7dd30921f8dbb4751f26262caddc7121ba66681d34647310fd5cb9"},
+].map(Object.freeze));
 export const FROZEN_SOURCE_UNION_R10='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r10.json';
 export const SOURCE_UNION_R11_BASE='cc1386cda879bddd5d70685d3d6118bb7f0e3bbc';
 export const SOURCE_UNION_R11_FILES=Object.freeze([
@@ -310,6 +327,7 @@ export const INTEGRATION_DELTAS=Object.freeze([
  FROZEN_SOURCE_UNION_R8,...SOURCE_UNION_R9_FILES.map(row=>row.path),
  FROZEN_SOURCE_UNION_R9,...SOURCE_UNION_R10_FILES.map(row=>row.path),
  FROZEN_SOURCE_UNION_R10,...SOURCE_UNION_R11_FILES.map(row=>row.path),
+ FROZEN_SOURCE_UNION_R11,...SOURCE_UNION_R12_FILES.map(row=>row.path),
  FROZEN_PRODUCER15_MONTHLY_MANIFEST,
  'src/features/vnext/dailyAdapter.ts',
  'tests/vnextDailyDatabase.integration.mjs',
@@ -767,7 +785,38 @@ export function sourceUnionLineage(){
   assert.equal(row?.sha256,file.sha256,'UNION_PRIOR_NORMALIZER_PROOF_DRIFT');assert.equal(row?.mode,'100644','UNION_PRIOR_NORMALIZER_PROOF_MODE');}
  return {schema:'V1_SOURCE_UNION_CANDIDATE_1',base:SOURCE_UNION_BASE,parents:{...SOURCE_UNION_PARENTS},
   registry_support:{parent:REGISTRY_SUPPORT_PARENT,paths:[...REGISTRY_SUPPORT_PATHS]},receipts,
-  historical_proof,prior_normalizer_proof,normalizer:sourceUnionNormalizerLineage(),r3:sourceUnionR3Lineage(),r4:sourceUnionR4Lineage(),r5:sourceUnionR5Lineage(),r6:sourceUnionR6Lineage(),r7:sourceUnionR7Lineage(),r8:sourceUnionR8Lineage(),r9:sourceUnionR9Lineage(),r10:sourceUnionR10Lineage(),r11:sourceUnionR11Lineage(),support_paths:[...SOURCE_UNION_SUPPORT],source_authorities_shared:false,member_gate_changed:false};
+  historical_proof,prior_normalizer_proof,normalizer:sourceUnionNormalizerLineage(),r3:sourceUnionR3Lineage(),r4:sourceUnionR4Lineage(),r5:sourceUnionR5Lineage(),r6:sourceUnionR6Lineage(),r7:sourceUnionR7Lineage(),r8:sourceUnionR8Lineage(),r9:sourceUnionR9Lineage(),r10:sourceUnionR10Lineage(),r11:sourceUnionR11Lineage(),r12:sourceUnionR12Lineage(),support_paths:[...SOURCE_UNION_SUPPORT],source_authorities_shared:false,member_gate_changed:false};
+}
+export function sourceUnionR12Lineage(){
+ const prior_root={revision:SOURCE_UNION_R12_BASE,path:FROZEN_SOURCE_UNION_R11,sha256:'99f045102c0e148164b0b97ad2e568e7e2865905fc54fa8f9fe1c85dde0cd269'};
+ const approved_root={revision:SOURCE_UNION_R12_HEAD,path:FROZEN_SOURCE_UNION_R12,sha256:'3f77e92bda7dd30921f8dbb4751f26262caddc7121ba66681d34647310fd5cb9'};
+ const prior=unionBlob(prior_root.revision,prior_root.path),approved=unionBlob(approved_root.revision,approved_root.path);
+ assert.equal(prior?.sha256,prior_root.sha256,'UNION_R12_PRIOR_ROOT_DRIFT');assert.equal(prior?.mode,'100644');
+ assert.equal(approved?.sha256,approved_root.sha256,'UNION_R12_APPROVED_ROOT_DRIFT');assert.equal(approved?.mode,'100644');
+ const old=JSON.parse(prior.bytes),packet=JSON.parse(approved.bytes);
+ assert.equal(old.files.length,533,'UNION_R12_PRIOR_FULL_SCOPE');assert.deepEqual(old.source_union.r11,sourceUnionR11Lineage());
+ assert.deepEqual(git(['rev-list','--parents','-n','1',SOURCE_UNION_R12_HEAD]).trim().split(' '),[SOURCE_UNION_R12_HEAD,SOURCE_UNION_R12_BASE],'UNION_R12_COMMIT_PARENT');
+ const delta=git(['diff','--no-renames','--name-only','-z',SOURCE_UNION_R12_BASE,SOURCE_UNION_R12_HEAD,'--']).split('\0').filter(Boolean).sort();
+ assert.equal(SOURCE_UNION_R12_FILES.length,9);assert.equal(new Set(SOURCE_UNION_R12_FILES.map(r=>r.path)).size,9);
+ assert.deepEqual(delta,SOURCE_UNION_R12_FILES.map(r=>r.path).sort(),'UNION_R12_EXACT_APPROVED_SCOPE');
+ assert.equal(packet.schema,'V1_SOURCE_UNION_R12_NATIVE_QUARTER_AND_JSONB_INCREMENT_1');
+ assert.equal(packet.git.head,SOURCE_UNION_R12_BASE);assert.equal(packet.git.origin_main,SOURCE_UNION_BASE);
+ assert.equal(packet.increment.root_self,FROZEN_SOURCE_UNION_R12);assert.equal(packet.increment.total_paths_including_root,9);
+ assert.deepEqual(packet.increment.paths_excluding_self,SOURCE_UNION_R12_FILES.filter(r=>r.path!==FROZEN_SOURCE_UNION_R12).map(({mode,...r})=>r));
+ assert.equal(packet.increment.production_authorized,false);assert.equal(packet.real_original_replay.source_admission,false);
+ assert.equal(packet.real_original_replay.quality_authority_installed,false);assert.equal(packet.real_original_replay.member_publication,false);
+ for(const row of SOURCE_UNION_R12_FILES){
+  assert(!SOURCE_UNION_SUPPORT.includes(row.path),'UNION_R12_SUPPORT_OVERLAP');
+  const before=unionBlob(SOURCE_UNION_R12_BASE,row.path),after=unionBlob(SOURCE_UNION_R12_HEAD,row.path);
+  assert.equal(before?.sha256??null,row.before_sha256,'UNION_R12_BEFORE_SOURCE_DRIFT:'+row.path);
+  assert.equal(after?.sha256,row.after_sha256,'UNION_R12_APPROVED_SOURCE_DRIFT:'+row.path);assert.equal(after?.mode,row.mode);
+  const priorRow=old.files.find(r=>r.path===row.path);
+  assert.equal(priorRow?.after_sha256??null,row.before_sha256,'UNION_R12_PRIOR_ROW_DRIFT:'+row.path);
+ }
+ return {schema:'V1_SOURCE_UNION_R12_APPROVED_EXACT_CODE_DELTA_1',base:SOURCE_UNION_R12_BASE,head:SOURCE_UNION_R12_HEAD,
+  prior_root,approved_root,files:SOURCE_UNION_R12_FILES.map(r=>({...r})),owner_approval_scope:'NINE_FILE_COMMIT_PUSH_ONLY',
+  source_admission:false,canonical_admission:false,quality_approval:false,rights_gate_changed:false,
+  publication_approval:false,production_authorized:false,thresholds_changed:false,existing_release_payloads_changed:false};
 }
 export function sourceUnionR11Lineage(){
  const prior_root={revision:SOURCE_UNION_R11_BASE,path:FROZEN_SOURCE_UNION_R10,sha256:'f97d3d429b3b93839522a6c8c8fdecda0ba2daa7a95fed0644143e5d1984d904'};
@@ -985,6 +1034,12 @@ function sourceUnionExpected(){
   expected.set(FROZEN_SOURCE_UNION_R10,unionBlob(SOURCE_UNION_R11_BASE,FROZEN_SOURCE_UNION_R10));
   for(const file of SOURCE_UNION_R11_FILES){
    assert.equal(expected.get(file.path)?.sha256,file.before_sha256,'UNION_R11_BEFORE_COMPOSITION:'+file.path);
+   expected.set(file.path,{mode:file.mode,sha256:file.after_sha256});
+  }
+  assert(!expected.has(FROZEN_SOURCE_UNION_R11),'UNION_R12_PRIOR_RECEIPT_OVERLAP');
+  expected.set(FROZEN_SOURCE_UNION_R11,unionBlob(SOURCE_UNION_R12_BASE,FROZEN_SOURCE_UNION_R11));
+  for(const file of SOURCE_UNION_R12_FILES){
+   assert.equal(expected.get(file.path)?.sha256??null,file.before_sha256,'UNION_R12_BEFORE_COMPOSITION:'+file.path);
    expected.set(file.path,{mode:file.mode,sha256:file.after_sha256});
   }
   for(const p of support)expected.delete(p);

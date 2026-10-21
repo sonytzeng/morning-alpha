@@ -18,17 +18,21 @@ import {
  FROZEN_SOURCE_UNION_R8,SOURCE_UNION_R9_BASE,SOURCE_UNION_R9_FILES,sourceUnionR9Lineage,
  FROZEN_SOURCE_UNION_R9,SOURCE_UNION_R10_BASE,SOURCE_UNION_R10_FILES,sourceUnionR10Lineage,
  FROZEN_SOURCE_UNION_R10,SOURCE_UNION_R11_BASE,SOURCE_UNION_R11_FILES,sourceUnionR11Lineage,
+ FROZEN_SOURCE_UNION_R11,FROZEN_SOURCE_UNION_R12,SOURCE_UNION_R12_BASE,SOURCE_UNION_R12_HEAD,SOURCE_UNION_R12_FILES,sourceUnionR12Lineage,
  integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHash,
  createSourceUnionComposition,verifyIntegrationCandidate,sourceUnionLineage,sourceUnionParentRead,reuseSourceUnionPinnedProof,
 } from './helpers/integrationAdmission.mjs';
 const flags=['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'];
 test('R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',()=>{
  const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);
- assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r11.json');
+ assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r13.json');
  assert.equal(FROZEN_SOURCE_UNION_R7,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r7.json');
  assert.equal(FROZEN_SOURCE_UNION,'docs/operations/evidence/core-member-integration-20261020-v1-source-union.json');
  assert.equal(FROZEN_SOURCE_UNION_NORMALIZER,'docs/operations/evidence/core-member-integration-20261020-v1-source-union-normalizer.json');
- assert.equal(m.files.length,533);assert.equal(integrationInventory().length,534);
+ assert.equal(m.files.length,536);assert.equal(integrationInventory().length,537);
+ const r11=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R11));assert.equal(r11.files.length,533);
+ const r11Inventory=execFileSync('git',['--no-replace-objects','diff','--no-renames','--name-only','-z',INTEGRATION_BASE,SOURCE_UNION_R12_BASE,'--'],{cwd:new URL('../',import.meta.url),encoding:'utf8'}).split('\0').filter(Boolean).sort();
+ assert.equal(r11Inventory.length,534);assert.deepEqual(r11Inventory,[...r11.files.map(r=>r.path),FROZEN_SOURCE_UNION_R11].sort());
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R8)).files.length,525,'R8 full root remains frozen');
  const r7=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R7));assert.equal(r7.files.length,521);
  const r7Inventory=execFileSync('git',['--no-replace-objects','diff','--no-renames','--name-only','-z',INTEGRATION_BASE,SOURCE_UNION_R8_BASE,'--'],{cwd:new URL('../',import.meta.url),encoding:'utf8'}).split('\0').filter(Boolean).sort();
@@ -194,7 +198,9 @@ test('R3 CI runs full admission before fixed Python controls, capacity negatives
  assert.equal(integrationHash(priorWorkflow),'2d8b2095fca1e61e2b40430cf2394f18c78b36f6857927c6440690f71e486311');
  const names=text=>[...text.matchAll(/^    def (test_\w+)\(/gm)].map(m=>m[1]);
  const currentText=integrationPhysicalRead('tests/test_issuer_pdf_descriptor.py').toString();
- const current=names(currentText);assert.equal(current.length,65);
+ const current=names(currentText);assert.equal(current.length,77);
+ const r11Text=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R12_BASE+':tests/test_issuer_pdf_descriptor.py'],{cwd:new URL('../',import.meta.url),encoding:'utf8'});
+ const r11=names(r11Text);assert.equal(r11.length,65);for(const name of r11)assert(current.includes(name),'all65 R11 synthetic controls must remain: '+name);
  const old=names(execFileSync('git',['--no-replace-objects','show','9ff0f90e737484b1235cfb79c43fcaa5bd40d9d9:tests/test_issuer_pdf_descriptor.py'],{cwd:new URL('../',import.meta.url),encoding:'utf8'}));
  assert.equal(old.length,28);for(const name of old)assert(current.includes(name),'original synthetic control must remain: '+name);
  const r2=names(execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_NORMALIZER_PARENT+':tests/test_issuer_pdf_descriptor.py'],{cwd:new URL('../',import.meta.url),encoding:'utf8'}));
@@ -206,17 +212,26 @@ test('R3 CI runs full admission before fixed Python controls, capacity negatives
  };
  const oldBodies=bodies(execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_NORMALIZER_PARENT+':tests/test_issuer_pdf_descriptor.py'],{cwd:new URL('../',import.meta.url),encoding:'utf8'}));
  const newBodies=bodies(currentText);
- assert.equal(oldBodies.size,45);assert.equal(newBodies.size,65);for(const [name,body]of oldBodies)assert.equal(newBodies.get(name),body,'unchanged original Python assertion body: '+name);
+ assert.equal(oldBodies.size,45);assert.equal(newBodies.size,77);for(const [name,body]of oldBodies)assert.equal(newBodies.get(name),body,'unchanged original Python assertion body: '+name);
+ const r11Bodies=bodies(r11Text);assert.equal(r11Bodies.size,65);for(const [name,body]of r11Bodies)assert.equal(newBodies.get(name),body,'unchanged R11 Python assertion body: '+name);
  // Keep the previously reviewed 62 controls AND their surrounding source bytes.
  // Only this exact added helper/three-control segment is removed for comparison;
  // this is not an exemption for current parser bytes or a private PDF replay.
- const addedStart=currentText.indexOf('    def q4_ratio_fixture('),addedEnd=currentText.indexOf('def local_replay(',addedStart);
+ const addedStart=r11Text.indexOf('    def q4_ratio_fixture('),addedEnd=r11Text.indexOf('def local_replay(',addedStart);
  assert(addedStart>0&&addedEnd>addedStart);
- const prior62=currentText.slice(0,addedStart)+'\n'+currentText.slice(addedEnd);
+ const prior62=r11Text.slice(0,addedStart)+'\n'+r11Text.slice(addedEnd);
  assert.equal(integrationHash(Buffer.from(prior62)),'6b47af5d9d3e97bee5edc91886568f591753c868d63475919c864e29458786da');
  assert.equal(names(prior62).length,62);
- assert.deepEqual(current.filter(name=>!names(prior62).includes(name)),[
+ assert.deepEqual(r11.filter(name=>!names(prior62).includes(name)),[
   'test_q4_actual_cell_cannot_be_yoy_or_qoq','test_q4_padded_quarter_locator_cannot_include_ratio','test_q4_expanded_axis_keeps_native_actual_cell',
+ ]);
+ assert.deepEqual(current.filter(name=>!r11.includes(name)),[
+  'test_public_link_unknown_transport_stays_unknown','test_public_link_cannot_forge_transport_or_publication',
+  'test_public_link_binds_bytes_path_exact_link_period_and_private_source','test_public_link_no_extra_capture_self_approval_headers_or_future_copy',
+  'test_direct_interim_common_note_native_pair','test_content_flow_is_version_selected_not_global_text_guessing',
+  'test_content_flow_preserves_stated_unit_exception_not_ytd_or_approval','test_interim_revenue_must_not_use_the_percentage_cell_in_same_quarter',
+  'test_interim_cannot_take_ytd_or_prior_year_even_with_expanded_axis','test_interim_note_period_shares_units_and_native_eps_must_agree',
+  'test_interim_no_unrelated_currency_note_or_diluted_row','test_adjacent_note_decimal_only_when_native_tokens_touch',
  ]);
  const gate=workflow.indexOf('run: node --experimental-strip-types --test --test-concurrency=1 tests/originalIngressAdmission.test.mjs tests/officialPublicAdmission.test.mjs');
  const python=workflow.indexOf('uses: actions/setup-python@v5'),install=workflow.indexOf('python -m pip install --disable-pip-version-check pypdf==6.10.0 pdfplumber==0.11.9');
@@ -243,7 +258,7 @@ test('R3 pins all eight exact sources to8c before/after bytes; only explicit R4/
   assert(!SOURCE_UNION_SUPPORT.includes(row.path));
   const old=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R4_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
   assert.equal(integrationHash(old),row.after_sha256,'unchanged R3 generation at exact cbb');
-  const replacement=SOURCE_UNION_R9_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R8_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R7_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R4_FILES.find(r=>r.path===row.path);
+  const replacement=SOURCE_UNION_R12_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R9_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R8_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R7_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R4_FILES.find(r=>r.path===row.path);
   assert.equal(integrationHash(integrationPhysicalRead(row.path)),replacement?.after_sha256??row.after_sha256);
   assert.equal(integrationPhysicalMode(row.path),'100644');
  }
@@ -511,7 +526,7 @@ test('R7 admits only the existing private refresh caller, its controls and curre
  for(const row of r.files){
   const immutable=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R8_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
   assert.equal(integrationHash(immutable),row.after_sha256);
-  const replacement=SOURCE_UNION_R9_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R8_FILES.find(f=>f.path===row.path);
+  const replacement=SOURCE_UNION_R12_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R9_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R8_FILES.find(f=>f.path===row.path);
   assert.equal(integrationHash(integrationPhysicalRead(row.path)),replacement?.after_sha256??row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);
   assert.equal(old.files.find(f=>f.path===row.path).after_sha256,row.before_sha256);assert(!SOURCE_UNION_SUPPORT.includes(row.path));
  }
@@ -547,10 +562,11 @@ test('R8 pins seven independent exact before/after deltas and preserves the full
  const added=r.files.filter(f=>f.before_sha256===null).map(f=>f.path);
  const r9Added=SOURCE_UNION_R9_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);
  const r10Added=SOURCE_UNION_R10_FILES.filter(f=>!old.files.some(r=>r.path===f.path)).map(f=>f.path);
- assert.equal(added.length,3);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R7,...added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10].sort());
- assert.equal(m.files.length,533);assert.deepEqual(integrationInventory(),[...m.files.map(f=>f.path),INTEGRATION_MANIFEST].sort());
+ const r12Added=SOURCE_UNION_R12_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);
+ assert.equal(added.length,3);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R7,...added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added].sort());
+ assert.equal(m.files.length,536);assert.deepEqual(integrationInventory(),[...m.files.map(f=>f.path),INTEGRATION_MANIFEST].sort());
  for(const row of r.files){
-  const replacement=SOURCE_UNION_R11_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R9_FILES.find(f=>f.path===row.path);
+  const replacement=SOURCE_UNION_R12_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R11_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R9_FILES.find(f=>f.path===row.path);
   const immutable=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R9_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
   assert.equal(integrationHash(immutable),row.after_sha256,'exact R8 generation remains pinned');
   assert.equal(integrationHash(integrationPhysicalRead(row.path)),replacement?.after_sha256??row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);
@@ -634,6 +650,7 @@ test('R8 retains every R7 admission test and all unadapted assertion bodies; exa
  const adapted=new Set(['R7 complete physical current union preserves R4/R5/R6 assertions at their immutable parents',
   'R3 pins all eight exact sources to8c before/after bytes; only explicit R4/R7 replacements differ in current',
   'R7 admits only the existing private refresh caller, its controls and current Master over frozen R6',
+  'R3 CI runs full admission before fixed Python controls, capacity negatives and current evaluator regressions',
   'R5 full PR composition adds the old R4 root and three new paths, never a four-file-only seal or Worker grant']);
  const renamed=new Map([
   ['R7 complete physical current union preserves R4/R5/R6 assertions at their immutable parents','R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents'],
@@ -652,7 +669,7 @@ test('R8 retains every R7 admission test and all unadapted assertion bodies; exa
    assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
   }
  }
- assert.equal(count,51);assert.equal(adapted.size,4);
+ assert.equal(count,51);assert.equal(adapted.size,5);
 });
 test('R9 admits the exact native PDF intake delta without changing the frozen R8 lineage or granting any business permission',()=>{
  const m=verifyIntegrationCandidate(),r=m.source_union.r9,old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R8));
@@ -661,10 +678,14 @@ test('R9 admits the exact native PDF intake delta without changing the frozen R8
  assert.equal(old.files.length,525);assert.deepEqual(m.source_union.r8,old.source_union.r8);
  const added=SOURCE_UNION_R9_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);
  const r10Added=SOURCE_UNION_R10_FILES.filter(f=>!old.files.some(r=>r.path===f.path)).map(f=>f.path);
- assert.equal(added.length,3);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R8,...added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10].sort());
+ const r12Added=SOURCE_UNION_R12_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);
+ assert.equal(added.length,3);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R8,...added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added].sort());
  for(const row of SOURCE_UNION_R9_FILES){
   assert.equal(old.files.find(f=>f.path===row.path)?.after_sha256??null,row.before_sha256);
-  assert.equal(integrationHash(integrationPhysicalRead(row.path)),row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);
+  const immutable=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R10_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
+  assert.equal(integrationHash(immutable),row.after_sha256,'exact R9 generation remains pinned');
+  const replacement=SOURCE_UNION_R12_FILES.find(f=>f.path===row.path);
+  assert.equal(integrationHash(integrationPhysicalRead(row.path)),replacement?.after_sha256??row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);
  }
  for(const flag of ['source_admission','canonical_admission','quality_approval','production_authorized','publication_approval','thresholds_changed','worker_payload_changed','cle_payload_changed'])assert.equal(r[flag],false);
 });
@@ -694,6 +715,8 @@ test('R9 preserves all 61 R8 admission assertions at their exact parent; only fi
  const adapted=new Set(['R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',
   'R3 pins all eight exact sources to8c before/after bytes; only explicit R4/R7/R8 replacements differ in current',
   'R7 admits only the existing private refresh caller, its controls and current Master over frozen R6',
+  'R3 CI runs full admission before fixed Python controls, capacity negatives and current evaluator regressions',
+  'R8 retains every R7 admission test and all unadapted assertion bodies; exact R7 source is never rewritten',
   'R8 pins seven independent exact before/after deltas and preserves the full frozen R7 root and lineage',
   'R5 full PR composition adds the old R4 root and three new paths, never a four-file-only seal or Worker grant']);
  const bodies=text=>{const starts=[...text.matchAll(/^test\('([^']+)'/gm)];return new Map(starts.map((r,i)=>[r[1],text.slice(r.index,starts[i+1]?.index??text.length).trimEnd()]));};
@@ -708,7 +731,7 @@ test('R9 preserves all 61 R8 admission assertions at their exact parent; only fi
    assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
   }
  }
- assert.equal(count,61);assert.equal(adapted.size,5);
+ assert.equal(count,61);assert.equal(adapted.size,7);
 });
 test('R10 pins only the company-event identity correction over the unchanged complete R9 root',()=>{
  const m=verifyIntegrationCandidate(),r=m.source_union.r10,old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R9));
@@ -716,7 +739,8 @@ test('R10 pins only the company-event identity correction over the unchanged com
  assert.equal(integrationHash(integrationPhysicalRead(FROZEN_SOURCE_UNION_R9)),'54cda51cf63f6d0c3dd2eb2729ebe6c5deb2722905cf368d140c1ec962ad8869');
  assert.equal(old.files.length,529);assert.deepEqual(m.source_union.r9,old.source_union.r9);
  const added=SOURCE_UNION_R10_FILES.filter(f=>!old.files.some(r=>r.path===f.path)).map(f=>f.path);assert.equal(added.length,2);
- assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R9,...added,FROZEN_SOURCE_UNION_R10].sort());
+ const r12Added=SOURCE_UNION_R12_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);
+ assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R9,...added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added].sort());
  for(const row of SOURCE_UNION_R10_FILES){
   const prior=row.before_sha256===null?null:old.files.find(f=>f.path===row.path)?.after_sha256??integrationHash(execFileSync('git',['show',INTEGRATION_BASE+':'+row.path],{cwd:new URL('../',import.meta.url),stdio:['ignore','pipe','ignore']}));
   assert.equal(prior,row.before_sha256);
@@ -743,6 +767,11 @@ test('R10 rejects reflected source, mode, omission, old-generation and lineage c
 });
 test('R10 retains all 64 R9 admission cases; four full-current inventory views only are adapted',()=>{
  const adapted=new Set(['R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',
+  'R3 CI runs full admission before fixed Python controls, capacity negatives and current evaluator regressions',
+  'R3 pins all eight exact sources to8c before/after bytes; only explicit R4/R7/R8 replacements differ in current',
+  'R7 admits only the existing private refresh caller, its controls and current Master over frozen R6',
+  'R8 retains every R7 admission test and all unadapted assertion bodies; exact R7 source is never rewritten',
+  'R9 preserves all 61 R8 admission assertions at their exact parent; only five explicit current-view cases are adapted',
   'R8 pins seven independent exact before/after deltas and preserves the full frozen R7 root and lineage',
   'R9 admits the exact native PDF intake delta without changing the frozen R8 lineage or granting any business permission',
   'R5 full PR composition adds the old R4 root and three new paths, never a four-file-only seal or Worker grant']);
@@ -757,17 +786,21 @@ test('R10 retains all 64 R9 admission cases; four full-current inventory views o
    assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
   }
  }
- assert.equal(count,64);assert.equal(adapted.size,4);
+ assert.equal(count,64);assert.equal(adapted.size,9);
 });
 test('R11 admits only the retained incremental reuse fix and preserves the complete immutable R10 root',()=>{
  const m=verifyIntegrationCandidate(),r=m.source_union.r11,old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R10));
  assert.deepEqual(r,sourceUnionR11Lineage());assert.equal(SOURCE_UNION_R11_FILES.length,2);
  assert.equal(integrationHash(integrationPhysicalRead(FROZEN_SOURCE_UNION_R10)),'f97d3d429b3b93839522a6c8c8fdecda0ba2daa7a95fed0644143e5d1984d904');
- assert.equal(old.files.length,532);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R10].sort());
+ const r12Added=SOURCE_UNION_R12_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);
+ assert.equal(old.files.length,532);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added].sort());
  for(const [key,value]of Object.entries(old.source_union))assert.deepEqual(m.source_union[key],value);
  for(const row of SOURCE_UNION_R11_FILES){
   assert.equal(old.files.find(f=>f.path===row.path)?.after_sha256,row.before_sha256);
-  assert.equal(integrationHash(integrationPhysicalRead(row.path)),row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);
+  const immutable=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R12_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
+  assert.equal(integrationHash(immutable),row.after_sha256,'exact R11 generation remains pinned');
+  const replacement=SOURCE_UNION_R12_FILES.find(f=>f.path===row.path);
+  assert.equal(integrationHash(integrationPhysicalRead(row.path)),replacement?.after_sha256??row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);
  }
  for(const flag of ['source_admission','canonical_admission','quality_approval','production_authorized','publication_approval','thresholds_changed','existing_release_payloads_changed'])assert.equal(r[flag],false);
 });
@@ -790,6 +823,12 @@ test('R11 cannot admit altered source, old code, mode, inventory, lineage, right
 });
 test('R11 preserves all 67 R10 assertions; only five current inventory/source views are explicitly adapted',()=>{
  const adapted=new Set(['R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',
+  'R3 CI runs full admission before fixed Python controls, capacity negatives and current evaluator regressions',
+  'R3 pins all eight exact sources to8c before/after bytes; only explicit R4/R7/R8 replacements differ in current',
+  'R7 admits only the existing private refresh caller, its controls and current Master over frozen R6',
+  'R8 retains every R7 admission test and all unadapted assertion bodies; exact R7 source is never rewritten',
+  'R9 preserves all 61 R8 admission assertions at their exact parent; only five explicit current-view cases are adapted',
+  'R10 retains all 64 R9 admission cases; four full-current inventory views only are adapted',
   'R8 pins seven independent exact before/after deltas and preserves the full frozen R7 root and lineage',
   'R9 admits the exact native PDF intake delta without changing the frozen R8 lineage or granting any business permission',
   'R10 pins only the company-event identity correction over the unchanged complete R9 root',
@@ -805,5 +844,148 @@ test('R11 preserves all 67 R10 assertions; only five current inventory/source vi
    assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
   }
  }
- assert.equal(count,67);assert.equal(adapted.size,5);
+ assert.equal(count,67);assert.equal(adapted.size,11);
+});
+test('R13 pins the exact R12 nine-file commit, both immutable roots and the full current composition without authority',()=>{
+ const m=verifyIntegrationCandidate(),r=m.source_union.r12,old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R11));
+ const git=(...args)=>execFileSync('git',['--no-replace-objects',...args],{cwd:new URL('../',import.meta.url)});
+ assert.equal(SOURCE_UNION_R12_BASE,'3f8ad958105973d64cc7e34ae9391b2804e8ea44');
+ assert.equal(SOURCE_UNION_R12_HEAD,'b7bfeba3a6047c792246bdf8393ef0ebd46bcefc');
+ assert.deepEqual(git('rev-list','--parents','-n','1',SOURCE_UNION_R12_HEAD).toString().trim().split(' '),[SOURCE_UNION_R12_HEAD,SOURCE_UNION_R12_BASE]);
+ assert.equal(SOURCE_UNION_R12_FILES.length,9);assert.equal(new Set(SOURCE_UNION_R12_FILES.map(f=>f.path)).size,9);
+ assert.deepEqual(SOURCE_UNION_R12_FILES.map(f=>f.path).sort(),[
+  'docs/operations/PRODUCT_DELIVERY_MASTER.md',FROZEN_SOURCE_UNION_R12,
+  'research/issuer-actual-v1-input.ts','research/recommendation-official-source-join.ts',
+  'scripts/official-actuals/issuer-pdf-descriptor.py','tests/officialV1SourceJoin.test.mjs',
+  'tests/officialV1SourceJoinJsonb.integration.mjs','tests/retainedIssuerActuals.test.mjs','tests/test_issuer_pdf_descriptor.py',
+ ].sort());
+ assert.deepEqual(git('diff','--no-renames','--name-status','-z',SOURCE_UNION_R12_BASE,SOURCE_UNION_R12_HEAD,'--').toString().split('\0').filter(Boolean),
+  [...SOURCE_UNION_R12_FILES].sort((a,b)=>a.path<b.path?-1:a.path>b.path?1:0).flatMap(f=>[f.before_sha256===null?'A':'M',f.path]));
+ assert.deepEqual(r,sourceUnionR12Lineage());assert.equal(r.base,SOURCE_UNION_R12_BASE);assert.equal(r.head,SOURCE_UNION_R12_HEAD);
+ assert.deepEqual(r.prior_root,{revision:SOURCE_UNION_R12_BASE,path:FROZEN_SOURCE_UNION_R11,sha256:'99f045102c0e148164b0b97ad2e568e7e2865905fc54fa8f9fe1c85dde0cd269'});
+ assert.deepEqual(r.approved_root,{revision:SOURCE_UNION_R12_HEAD,path:FROZEN_SOURCE_UNION_R12,sha256:'3f77e92bda7dd30921f8dbb4751f26262caddc7121ba66681d34647310fd5cb9'});
+ for(const root of [r.prior_root,r.approved_root]){
+  assert.equal(integrationHash(git('show',root.revision+':'+root.path)),root.sha256);
+  assert.equal(integrationHash(integrationPhysicalRead(root.path)),root.sha256);assert.equal(integrationPhysicalMode(root.path),'100644');
+ }
+ assert.equal(old.files.length,533);for(const [key,value]of Object.entries(old.source_union))assert.deepEqual(m.source_union[key],value);
+ for(const row of SOURCE_UNION_R12_FILES){
+  const before=git('ls-tree',SOURCE_UNION_R12_BASE,'--',row.path).toString();
+  assert.equal(before?integrationHash(git('show',SOURCE_UNION_R12_BASE+':'+row.path)):null,row.before_sha256);
+  assert.equal(old.files.find(f=>f.path===row.path)?.after_sha256??null,row.before_sha256);
+  assert.equal(integrationHash(git('show',SOURCE_UNION_R12_HEAD+':'+row.path)),row.after_sha256);
+  assert.match(git('ls-tree',SOURCE_UNION_R12_HEAD,'--',row.path).toString(),/^100644 blob [a-f0-9]{40}\t/);
+  assert.equal(integrationHash(integrationPhysicalRead(row.path)),row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);
+  assert.equal(row.mode,'100644');assert(!SOURCE_UNION_SUPPORT.includes(row.path));
+ }
+ const added=SOURCE_UNION_R12_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);assert.equal(added.length,2);
+ assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R11,...added].sort());
+ assert.equal(m.schema,'CORE_MEMBER_COMPOSITION_V1');assert.equal(m.files.length,536);assert.equal(integrationInventory().length,537);
+ assert.deepEqual(integrationInventory(),[...m.files.map(f=>f.path),INTEGRATION_MANIFEST].sort());
+ for(const flag of flags)assert.equal(m[flag],false);
+ for(const flag of ['source_admission','canonical_admission','quality_approval','rights_gate_changed','publication_approval','production_authorized','thresholds_changed','existing_release_payloads_changed'])assert.equal(r[flag],false);
+});
+test('R13 rejects each R12 source drift even after warm admission and reflected current and lineage hashes',()=>{
+ for(const row of SOURCE_UNION_R12_FILES){
+  const f=fixture();f.verify();f.bytes.set(row.path,Buffer.concat([f.read(row.path),Buffer.from('\nR12_UNREVIEWED')]));
+  assert.throws(f.verify,/SOURCE_DRIFT/);
+  const reflected=integrationHash(f.read(row.path));f.manifest.files.find(r=>r.path===row.path).after_sha256=reflected;
+  f.manifest.source_union.r12.files.find(r=>r.path===row.path).after_sha256=reflected;
+  for(const generation of ['r3','r7','r8','r9','r11']){
+   const prior=f.manifest.source_union[generation].files.find(r=>r.path===row.path);if(prior)prior.after_sha256=reflected;
+  }
+  if(row.path===FROZEN_SOURCE_UNION_R12)f.manifest.source_union.r12.approved_root.sha256=reflected;
+  f.reseal();assert.throws(f.verify,/SOURCE_DRIFT/);assert.throws(()=>createSourceUnionComposition(f.read,f.paths,f.mode),/SOURCE_DRIFT/);
+ }
+});
+test('R13 all nine R12 paths reject missing files, executable or symlink modes, renamed rows and extra inventory',()=>{
+ for(const {path}of SOURCE_UNION_R12_FILES){
+  const f=fixture(),missing=p=>{if(p===path)throw Error('R12_MISSING');return f.read(p);};
+  assert.throws(()=>verifyIntegrationCandidate(missing,f.paths,f.mode),/R12_MISSING/);
+  assert.throws(()=>createSourceUnionComposition(missing,f.paths,f.mode),/R12_MISSING/);
+  for(const mode of ['100755','120000']){
+   const g=fixture();g.modes.set(path,mode);g.manifest.files.find(r=>r.path===path).mode=mode;
+   g.manifest.source_union.r12.files.find(r=>r.path===path).mode=mode;g.reseal();assert.throws(g.verify,/MODE_DRIFT/);
+   assert.throws(()=>createSourceUnionComposition(g.read,g.paths,g.mode),/MODE_DRIFT/);
+  }
+  const renamed=fixture();renamed.manifest.files.find(r=>r.path===path).path=path+'.renamed';renamed.reseal();assert.throws(renamed.verify,/EXACT_SCOPE/);
+  for(const paths of [f.paths.filter(p=>p!==path),[...f.paths,path+'.unknown']]){
+   assert.throws(()=>verifyIntegrationCandidate(f.read,paths,f.mode),/UNKNOWN_PATH/);
+   assert.throws(()=>createSourceUnionComposition(f.read,paths,f.mode),/UNKNOWN_PATH/);
+  }
+ }
+});
+test('R13 refuses every single and mixed R12 rollback to the exact immutable R11 parent',()=>{
+ for(const rows of [...SOURCE_UNION_R12_FILES.map(row=>[row]),SOURCE_UNION_R12_FILES]){
+  const f=fixture(),missing=new Set();f.verify();
+  for(const row of rows){
+   if(row.before_sha256===null){
+    missing.add(row.path);f.paths.splice(f.paths.indexOf(row.path),1);
+    f.manifest.files.splice(f.manifest.files.findIndex(r=>r.path===row.path),1);
+    f.manifest.source_union.r12.files.splice(f.manifest.source_union.r12.files.findIndex(r=>r.path===row.path),1);
+   }else{
+    const old=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R12_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
+    assert.equal(integrationHash(old),row.before_sha256);f.bytes.set(row.path,old);
+    f.manifest.files.find(r=>r.path===row.path).after_sha256=row.before_sha256;
+    f.manifest.source_union.r12.files.find(r=>r.path===row.path).after_sha256=row.before_sha256;
+   }
+  }
+  f.reseal();const read=p=>{if(missing.has(p))throw Error('R12_ROLLBACK_ABSENT');return f.read(p);};
+  assert.throws(()=>verifyIntegrationCandidate(read,f.paths,f.mode),/SOURCE_DRIFT|R12_ROLLBACK_ABSENT/);
+  assert.throws(()=>createSourceUnionComposition(read,f.paths,f.mode),/SOURCE_DRIFT|R12_ROLLBACK_ABSENT/);
+ }
+});
+test('R13 cannot reseal the frozen R11 root or substitute R12 parent, commit, source pins, lineage or authority flags',()=>{
+ const f=fixture(),path=FROZEN_SOURCE_UNION_R11;f.verify();f.bytes.set(path,Buffer.concat([f.read(path),Buffer.from('\n')]));
+ const reflected=integrationHash(f.read(path));f.manifest.files.find(r=>r.path===path).after_sha256=reflected;
+ f.manifest.source_union.r12.prior_root.sha256=reflected;f.reseal();assert.throws(f.verify,/SOURCE_DRIFT/);
+ assert.throws(()=>createSourceUnionComposition(f.read,f.paths,f.mode),/SOURCE_DRIFT/);
+ for(const mode of ['100755','120000']){
+  const g=fixture();g.modes.set(path,mode);g.manifest.files.find(r=>r.path===path).mode=mode;g.reseal();assert.throws(g.verify,/MODE_DRIFT/);
+ }
+ assert.throws(()=>verifyIntegrationCandidate(p=>{if(p===path)throw Error('R11_ROOT_MISSING');return integrationPhysicalRead(p);}),/R11_ROOT_MISSING/);
+ for(const change of [r=>r.base='HEAD',r=>r.head='HEAD',r=>r.head=SOURCE_UNION_R12_BASE,r=>r.files.pop(),
+  r=>r.files.push({...r.files[0],path:'UNREVIEWED'}),r=>r.files[0].before_sha256=null,r=>r.files[0].after_sha256='0'.repeat(64),
+  r=>r.files[0].path='src/features/vnext/dailyRuntime.ts',r=>r.files[0].mode='100755',
+  r=>r.prior_root.revision=SOURCE_UNION_R12_HEAD,r=>r.prior_root.path=FROZEN_SOURCE_UNION_R10,r=>r.prior_root.sha256='0'.repeat(64),
+  r=>r.approved_root.revision=SOURCE_UNION_R12_BASE,r=>r.approved_root.path=INTEGRATION_MANIFEST,r=>r.approved_root.sha256='0'.repeat(64),
+  r=>r.owner_approval_scope='PRODUCTION_APPROVED',r=>r.source_admission=true,r=>r.canonical_admission=true,
+  r=>r.quality_approval=true,r=>r.rights_gate_changed=true,r=>r.publication_approval=true,r=>r.production_authorized=true,
+  r=>r.thresholds_changed=true,r=>r.existing_release_payloads_changed=true]){
+  const g=fixture();change(g.manifest.source_union.r12);g.reseal();assert.throws(g.verify,/LINEAGE_DRIFT/);
+ }
+ for(const row of SOURCE_UNION_R12_FILES){const g=fixture();g.manifest.source_union.support_paths.push(row.path);g.reseal();assert.throws(g.verify,/LINEAGE_DRIFT/);}
+ for(const flag of flags){const g=fixture();g.manifest[flag]=true;g.reseal();assert.throws(g.verify,/FORBIDDEN/);}
+});
+test('R13 preserves all 70 R11 admission tests with only explicit current-view and nested preservation adaptations',()=>{
+ const adapted=new Set([
+  'R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',
+  'R3 CI runs full admission before fixed Python controls, capacity negatives and current evaluator regressions',
+  'R3 pins all eight exact sources to8c before/after bytes; only explicit R4/R7/R8 replacements differ in current',
+  'R7 admits only the existing private refresh caller, its controls and current Master over frozen R6',
+  'R8 pins seven independent exact before/after deltas and preserves the full frozen R7 root and lineage',
+  'R8 retains every R7 admission test and all unadapted assertion bodies; exact R7 source is never rewritten',
+  'R9 admits the exact native PDF intake delta without changing the frozen R8 lineage or granting any business permission',
+  'R9 preserves all 61 R8 admission assertions at their exact parent; only five explicit current-view cases are adapted',
+  'R10 pins only the company-event identity correction over the unchanged complete R9 root',
+  'R10 retains all 64 R9 admission cases; four full-current inventory views only are adapted',
+  'R11 admits only the retained incremental reuse fix and preserves the complete immutable R10 root',
+  'R11 preserves all 67 R10 assertions; only five current inventory/source views are explicitly adapted',
+  'R5 full PR composition adds the old R4 root and three new paths, never a four-file-only seal or Worker grant',
+ ]);
+ const bodies=text=>{const starts=[...text.matchAll(/^test\('([^']+)'/gm)];return new Map(starts.map((r,i)=>[r[1],text.slice(r.index,starts[i+1]?.index??text.length).trimEnd()]));};
+ let count=0;const changed=new Set();
+ for(const path of ['tests/originalIngressAdmission.test.mjs','tests/officialPublicAdmission.test.mjs']){
+  const old=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R12_BASE+':'+path],{cwd:new URL('../',import.meta.url),encoding:'utf8'});
+  const approved=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R12_HEAD+':'+path],{cwd:new URL('../',import.meta.url),encoding:'utf8'});
+  assert.equal(approved,old,'R12 never rewrote any R11 admission assertions');
+  const before=bodies(old),after=bodies(integrationPhysicalRead(path).toString());count+=before.size;
+  for(const [name,body]of before){const current=after.get(name);assert(current,'original test retained: '+name);
+   if(current!==body)changed.add(name);
+   if(!adapted.has(name))assert.equal(current,body,'original assertions unchanged: '+name);
+   else assert((current.match(/\bassert[.(]/g)??[]).length>=(body.match(/\bassert[.(]/g)??[]).length,'no adapted assertion reduction: '+name);
+   assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
+  }
+ }
+ assert.equal(count,70);assert.equal(adapted.size,13);assert.deepEqual([...changed].sort(),[...adapted].sort(),'only actual changed current views are named');
 });

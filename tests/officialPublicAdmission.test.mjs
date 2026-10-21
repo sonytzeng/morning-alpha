@@ -10,6 +10,7 @@ import {
  SOURCE_UNION_R9_FILES,FROZEN_SOURCE_UNION_R8,
  SOURCE_UNION_R10_FILES,FROZEN_SOURCE_UNION_R9,
  FROZEN_SOURCE_UNION_R10,
+ FROZEN_SOURCE_UNION_R11,FROZEN_SOURCE_UNION_R12,SOURCE_UNION_R12_FILES,
 } from './helpers/integrationAdmission.mjs';
 import {assemble as financial,CHANGED,CATALOG} from '../scripts/operations/financial-response-period-20261020/materialize.mjs';
 import {worker4Baseline} from '../scripts/operations/forward-cutoff-20261020/materialize.mjs';
@@ -106,10 +107,13 @@ test('R5 full PR composition adds the old R4 root and three new paths, never a f
  const r8Added=SOURCE_UNION_R8_FILES.filter(r=>r.before_sha256===null).map(r=>r.path);
  const r9Added=SOURCE_UNION_R9_FILES.filter(r=>r.before_sha256===null).map(r=>r.path);
  const r10Added=SOURCE_UNION_R10_FILES.filter(r=>!old.files.some(f=>f.path===r.path)).map(r=>r.path);
- assert.deepEqual(m.files.filter(r=>![FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10].includes(r.path)).map(r=>r.path),paths);
- assert.deepEqual(integrationInventory(),[...paths,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,INTEGRATION_MANIFEST].sort());
+ const r12Added=SOURCE_UNION_R12_FILES.filter(r=>r.before_sha256===null).map(r=>r.path);
+ assert.deepEqual(m.files.filter(r=>![FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added].includes(r.path)).map(r=>r.path),paths);
+ assert.deepEqual(integrationInventory(),[...paths,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,INTEGRATION_MANIFEST].sort());
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R5)).files.length,519,'R5 complete assertion stays frozen, not rewritten');
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R6)).files.length,520,'R6 complete assertion stays frozen, not rewritten');
+ assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R11)).files.length,533,'R11 full root stays immutable, not relabelled as current');
+ assert.equal(SOURCE_UNION_R12_FILES.find(r=>r.path===FROZEN_SOURCE_UNION_R12).after_sha256,'3f77e92bda7dd30921f8dbb4751f26262caddc7121ba66681d34647310fd5cb9');
  const candidate=financial('candidate'),recovery=financial('recovery'),base=worker4Baseline();
  assert.equal(candidate.sha256,'7986f277660d0b9a3500d7f45a32be247f1d1d7514c1590b5db2956ace2fd596');
  assert.deepEqual(recovery.bytes,base.bytes);
@@ -174,5 +178,13 @@ test('R8 seven source deltas stay outside every sealed Worker packet and never a
  for(const {path}of SOURCE_UNION_R8_FILES)for(const packet of [candidate,recovery,base])assert.equal(packet.payload.files.find(f=>f.name===path),undefined,'R8 source never enters an old Worker packet: '+path);
  assert(SOURCE_UNION_R8_FILES.every(f=>!f.path.startsWith('supabase/')));
  for(const flag of ['source_admission','canonical_admission','quality_approval','rights_gate_changed','publication_approval','production_authorized','thresholds_changed','worker_payload_changed','cle_payload_changed'])assert.equal(m.source_union.r8[flag],false);
+ for(const flag of ['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'])assert.equal(m[flag],false);
+});
+test('R13 exact R12 sources stay outside sealed Worker packets and never grant data, rights or deployment authority',()=>{
+ const m=verifyIntegrationCandidate(),candidate=financial('candidate'),recovery=financial('recovery'),base=worker4Baseline();
+ assert.equal(candidate.sha256,'7986f277660d0b9a3500d7f45a32be247f1d1d7514c1590b5db2956ace2fd596');assert.deepEqual(recovery.bytes,base.bytes);
+ for(const {path}of SOURCE_UNION_R12_FILES)for(const packet of [candidate,recovery,base])assert.equal(packet.payload.files.find(f=>f.name===path),undefined,'R12 never enters a sealed Worker packet: '+path);
+ assert.equal(SOURCE_UNION_R12_FILES.length,9);assert(SOURCE_UNION_R12_FILES.every(f=>!f.path.startsWith('supabase/')));
+ for(const flag of ['source_admission','canonical_admission','quality_approval','rights_gate_changed','publication_approval','production_authorized','thresholds_changed','existing_release_payloads_changed'])assert.equal(m.source_union.r12[flag],false);
  for(const flag of ['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'])assert.equal(m[flag],false);
 });

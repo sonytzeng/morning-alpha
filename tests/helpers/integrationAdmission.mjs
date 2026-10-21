@@ -13,7 +13,20 @@ import {fileURLToPath} from 'node:url';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r8.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r9.json';
+export const FROZEN_SOURCE_UNION_R8='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r8.json';
+export const SOURCE_UNION_R9_BASE='99cac630b12b95c93e2f1f79986e2dd7e93d5839';
+export const SOURCE_UNION_R9_FILES=Object.freeze([
+ {path:'research/issuer-actual-canonical-intake.ts',mode:'100644',before_sha256:null,after_sha256:'d969282264342e6609221ed27fdf772c339d8cad8d3805756ef0b5861c3b796a'},
+ {path:'tests/fixtures/issuerPdfActual.mjs',mode:'100644',before_sha256:null,after_sha256:'1b58faf57dd2b75c3b86465768c8b5da638bca0816573871d5078c90db05f156'},
+ {path:'tests/issuerActualCanonicalIntake.test.mjs',mode:'100644',before_sha256:null,after_sha256:'55277333b768f8ac0a43c6d86750c29deefded1e162936d41fa25163d84e8d81'},
+ {path:'supabase/migrations/20261020070000_v1_actual_canonical_candidate.sql',mode:'100644',before_sha256:'86fff57198595564a691a282eeb9ee6785e35d4576a2d8898a98cfe141eb1166',after_sha256:'da7b7a5afa16d2b86ed67c2111f7fbaca7b049fddef95c7d863c72171e0d2797'},
+ {path:'src/features/vnext/v1ActualCanonical.ts',mode:'100644',before_sha256:'7e07e0f1c6fd4fd1d16959de02f3bcdd4cf8f4be4ac79b5fac91f67339273bab',after_sha256:'f1803634501b21d72cbd7309d06cfff7058af27da387edf4284663a244ac9936'},
+ {path:'tests/v1ActualCanonicalSql.integration.mjs',mode:'100644',before_sha256:'b995b9be847151853934cac33c0b72b5623081925ea07c8e9d29177bcb9a59ee',after_sha256:'646c3cca990bcb943a0f70e9c706ffbdd8d577c9c153333a1f7717621b9d1338'},
+ {path:'.github/workflows/v1-actual-canonical.yml',mode:'100644',before_sha256:'bd85c9f98fb0b6527db53e5168feddfd9d09031e5022dea9ba1655dbd57e45c7',after_sha256:'397764b55e03076299679515c29e3ff31fad5c70a36931b4ce985eeb9956a2d9'},
+ {path:'scripts/official-actuals/evaluate-public-v1.mjs',mode:'100644',before_sha256:'b6945124c5fdd7750e4bd22916558e4fbfe87a18aee3716fbfde8130ef8049a3',after_sha256:'d16e251b61308d13a433bcbd7fc1e853902a0414cbc6e91161cab9326878a78c'},
+ {path:'docs/operations/PRODUCT_DELIVERY_MASTER.md',mode:'100644',before_sha256:'9b4c68102a3a7d343414b6816e5b11be1596c9f7330562a6073683b197d4ee49',after_sha256:'16f174d068847e23373940aea72bac6d10ec4c374664964ad751be1708d533a8'},
+].map(Object.freeze));
 export const FROZEN_SOURCE_UNION_R7='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r7.json';
 export const SOURCE_UNION_R8_BASE='44baf6b5663d9b7bf251d3f2ab16d2e00fd66e70';
 // Main-agent source deltas captured independently before composition generation.
@@ -281,6 +294,7 @@ export const INTEGRATION_DELTAS=Object.freeze([
  FROZEN_SOURCE_UNION_R4,...SOURCE_UNION_R5_FILES.map(row=>row.path),
  FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,...SOURCE_UNION_R7_FILES.map(row=>row.path),
  FROZEN_SOURCE_UNION_R7,...SOURCE_UNION_R8_FILES.map(row=>row.path),
+ FROZEN_SOURCE_UNION_R8,...SOURCE_UNION_R9_FILES.map(row=>row.path),
  FROZEN_PRODUCER15_MONTHLY_MANIFEST,
  'src/features/vnext/dailyAdapter.ts',
  'tests/vnextDailyDatabase.integration.mjs',
@@ -738,7 +752,28 @@ export function sourceUnionLineage(){
   assert.equal(row?.sha256,file.sha256,'UNION_PRIOR_NORMALIZER_PROOF_DRIFT');assert.equal(row?.mode,'100644','UNION_PRIOR_NORMALIZER_PROOF_MODE');}
  return {schema:'V1_SOURCE_UNION_CANDIDATE_1',base:SOURCE_UNION_BASE,parents:{...SOURCE_UNION_PARENTS},
   registry_support:{parent:REGISTRY_SUPPORT_PARENT,paths:[...REGISTRY_SUPPORT_PATHS]},receipts,
-  historical_proof,prior_normalizer_proof,normalizer:sourceUnionNormalizerLineage(),r3:sourceUnionR3Lineage(),r4:sourceUnionR4Lineage(),r5:sourceUnionR5Lineage(),r6:sourceUnionR6Lineage(),r7:sourceUnionR7Lineage(),r8:sourceUnionR8Lineage(),support_paths:[...SOURCE_UNION_SUPPORT],source_authorities_shared:false,member_gate_changed:false};
+  historical_proof,prior_normalizer_proof,normalizer:sourceUnionNormalizerLineage(),r3:sourceUnionR3Lineage(),r4:sourceUnionR4Lineage(),r5:sourceUnionR5Lineage(),r6:sourceUnionR6Lineage(),r7:sourceUnionR7Lineage(),r8:sourceUnionR8Lineage(),r9:sourceUnionR9Lineage(),support_paths:[...SOURCE_UNION_SUPPORT],source_authorities_shared:false,member_gate_changed:false};
+}
+export function sourceUnionR9Lineage(){
+ const prior_root={revision:SOURCE_UNION_R9_BASE,path:FROZEN_SOURCE_UNION_R8,sha256:'b773a7050a97ffc37fa2cfacf7da03cc9d855972998d1418bcae5fd92406d787'};
+ const root=unionBlob(prior_root.revision,prior_root.path);
+ assert.equal(root?.sha256,prior_root.sha256,'UNION_R9_PRIOR_ROOT_DRIFT');assert.equal(root?.mode,'100644');
+ const old=JSON.parse(root.bytes);assert.equal(old.files.length,525,'UNION_R9_PRIOR_FULL_SCOPE');
+ assert.deepEqual(old.source_union.r8,sourceUnionR8Lineage(),'UNION_R9_R8_LINEAGE_DRIFT');
+ assert.equal(SOURCE_UNION_R9_FILES.length,9);assert.equal(new Set(SOURCE_UNION_R9_FILES.map(r=>r.path)).size,9);
+ for(const row of SOURCE_UNION_R9_FILES){
+  assert(!SOURCE_UNION_SUPPORT.includes(row.path));const before=unionBlob(SOURCE_UNION_R9_BASE,row.path);
+  assert.equal(before?.sha256??null,row.before_sha256,'UNION_R9_BEFORE_SOURCE_DRIFT:'+row.path);
+  assert.equal(old.files.find(r=>r.path===row.path)?.after_sha256??null,row.before_sha256,'UNION_R9_PRIOR_ROW_DRIFT:'+row.path);
+  assert.equal(row.mode,'100644');if(before)assert.equal(before.mode,row.mode);
+  assert.match(row.after_sha256,/^[a-f0-9]{64}$/);assert.notEqual(row.before_sha256,row.after_sha256);
+ }
+ return {schema:'V1_SOURCE_UNION_R9_NATIVE_PDF_INTAKE_1',base:SOURCE_UNION_R9_BASE,prior_root,
+  files:SOURCE_UNION_R9_FILES.map(r=>({...r})),
+  prior_assertions:'PRESERVED_AT_EXACT_99CAC630_PARENT_WITH_CURRENT_DRIFT_CONTROLS',
+  scope:'NATIVE_PDF_MEASUREMENT_CONTRACT_NOT_SOURCE_APPROVAL_OR_MIGRATION_AUTHORIZATION',
+  source_admission:false,canonical_admission:false,quality_approval:false,production_authorized:false,
+  publication_approval:false,thresholds_changed:false,worker_payload_changed:false,cle_payload_changed:false};
 }
 export function sourceUnionR8Lineage(){
  const prior_root={revision:SOURCE_UNION_R8_BASE,path:FROZEN_SOURCE_UNION_R7,sha256:'e64bcc91568afa112ab31bc3d68a5426291cd90dd2a177e4a2352a717b1b9916'};
@@ -877,6 +912,12 @@ function sourceUnionExpected(){
   expected.set(FROZEN_SOURCE_UNION_R7,unionBlob(SOURCE_UNION_R8_BASE,FROZEN_SOURCE_UNION_R7));
   for(const file of SOURCE_UNION_R8_FILES){
    assert.equal(expected.get(file.path)?.sha256??null,file.before_sha256,'UNION_R8_BEFORE_COMPOSITION:'+file.path);
+   expected.set(file.path,{mode:file.mode,sha256:file.after_sha256});
+  }
+  assert(!expected.has(FROZEN_SOURCE_UNION_R8),'UNION_R9_PRIOR_RECEIPT_OVERLAP');
+  expected.set(FROZEN_SOURCE_UNION_R8,unionBlob(SOURCE_UNION_R9_BASE,FROZEN_SOURCE_UNION_R8));
+  for(const file of SOURCE_UNION_R9_FILES){
+   assert.equal(expected.get(file.path)?.sha256??null,file.before_sha256,'UNION_R9_BEFORE_COMPOSITION:'+file.path);
    expected.set(file.path,{mode:file.mode,sha256:file.after_sha256});
   }
   for(const p of support)expected.delete(p);

@@ -29,7 +29,9 @@ jobs:
       - name: Current financial period and original source refusal controls
         run: node --experimental-strip-types --test tests/vnextFinancialResponsePeriod.test.mjs tests/vnextStockResearch.test.mjs tests/vnextColdSourcePriority.test.mjs tests/v1FinancialPeriodRelease.test.mjs
       - name: Actual-only identifier adapter controls (synthetic)
-        run: node --experimental-strip-types --test tests/v1ActualCanonical.test.mjs
+        run: node --experimental-strip-types --test tests/v1ActualCanonical.test.mjs tests/issuerActualCanonicalIntake.test.mjs
+      - name: Native PDF administrative intake offline type check; no approval or source access
+        run: deno check --no-config --no-lock --no-remote --deny-import --no-npm --node-modules-dir=none --sloppy-imports research/issuer-actual-canonical-intake.ts
       - name: Prepare isolated fixed-clock PostgreSQL image
         run: docker build -t ma-runtime-sparse-ci - < tests/fixtures/runtime-sparse-postgres.Dockerfile
       - name: Actual canonical transaction, original loader and RLS (Fresh DB, synthetic)

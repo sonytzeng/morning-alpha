@@ -14,6 +14,7 @@ import {emptyEvidenceData} from '../../supabase/functions/_shared/decision-v1-da
 import {COMPANY_EVENT_SOURCES,normalizeCompanyEvents} from '../../supabase/functions/_shared/recommendation-company-events.ts';
 import {isMarketTradingDate} from '../../supabase/functions/_shared/market-session-contract.mjs';
 import {snapshotHash} from '../../src/features/vnext/contracts.ts';
+import {prepareIssuerActualCanonicalIntake} from '../../research/issuer-actual-canonical-intake.ts';
 export const PUBLIC_V1_LIMITS=Object.freeze({requests:2,total_ms:20000,request_ms:6000,source_bytes:3_000_000,total_bytes:6_000_000});
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
 function bounded(work,signal){return new Promise((resolve,reject)=>{
@@ -85,6 +86,8 @@ export async function evaluatePublicV1(bundle,{fetcher=fetch,now=()=>new Date().
  const result=await buildOfficialV1SourceCandidate({data:prices.data,identity:{...identity,generated_at:cutoff,data_as_of:cutoff},
   announcements,reported_financial_receipts:reportedFinancialReceipts,
   retained_issuer_actuals:bundle.input.retained_issuer_actuals??[]});
+ const actualIntake=await prepareIssuerActualCanonicalIntake(prices.data,{...identity,generated_at:cutoff,data_as_of:cutoff},
+  bundle.input.retained_issuer_actuals??[]);
  check();
  // No subject review or causal mapping is invented. These events are retained
  // as time-stamped source facts; independent content/causal review remains open.
@@ -99,13 +102,14 @@ export async function evaluatePublicV1(bundle,{fetcher=fetch,now=()=>new Date().
   held_issuer_actual_rows:result.data.earnings.filter(r=>r.provider==='RETAINED_ISSUER_PDF_UNADMITTED').length,
   held_issuer_actual_symbols:new Set(result.data.earnings.filter(r=>r.provider==='RETAINED_ISSUER_PDF_UNADMITTED').map(r=>r.symbol)).size,
   held_issuer_actual_receipts:result.source_receipts.filter(r=>r.parser_result_sha256),
+  canonical_actual_intake_rows:actualIntake.prepared.length,
   reported_financial_snapshot_rows:result.data.earnings.filter(r=>r.reported_snapshot_only===true).length,
   reported_financial_symbols:new Set(result.data.earnings.filter(r=>r.reported_snapshot_only===true).map(r=>r.symbol)).size,
   retained_last_price_date:prices.data.quotes.filter(r=>/^\d/.test(String(r.symbol))).map(r=>r.trading_date).sort().at(-1)??null,
   before:result.before,after:result.after,reason_distribution:result.decision.phase_evaluation.reason_distribution,
   assessment_phase:result.decision.phase_evaluation.evaluation_phase,source_join_failures:result.data.failures,
   candidate_input_sha256:result.input_sha256,original_thresholds_changed:false,production_operations:0,
-  captured_official_facts:{market_flow:null,announcements:result.official_events,
+  captured_official_facts:{market_flow:null,announcements:result.official_events,canonical_actual_intake:actualIntake,
    reported_financial_sources:result.data.earnings.filter(r=>r.reported_snapshot_only===true).map(r=>r.actual_source)},
   forward_sample:0,outcome_sample:0,member_publication_approved:false,publication_eligibility:'HOLD',
   license_scope:'EXACT_DATASET_OGL_REVIEW_SEPARATE_FROM_SOURCE_ADMISSION_AND_PUBLICATION',

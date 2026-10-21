@@ -2,7 +2,16 @@
 
 更新日期：2026-10-21（Asia/Taipei）。本文件管理原需求、相依性與真實驗收；不是部署授權，也不取代歷史封存。
 
-## 最新增量結論（R8；下方舊輪次紀錄保留）
+## 最新增量結論（R9；R8及更早原文保留）
+
+- 正式六支相關Function再次唯讀核對仍Worker4／Caller4／Producer16／Reader57／LINE71／OwnerLab9，artifact與JWT未漂移。10/21當日V1仍72／0 evaluated／72 blocked，五項重疊原因各72；不是已評估後全部不合格。唯一寫入者為本工作，另一個工作只作唯讀接線review，未修改正式資源。
+- 本輪補上已保存原件到Canonical候選之間的必要PDF契約：沿用原件validator與既有ID-only原子RPC，增加獨立的 `ISSUER_PDF_DIRECT_QUARTER_V1` 量測dialect，不把PDF偽裝成iXBRL。直接單季、原生TWD、普通股Basic EPS、頁碼／bbox、原件／parser／descriptor／receipt hash都綁定獨立review的row hash。iXBRL QName驗證、未知格式拒絕及金融淨收益方法HOLD不移除。
+- 既有 `evaluate-public-v1` 將準備結果放入私人facts；console摘要只有筆數，不輸出財報數值。preparer不給authority、不寫DB、不核准來源／權利／品質；未知公告、原版次與權利仍PENDING／null，SQL重查不同authority、撤銷、有效時間與原始公告，不讓新格式繞過Gate。
+- 10/21 10:36台北，重用2454四份已保存PDF與既有正規化收據，4季／8量測完成新intake接線，HTTP0／正式寫入0／canonical寫入0／Forward0／Outcome0；四季公告與版次仍未知，不能正式准入。受控私人artifact SHA256 `e2ac48df519408a2f468ef123374b83de42198ef0297241a38b87de9fcf1cd2c`。這不是72股正式評估完成。
+- Fresh PG17真實SQL／RLS／原子性／撤銷／重播與清理14/14 PASS，僅合成獨立審查控制；不把合成approval當成真實來源授權。真實原件只驗preparation，尚未獲source/version/quality/rights准入。PR281唯讀review未發現新的可重現工程缺陷，來源authority及原條件Producer仍需實證，不自行製造CONDITION_MET。
+- 新格式變更僅存在未發布candidate Migration，**沒有Production SQL**。原已封存Worker及三個consumer發布包不混入此SQL／intake，仍須各自具名核准。LINE舊安全掃描INCOMPLETE保持HOLD，Free／Premium真實身份E2E未獲證明，付款DISABLED，穩定0/5。
+
+## R8 歷史增量（以下為當時觀測，不作最新終態）
 
 - **10/21 08:51 台北正式唯讀核對**：當日 V1 72／0 evaluated／72 blocked，READY／WATCH／NONE均0。今天五項重疊阻擋各72：逐股三法人、四季基本面、公司因果映射、事件對齊量價、市場法人；昨天的第六項市場催化不在今日拒絕分布，不沿用舊六項冒充當日。完整逐股來源／時間／格式／canonical接入狀態見 [72股缺口矩陣](evidence/v1-source-gap-matrix-20261021.json)。四個canonical earnings／flows／catalysts／mappings表仍0，不是完成評估後全部不推薦。
 - 當日SourceReceipt庫存增至1653份。72股各有36個營收月及至少20日法人SHARES；66股有事件索引。財報request期間仍無source-heading proof，不能視為單季Actual；股數不當實際TWD。上述是已保存、未准入或必要來源缺失的不同狀態，不重抓既存資料，也不以月營收替代Actual。

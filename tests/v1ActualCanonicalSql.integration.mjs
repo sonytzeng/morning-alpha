@@ -18,6 +18,10 @@ import {createHash,randomUUID} from 'node:crypto';
 import {appendCanonicalActual,V1_ACTUAL_CANONICAL_FUNCTION} from '../src/features/vnext/v1ActualCanonical.ts';
 import {loadDecisionEvidence} from '../supabase/functions/_shared/decision-v1-data.ts';
 import {buildRecommendationProof,RECOMMENDATION_UNIVERSE} from '../supabase/functions/_shared/recommendation-stock-evidence.ts';
+import {prepareIssuerActualCanonicalIntake} from '../research/issuer-actual-canonical-intake.ts';
+import {snapshotHash} from '../src/features/vnext/contracts.ts';
+import {emptyEvidenceData} from '../supabase/functions/_shared/decision-v1-data.ts';
+import {syntheticIssuerPdfActual} from './fixtures/issuerPdfActual.mjs';
 
 const migration=readFileSync(new URL('../supabase/migrations/20261020070000_v1_actual_canonical_candidate.sql',import.meta.url),'utf8');
 const synthetic=readFileSync(new URL('./fixtures/v1ActualCanonical-synthetic.sql',import.meta.url),'utf8');
@@ -173,6 +177,52 @@ test('SYNTHETIC Fresh DB: Actual-only SQL capability, preserved canonical contra
    await deny(makeCase({review:{announced_at:'2026-10-01T00:00:00.001Z'}}),/ACTUAL_EXACT_ANNOUNCEMENT_REQUIRED/);
    await deny(makeCase({source:{available_at:'2200-01-01T00:00:00Z'}}),/ACTUAL_SOURCE_VERSION_OR_RECEIPT_INVALID/);
    assert.throws(()=>q("update v1_actual_candidate.independent_reviews set status='APPROVED';",'service_role'),/permission denied/);
+  });
+  let pdf;
+  await t.test('native PDF intake -> original service-only atomic RPC needs REAL independent approval dimensions, never parser self-approval',async()=>{
+   const parsed=syntheticIssuerPdfActual(),cutoff='2026-10-20T00:10:00Z';
+   const intake=await prepareIssuerActualCanonicalIntake({...emptyEvidenceData(),universe:[{symbol:'2330',is_active:true}]},
+    {report_date:'2026-10-20',today_date:'2026-10-20',generated_at:cutoff,data_as_of:cutoff,revision_id:'SYNTHETIC_ONLY',is_trading_day:true},
+    [{parsed,parsed_sha256:await snapshotHash(parsed)}]);
+   pdf=intake.prepared[0];assert(pdf);
+   // These are separate LOCAL administrative fake approvals, NOT extraction or
+   // real issuer/rights evidence. The prepared unknown version still denies.
+   await deny(makeCase({source:pdf.source,row:pdf.actual}),/ACTUAL_SOURCE_VERSION_OR_RECEIPT_INVALID/);
+   await deny(makeCase({source:{...pdf.source,source_version_ref:'SYNTHETIC-PDF-V1',version_status:'EXACT'},row:pdf.actual,omitReview:true}),/ACTUAL_REVIEW_MISSING/);
+   await deny(makeCase({source:{...pdf.source,source_version_ref:'SYNTHETIC-PDF-V1',version_status:'EXACT'},row:pdf.actual,omitRights:true}),/ACTUAL_INTERNAL_RIGHTS_MISSING/);
+   const c=makeCase({source:{...pdf.source,source_version_ref:'SYNTHETIC-PDF-V1',version_status:'EXACT'},row:pdf.actual,
+    review:{announced_at:'2026-07-31T08:00:00Z'}});
+   const before=count(),result=await call(c),saved=tableRow('canonical_audit',result.audit_id);
+   assert.equal(result.status,'INSERTED');assert.equal(result.v1_ready,false);
+   assert.deepEqual(count(),[before[0]+1,before[1]+1]);
+   const e=json(`select to_jsonb(e) from public.earnings_events e where id=${quote(saved.earnings_event_id)};`);
+   assert.equal(e.revenue_actual,123456789);assert.equal(e.eps_actual,1.25);
+   assert.equal(e.raw_payload.source_format,'ISSUER_PDF_DIRECT_QUARTER_V1');
+   assert.equal(e.raw_payload.measurement.eps_namespace,null);assert.equal(e.raw_payload.measurement.eps_basis,'BASIC');
+   for(const key of ['revenue_consensus','eps_consensus','guidance_direction','surprise_score'])assert.equal(e[key],null);
+   const after=count();assert.equal((await call(c)).status,'REPLAY');assert.deepEqual(count(),after);
+   revoke('rights_id',c.g.id);await deny(c,/ACTUAL_REVOKED/);
+  });
+  await t.test('PDF-specific evidence cannot be forged by QName, bad source, wrong period, mismatched values, locator or raw extras',async()=>{
+   const source={...pdf.source,source_version_ref:'SYNTHETIC-PDF-V1',version_status:'EXACT'};
+   const bad=[];
+   for(const change of [p=>p.source_sha256='0'.repeat(64),p=>p.receipt_sha256='0'.repeat(64),p=>p.symbol='2454',
+    p=>p.period_start='2026-01-01',p=>p.revenue.value_decimal='1',p=>p.eps.value_decimal='NaN',
+    p=>p.eps.value_decimal=null,p=>p.eps.period_basis='YTD',p=>p.eps.unit='USD/ADR',
+    p=>p.eps.page=0,p=>p.eps.page='6',p=>p.eps.page=161,p=>p.eps.bbox=[130,200,100,210],
+    p=>p.eps.bbox=[-1,200,130,210],p=>p.eps.bbox=[100,200,130],p=>p.eps.bbox=[100,200,'130',210],
+    p=>p.eps.private_path='FORBIDDEN_PRIVATE_EXTRA',p=>p.eps.resolution_decimal='0',
+    p=>p.revenue.resolution_decimal='1000',p=>p.parser_result_sha256=null]){
+    const p=structuredClone(pdf.actual.pdf_measurement);change(p);bad.push({pdf_measurement:p});
+   }
+   for(const row of [...bad,{pdf_measurement:null},{revenue_namespace:'https://xbrl.ifrs.org/taxonomy/2025-03-27/ifrs-full'},
+    {eps_concept:'BasicEarningsLossPerShare'},{eps_basis:'DILUTED'},{profile:'FINANCIAL_TIFRS_FH'},
+    {consolidation:'INDIVIDUAL'},{eps_locator:'PDF_PAGE:7'}]){
+    await deny(makeCase({source,row:{...pdf.actual,...row},review:{announced_at:'2026-07-31T08:00:00Z'}}),/ACTUAL_PDF_MEASUREMENT_UNPROVEN/);
+   }
+   await deny(makeCase({row:{pdf_measurement:pdf.actual.pdf_measurement}}),/ACTUAL_SOURCE_FORMAT_UNSUPPORTED/);
+   await deny(makeCase({source,row:pdf.actual,review:{announced_at:null}}),/ACTUAL_EXACT_ANNOUNCEMENT_REQUIRED/);
+   await deny(makeCase({source,row:pdf.actual,review:{announcement_precision:'DATE_ONLY'}}),/ACTUAL_EXACT_ANNOUNCEMENT_REQUIRED/);
   });
   await t.test('NULL/unknown financial dimensions and unrepresentable numbers reject before canonical write',async()=>{
    for(const row of [{period_start:null},{period_end:null},{period_basis:'YTD'},{profile:null},{revenue_definition:null},

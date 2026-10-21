@@ -7,6 +7,7 @@ import {
  integrationHash,integrationHistoricalRead,SOURCE_UNION_R3_FILES,SOURCE_UNION_R3_BASE,SOURCE_UNION_R4_FILES,
  SOURCE_UNION_R5_FILES,FROZEN_SOURCE_UNION_R4,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,INTEGRATION_MANIFEST,
  SOURCE_UNION_R8_FILES,FROZEN_SOURCE_UNION_R7,
+ SOURCE_UNION_R9_FILES,FROZEN_SOURCE_UNION_R8,
 } from './helpers/integrationAdmission.mjs';
 import {assemble as financial,CHANGED,CATALOG} from '../scripts/operations/financial-response-period-20261020/materialize.mjs';
 import {worker4Baseline} from '../scripts/operations/forward-cutoff-20261020/materialize.mjs';
@@ -101,8 +102,9 @@ test('R5 full PR composition adds the old R4 root and three new paths, never a f
  const paths=[...new Set([...old.files.map(r=>r.path),FROZEN_SOURCE_UNION_R4,...SOURCE_UNION_R5_FILES.map(r=>r.path)])].sort();
  assert.equal(old.files.length,515);assert.equal(paths.length,519);
  const r8Added=SOURCE_UNION_R8_FILES.filter(r=>r.before_sha256===null).map(r=>r.path);
- assert.deepEqual(m.files.filter(r=>![FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added].includes(r.path)).map(r=>r.path),paths);
- assert.deepEqual(integrationInventory(),[...paths,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,INTEGRATION_MANIFEST].sort());
+ const r9Added=SOURCE_UNION_R9_FILES.filter(r=>r.before_sha256===null).map(r=>r.path);
+ assert.deepEqual(m.files.filter(r=>![FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added].includes(r.path)).map(r=>r.path),paths);
+ assert.deepEqual(integrationInventory(),[...paths,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added,INTEGRATION_MANIFEST].sort());
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R5)).files.length,519,'R5 complete assertion stays frozen, not rewritten');
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R6)).files.length,520,'R6 complete assertion stays frozen, not rewritten');
  const candidate=financial('candidate'),recovery=financial('recovery'),base=worker4Baseline();

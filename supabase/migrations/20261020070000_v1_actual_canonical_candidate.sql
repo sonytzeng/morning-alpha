@@ -29,7 +29,7 @@ create table v1_actual_candidate.source_revisions (
  symbol text not null check(symbol ~ '^[0-9]{4,6}$'),
  source_kind text not null check(source_kind in ('ISSUER_FILING','EXCHANGE_FILING')),
  source_format text not null default 'UNKNOWN'
-  check(source_format in ('SUPPORTED_INLINE_XBRL_ONLY','PDF_UNSUPPORTED','UNKNOWN')),
+  check(source_format in ('SUPPORTED_INLINE_XBRL_ONLY','ISSUER_PDF_DIRECT_QUARTER_V1','PDF_UNSUPPORTED','UNKNOWN')),
  source_ref text not null check(source_ref ~ '^https://[^/?#@[:space:]]+([/?#]|$)'
   and source_ref !~* '[?&][^=]*(token|secret|key|auth|email)[^=]*='),
  source_sha256 text not null check(source_sha256 ~ '^[a-f0-9]{64}$'),
@@ -55,6 +55,10 @@ create table v1_actual_candidate.actual_rows (
  share_class text, eps_basis text, eps_unit text,
  revenue_namespace text, revenue_concept text, eps_namespace text, eps_concept text,
  revenue_locator text, eps_locator text,
+ -- A separate native PDF measurement dialect. No invented XBRL QName/context.
+ -- Row-hash-bound independent review is still mandatory; the parser is NOT
+ -- an approval authority and this JSON cannot grant source or member rights.
+ pdf_measurement jsonb,
  revenue_actual numeric, eps_actual numeric,
  recorded_at timestamptz not null default clock_timestamp(),
  record_sha256 text not null default repeat('0',64),
@@ -162,7 +166,7 @@ declare
  v v1_actual_candidate.independent_reviews; g v1_actual_candidate.internal_rights;
  a v1_actual_candidate.authorities; audit v1_actual_candidate.canonical_audit;
  e public.earnings_events; body jsonb; digest text; event_id uuid; audit_id uuid;
- at_time timestamptz; expected_start date; expected_end date; ns text;
+ at_time timestamptz; expected_start date; expected_end date; ns text; p jsonb; m jsonb; metric text;
 begin
  if p_source_revision_id is null or p_row_id is null then raise exception 'ACTUAL_ID_REQUIRED'; end if;
  -- Under a stale repeatable-read snapshot a just-committed revocation could be
@@ -174,10 +178,8 @@ begin
  if not found then raise exception 'ACTUAL_SOURCE_MISSING'; end if;
  select * into r from v1_actual_candidate.actual_rows where id=p_row_id and source_revision_id=s.id;
  if not found then raise exception 'ACTUAL_ROW_MISSING'; end if;
- -- The typed QName/context contract is iXBRL-only. Real issuer PDFs, including
- -- those with explicit three-month columns, require a DIFFERENT reviewed source
- -- adapter/schema. A raw PDF hash cannot manufacture iXBRL QName evidence.
- if s.source_format is distinct from 'SUPPORTED_INLINE_XBRL_ONLY' then raise exception 'ACTUAL_SOURCE_FORMAT_UNSUPPORTED'; end if;
+ if (s.source_format in ('SUPPORTED_INLINE_XBRL_ONLY','ISSUER_PDF_DIRECT_QUARTER_V1')) is distinct from true
+ then raise exception 'ACTUAL_SOURCE_FORMAT_UNSUPPORTED'; end if;
  select * into v from v1_actual_candidate.independent_reviews where row_id=r.id and source_revision_id=s.id;
  if not found then raise exception 'ACTUAL_REVIEW_MISSING'; end if;
  select * into g from v1_actual_candidate.internal_rights where source_revision_id=s.id;
@@ -221,6 +223,57 @@ begin
   or r.eps_unit is distinct from 'TWD_PER_COMMON_SHARE'
   or r.revenue_locator is null or btrim(r.revenue_locator)='' or r.eps_locator is null or btrim(r.eps_locator)=''
  then raise exception 'ACTUAL_MEASUREMENT_BASIS_UNPROVEN'; end if;
+ if s.source_format='ISSUER_PDF_DIRECT_QUARTER_V1' then
+  -- Only the exact direct-quarter parser projection is understood. Unknown
+  -- announcements/versions/rights still fail the SAME shared checks below.
+  p:=r.pdf_measurement;
+  if p is null or jsonb_typeof(p) is distinct from 'object' or octet_length(p::text)>16000
+   or (select array_agg(k order by k) from jsonb_object_keys(p) k) is distinct from
+    array['contract','descriptor_sha256','eps','parser_result_sha256','period_end','period_start','receipt_sha256','revenue','source_sha256','symbol']::text[]
+   or p->>'contract' is distinct from 'ISSUER_PDF_DIRECT_QUARTER_MEASUREMENT_V1'
+   or p->>'symbol' is distinct from s.symbol or p->>'source_sha256' is distinct from s.source_sha256
+   or p->>'period_start' is distinct from r.period_start::text or p->>'period_end' is distinct from r.period_end::text
+   or (p->>'parser_result_sha256' ~ '^[a-f0-9]{64}$') is distinct from true
+   or (p->>'descriptor_sha256' ~ '^[a-f0-9]{64}$') is distinct from true
+   or p->>'receipt_sha256' is distinct from s.receipt_document_sha256
+   or r.revenue_namespace is not null or r.eps_namespace is not null
+   or r.revenue_concept is not null or r.eps_concept is not null
+   or r.profile is distinct from 'NONFINANCIAL_IFRS' or r.revenue_definition is distinct from 'IFRS_REVENUE'
+   or r.consolidation is distinct from 'CONSOLIDATED' or r.eps_basis is distinct from 'BASIC'
+   or r.symbol in ('2881','2882','2884','2885','2886','2891','2892')
+  then raise exception 'ACTUAL_PDF_MEASUREMENT_UNPROVEN'; end if;
+  foreach metric in array array['revenue','eps'] loop
+   m:=p->metric;
+   if jsonb_typeof(m) is distinct from 'object' then raise exception 'ACTUAL_PDF_MEASUREMENT_UNPROVEN'; end if;
+   if (select array_agg(k order by k) from jsonb_object_keys(m) k) is distinct from
+     array['bbox','page','period_basis','resolution_decimal','unit','value_decimal']::text[]
+    or (m->>'period_basis' in ('DIRECT_THREE_MONTHS','DIRECT_SINGLE_QUARTER_AS_REPORTED')) is distinct from true
+    or m->>'unit' is distinct from (case metric when 'revenue' then 'TWD' else 'TWD/ordinary_share' end)
+    or jsonb_typeof(m->'value_decimal') is distinct from 'string'
+    or jsonb_typeof(m->'resolution_decimal') is distinct from 'string'
+    or length(m->>'value_decimal')>64 or length(m->>'resolution_decimal')>64
+    or (m->>'value_decimal' ~ '^-?[0-9]{1,40}(\.[0-9]{1,12})?(E[+-]?[0-9]{1,2})?$') is distinct from true
+    or (m->>'resolution_decimal' ~ '^[0-9]{1,40}(\.[0-9]{1,12})?(E[+-]?[0-9]{1,2})?$') is distinct from true
+    or (m->>'page' ~ '^[0-9]{1,3}$') is distinct from true
+    or jsonb_typeof(m->'page') is distinct from 'number'
+    or jsonb_typeof(m->'bbox') is distinct from 'array'
+   then raise exception 'ACTUAL_PDF_MEASUREMENT_UNPROVEN'; end if;
+   if (m->>'value_decimal')::numeric is distinct from (case metric when 'revenue' then r.revenue_actual else r.eps_actual end)
+    or (m->>'resolution_decimal')::numeric<=0 or (m->>'resolution_decimal')::numeric<0.000000000001
+    or (m->>'page')::integer not between 1 and 160 or jsonb_array_length(m->'bbox')<>4
+    or (case metric when 'revenue' then r.revenue_locator else r.eps_locator end) is distinct from 'PDF_PAGE:'||(m->>'page')
+   then raise exception 'ACTUAL_PDF_MEASUREMENT_UNPROVEN'; end if;
+   if exists(select from jsonb_array_elements(m->'bbox') b where jsonb_typeof(b) is distinct from 'number'
+     or length(b::text)>32 or b::text !~ '^[0-9]+(\.[0-9]+)?$')
+   then raise exception 'ACTUAL_PDF_MEASUREMENT_UNPROVEN'; end if;
+   if (m->'bbox'->>0)::numeric>=(m->'bbox'->>2)::numeric
+    or (m->'bbox'->>1)::numeric>=(m->'bbox'->>3)::numeric
+   then raise exception 'ACTUAL_PDF_MEASUREMENT_UNPROVEN'; end if;
+  end loop;
+  if (p->'revenue'->>'resolution_decimal')::numeric is distinct from r.revenue_resolution_twd
+  then raise exception 'ACTUAL_PDF_MEASUREMENT_UNPROVEN'; end if;
+ else
+ if r.pdf_measurement is not null then raise exception 'ACTUAL_SOURCE_FORMAT_UNSUPPORTED'; end if;
  ns:=r.eps_namespace;
  if (ns in ('http://xbrl.ifrs.org/taxonomy/2017-03-09/ifrs-full','https://xbrl.ifrs.org/taxonomy/2025-03-27/ifrs-full')) is distinct from true
   or r.eps_concept is distinct from (case r.eps_basis when 'BASIC' then 'BasicEarningsLossPerShare' else 'DilutedEarningsLossPerShare' end)
@@ -242,6 +295,7 @@ begin
   -- comparable financial-consensus policy exists. No caller can override this.
   raise exception 'ACTUAL_FINANCIAL_CANONICAL_METHOD_REVIEW_REQUIRED';
  else raise exception 'ACTUAL_PROFILE_UNPROVEN'; end if;
+ end if;
  if r.revenue_actual is null or r.eps_actual is null
   or r.revenue_actual::text in ('NaN','Infinity','-Infinity') or r.eps_actual::text in ('NaN','Infinity','-Infinity')
   or abs(r.revenue_actual)>9007199254740991 or abs(r.eps_actual)>9007199254740991

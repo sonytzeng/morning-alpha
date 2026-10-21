@@ -2,8 +2,10 @@
  * source acquisition, SDK, credentials, UI, publication, or V1 threshold change.
  * Use the existing server Supabase client's rpc(name,args); no extra credential
  * or private PostgREST schema exposure. The SQL transaction is authority.
- * Supported source: reviewed Inline XBRL ONLY. PDF/unknown format and financial
- * canonical methods are explicitly unsupported, even with retained raw hashes.
+ * Reviewed Inline XBRL and the SEPARATE native PDF direct-quarter dialect use
+ * the same ID-only transaction. Both require independent source/quality/rights
+ * records and exact announcement/version proof; a parser never grants approval.
+ * Unknown formats and financial canonical methods remain unsupported.
  */
 export const V1_ACTUAL_CANONICAL_CONTRACT = 'V1_ACTUAL_CANONICAL_CANDIDATE_V1';
 export const V1_ACTUAL_CANONICAL_FUNCTION = 'append_v1_canonical_actual_candidate_v1';

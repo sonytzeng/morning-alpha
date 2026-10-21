@@ -16,17 +16,18 @@ import {
  FROZEN_SOURCE_UNION_R6,SOURCE_UNION_R7_BASE,SOURCE_UNION_R7_FILES,sourceUnionR7Lineage,
  FROZEN_SOURCE_UNION_R7,SOURCE_UNION_R8_BASE,SOURCE_UNION_R8_FILES,sourceUnionR8Lineage,INTEGRATION_BASE,
  FROZEN_SOURCE_UNION_R8,SOURCE_UNION_R9_BASE,SOURCE_UNION_R9_FILES,sourceUnionR9Lineage,
+ FROZEN_SOURCE_UNION_R9,SOURCE_UNION_R10_BASE,SOURCE_UNION_R10_FILES,sourceUnionR10Lineage,
  integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHash,
  createSourceUnionComposition,verifyIntegrationCandidate,sourceUnionLineage,sourceUnionParentRead,reuseSourceUnionPinnedProof,
 } from './helpers/integrationAdmission.mjs';
 const flags=['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'];
 test('R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',()=>{
  const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);
- assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r9.json');
+ assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r10.json');
  assert.equal(FROZEN_SOURCE_UNION_R7,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r7.json');
  assert.equal(FROZEN_SOURCE_UNION,'docs/operations/evidence/core-member-integration-20261020-v1-source-union.json');
  assert.equal(FROZEN_SOURCE_UNION_NORMALIZER,'docs/operations/evidence/core-member-integration-20261020-v1-source-union-normalizer.json');
- assert.equal(m.files.length,529);assert.equal(integrationInventory().length,530);
+ assert.equal(m.files.length,532);assert.equal(integrationInventory().length,533);
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R8)).files.length,525,'R8 full root remains frozen');
  const r7=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R7));assert.equal(r7.files.length,521);
  const r7Inventory=execFileSync('git',['--no-replace-objects','diff','--no-renames','--name-only','-z',INTEGRATION_BASE,SOURCE_UNION_R8_BASE,'--'],{cwd:new URL('../',import.meta.url),encoding:'utf8'}).split('\0').filter(Boolean).sort();
@@ -544,8 +545,9 @@ test('R8 pins seven independent exact before/after deltas and preserves the full
   'docs/operations/PRODUCT_DELIVERY_MASTER.md','docs/operations/evidence/v1-source-gap-matrix-20261021.json']);
  const added=r.files.filter(f=>f.before_sha256===null).map(f=>f.path);
  const r9Added=SOURCE_UNION_R9_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);
- assert.equal(added.length,3);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R7,...added,FROZEN_SOURCE_UNION_R8,...r9Added].sort());
- assert.equal(m.files.length,529);assert.deepEqual(integrationInventory(),[...m.files.map(f=>f.path),INTEGRATION_MANIFEST].sort());
+ const r10Added=SOURCE_UNION_R10_FILES.filter(f=>!old.files.some(r=>r.path===f.path)).map(f=>f.path);
+ assert.equal(added.length,3);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R7,...added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added].sort());
+ assert.equal(m.files.length,532);assert.deepEqual(integrationInventory(),[...m.files.map(f=>f.path),INTEGRATION_MANIFEST].sort());
  for(const row of r.files){
   const replacement=SOURCE_UNION_R9_FILES.find(f=>f.path===row.path);
   const immutable=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R9_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
@@ -657,7 +659,8 @@ test('R9 admits the exact native PDF intake delta without changing the frozen R8
  assert.equal(integrationHash(integrationPhysicalRead(FROZEN_SOURCE_UNION_R8)),'b773a7050a97ffc37fa2cfacf7da03cc9d855972998d1418bcae5fd92406d787');
  assert.equal(old.files.length,525);assert.deepEqual(m.source_union.r8,old.source_union.r8);
  const added=SOURCE_UNION_R9_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);
- assert.equal(added.length,3);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R8,...added].sort());
+ const r10Added=SOURCE_UNION_R10_FILES.filter(f=>!old.files.some(r=>r.path===f.path)).map(f=>f.path);
+ assert.equal(added.length,3);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R8,...added,FROZEN_SOURCE_UNION_R9,...r10Added].sort());
  for(const row of SOURCE_UNION_R9_FILES){
   assert.equal(old.files.find(f=>f.path===row.path)?.after_sha256??null,row.before_sha256);
   assert.equal(integrationHash(integrationPhysicalRead(row.path)),row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);
@@ -705,4 +708,53 @@ test('R9 preserves all 61 R8 admission assertions at their exact parent; only fi
   }
  }
  assert.equal(count,61);assert.equal(adapted.size,5);
+});
+test('R10 pins only the company-event identity correction over the unchanged complete R9 root',()=>{
+ const m=verifyIntegrationCandidate(),r=m.source_union.r10,old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R9));
+ assert.deepEqual(r,sourceUnionR10Lineage());assert.equal(SOURCE_UNION_R10_FILES.length,2);
+ assert.equal(integrationHash(integrationPhysicalRead(FROZEN_SOURCE_UNION_R9)),'54cda51cf63f6d0c3dd2eb2729ebe6c5deb2722905cf368d140c1ec962ad8869');
+ assert.equal(old.files.length,529);assert.deepEqual(m.source_union.r9,old.source_union.r9);
+ const added=SOURCE_UNION_R10_FILES.filter(f=>!old.files.some(r=>r.path===f.path)).map(f=>f.path);assert.equal(added.length,2);
+ assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R9,...added].sort());
+ for(const row of SOURCE_UNION_R10_FILES){
+  const prior=row.before_sha256===null?null:old.files.find(f=>f.path===row.path)?.after_sha256??integrationHash(execFileSync('git',['show',INTEGRATION_BASE+':'+row.path],{cwd:new URL('../',import.meta.url),stdio:['ignore','pipe','ignore']}));
+  assert.equal(prior,row.before_sha256);
+  assert.equal(integrationHash(integrationPhysicalRead(row.path)),row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);
+ }
+ for(const flag of ['source_admission','canonical_admission','quality_approval','production_authorized','publication_approval','thresholds_changed','existing_release_payloads_changed'])assert.equal(r[flag],false);
+});
+test('R10 rejects reflected source, mode, omission, old-generation and lineage changes',()=>{
+ for(const row of SOURCE_UNION_R10_FILES){
+  const f=fixture();f.verify();f.bytes.set(row.path,Buffer.concat([f.read(row.path),Buffer.from('\nR10_UNREVIEWED')]));
+  const reflected=integrationHash(f.read(row.path));f.manifest.files.find(r=>r.path===row.path).after_sha256=reflected;
+  f.manifest.source_union.r10.files.find(r=>r.path===row.path).after_sha256=reflected;f.reseal();assert.throws(f.verify,/SOURCE_DRIFT/);
+  assert.throws(()=>createSourceUnionComposition(f.read,f.paths,f.mode),/SOURCE_DRIFT/);
+  const absent=fixture();assert.throws(()=>verifyIntegrationCandidate(p=>{if(p===row.path)throw Error('R10_MISSING');return absent.read(p);},absent.paths,absent.mode),/R10_MISSING/);
+  for(const mode of ['100755','120000']){const g=fixture();g.modes.set(row.path,mode);g.manifest.files.find(r=>r.path===row.path).mode=mode;g.reseal();assert.throws(g.verify,/MODE_DRIFT/);}
+  if(row.before_sha256){const g=fixture();g.bytes.set(row.path,execFileSync('git',['show',SOURCE_UNION_R10_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)}));
+   g.manifest.files.find(r=>r.path===row.path).after_sha256=row.before_sha256;g.manifest.source_union.r10.files.find(r=>r.path===row.path).after_sha256=row.before_sha256;g.reseal();assert.throws(g.verify,/SOURCE_DRIFT/);}
+ }
+ for(const change of [r=>r.production_authorized=true,r=>r.source_admission=true,r=>r.canonical_admission=true,
+  r=>r.quality_approval=true,r=>r.publication_approval=true,r=>r.thresholds_changed=true,r=>r.existing_release_payloads_changed=true,
+  r=>r.files.pop(),r=>r.base='HEAD',r=>r.prior_root.sha256='0'.repeat(64)]){
+  const f=fixture();change(f.manifest.source_union.r10);f.reseal();assert.throws(f.verify,/LINEAGE_DRIFT/);
+ }
+});
+test('R10 retains all 64 R9 admission cases; four full-current inventory views only are adapted',()=>{
+ const adapted=new Set(['R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',
+  'R8 pins seven independent exact before/after deltas and preserves the full frozen R7 root and lineage',
+  'R9 admits the exact native PDF intake delta without changing the frozen R8 lineage or granting any business permission',
+  'R5 full PR composition adds the old R4 root and three new paths, never a four-file-only seal or Worker grant']);
+ const bodies=text=>{const starts=[...text.matchAll(/^test\('([^']+)'/gm)];return new Map(starts.map((r,i)=>[r[1],text.slice(r.index,starts[i+1]?.index??text.length).trimEnd()]));};
+ let count=0;
+ for(const path of ['tests/originalIngressAdmission.test.mjs','tests/officialPublicAdmission.test.mjs']){
+  const old=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R10_BASE+':'+path],{cwd:new URL('../',import.meta.url),encoding:'utf8'});
+  const before=bodies(old),after=bodies(integrationPhysicalRead(path).toString());count+=before.size;
+  for(const [name,body]of before){const current=after.get(name);assert(current,'original test retained: '+name);
+   if(!adapted.has(name))assert.equal(current,body,'original assertions unchanged: '+name);
+   else assert((current.match(/\bassert[.(]/g)??[]).length>=(body.match(/\bassert[.(]/g)??[]).length);
+   assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
+  }
+ }
+ assert.equal(count,64);assert.equal(adapted.size,4);
 });

@@ -2,13 +2,20 @@
  * An announcement is an event fact, never automatically a positive catalyst.
  * Deliberately excludes raw free-text/contacts from retained metadata. */
 import type { Row } from './decision-v1-data.ts';
+import { validTime } from '../../../src/features/vnext/contracts.ts';
 export const COMPANY_EVENT_SOURCES=Object.freeze([
- {exchange:'TWSE',url:'https://openapi.twse.com.tw/v1/opendata/t187ap04_L'},
- {exchange:'TPEX',url:'https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap04_O'},
+ Object.freeze({exchange:'TWSE',url:'https://openapi.twse.com.tw/v1/opendata/t187ap04_L'} as const),
+ Object.freeze({exchange:'TPEX',url:'https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap04_O'} as const),
 ] as const);
 export type CompanyEvent={symbol:string;exchange:'TWSE'|'TPEX';source_ref:string;source_hash:string;published_at:string;available_at:string;event_type:'OFFICIAL_MATERIAL_ANNOUNCEMENT';event_fact:true;bullishness:null;impact_review:'REQUIRED';raw_retained:false};
 const obj=(v:unknown):Row=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Row:{};
 const text=(v:unknown)=>typeof v==='string'?v.trim():typeof v==='number'?String(v):'';
+function alias(row:Row,primary:string,secondary:string):string{
+ const a=row[primary],b=row[secondary];
+ if(a!==null&&a!==undefined&&b!==null&&b!==undefined&&text(a)!==text(b))
+  throw Error('COMPANY_EVENT_FIELD_CONFLICT');
+ return text(a??b);
+}
 const sha=async(v:unknown)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(v)))),b=>b.toString(16).padStart(2,'0')).join('');
 function published(date:unknown,time:unknown):string|null{
  const d=text(date).match(/^(\d{3,4})[-/]?(\d{2})[-/]?(\d{2})$/),t=text(time).match(/^(\d{2}):?(\d{2}):?(\d{2})$/);
@@ -17,16 +24,24 @@ function published(date:unknown,time:unknown):string|null{
  return Number.isFinite(at)&&new Date(at+8*3600000).toISOString().slice(0,19)===local?new Date(at).toISOString():null;
 }
 export async function normalizeCompanyEvents(source:typeof COMPANY_EVENT_SOURCES[number],payload:unknown,receivedAt:string,symbols:readonly string[]):Promise<CompanyEvent[]>{
- if(!COMPANY_EVENT_SOURCES.some(s=>s.url===source.url&&s.exchange===source.exchange)||!Number.isFinite(Date.parse(receivedAt))||!Array.isArray(payload)||payload.length>5000)throw Error('COMPANY_EVENT_CONTRACT');
+ const trusted=COMPANY_EVENT_SOURCES.find(s=>s.url===source?.url&&s.exchange===source?.exchange);
+ if(!trusted||typeof receivedAt!=='string'||!validTime(receivedAt)||!Array.isArray(payload)||payload.length>5000)throw Error('COMPANY_EVENT_CONTRACT');
  const allowed=new Set(symbols),seen=new Set<string>(),events:CompanyEvent[]=[];
+ // Capture only identifying fields before the first await. A changed caller
+ // object must not retarget a verified company, source or later batch record.
+ // Do not clone/retain explanations, contact details or the whole raw payload.
+ const facts:{symbol:string;at:string;subject:string}[]=[];
  for(const raw of payload){
-  const r=obj(raw),symbol=text(r['公司代號']??r.SecuritiesCompanyCode);if(!allowed.has(symbol))continue;
-  const at=published(r['發言日期'],r['發言時間']),subject=text(r['主旨 ']??r['主旨']);
+  const r=obj(raw),symbol=alias(r,'公司代號','SecuritiesCompanyCode');if(!allowed.has(symbol))continue;
+  const at=published(r['發言日期'],r['發言時間']),subject=alias(r,'主旨 ','主旨');
   if(!at||Date.parse(at)>Date.parse(receivedAt)||!subject||subject.length>4000)throw Error('COMPANY_EVENT_TIME_OR_SUBJECT');
+  facts.push({symbol,at,subject});
+ }
+ for(const {symbol,at,subject} of facts){
   // Hash only the identifying official fields. Never retain raw explanation,
   // named speaker, phone, email or member identity. Subject is not surfaced.
-  const digest=await sha([source.url,symbol,at,subject]);if(seen.has(digest))continue;seen.add(digest);
-  events.push({symbol,exchange:source.exchange,source_ref:source.url,source_hash:digest,published_at:at,available_at:receivedAt,event_type:'OFFICIAL_MATERIAL_ANNOUNCEMENT',event_fact:true,bullishness:null,impact_review:'REQUIRED',raw_retained:false});
+  const digest=await sha([trusted.url,symbol,at,subject]);if(seen.has(digest))continue;seen.add(digest);
+  events.push({symbol,exchange:trusted.exchange,source_ref:trusted.url,source_hash:digest,published_at:at,available_at:receivedAt,event_type:'OFFICIAL_MATERIAL_ANNOUNCEMENT',event_fact:true,bullishness:null,impact_review:'REQUIRED',raw_retained:false});
  }
  return events.sort((a,b)=>a.symbol.localeCompare(b.symbol)||a.published_at.localeCompare(b.published_at)||a.source_hash.localeCompare(b.source_hash));
 }

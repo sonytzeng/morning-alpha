@@ -51,6 +51,53 @@ test('idempotent same study does not duplicate rows; conflicting saved same ID f
   assert.equal(b.appended_rows,0);assert.deepEqual(a.data,b.data);
   a.data.earnings[0].eps_actual=999;await assert.rejects(join(a.data,identity,[p]),/EXISTING_ROW_CONFLICT/);
 });
+test('new cutoff or trading day reuses the identical retained packet without rewriting its first preparation',async()=>{
+  const p=await packet(),first=await join(data(),identity,[p]),original=structuredClone(first.data);
+  for(const later of [
+    {...identity,revision_id:'synthetic-held-later',generated_at:'2026-10-21T02:00:00.000Z',data_as_of:'2026-10-21T02:00:00.000Z'},
+    {...identity,revision_id:'synthetic-held-next-day',today_date:'2026-10-22',report_date:'2026-10-22',
+      generated_at:'2026-10-22T01:00:00.000Z',data_as_of:'2026-10-22T01:00:00.000Z'},
+  ]){
+    const out=await join(first.data,later,[p]);
+    assert.equal(out.appended_rows,0);assert.deepEqual(out.data,original);assert.deepEqual(first.data,original);
+    assert.equal(out.source_receipts[0].input_prepared_at,later.generated_at);
+    assert.equal(out.data.earnings[0].actual_source.input_prepared_at,identity.generated_at);
+    assert.equal(out.data.earnings[0].announced_at,null);assert.equal(out.data.earnings[0].source_admitted,false);
+    assert.equal(out.canonical_writes,0);assert.equal(out.member_publication,false);assert.equal(out.forward_sample,0);
+    const decision=buildEvidenceDecision(out.data,later);
+    assert.equal(decision.phase_evaluation.evaluated_count,0);assert.equal(decision.phase_evaluation.blocked_count,1);
+  }
+});
+test('a saved JSON object key order is not a source revision; changed values remain conflicts',async()=>{
+  const p=await packet(),first=await join(data(),identity,[p]);
+  const reorder=v=>Array.isArray(v)?v.map(reorder):v&&typeof v==='object'
+    ?Object.fromEntries(Object.entries(v).reverse().map(([k,value])=>[k,reorder(value)])):v;
+  const saved=reorder(first.data),before=structuredClone(saved);
+  const out=await join(saved,{...identity,revision_id:'synthetic-json-roundtrip',generated_at:'2026-10-21T02:00:00.000Z'},[p]);
+  assert.equal(out.appended_rows,0);assert.deepEqual(out.data.earnings,saved.earnings);assert.deepEqual(saved,before);
+  saved.earnings[0].actual_source.measurements[0].value_decimal='999';
+  await assert.rejects(join(saved,identity,[p]),/EXISTING_ROW_CONFLICT/);
+});
+test('later-cutoff reuse still rejects changed evidence, forged preparation, duplicates or late rows',async()=>{
+  const p=await packet(),first=await join(data(),identity,[p]);
+  const later={...identity,revision_id:'synthetic-held-later',generated_at:'2026-10-21T02:00:00.000Z'};
+  for(const change of [
+    r=>r.eps_actual=999,r=>r.actual_source.measurements[0].value_decimal='999',
+    r=>r.source_admitted=true,r=>r.legal_reuse_approval=true,r=>r.actual_source.source_version='invented',
+    r=>r.id='not-an-immutable-held-id',r=>r.actual_source.input_prepared_at=later.generated_at,
+    r=>{r.created_at=r.available_at=r.actual_source.input_prepared_at='2026-10-20T01:00:00.000Z';},
+    r=>{r.created_at=r.available_at=r.actual_source.input_prepared_at='2026-10-21T03:00:00.000Z';},
+  ]){
+    const d=structuredClone(first.data);change(d.earnings[0]);const original=structuredClone(d);
+    await assert.rejects(join(d,later,[p]),/EXISTING_ROW_CONFLICT/);assert.deepEqual(d,original);
+  }
+  const duplicate=structuredClone(first.data);duplicate.earnings.push(structuredClone(duplicate.earnings[0]));
+  await assert.rejects(join(duplicate,later,[p]),/EXISTING_QUARTER_CONFLICT/);
+  const changed=parsed();changed.rows[0].value_decimal='999';
+  await assert.rejects(join(first.data,later,[await packet(changed)]),/EXISTING_QUARTER_CONFLICT/);
+  const earlier={...identity,revision_id:'synthetic-held-earlier',generated_at:'2026-10-21T00:00:00.000Z'};
+  await assert.rejects(join(first.data,earlier,[p]),/EXISTING_ROW_CONFLICT/);
+});
 test('all 72 original symbols can use the same bridge without issuer-specific helpers or partial universe success claims',async()=>{
   const symbols=Array.from({length:72},(_,i)=>String(1500+i)),packets=await Promise.all(symbols.map(s=>packet(parsed(s))));
   const out=await join(data(symbols),identity,packets);assert.equal(out.appended_rows,72);assert.equal(out.source_receipts.length,72);

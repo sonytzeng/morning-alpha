@@ -122,14 +122,31 @@ export async function withRetainedIssuerActualInputs(data: EvidenceData, identit
           unit:r.unit,period_basis:r.period_basis,scope:r.scope,period_start:r.period_start,period_end:r.period_end,
           cell:{page:object(r.cell).page,bbox:[...(object(r.cell).bbox as number[])]},
           eps_basis:r.metric === 'basic_eps' ? 'BASIC' : null,share_class:r.metric === 'basic_eps' ? 'ORDINARY' : null}))}};
-    // A different parser/source revision for the same retained quarter cannot
-    // evade the batch duplicate guard by arriving in a later call. Do not choose
-    // or combine competing unreviewed versions; preserve existing data unchanged.
-    refuse(!original.earnings.some(r => r.provider === 'RETAINED_ISSUER_PDF_UNADMITTED'
-      && r.symbol === p.entity && r.fiscal_period === fiscal && r.id !== row.id), 'EXISTING_QUARTER_CONFLICT');
-    const prior = original.earnings.filter(r => r.id === row.id);
-    refuse(!prior.some(r => JSON.stringify(r) !== JSON.stringify(row)), 'EXISTING_ROW_CONFLICT');
-    if (!prior.length) appended.push(row);
+    // A later evaluation is not a new source revision. Keep the first private
+    // row (including its original ID and preparation/availability times) intact
+    // when exactly the same validated packet is reconsidered at a newer cutoff.
+    // Never use this read-side reuse as admission, correction or an overwrite.
+    const quarterRows = original.earnings.filter(r => r.provider === 'RETAINED_ISSUER_PDF_UNADMITTED'
+      && r.symbol === p.entity && r.fiscal_period === fiscal);
+    refuse(quarterRows.length <= 1, 'EXISTING_QUARTER_CONFLICT');
+    if (quarterRows.length) {
+      const prior = quarterRows[0], source = object(prior.actual_source);
+      refuse(source.parser_result_sha256 === packet.parsed_sha256, 'EXISTING_QUARTER_CONFLICT');
+      refuse(typeof prior.id === 'string' && /^held-issuer-actual:[a-f0-9]{64}$/.test(prior.id)
+        && prior.created_at === prior.available_at && source.input_prepared_at === prior.created_at
+        && ordered(p.conservative_available_at,prior.created_at) && ordered(prior.created_at,id.generated_at),
+      'EXISTING_ROW_CONFLICT');
+      const expected = {...row,id:prior.id,created_at:prior.created_at,available_at:prior.available_at,
+        actual_source:{...object(row.actual_source),input_prepared_at:prior.created_at}};
+      // JSONB round trips may reorder object keys. Compare the complete canonical
+      // values, not serialization order; arrays, amounts and all flags still bind.
+      refuse(await snapshotHash(prior) === await snapshotHash(expected), 'EXISTING_ROW_CONFLICT');
+    } else {
+      // A duplicate ID outside its validated company/quarter must not turn an
+      // append into implicit reuse of a differently scoped existing row.
+      refuse(!original.earnings.some(r => r.id === row.id), 'EXISTING_ROW_CONFLICT');
+      appended.push(row);
+    }
   }
   return {data:{...original,earnings:[...original.earnings,...appended]},source_receipts:receipts,gaps,
     appended_rows:appended.length,source_admission:false,canonical_writes:0,member_publication:false,

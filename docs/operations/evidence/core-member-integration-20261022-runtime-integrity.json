@@ -2928,7 +2928,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "8c77420fe86e37510cd52ab29ccae5254a66684c18ebf9a5bfd7c3cb5fe1ddb5",
+      "after_sha256": "7d0b781c877b2914c745c2164dcdff7b15fac769486b9036b2304f73344379bd",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3488,7 +3488,7 @@
     {
       "path": "tests/v1FinancialPeriodRelease.test.mjs",
       "before_sha256": null,
-      "after_sha256": "106e0cbf7f21e126eb544f4b8f8049833b51c36aa80663f1a005add4932e2384",
+      "after_sha256": "3c713ab57c4554ef447224d9ca7e3584c351bd392cf8896e160119ec9962a684",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3593,7 +3593,7 @@
     {
       "path": "tests/vnextDailyDatabase.integration.mjs",
       "before_sha256": "67698a4f0f223dc8bbf33ea1c6672a89d7045eacb1591587606ba478ec6844ae",
-      "after_sha256": "0742de82575a2f196f2d0c8543bbeeca0425a1939cf16fb22ecec1e93bcb08cb",
+      "after_sha256": "a7767bbbc313c1870543a40994f34c4707bd0ef725368c3595bab88b8c9e5caf",
       "mode": "100644",
       "origin": "composition"
     },
@@ -4724,6 +4724,18 @@
           "mode": "100644",
           "before_sha256": "cb0ef310499dd03d237afb9c3f49679d8050098b367d2de877d3d0d3ea638581",
           "after_sha256": "4c57eb376a70645f768f2e03c1ae4fa7fcf58a8a16d1235cf2ad63cb44031db1"
+        },
+        {
+          "path": "tests/v1FinancialPeriodRelease.test.mjs",
+          "mode": "100644",
+          "before_sha256": "106e0cbf7f21e126eb544f4b8f8049833b51c36aa80663f1a005add4932e2384",
+          "after_sha256": "3c713ab57c4554ef447224d9ca7e3584c351bd392cf8896e160119ec9962a684"
+        },
+        {
+          "path": "tests/vnextDailyDatabase.integration.mjs",
+          "mode": "100644",
+          "before_sha256": "0742de82575a2f196f2d0c8543bbeeca0425a1939cf16fb22ecec1e93bcb08cb",
+          "after_sha256": "a7767bbbc313c1870543a40994f34c4707bd0ef725368c3595bab88b8c9e5caf"
         }
       ],
       "scope": "OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_AND_CI_PREPARATION",

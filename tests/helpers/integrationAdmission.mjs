@@ -112,6 +112,18 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "mode": "100644",
   "before_sha256": "cb0ef310499dd03d237afb9c3f49679d8050098b367d2de877d3d0d3ea638581",
   "after_sha256": "4c57eb376a70645f768f2e03c1ae4fa7fcf58a8a16d1235cf2ad63cb44031db1"
+ },
+ {
+  "path": "tests/v1FinancialPeriodRelease.test.mjs",
+  "mode": "100644",
+  "before_sha256": "106e0cbf7f21e126eb544f4b8f8049833b51c36aa80663f1a005add4932e2384",
+  "after_sha256": "3c713ab57c4554ef447224d9ca7e3584c351bd392cf8896e160119ec9962a684"
+ },
+ {
+  "path": "tests/vnextDailyDatabase.integration.mjs",
+  "mode": "100644",
+  "before_sha256": "0742de82575a2f196f2d0c8543bbeeca0425a1939cf16fb22ecec1e93bcb08cb",
+  "after_sha256": "a7767bbbc313c1870543a40994f34c4707bd0ef725368c3595bab88b8c9e5caf"
  }
 ].map(Object.freeze));
 export const FROZEN_SOURCE_UNION_R14='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r14.json';
@@ -921,7 +933,7 @@ export function runtimeIntegrityLineage(){
  assert.equal(root?.sha256,prior_root.sha256,'RUNTIME_PRIOR_ROOT_DRIFT');assert.equal(root?.mode,'100644');
  const old=JSON.parse(root.bytes);assert.equal(old.files.length,538,'RUNTIME_PRIOR_FULL_SCOPE');
  assert.deepEqual(old.source_union.r15,sourceUnionR15Lineage(),'RUNTIME_PRIOR_LINEAGE_DRIFT');
- assert.equal(RUNTIME_INTEGRITY_FILES.length,16);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,16);
+ assert.equal(RUNTIME_INTEGRITY_FILES.length,18);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,18);
  for(const row of RUNTIME_INTEGRITY_FILES){
   assert(!SOURCE_UNION_SUPPORT.includes(row.path));const before=unionBlob(RUNTIME_INTEGRITY_BASE,row.path);
   assert.equal(before?.sha256??null,row.before_sha256,'RUNTIME_BEFORE_SOURCE_DRIFT:'+row.path);

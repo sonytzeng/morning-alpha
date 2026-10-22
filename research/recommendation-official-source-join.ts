@@ -71,7 +71,11 @@ export async function buildOfficialV1SourceCandidate(options: {
       const fiscalYear = Number(year) + (year.length === 3 ? 1911 : 0);
       if (Date.UTC(fiscalYear, Number(quarter) * 3, 0, 16) >= available) throw Error('OFFICIAL_FINANCIAL_FUTURE_PERIOD');
       const fields: Row = {};
-      for (const key of ['營業收入','營業成本','營業毛利（毛損）','營業利益（損失）','本期淨利（淨損）','基本每股盈餘（元）','淨收益','利息淨收益','利息以外淨收益']) {
+      // Preserve exact retained statement columns: net gross profit is not
+      // gross profit, and holdings report a distinct after-tax profit label.
+      // These remain as-reported snapshots, never generic/quarterly Actual.
+      for (const key of ['營業收入','營業成本','營業毛利（毛損）','營業毛利（毛損）淨額','營業利益（損失）',
+        '本期淨利（淨損）','本期稅後淨利（淨損）','基本每股盈餘（元）','淨收益','利息淨收益','利息以外淨收益']) {
         if (Object.hasOwn(row, key)) {
           if (typeof row[key] !== 'string' || String(row[key]).length > 80 || !/^(?:|-?\d+(?:\.\d+)?)$/.test(String(row[key]))) throw Error('OFFICIAL_FINANCIAL_VALUE');
           fields[key] = row[key];

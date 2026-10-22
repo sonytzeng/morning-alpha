@@ -574,7 +574,7 @@ test('R8 pins seven independent exact before/after deltas and preserves the full
  assert.equal(added.length,3);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R7,...added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded].sort());
  assert.equal(m.files.length,548);assert.deepEqual(integrationInventory(),[...m.files.map(f=>f.path),INTEGRATION_MANIFEST].sort());
  for(const row of r.files){
-  const replacement=SOURCE_UNION_R12_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R11_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R9_FILES.find(f=>f.path===row.path);
+  const replacement=RUNTIME_INTEGRITY_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R12_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R11_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R9_FILES.find(f=>f.path===row.path);
   const immutable=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R9_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
   assert.equal(integrationHash(immutable),row.after_sha256,'exact R8 generation remains pinned');
   assert.equal(integrationHash(integrationPhysicalRead(row.path)),replacement?.after_sha256??row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);
@@ -903,7 +903,8 @@ test('R13 pins the exact R12 nine-file commit, both immutable roots and the full
   assert.equal(old.files.find(f=>f.path===row.path)?.after_sha256??null,row.before_sha256);
   assert.equal(integrationHash(git('show',SOURCE_UNION_R12_HEAD+':'+row.path)),row.after_sha256);
   assert.match(git('ls-tree',SOURCE_UNION_R12_HEAD,'--',row.path).toString(),/^100644 blob [a-f0-9]{40}\t/);
-  assert.equal(integrationHash(integrationPhysicalRead(row.path)),row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);
+  const current=RUNTIME_INTEGRITY_FILES.find(f=>f.path===row.path);
+  assert.equal(integrationHash(integrationPhysicalRead(row.path)),current?.after_sha256??row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);
   assert.equal(row.mode,'100644');assert(!SOURCE_UNION_SUPPORT.includes(row.path));
  }
  const added=SOURCE_UNION_R12_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);assert.equal(added.length,2);

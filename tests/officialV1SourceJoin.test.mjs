@@ -121,6 +121,51 @@ function financialReceipt(){return {
   period_basis:'AS_REPORTED_PERIOD_BASIS_UNVERIFIED',direct_single_quarter:false,published_at:null,
   consensus:null,guidance:null,source_admitted:false}]
 };}
+test('reported financial join preserves retained net gross-profit and holding net-profit columns without aliasing',async()=>{
+ const {options}=setup(),ci=financialReceipt(),fh=financialReceipt();
+ ci.rows[0]['營業毛利（毛損）']='90.00';ci.rows[0]['營業毛利（毛損）淨額']='80.00';
+ fh.source='https://openapi.twse.com.tw/v1/opendata/t187ap06_L_fh';fh.source_response_sha256='c'.repeat(64);
+ fh.rows[0]['公司代號']='2881';delete fh.rows[0]['營業收入'];
+ fh.rows[0]['淨收益']='700.00';fh.rows[0]['本期稅後淨利（淨損）']='-20.00';
+ fh.rows[0]['聯絡人']='SYNTHETIC_FINANCIAL_CONTACT_MUST_NOT_ESCAPE';
+ const data=structuredClone(options.data);data.universe.push({...data.universe[0],symbol:'2881'});
+ const request={...options,data,announcements:[],reported_financial_receipts:[ci,fh]},before=structuredClone(request);
+ const out=await join(request),rows=out.data.earnings.filter(r=>r.reported_snapshot_only===true);
+ const industrial=rows.find(r=>r.symbol==='2330'),holding=rows.find(r=>r.symbol==='2881');
+ assert.equal(industrial.actual_source.reported_fields['營業毛利（毛損）'],'90.00');
+ assert.equal(industrial.actual_source.reported_fields['營業毛利（毛損）淨額'],'80.00');
+ assert.equal(holding.actual_source.reported_fields['本期稅後淨利（淨損）'],'-20.00');
+ assert.equal(Object.hasOwn(holding.actual_source.reported_fields,'本期淨利（淨損）'),false);
+ assert.equal(Object.hasOwn(holding.actual_source.reported_fields,'營業收入'),false);
+ for(const row of rows){
+  for(const key of ['eps_actual','revenue_actual','announced_at','eps_consensus','revenue_consensus','guidance_direction'])assert.equal(row[key],null);
+  assert.equal(row.source_admitted,false);assert.equal(row.actual_only,false);
+ }
+ assert.deepEqual(out.after,out.before);assert.equal(out.after.evaluated,0);assert.equal(out.after.ready,0);
+ assert.equal(out.original_thresholds_changed,false);assert.equal(out.member_publication_approved,false);
+ assert.deepEqual(out.business_writes,[]);assert.deepEqual(request,before);
+ assert.doesNotMatch(JSON.stringify(out),/SYNTHETIC_FINANCIAL_CONTACT_MUST_NOT_ESCAPE/);
+ const replay=await join({...request,data:reorderJsonKeys(out.data)});
+ assert.deepEqual(replay.data.earnings,reorderJsonKeys(out.data).earnings);
+});
+test('retained financial column values validate and bind identity without overwriting old projections',async()=>{
+ const {options}=setup();
+ for(const field of ['營業毛利（毛損）淨額','本期稅後淨利（淨損）']){
+  const capture=financialReceipt(),run=(receipt,data=options.data)=>join({...options,data,announcements:[],reported_financial_receipts:[receipt]});
+  const legacy=await run(capture);capture.rows[0][field]='10.00';
+  const added=await run(capture,legacy.data),rows=added.data.earnings.filter(r=>r.reported_snapshot_only===true);
+  assert.equal(rows.length,2);assert.deepEqual(rows[0],legacy.data.earnings.find(r=>r.reported_snapshot_only===true));
+  assert.notEqual(rows[0].id,rows[1].id);assert.equal(rows[1].actual_source.reported_fields[field],'10.00');
+  const base=await run(capture),changed=structuredClone(capture);changed.rows[0][field]='11.00';
+  const next=await run(changed);
+  assert.notEqual(base.input_sha256,next.input_sha256);
+  assert.notEqual(base.data.earnings.find(r=>r.reported_snapshot_only===true).id,next.data.earnings.find(r=>r.reported_snapshot_only===true).id);
+  for(const invalid of [null,10,'NaN','1e3','SYNTHETIC_INVALID_TEXT','1'.repeat(81)]){
+   const bad=structuredClone(capture);bad.rows[0][field]=invalid;
+   await assert.rejects(run(bad),/OFFICIAL_FINANCIAL_VALUE/);
+  }
+ }
+});
 function reorderJsonKeys(value){
  return Array.isArray(value)?value.map(reorderJsonKeys):value&&typeof value==='object'
   ?Object.fromEntries(Object.entries(value).reverse().map(([key,v])=>[key,reorderJsonKeys(v)])):value;

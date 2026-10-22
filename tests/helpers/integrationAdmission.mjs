@@ -136,6 +136,18 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "mode": "100644",
   "before_sha256": null,
   "after_sha256": "861aee1e6907d4ef665cbf5e1a46f623830acccb1318a6a0a8492700908db59d"
+ },
+ {
+  "path": "research/recommendation-official-source-join.ts",
+  "mode": "100644",
+  "before_sha256": "a83b147d8f63f056fd808064eb9bc8dbadb6718be2ddeb49e0c8a6a12df36560",
+  "after_sha256": "539943380e7918bad60fd8a1e84a5ec90bb225497d3d9641124dcc960f69dafc"
+ },
+ {
+  "path": "tests/officialV1SourceJoin.test.mjs",
+  "mode": "100644",
+  "before_sha256": "a96472c706b13f4acc2c2d4c132f04ee4d186ce9cff709dfde61557a9460990c",
+  "after_sha256": "29e7f0119e20bcb7caaa31c03ecdb48a6b140140aede7ff45c4e4525f3f43aea"
  }
 ].map(Object.freeze));
 export const FROZEN_SOURCE_UNION_R14='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r14.json';
@@ -945,7 +957,7 @@ export function runtimeIntegrityLineage(){
  assert.equal(root?.sha256,prior_root.sha256,'RUNTIME_PRIOR_ROOT_DRIFT');assert.equal(root?.mode,'100644');
  const old=JSON.parse(root.bytes);assert.equal(old.files.length,538,'RUNTIME_PRIOR_FULL_SCOPE');
  assert.deepEqual(old.source_union.r15,sourceUnionR15Lineage(),'RUNTIME_PRIOR_LINEAGE_DRIFT');
- assert.equal(RUNTIME_INTEGRITY_FILES.length,20);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,20);
+ assert.equal(RUNTIME_INTEGRITY_FILES.length,22);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,22);
  for(const row of RUNTIME_INTEGRITY_FILES){
   assert(!SOURCE_UNION_SUPPORT.includes(row.path));const before=unionBlob(RUNTIME_INTEGRITY_BASE,row.path);
   assert.equal(before?.sha256??null,row.before_sha256,'RUNTIME_BEFORE_SOURCE_DRIFT:'+row.path);
@@ -957,7 +969,7 @@ export function runtimeIntegrityLineage(){
   assert.notEqual(row.before_sha256,row.after_sha256);
  }
  return {schema:'CURRENT_RUNTIME_INTEGRITY_CANDIDATE_V1',base:RUNTIME_INTEGRITY_BASE,prior_root,
-  files:RUNTIME_INTEGRITY_FILES.map(r=>({...r})),scope:'OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_AND_CI_PREPARATION',
+  files:RUNTIME_INTEGRITY_FILES.map(r=>({...r})),scope:'OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_AND_RAW_FINANCIAL_COLUMN_RETENTION',
   source_admission:false,canonical_admission:false,quality_approval:false,rights_gate_changed:false,
   publication_approval:false,production_authorized:false,thresholds_changed:false,existing_release_payloads_changed:false};
 }

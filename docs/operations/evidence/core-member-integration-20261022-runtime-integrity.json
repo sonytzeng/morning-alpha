@@ -1185,7 +1185,7 @@
     {
       "path": "research/recommendation-official-source-join.ts",
       "before_sha256": null,
-      "after_sha256": "a83b147d8f63f056fd808064eb9bc8dbadb6718be2ddeb49e0c8a6a12df36560",
+      "after_sha256": "539943380e7918bad60fd8a1e84a5ec90bb225497d3d9641124dcc960f69dafc",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2928,7 +2928,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "c073af4a8a152bb075bfc639762fb37a9fb1c8907f23d0879941c795188a5363",
+      "after_sha256": "712ce3dab9a89d9db49f41dd339a608cb8dca3238c9603f9082e193f5df1c3b3",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3089,7 +3089,7 @@
     {
       "path": "tests/officialV1SourceJoin.test.mjs",
       "before_sha256": null,
-      "after_sha256": "a96472c706b13f4acc2c2d4c132f04ee4d186ce9cff709dfde61557a9460990c",
+      "after_sha256": "29e7f0119e20bcb7caaa31c03ecdb48a6b140140aede7ff45c4e4525f3f43aea",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3103,7 +3103,7 @@
     {
       "path": "tests/originalIngressAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "3d030548536714ee4564d94fcce12a4dd9e85248014d33ca353a7a41deb27fd8",
+      "after_sha256": "7832182a618e43b058e579c0e1499124f0f6b79dae47c73626cfe309ea45d651",
       "mode": "100644",
       "origin": "composition"
     },
@@ -4762,9 +4762,21 @@
           "mode": "100644",
           "before_sha256": null,
           "after_sha256": "861aee1e6907d4ef665cbf5e1a46f623830acccb1318a6a0a8492700908db59d"
+        },
+        {
+          "path": "research/recommendation-official-source-join.ts",
+          "mode": "100644",
+          "before_sha256": "a83b147d8f63f056fd808064eb9bc8dbadb6718be2ddeb49e0c8a6a12df36560",
+          "after_sha256": "539943380e7918bad60fd8a1e84a5ec90bb225497d3d9641124dcc960f69dafc"
+        },
+        {
+          "path": "tests/officialV1SourceJoin.test.mjs",
+          "mode": "100644",
+          "before_sha256": "a96472c706b13f4acc2c2d4c132f04ee4d186ce9cff709dfde61557a9460990c",
+          "after_sha256": "29e7f0119e20bcb7caaa31c03ecdb48a6b140140aede7ff45c4e4525f3f43aea"
         }
       ],
-      "scope": "OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_AND_CI_PREPARATION",
+      "scope": "OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_AND_RAW_FINANCIAL_COLUMN_RETENTION",
       "source_admission": false,
       "canonical_admission": false,
       "quality_approval": false,

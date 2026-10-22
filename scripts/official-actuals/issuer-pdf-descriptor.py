@@ -34,11 +34,14 @@ from urllib.parse import urlsplit
 
 import pdfplumber
 from pypdf import PdfReader
+from pypdf.constants import UserAccessPermissions
+from pypdf.errors import FileNotDecryptedError
 
 CONTRACT = "issuer-pdf-descriptor-v1"
 Q4_CONTRACT = "issuer-pdf-direct-q4-annual-policy-v1"
 INTERIM_CONTRACT = "issuer-pdf-direct-interim-common-note-v1"
 INTERIM_FLOW_CONTRACT = "issuer-pdf-direct-interim-content-flow-v1"
+SPLIT_BASIC_CONTRACT = "issuer-pdf-direct-interim-split-basic-note-v1"
 Q4_SHARE_PROOF = "reviewed-annual-ordinary-policy-v1"
 BROWSER_RECEIPT = "BROWSER_NATIVE_PUBLIC_DOWNLOAD_RECEIPT_V1"
 LINK_RECEIPT = "BROWSER_PUBLIC_LINK_DOWNLOAD_RECEIPT_V1"
@@ -401,11 +404,27 @@ def bind_link_receipt(document: dict, source: dict, selector: str,
 
 
 class Document:
-    def __init__(self, data: bytes, limits: Limits, started: float):
+    def __init__(self, data: bytes, limits: Limits, started: float, *, permitted_read: bool = False):
         self.limits, self.started = limits, started
         require(data.startswith(b"%PDF-"), "PDF_MAGIC")
         reader = PdfReader(BytesIO(data), strict=True)
-        require(not reader.is_encrypted, "PDF_ENCRYPTED")
+        self.access = {"encrypted_marker": reader.is_encrypted, "permission_is_reuse_approval": False}
+        if reader.is_encrypted:
+            # Opt-in dialect only. No supplied/guessed password, explicit decrypt,
+            # altered permissions or rewritten PDF. The library must already be
+            # able to open the original normally AND permit content extraction.
+            require(permitted_read, "PDF_ENCRYPTED")
+            require(reader.are_permissions_valid is True, "PDF_PERMISSION_INTEGRITY")
+            permissions = reader.user_access_permissions
+            require(permissions is not None and bool(permissions & UserAccessPermissions.EXTRACT),
+                    "PDF_EXTRACTION_NOT_PERMITTED")
+            require(reader.trailer["/Encrypt"].get("/Filter") == "/Standard", "PDF_SECURITY_HANDLER")
+            try:
+                reader.pages[0]
+            except FileNotDecryptedError:
+                raise DescriptorError("PDF_OPEN_PASSWORD_REQUIRED") from None
+            self.access.update(normal_open_without_supplied_password=True, extraction_permitted=True,
+                               permission_integrity_verified=True, derivative_pdf_saved=False)
         require(0 < len(reader.pages) <= limits.pages, "PDF_PAGE_LIMIT")
         self.reader = reader
         self.pdf = pdfplumber.open(BytesIO(data))
@@ -548,6 +567,90 @@ def number(doc: Document, cell: object, fmt: str) -> tuple[Decimal, str, int]:
     value = Decimal(lexical.replace(",", ""))
     decimals = len(lexical.split(".")[1]) if "." in lexical else 0
     return value, lexical, decimals
+
+
+def split_basic_period(doc: Document, obj: object, *, statement: bool = False) -> dict:
+    """Direct quarter with native year groups; padding cannot select YTD/prior.
+
+    Some reported EPS rows span AMOUNT/% while revenue does not. Preserve that
+    native layout, deriving the current-year group independently of column_x.
+    """
+    p = period(doc, obj)
+    require(p["quarter"] in (1, 2, 3), "SPLIT_INTERIM_QUARTER")
+    y = p["year_label"]
+    words = doc.page(y["page"])[1]
+    years = sorted([w for w in words if y["bbox"][1] - 2 <= w["top"] <= y["bbox"][3] + 2
+                    and re.fullmatch(r"20\d{2}", w["text"])], key=lambda w: w["x0"])
+    require(len(years) in (2, 4)
+            and [w["text"] for w in years] == [str(p["year"]), str(p["year"] - 1)] * (len(years) // 2)
+            and y["bbox"][0] <= years[0]["x0"] and years[0]["x1"] <= y["bbox"][2],
+            "SPLIT_CURRENT_YEAR_NOT_FIRST")
+    gap = (years[1]["x0"] - years[0]["x1"]) / 2
+    require(gap > 0, "SPLIT_YEAR_COLUMN_OVERLAP")
+    axis = [max(0, years[0]["x0"] - gap), years[0]["x1"] + gap]
+    result = {**p, "native_interim_column_x": axis}
+    if statement:
+        headers = [w for w in words if y["bbox"][3] < w["top"] <= y["bbox"][3] + 30
+                   and axis[0] <= w["x0"] < w["x1"] <= axis[1]]
+        amounts = [w for w in headers if w["text"].upper() == "AMOUNT"]
+        ratios = [w for w in headers if w["text"] == "%"]
+        require(len(amounts) == len(ratios) == 1 and amounts[0]["x1"] < ratios[0]["x0"]
+                and abs(amounts[0]["top"] - ratios[0]["top"]) <= 2, "SPLIT_AMOUNT_HEADERS")
+        result["native_amount_column_x"] = [axis[0], ratios[0]["x0"]]
+    return result
+
+
+def split_basic_note(doc: Document, proof: object, p: dict, value: Decimal, decimals: int) -> dict:
+    """Reconcile the statement's REPORTED EPS against split ordinary-share tables.
+
+    There is intentionally no note EPS result selector: no result is invented
+    when the source reports EPS only on its statement. Arithmetic is validation
+    of that native value, never a replacement for reading it.
+    """
+    q = keys(proof, {"kind", "basic_label", "diluted_label", "profit_period", "profit_label",
+                     "profit_cell", "share_period", "share_label", "share_cell", "share_unit", "unit_context"})
+    require(q["kind"] == "DIRECT_SPLIT_BASIC_ORDINARY_NOTE_V1", "SPLIT_NOTE_KIND")
+    loc = {k: doc.select(q[k])[0] for k in
+           ("basic_label", "diluted_label", "profit_label", "share_label", "share_unit", "unit_context")}
+    require(re.fullmatch(r"(?:\d+\.\s*)?Basic earnings per share", loc["basic_label"], re.I)
+            and re.fullmatch(r"(?:\d+\.\s*)?Diluted earnings per share", loc["diluted_label"], re.I),
+            "SPLIT_BASIC_SECTION")
+    require(re.fullmatch(r"Profit attributable to ordinary\$? shareholders of the Company",
+                         loc["profit_label"], re.I)
+            and loc["share_label"].lower() == "weighted-average number of ordinary shares (basic)",
+            "SPLIT_ORDINARY_ATTRIBUTION")
+    require(re.fullmatch(r"Unit[:\uff1a]\s*thousand shares", loc["share_unit"], re.I)
+            and norm(loc["unit_context"]).lower().strip("() ") ==
+            "amounts expressed in thousands of new taiwan dollars, unless otherwise specified",
+            "SPLIT_NOTE_UNITS")
+    np, dp = (split_basic_period(doc, q[k]) for k in ("profit_period", "share_period"))
+    require(all((v["year"], v["quarter"]) == (p["year"], p["quarter"]) for v in (np, dp)),
+            "SPLIT_NOTE_PERIOD_CONFLICT")
+    page = q["basic_label"]["page"]
+    require(all(q[k]["page"] == page for k in
+                ("diluted_label", "profit_label", "profit_cell", "share_label", "share_cell", "share_unit", "unit_context"))
+            and np["header"]["page"] == dp["header"]["page"] == page, "SPLIT_NOTE_PAGE")
+    basic, stop = q["basic_label"]["bbox"], q["diluted_label"]["bbox"]
+    require(q["unit_context"]["bbox"][3] < basic[1] < np["header"]["bbox"][1]
+            < q["profit_cell"]["bbox"][1] < q["share_unit"]["bbox"][1]
+            < dp["header"]["bbox"][1] < q["share_cell"]["bbox"][1] < stop[1],
+            "SPLIT_NOTE_BASIC_GEOMETRY")
+    for field, lab, per in (("profit_cell", "profit_label", np), ("share_cell", "share_label", dp)):
+        aligned(q[field], q[lab], per)
+        require(q[field]["bbox"][3] < stop[1]
+                and q[lab]["bbox"][1] - 3 <= q[field]["bbox"][1] <= q[lab]["bbox"][1] + 3,
+                "SPLIT_NOTE_ROW")
+    num, _, _ = number(doc, q["profit_cell"], "comma_dot")
+    den, _, _ = number(doc, q["share_cell"], "comma_dot")
+    require(den > 0, "SPLIT_NOTE_DENOMINATOR")
+    with localcontext() as ctx:
+        ctx.prec = 80
+        require((num / den).quantize(Decimal(1).scaleb(-decimals), rounding=ROUND_HALF_UP) == value,
+                "EPS_DENOMINATOR_FORMULA_CONFLICT")
+    return {"share_class": "ORDINARY", "eps_basis": "BASIC", "proof": q,
+            "denominator_formula_checked": True, "numerator_multiplier": "1000", "denominator_multiplier": "1000",
+            "native_eps_read": True, "native_eps_location": "STATEMENT", "note_eps_result_read": False,
+            "missing_eps_computed": False}
 
 
 def aligned(cell: dict, label: dict, p: dict) -> None:
@@ -769,9 +872,10 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
     q4 = type(obj) is dict and obj.get("contract") == Q4_CONTRACT
     interim = type(obj) is dict and obj.get("contract") in (INTERIM_CONTRACT, INTERIM_FLOW_CONTRACT)
     content_flow = type(obj) is dict and obj.get("contract") == INTERIM_FLOW_CONTRACT
+    split_basic = type(obj) is dict and obj.get("contract") == SPLIT_BASIC_CONTRACT
     d = keys(obj, {"contract", "entity", "source", "period", "issuer_name", "identity", "accounting", "metrics"}
              | ({"annual_policy_proof"} if q4 else set()))
-    require(d["contract"] in (CONTRACT, Q4_CONTRACT, INTERIM_CONTRACT, INTERIM_FLOW_CONTRACT), "DESCRIPTOR_CONTRACT")
+    require(d["contract"] in (CONTRACT, Q4_CONTRACT, INTERIM_CONTRACT, INTERIM_FLOW_CONTRACT, SPLIT_BASIC_CONTRACT), "DESCRIPTOR_CONTRACT")
     require(re.fullmatch(r"[A-Za-z0-9_.-]{1,32}", text(d["entity"], 32)) is not None, "ENTITY")
     source = keys(d["source"], {"path", "url", "sha256", "receipt"})
     url = urlsplit(text(source["url"]))
@@ -795,10 +899,10 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
         require(type(entry.get("bytes")) is int and entry["bytes"] == len(pdf_data)
                 and entry.get("period") == f"{d['period']['year']}Q4", "Q4_RECEIPT_BINDING")
     verified = clock()
-    doc = Document(pdf_data, limits, started)
+    doc = Document(pdf_data, limits, started, permitted_read=True) if split_basic else Document(pdf_data, limits, started)
     doc.content_flow = content_flow
     try:
-        p = period(doc, d["period"], direct_q4=q4, interim=interim)
+        p = split_basic_period(doc, d["period"], statement=True) if split_basic else period(doc, d["period"], direct_q4=q4, interim=interim)
         issuer_name, _ = doc.select(d["issuer_name"])
         require(len(issuer_name) <= 256, "ISSUER_NAME_BOUND")
         identity, _ = doc.select(d["identity"])
@@ -816,8 +920,14 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
                         and re.search(r"International Accounting Standard 34", accounting_text, re.I)
                         and re.search(r"Interim financial reporting", accounting_text, re.I)
                         and re.search(r"endorsed by (?:the )?FSC", accounting_text, re.I), "INTERIM_ACCOUNTING_PROOF")
+            if split_basic:
+                require(accounting["classification"] == "FSC_ENDORSED_IAS34_INTERIM"
+                        and re.search(r"\bIAS 34\b", accounting_text, re.I)
+                        and re.search(r"Interim Financial Reporting", accounting_text, re.I)
+                        and re.search(r"endorsed and issued into effect by the FSC", accounting_text, re.I),
+                        "SPLIT_ACCOUNTING_PROOF")
         require(type(d["metrics"]) is list and 1 <= len(d["metrics"]) <= 2, "METRIC_COUNT")
-        if q4 or interim:
+        if q4 or interim or split_basic:
             require([m.get("metric") for m in d["metrics"] if type(m) is dict] == ["revenue", "basic_eps"],
                     "Q4_METRIC_PAIR" if q4 else "INTERIM_METRIC_PAIR")
         result, seen = [], set()
@@ -832,7 +942,8 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
                         r"(?:net sales|revenue|revenues|operating revenue)(?: ?\(Notes? [A-Za-z0-9() ,]+\))?",
                         label, re.I) is not None)
                     or (metric == "basic_eps" and re.fullmatch(
-                        r"basic earnings per share \(NTD\)" if q4 else r"basic earnings per share(?: \(in new taiwan dollars\)| \(NT\$\))?",
+                        r"basic earnings per share \(NTD\)" if q4 else r"basic earnings per share \(NT dollars\)" if split_basic
+                        else r"basic earnings per share(?: \(in new taiwan dollars\)| \(NT\$\))?",
                         label, re.I) is not None),
                     "METRIC_LABEL_NOT_EQUIVALENT")
             value, lexical, decimals = number(doc, m["cell"], m["numeric_format"])
@@ -842,17 +953,22 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
             unit, unit_locator = doc.select(m["unit_proof"])
             if q4:
                 require(unit_locator["page"] == p["header"]["page"], "Q4_UNIT_PAGE")
-            require(m["currency"] in CURRENCIES and any(t in unit.lower() for t in CURRENCIES[m["currency"]]),
+            require(m["currency"] in CURRENCIES and (any(t in unit.lower() for t in CURRENCIES[m["currency"]])
+                    or split_basic and metric == "basic_eps" and m["currency"] == "TWD" and "(nt dollars)" in unit.lower()),
                     "CURRENCY_NOT_PROVEN")
             require(type(m["multiplier"]) is str and m["multiplier"] in MULTIPLIERS, "MULTIPLIER")
             if metric == "revenue":
-                if interim:
+                if interim or split_basic:
                     require(mp["native_amount_column_x"][0] <= m["cell"]["bbox"][0]
                             < m["cell"]["bbox"][2] <= mp["native_amount_column_x"][1],
                             "INTERIM_REVENUE_PERCENT_COLUMN")
                 require("share_proof" not in m and revenue_scale(unit, m["currency"], interim=interim) == m["multiplier"],
                         "REVENUE_SCALE_NOT_PROVEN")
                 share = None
+            elif split_basic:
+                require(m["currency"] == "TWD" and m["multiplier"] == "1"
+                        and unit_locator == label_loc, "EPS_CURRENCY_PROOF_CONFLICT")
+                share = split_basic_note(doc, m.get("share_proof"), p, value, decimals)
             elif interim:
                 require(unit_locator["page"] == m["cell"]["page"], "INTERIM_EPS_UNIT_PAGE")
                 require(m["currency"] == "TWD" and m["multiplier"] == "1"
@@ -939,6 +1055,7 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
             "accounting": accounting, "period_evidence": p, "rows": result,
             **({"descriptor_dialect": Q4_CONTRACT, "annual_policy_evidence": annual} if q4 else {}),
             **({"descriptor_dialect": d["contract"]} if interim else {}),
+            **({"descriptor_dialect": d["contract"], "pdf_access_evidence": doc.access} if split_basic else {}),
             "ytd_or_annual_subtraction_used": False, "canonical_writer_invoked": False,
             "source_admission": False, "quality_admission": False, "member_publication": False,
             "legal_reuse_approval": None}

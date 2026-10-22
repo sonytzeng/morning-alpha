@@ -67,6 +67,43 @@ class SyntheticDocument:
     def close(self): pass
 
 
+class SplitBasicSyntheticDocument:
+    """Public synthetic split-note geometry; no issuer original or values."""
+    select = M.Document.select
+    def __init__(self, _data, limits, started, **_kwargs):
+        self.limits, self.started = limits, started
+        self.access = {"encrypted_marker": False, "permission_is_reuse_approval": False}
+        self.items = {1: [], 2: [], 3: []}
+        self.add(1, [10,10,180,20], 'SYNTHETIC CONSOLIDATED')
+        self.add(1, [10,25,180,35], 'SYNTHETIC ISSUER LIMITED')
+        self.add(1, [200,40,400,50], 'For the Three Months Ended June 30,')
+        self.add(1, [220,65,250,75], '2026'); self.add(1, [400,65,430,75], '2025')
+        self.add(1, [200,80,250,90], 'Amount'); self.add(1, [300,80,310,90], '%')
+        self.add(1, [10,95,180,105], 'Amounts in thousands of New Taiwan Dollars')
+        self.add(1, [10,120,180,130], 'Operating revenue')
+        self.add(1, [220,120,280,130], '123,456')
+        self.add(1, [10,150,180,160], 'Basic earnings per share (NT dollars)')
+        self.add(1, [300,150,320,160], '15.00')
+        self.add(3, [10,10,500,30], 'IAS 34 Interim Financial Reporting endorsed and issued into effect by the FSC')
+        self.add(2, [10,10,560,30], '(AMOUNTS EXPRESSED IN THOUSANDS OF NEW TAIWAN DOLLARS, UNLESS OTHERWISE SPECIFIED)')
+        self.add(2, [10,40,200,50], '1.Basic earnings per share')
+        self.add(2, [200,60,400,70], 'For the Three Months Ended June 30,')
+        self.add(2, [220,80,250,90], '2026'); self.add(2, [400,80,430,90], '2025')
+        self.add(2, [10,100,200,120], 'Profit attributable to ordinary$ shareholders of the Company')
+        self.add(2, [260,100,300,110], '1,500')
+        self.add(2, [400,130,550,140], 'Unit\uff1athousand shares')
+        self.add(2, [200,150,400,160], 'For the Three Months Ended June 30,')
+        self.add(2, [220,170,250,180], '2026'); self.add(2, [400,170,430,180], '2025')
+        self.add(2, [10,190,200,210], 'Weighted-average number of ordinary shares (basic)')
+        self.add(2, [260,190,300,200], '100')
+        self.add(2, [10,230,200,240], '2.Diluted earnings per share')
+    def add(self, page, bounds, value):
+        self.items[page].append(dict(zip(('x0','top','x1','bottom'), bounds), text=value))
+    def page(self, n):
+        return type('Page', (), {'width':600,'height':800})(), self.items[n]
+    def close(self): pass
+
+
 class SyntheticControls(unittest.TestCase):
     def setUp(self):
         safe_temp_parent = Path(tempfile.gettempdir()).resolve()
@@ -550,6 +587,98 @@ class SyntheticControls(unittest.TestCase):
                 with self.assertRaisesRegex(M.DescriptorError,code):
                     M.Document(b'%PDF-SYNTHETIC',M.Limits(),time.monotonic())
                 opened.assert_not_called()
+
+    def split_basic_fixture(self):
+        doc = SplitBasicSyntheticDocument(None, M.Limits(), time.monotonic())
+        def loc(page, text, *, cell=False):
+            w = next(w for w in doc.items[page] if w['text'] == text)
+            r = {'page':page, 'bbox':[w[k] for k in ('x0','top','x1','bottom')]}
+            if not cell:r['text']=text
+            return r
+        def per(page, top):
+            return {'year':2026,'quarter':2,'column_x':[145,325],
+                'header':{'page':page,'bbox':[200,top,400,top+10],'text':'For the Three Months Ended June 30,'},
+                'year_label':{'page':page,'bbox':[220,top+20 if page==2 else 65,250,top+30 if page==2 else 75],'text':'2026'}}
+        d = copy.deepcopy(self.d); d['contract']=M.SPLIT_BASIC_CONTRACT;d['period']=per(1,40)
+        d['issuer_name']=loc(1,'SYNTHETIC ISSUER LIMITED');d['identity']=loc(1,'SYNTHETIC CONSOLIDATED')
+        d['accounting']={'classification':'FSC_ENDORSED_IAS34_INTERIM','proof':loc(3,'IAS 34 Interim Financial Reporting endorsed and issued into effect by the FSC')}
+        proof={'kind':'DIRECT_SPLIT_BASIC_ORDINARY_NOTE_V1',
+            'basic_label':loc(2,'1.Basic earnings per share'),'diluted_label':loc(2,'2.Diluted earnings per share'),
+            'profit_period':per(2,60),'profit_label':loc(2,'Profit attributable to ordinary$ shareholders of the Company'),
+            'profit_cell':loc(2,'1,500',cell=True),'share_period':per(2,150),
+            'share_label':loc(2,'Weighted-average number of ordinary shares (basic)'),
+            'share_cell':loc(2,'100',cell=True),'share_unit':loc(2,'Unit\uff1athousand shares'),
+            'unit_context':loc(2,'(AMOUNTS EXPRESSED IN THOUSANDS OF NEW TAIWAN DOLLARS, UNLESS OTHERWISE SPECIFIED)')}
+        d['metrics']=[{'metric':'revenue','label':loc(1,'Operating revenue'),'cell':loc(1,'123,456',cell=True),
+            'currency':'TWD','multiplier':'1000','unit_proof':loc(1,'Amounts in thousands of New Taiwan Dollars'),'numeric_format':'comma_dot'},
+            {'metric':'basic_eps','label':loc(1,'Basic earnings per share (NT dollars)'),
+            'cell':loc(1,'15.00',cell=True),'currency':'TWD','multiplier':'1',
+            'unit_proof':loc(1,'Basic earnings per share (NT dollars)'), 'numeric_format':'decimal_dot','share_proof':proof}]
+        return d
+
+    def test_split_basic_statement_native_eps_without_fabricated_note_result(self):
+        r=self.run_descriptor(self.split_basic_fixture(), SplitBasicSyntheticDocument)
+        self.assertEqual([x['value_decimal'] for x in r['rows']],['123456000','15.00'])
+        s=r['rows'][1]['share_proof']
+        self.assertTrue(s['denominator_formula_checked']);self.assertTrue(s['native_eps_read'])
+        self.assertFalse(s['note_eps_result_read']);self.assertFalse(s['missing_eps_computed'])
+        self.assertEqual(s['native_eps_location'],'STATEMENT');self.assertNotIn('eps_cell',s['proof'])
+        self.assertFalse(r['source_admission']);self.assertFalse(r['member_publication'])
+        self.assertIsNone(r['announced_at']);self.assertIsNone(r['legal_reuse_approval'])
+
+    def test_split_basic_rejects_prior_year_or_ytd_even_with_padded_descriptor(self):
+        for field in ('period','profit_period','share_period'):
+            d=self.split_basic_fixture()
+            p=d['period'] if field=='period' else d['metrics'][1]['share_proof'][field]
+            p['year_label']['bbox']=[400,p['year_label']['bbox'][1],430,p['year_label']['bbox'][3]]
+            p['year_label']['text']='2025';p['year']=2025;p['column_x']=[0,599]
+            self.rejected(d,'SPLIT_CURRENT_YEAR_NOT_FIRST',SplitBasicSyntheticDocument)
+        d=self.split_basic_fixture();d['period']['header']['text']='For the Six Months Ended June 30,'
+        self.rejected(d,'LOCATOR_LABEL_MISMATCH',SplitBasicSyntheticDocument)
+
+    def test_split_basic_rejects_percentage_revenue_and_unreported_eps(self):
+        d=self.split_basic_fixture();d['metrics'][0]['cell']=copy.deepcopy(d['metrics'][1]['cell'])
+        d['metrics'][0]['label']=copy.deepcopy(d['metrics'][1]['label'])
+        self.rejected(d,'METRIC_LABEL_NOT_EQUIVALENT',SplitBasicSyntheticDocument)
+        d=self.split_basic_fixture();d['metrics']=d['metrics'][:1]
+        self.rejected(d,'INTERIM_METRIC_PAIR',SplitBasicSyntheticDocument)
+        d=self.split_basic_fixture();d['metrics'][1]['share_proof']['eps_cell']=d['metrics'][1]['cell']
+        self.rejected(d,'DESCRIPTOR_SCHEMA',SplitBasicSyntheticDocument)
+
+    def test_split_basic_keeps_basic_share_units_periods_and_formula_strict(self):
+        for key,value in [('share_unit','Unit\uff1ashares'),('share_label','Weighted-average number of ordinary shares (diluted)'),
+                          ('profit_label','Profit attributable to all shareholders')]:
+            d=self.split_basic_fixture();d['metrics'][1]['share_proof'][key]['text']=value
+            self.rejected(d,'LOCATOR_LABEL_MISMATCH',SplitBasicSyntheticDocument)
+        class WrongDenominator(SplitBasicSyntheticDocument):
+            def __init__(self,*a,**kw):
+                super().__init__(*a,**kw)
+                next(w for w in self.items[2] if w['text']=='100')['text']='200'
+        self.rejected(self.split_basic_fixture(),'EPS_DENOMINATOR_FORMULA_CONFLICT',WrongDenominator)
+
+    def test_opt_in_encrypted_read_requires_native_copy_permission_integrity_and_no_password(self):
+        from pypdf import PdfWriter
+        from pypdf.constants import UserAccessPermissions
+        for password,allow_copy,expected in [('',True,None),('',False,'PDF_EXTRACTION_NOT_PERMITTED'),
+                                             ('SYNTHETIC-NOT-A-CREDENTIAL',True,'PDF_PERMISSION_INTEGRITY')]:
+            writer=PdfWriter();writer.add_blank_page(width=300,height=300)
+            writer.encrypt(password,owner_password='SYNTHETIC-OWNER-NOT-A-CREDENTIAL',algorithm='AES-128',
+                           permissions_flag=UserAccessPermissions.EXTRACT if allow_copy else UserAccessPermissions.PRINT)
+            out=io.BytesIO();writer.write(out);raw=out.getvalue();original=sha(raw)
+            with self.assertRaisesRegex(M.DescriptorError,'PDF_ENCRYPTED'):
+                M.Document(raw,M.Limits(),time.monotonic())
+            if expected:
+                with self.assertRaisesRegex(M.DescriptorError,expected):
+                    M.Document(raw,M.Limits(),time.monotonic(),permitted_read=True)
+            else:
+                d=M.Document(raw,M.Limits(),time.monotonic(),permitted_read=True)
+                self.assertTrue(d.access['extraction_permitted']);d.close()
+            self.assertEqual(sha(raw),original)
+        reader=type('Metadata',(),{'is_encrypted':True,'are_permissions_valid':False})()
+        with patch.object(M,'PdfReader',return_value=reader),patch.object(M.pdfplumber,'open') as opened:
+            with self.assertRaisesRegex(M.DescriptorError,'PDF_PERMISSION_INTEGRITY'):
+                M.Document(b'%PDF-SYNTHETIC',M.Limits(),time.monotonic(),permitted_read=True)
+            opened.assert_not_called()
 
     def test_observed_operating_revenue_and_expressed_unit_labels_only(self):
         revenue_label='Operating revenue(Notes (4)(w) and (6))'

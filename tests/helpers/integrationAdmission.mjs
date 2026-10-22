@@ -27,7 +27,7 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "path": ".github/workflows/vnext-candidate.yml",
   "mode": "100644",
   "before_sha256": "727be694755623b7f0c53a5b59b835cc71e412a95fe4b6ca0acb7005a53b1e04",
-  "after_sha256": "b1a1479d9b25c738d694f17a24d27654e775be1d09893d1727278fb9ef3c1fa1"
+  "after_sha256": "0aac7753cedea279479105cdb46cffbaaa962187edbc0ccc033b23a417cf6111"
  },
  {
   "path": "scripts/operations/financial-response-period-20261020/materialize.mjs",
@@ -39,7 +39,7 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "path": "src/features/vnext/dailyIntelligence.ts",
   "mode": "100644",
   "before_sha256": "ac379cf85344567f5ea7a863caf7378f6578bb8368a2cec758678c7ec9e22790",
-  "after_sha256": "1959e45c7b564b9c8111823291ec52dba0f100ba794b2fbd984b93b3c34ac0a7"
+  "after_sha256": "8cd6773c7ee2c30bcb82e118a8bae289a9dc0b8a64cb8791647558413e6e692a"
  },
  {
   "path": "src/features/vnext/researchFunnel.ts",
@@ -69,7 +69,7 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "path": "tests/vnextPredictionHashBudget.test.mjs",
   "mode": "100644",
   "before_sha256": null,
-  "after_sha256": "a6c114bc4db6d78a20cd192e9cb8d0d20c0442740aa22c5859d89ab36bdea90b"
+  "after_sha256": "dbead509672f7100f3784c1ac0ed505c12371eac66bbadb44436ea8f95bbc764"
  },
  {
   "path": "tests/vnextTraceValidationBudget.test.mjs",
@@ -87,7 +87,7 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "path": "src/features/vnext/dailyRuntime.ts",
   "mode": "100644",
   "before_sha256": "01fe2480681368465530cb2feeb039161931051ac55e6f4ea1284a95fe47a2bf",
-  "after_sha256": "e8de1a9f71a1f3f550ca94a924a9a2a47a53b75cda9772bdbb4c62064e7630c1"
+  "after_sha256": "9768c9c269e4df1bcbb9c3fb9f3b883a144bba4ff2031a62b92e81ff5d5d87a5"
  },
  {
   "path": "tests/vnextSharedPreimage.test.mjs",
@@ -123,7 +123,19 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "path": "tests/vnextDailyDatabase.integration.mjs",
   "mode": "100644",
   "before_sha256": "0742de82575a2f196f2d0c8543bbeeca0425a1939cf16fb22ecec1e93bcb08cb",
-  "after_sha256": "a7767bbbc313c1870543a40994f34c4707bd0ef725368c3595bab88b8c9e5caf"
+  "after_sha256": "8f8de2184b033f19cf33e7d1d0b0e1ffdd7e14bdd4805b19c0cbfdf57aecd00e"
+ },
+ {
+  "path": "tests/helpers/vnextFullSnapshotCapacity.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "5e9865a8a154fbf066cab2ec718a69b2f43bf80803c49c54491a6086950d31cb"
+ },
+ {
+  "path": "tests/vnextPrelockStageBudget.test.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "861aee1e6907d4ef665cbf5e1a46f623830acccb1318a6a0a8492700908db59d"
  }
 ].map(Object.freeze));
 export const FROZEN_SOURCE_UNION_R14='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r14.json';
@@ -933,7 +945,7 @@ export function runtimeIntegrityLineage(){
  assert.equal(root?.sha256,prior_root.sha256,'RUNTIME_PRIOR_ROOT_DRIFT');assert.equal(root?.mode,'100644');
  const old=JSON.parse(root.bytes);assert.equal(old.files.length,538,'RUNTIME_PRIOR_FULL_SCOPE');
  assert.deepEqual(old.source_union.r15,sourceUnionR15Lineage(),'RUNTIME_PRIOR_LINEAGE_DRIFT');
- assert.equal(RUNTIME_INTEGRITY_FILES.length,18);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,18);
+ assert.equal(RUNTIME_INTEGRITY_FILES.length,20);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,20);
  for(const row of RUNTIME_INTEGRITY_FILES){
   assert(!SOURCE_UNION_SUPPORT.includes(row.path));const before=unionBlob(RUNTIME_INTEGRITY_BASE,row.path);
   assert.equal(before?.sha256??null,row.before_sha256,'RUNTIME_BEFORE_SOURCE_DRIFT:'+row.path);

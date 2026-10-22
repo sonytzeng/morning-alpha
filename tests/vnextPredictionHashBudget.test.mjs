@@ -76,7 +76,18 @@ test('bounded hash workload can reach the unchanged SQL lock boundary without la
   throw Error('UNEXPECTED_TEST_RPC_'+op);
  };
  const before=structuredClone(f.acquired);
- const result=await workDailyRun(run.id,{rpc,fetcher:async()=>{throw Error('UNEXPECTED_PROVIDER');},clock:()=>new Date(now).toISOString(),sleep:async ms=>{now+=ms;}});
+ const ports={rpc,fetcher:async()=>{throw Error('UNEXPECTED_PROVIDER');},clock:()=>new Date(now).toISOString(),sleep:async ms=>{now+=ms;}};
+ for(const stage of ['RESEARCH','ENTRY']){
+  const next=await workDailyRun(run.id,ports);
+  assert.equal(next.status,'QUEUED');assert.equal(next.reason,'FORWARD_PREPARATION_CONTINUATION');
+  assert(run.checkpoint.completed.includes(stage));assert.equal(committed.size,0);
+  assert.equal(counts().count,0,'large-snapshot preparation must yield before any evidence lock digest');
+  assert.deepEqual(run.checkpoint.acquired,before);now+=3000;
+ }
+ const committedHandoff=await workDailyRun(run.id,ports);
+ assert.equal(committedHandoff.status,'QUEUED');assert.equal(committedHandoff.reason,'FORWARD_PREPARATION_CONTINUATION');
+ assert.equal(committed.size,216);assert(run.checkpoint.completed.includes('PREDICTION_LOCK'));now+=3000;
+ const result=await workDailyRun(run.id,ports);
  assert.equal(result.status,'COMPLETE','repeated full-entry hashing must not consume the complete invocation before prepared commit');
  assert.equal(committed.size,216);assert.equal(counts().count,72);
  assert(!calls.includes('SOURCES')&&!calls.includes('ENTRY_SOURCE'),'a pinned revision is not reassembled');

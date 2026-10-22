@@ -12,6 +12,7 @@ import {RECOMMENDATION_UNIVERSE} from '../supabase/functions/_shared/recommendat
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
 import {canonical} from '../research/entry-opportunity.ts';
 import {researchOutcome} from '../src/features/vnext/dailyOutcome.ts';
+import {fullCapacityAcquired} from './helpers/vnextFullSnapshotCapacity.mjs';
 const migration='supabase/migrations/20261012054120_vnext_daily_research_runtime_candidate.sql';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const name='ma-vnext-wiring-'+process.pid,db=name+'-db',rest=name+'-rest';
@@ -196,7 +197,8 @@ try{
  assert.equal((await invoke()).status,202);await Promise.all(pending);
  assert.equal(sql("select md5((checkpoint->'locks')::text) from vnext_runtime.runs"),preparedFingerprint);
  assert.equal(sql("select jsonb_build_object('predictions',count(*),'payload',md5(string_agg(payload_text,E'\\n' order by id)),'queue',(select count(*) from vnext_runtime.outcome_queue),'publication',(select count(*) from vnext_runtime.publication_status)) from vnext_runtime.predictions"),committedFingerprint);
- checks.push('Real SQL crash before commit -> 0 rows; actual 100s lease expiry -> exact 216 rows; response lost -> next actual lease expiry after cutoff reconciles unchanged Prediction/queue/publication fingerprints');
+ assert.equal(sql("select (checkpoint->>'finished')::boolean and checkpoint->'completed' ? 'PUBLICATION' from vnext_runtime.runs"),'t','confirmed prepared replay must finish post-lock bookkeeping, not only label the run COMPLETE');
+ checks.push('Real SQL crash before commit -> 0 rows; actual100s lease -> exact216 rows; lost reply -> post-cutoff exact replay preserves Prediction/queue/publication and finishes durable post-lock bookkeeping');
  checks.push('Acquired-only pin -> existing three-second continuation intent -> separate HTTP claim; original cutoff and acquired fingerprint unchanged');
  assert.equal(sql('select count(*) from vnext_runtime.predictions'),'216',JSON.stringify(sqlErrors)+sql("select jsonb_build_object('state',state,'reason',reason,'failure',checkpoint->'failure') from vnext_runtime.runs"));assert.equal(sql("select count(*) from vnext_runtime.predictions where payload->'research'->>'state'='INSUFFICIENT'"),'216');
  assert.equal(sql("select count(*) from vnext_runtime.publication_status where approved"),'0');
@@ -249,6 +251,46 @@ try{
  // Preserve immutable evidence across actual DB transactions and API retries.
  assert.equal(sql("select count(*) from vnext_runtime.outcomes where payload->>'performance_eligible'='true'"),'0');
  assert.equal(sql("select count(*) from vnext_runtime.predictions where payload->>'mode'<>'FORWARD_SHADOW'"),'0');
+ // A separate, full-size synthetic run exercises the new CPU handoff through
+ // real SQL/HTTP, not only a no-op mock. Do not reset/rearm any earlier run.
+ advance('2026-10-22T00:58:00.000Z');
+ sql("update vnext_runtime.outcome_queue set last_checked='2026-10-22'"); // fixture isolates earlier maturity controls only
+ const bigBatch='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+ sql(`insert into public.market_checkpoint_batches values('${bigBatch}','2026-10-22','PREMARKET','COMMITTED',11,11,'2026-10-21T23:59:00Z')`);
+ const bigRun=await rpc('enqueue_vnext_daily_research_v1',{p_date:'2026-10-22',p_phase:'PREMARKET',p_batch:bigBatch});
+ active=(await rpc('claim_vnext_daily_research_v1',{p_run:bigRun.run_id})).run;
+ const bigOp=(name,data={})=>rpc('vnext_daily_runtime_v1',{p_run:bigRun.run_id,p_lease:active.lease,p_fence:active.fence,p_op:name,p_data:data});
+ const bigDirs=await directoryPlan('2026-10-22');
+ for(const task of bigDirs){
+  const raw=task.exchange==='TWSE'?RECOMMENDATION_UNIVERSE.map(symbol=>({'公司代號':symbol,'公司名稱':'SYNTHETIC capacity '+symbol,'產業別':'24','上市日期':'0830905'})):[];
+  const payload=await normalizeSource(task,raw,at),receipt={task,first_seen_at:at,available_at:at,published_at:null,as_of:at,version:ADAPTER_VERSION,raw_hash:await snapshotHash(raw),payload_hash:await snapshotHash(payload),payload,status:'OK',reason:null};
+  assert.equal((await bigOp('SOURCE_BEGIN',task)).status,'FETCH');await bigOp('SOURCE_SAVE',{text:canonical(receipt)});
+ }
+ const bigAcquired=await fullCapacityAcquired('2026-10-22',at);assert(Buffer.byteLength(JSON.stringify(bigAcquired))>16_000_000);
+ await bigOp('PLAN',[bigDirs[0]]);await bigOp('CURSOR',{cursor:1});await bigOp('CHECKPOINT',{acquired:bigAcquired});await bigOp('FINISH',{status:'QUEUED'});
+ const bigFingerprint=sql(`select md5((checkpoint->'acquired')::text) from vnext_runtime.runs where id='${bigRun.run_id}'`);
+ for(const [index,stage] of ['ACQUISITION','RESEARCH','ENTRY'].entries()){
+  advance(new Date(Date.parse('2026-10-22T00:58:00Z')+index*3000).toISOString());
+  const yielded=await workDailyRun(bigRun.run_id,{rpc,clock:()=>at,sleep:async()=>{},fetcher:async()=>{throw Error('NO_CAPACITY_PROVIDER');}});
+  assert.equal(yielded.status,'QUEUED');assert.equal(yielded.reason,'FORWARD_PREPARATION_CONTINUATION');assert.equal(yielded.retry_after_seconds,3);
+  assert.equal(sql(`select md5((checkpoint->'acquired')::text) from vnext_runtime.runs where id='${bigRun.run_id}'`),bigFingerprint);
+  assert.equal(sql(`select (checkpoint->'completed' ? '${stage}') and lease is null and lease_until is null from vnext_runtime.runs where id='${bigRun.run_id}'`),'t');
+  assert.equal(sql(`select count(*) from vnext_runtime.predictions where run_id='${bigRun.run_id}'`),'0');
+ }
+ advance('2026-10-22T00:58:09.000Z');
+ const bigPorts={rpc,clock:()=>at,sleep:async()=>{},fetcher:async()=>{throw Error('NO_CAPACITY_PROVIDER');}};
+ const bigCommitted=await workDailyRun(bigRun.run_id,bigPorts);
+ assert.equal(bigCommitted.status,'QUEUED');assert.equal(bigCommitted.reason,'FORWARD_PREPARATION_CONTINUATION');
+ assert.equal(sql(`select count(*) from vnext_runtime.predictions where run_id='${bigRun.run_id}'`),'216');
+ assert.equal(sql(`select (checkpoint->'completed' ? 'PREDICTION_LOCK') and not (checkpoint->>'finished')::boolean and lease is null from vnext_runtime.runs where id='${bigRun.run_id}'`),'t');
+ // Post-cutoff continuation may only reconcile the already committed batch.
+ advance('2026-10-22T01:00:03.000Z');
+ const bigFinal=await workDailyRun(bigRun.run_id,bigPorts);
+ assert.equal(bigFinal.status,'COMPLETE');assert.equal(sql(`select count(*) from vnext_runtime.predictions where run_id='${bigRun.run_id}'`),'216');
+ assert.equal(sql(`select md5((checkpoint->'acquired')::text) from vnext_runtime.runs where id='${bigRun.run_id}'`),bigFingerprint);
+ assert.equal(sql(`select (checkpoint->>'finished')::boolean and checkpoint->'completed' ? 'PUBLICATION' from vnext_runtime.runs where id='${bigRun.run_id}'`),'t');
+ assert.equal(sql('select count(*) from vnext_runtime.publication_status where approved'),'0');
+ checks.push('Full72x250 >16MB synthetic snapshot: prelock and committed-only handoffs release leases; exact216-lock SQL batch survives post-cutoff bookkeeping, no duplicate or member approval');
  // Roll back only the new execution entrypoints, retaining immutable research.
  const preserved=sql("select jsonb_build_object('prediction',md5((select string_agg(payload_text,E'\\n'order by id)from vnext_runtime.predictions)),'outcome',md5((select string_agg(payload::text,E'\\n'order by id)from vnext_runtime.outcomes)),'audit',count(*))from vnext_runtime.audit");
  sql('revoke execute on function public.enqueue_vnext_daily_research_v1(date,text,uuid),public.claim_vnext_daily_research_v1(uuid),public.vnext_daily_runtime_v1(uuid,uuid,integer,text,jsonb) from service_role');

@@ -31,6 +31,9 @@ export interface DailyStore {
  load(key: string): Promise<RunState | null>;
  save(state: RunState): Promise<void>;
  lock(rows: DailyLock[]): Promise<void>;
+ /** Optional read-only receipt for an already committed exact batch. Unlike
+  * lock(), this MUST NOT create predictions. Default adapters stay cutoff-closed. */
+ confirmCommitted?(rows: DailyLock[]): Promise<void>;
 }
 export interface DailyPorts {
  acquire(request: DailyRequest, signal: AbortSignal): Promise<AcquiredResearch>;
@@ -84,16 +87,18 @@ async function validateAcquired(a: AcquiredResearch, request: DailyRequest, now:
 }
 /** Runs outside the Core request. Caller enqueues after READY, never awaits this
  * from Report/LINE. Store must provide mutual exclusion + durable checkpoints. */
-export async function runDailyIntelligence(request: DailyRequest, store: DailyStore, ports: DailyPorts, timeoutMs = 20000) {
+export async function runDailyIntelligence(request: DailyRequest, store: DailyStore, ports: DailyPorts, timeoutMs = 20000, prelockStageLimit = 0, yieldAfterLock = false) {
  const deadline = Date.now() + 60000;
  if (!/^[A-Z0-9_]{1,40}$/.test(request.checkpoint) || !request.source_revision || request.source_revision.length > 256 || !hashValid(request.source_hash)
   || !['HISTORICAL_REPLAY', 'FORWARD_SHADOW'].includes(request.mode) || !['RETAINED_REAL_EVIDENCE', 'SYNTHETIC_CONTROL'].includes(request.provenance)
-  || !validTime(request.actionable_at) || !validTime(ports.clock()) || !Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 20000) fail('REQUEST_INVALID');
+  || !validTime(request.actionable_at) || !validTime(ports.clock()) || !Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 20000
+  || !Number.isInteger(prelockStageLimit) || prelockStageLimit < 0 || prelockStageLimit > 3
+  || typeof yieldAfterLock !== 'boolean' || yieldAfterLock && !store.confirmCommitted) fail('REQUEST_INVALID');
  if (!coveredCalendarDate('TW', request.business_date)) return {state: 'CALENDAR_UNKNOWN', core_awaits_research: false};
  if (!isMarketTradingDate('TW', request.business_date)) return {state: 'CLOSED_NO_EXECUTION', core_awaits_research: false};
  if (!request.core_ready || request.core_busy) return {state: 'DEFERRED_CORE_PRIORITY', core_awaits_research: false};
  if (day(request.actionable_at) !== request.business_date) fail('ACTIONABLE_DATE_MISMATCH');
- if (request.mode === 'FORWARD_SHADOW' && (day(ports.clock()) !== request.business_date || Date.parse(ports.clock()) >= Date.parse(request.actionable_at))) fail('FORWARD_WINDOW_EXPIRED');
+ if (request.mode === 'FORWARD_SHADOW' && day(ports.clock()) !== request.business_date) fail('FORWARD_WINDOW_EXPIRED');
  // Evidence revision is bound to one natural checkpoint: a changed retry must
  // conflict, not create a second authoritative prediction.
  const key = await snapshotHash({version: DAILY_INTELLIGENCE_VERSION, date: request.business_date, checkpoint: request.checkpoint, mode: request.mode, provenance: request.provenance});
@@ -103,8 +108,23 @@ export async function runDailyIntelligence(request: DailyRequest, store: DailySt
   if (state && state.request_hash !== request_hash) fail('IDEMPOTENCY_SCOPE_CONFLICT');
   if (state?.acquired) await validateAcquired(state.acquired, request, ports.clock());
   if (state?.locks && (state.locks.length !== 216 || (await Promise.all(state.locks.map(verifyDailyLock))).some(ok => !ok))) fail('CHECKPOINT_LOCK_INVALID');
+  let committedPrepared = false;
+  if (state?.locks && store.confirmCommitted) {
+   await store.confirmCommitted(state.locks); committedPrepared = true;
+  }
+  if (request.mode === 'FORWARD_SHADOW' && Date.parse(ports.clock()) >= Date.parse(request.actionable_at)) {
+   if (!committedPrepared) fail('FORWARD_WINDOW_EXPIRED');
+  }
   if (state?.finished) return {state: 'ALREADY_COMPLETE', key, checkpoint: state, core_awaits_research: false};
   state ??= {key, request_hash, attempts: {}, completed: [], finished: false};
+  if (committedPrepared && !state.completed.includes('PREDICTION_LOCK')) {
+   // Reconcile bookkeeping even if the third persisted attempt committed just
+   // before a crash. Do not reset, consume or repeat the exhausted write budget.
+   state.completed.push('PREDICTION_LOCK');
+   if (state.failure?.stage === 'PREDICTION_LOCK') delete state.failure;
+   await store.save(state);
+  }
+  let completedPrelockStages = 0;
   for (const stage of STAGES) {
    if (state.completed.includes(stage)) continue;
    let ok = false;
@@ -121,6 +141,14 @@ export async function runDailyIntelligence(request: DailyRequest, store: DailySt
      } else if (stage === 'ENTRY') {
       state.entry = state.acquired!.entry ? await evaluateEntry(state.acquired!.entry) : null;
      } else if (stage === 'PREDICTION_LOCK') {
+      if (state.locks) {
+       // A persisted attempt save may cross cutoff. Without a read-only commit
+       // confirmation this is still a writer, including for non-SQL adapters.
+       if (request.mode === 'FORWARD_SHADOW' && Date.parse(ports.clock()) >= Date.parse(request.actionable_at)) fail('LATE_LOCK_NOT_FORWARD');
+       // Resume a durable prepared batch unchanged, not a fresh now-timestamp
+       // or recomputed evidence hash. Store/SQL remains the commit authority.
+       await store.lock(state.locks);
+      } else {
       const now = ports.clock();
       if (request.mode === 'FORWARD_SHADOW' && Date.parse(now) >= Date.parse(request.actionable_at)) fail('LATE_LOCK_NOT_FORWARD');
       // Own the complete preimage before the first digest await. A retained
@@ -152,6 +180,7 @@ export async function runDailyIntelligence(request: DailyRequest, store: DailySt
       // until all three-horizon hashes have finished using it.
       state.acquired = acquired;
       state.locks ??= locks; await store.save(state); await store.lock(state.locks);
+      }
      } else if (stage === 'OUTCOME') state.outcome = await bounded(s => ports.outcomes(state!.locks!, s), Math.min(timeoutMs, deadline - Date.now()));
      else state.publication = await bounded(s => ports.publication(state!.locks!, s), Math.min(timeoutMs, deadline - Date.now()));
      state.completed.push(stage); delete state.failure; await store.save(state); ok = true; break;
@@ -163,6 +192,16 @@ export async function runDailyIntelligence(request: DailyRequest, store: DailySt
     }
    }
    if (!ok) return {state: 'BLOCKED', key, checkpoint: state, core_awaits_research: false};
+   // Large immutable acquired bytes are sent with every existing CHECKPOINT
+   // RPC. Bound pre-lock stages per invocation, not their evidence or attempts.
+   // Only yield AFTER completed checkpoints are durable. An explicit post-lock
+   // handoff additionally requires the read-only committed-batch contract;
+   // prepared-only bytes never authorize late Forward on recovery.
+   if (['ACQUISITION', 'RESEARCH', 'ENTRY'].includes(stage)
+     && prelockStageLimit > 0 && ++completedPrelockStages >= prelockStageLimit)
+    return {state: 'BUDGET_YIELDED', key, checkpoint: state, core_awaits_research: false};
+   if (stage === 'PREDICTION_LOCK' && yieldAfterLock)
+    return {state: 'BUDGET_YIELDED', key, checkpoint: state, core_awaits_research: false};
   }
   state.finished = true; await store.save(state);
   return {state: 'COMPLETE', key, checkpoint: state, core_awaits_research: false};

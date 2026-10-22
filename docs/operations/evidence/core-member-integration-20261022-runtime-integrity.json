@@ -142,7 +142,7 @@
     {
       "path": ".github/workflows/vnext-candidate.yml",
       "before_sha256": null,
-      "after_sha256": "b1a1479d9b25c738d694f17a24d27654e775be1d09893d1727278fb9ef3c1fa1",
+      "after_sha256": "0aac7753cedea279479105cdb46cffbaaa962187edbc0ccc033b23a417cf6111",
       "mode": "100644",
       "origin": "composition"
     },
@@ -1759,7 +1759,7 @@
     {
       "path": "src/features/vnext/dailyIntelligence.ts",
       "before_sha256": "22bdb3d495ec6c06fd6b2382524ef1727d6078d457fec3a2f724f15a6fc8528b",
-      "after_sha256": "1959e45c7b564b9c8111823291ec52dba0f100ba794b2fbd984b93b3c34ac0a7",
+      "after_sha256": "8cd6773c7ee2c30bcb82e118a8bae289a9dc0b8a64cb8791647558413e6e692a",
       "mode": "100644",
       "origin": "composition"
     },
@@ -1780,7 +1780,7 @@
     {
       "path": "src/features/vnext/dailyRuntime.ts",
       "before_sha256": "b2ee9bfd1618b6eb7f85494ae55a1d6dc14693f48571e007d9d6a019f861ae91",
-      "after_sha256": "e8de1a9f71a1f3f550ca94a924a9a2a47a53b75cda9772bdbb4c62064e7630c1",
+      "after_sha256": "9768c9c269e4df1bcbb9c3fb9f3b883a144bba4ff2031a62b92e81ff5d5d87a5",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2928,7 +2928,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "7d0b781c877b2914c745c2164dcdff7b15fac769486b9036b2304f73344379bd",
+      "after_sha256": "c073af4a8a152bb075bfc639762fb37a9fb1c8907f23d0879941c795188a5363",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2992,6 +2992,13 @@
       "path": "tests/helpers/v2HistoricalBatch.mjs",
       "before_sha256": null,
       "after_sha256": "836b7e77f8f698c6fe97992387b087de5d05237cabf71c4b28ecab07e50f7415",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "tests/helpers/vnextFullSnapshotCapacity.mjs",
+      "before_sha256": null,
+      "after_sha256": "5e9865a8a154fbf066cab2ec718a69b2f43bf80803c49c54491a6086950d31cb",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3096,7 +3103,7 @@
     {
       "path": "tests/originalIngressAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "4d7e290b1de487c341acac816e778ce47042d7572d95ea3bbabee6b4b8603930",
+      "after_sha256": "3d030548536714ee4564d94fcce12a4dd9e85248014d33ca353a7a41deb27fd8",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3593,7 +3600,7 @@
     {
       "path": "tests/vnextDailyDatabase.integration.mjs",
       "before_sha256": "67698a4f0f223dc8bbf33ea1c6672a89d7045eacb1591587606ba478ec6844ae",
-      "after_sha256": "a7767bbbc313c1870543a40994f34c4707bd0ef725368c3595bab88b8c9e5caf",
+      "after_sha256": "8f8de2184b033f19cf33e7d1d0b0e1ffdd7e14bdd4805b19c0cbfdf57aecd00e",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3726,7 +3733,14 @@
     {
       "path": "tests/vnextPredictionHashBudget.test.mjs",
       "before_sha256": null,
-      "after_sha256": "a6c114bc4db6d78a20cd192e9cb8d0d20c0442740aa22c5859d89ab36bdea90b",
+      "after_sha256": "dbead509672f7100f3784c1ac0ed505c12371eac66bbadb44436ea8f95bbc764",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "tests/vnextPrelockStageBudget.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "861aee1e6907d4ef665cbf5e1a46f623830acccb1318a6a0a8492700908db59d",
       "mode": "100644",
       "origin": "composition"
     },
@@ -4639,7 +4653,7 @@
           "path": ".github/workflows/vnext-candidate.yml",
           "mode": "100644",
           "before_sha256": "727be694755623b7f0c53a5b59b835cc71e412a95fe4b6ca0acb7005a53b1e04",
-          "after_sha256": "b1a1479d9b25c738d694f17a24d27654e775be1d09893d1727278fb9ef3c1fa1"
+          "after_sha256": "0aac7753cedea279479105cdb46cffbaaa962187edbc0ccc033b23a417cf6111"
         },
         {
           "path": "scripts/operations/financial-response-period-20261020/materialize.mjs",
@@ -4651,7 +4665,7 @@
           "path": "src/features/vnext/dailyIntelligence.ts",
           "mode": "100644",
           "before_sha256": "ac379cf85344567f5ea7a863caf7378f6578bb8368a2cec758678c7ec9e22790",
-          "after_sha256": "1959e45c7b564b9c8111823291ec52dba0f100ba794b2fbd984b93b3c34ac0a7"
+          "after_sha256": "8cd6773c7ee2c30bcb82e118a8bae289a9dc0b8a64cb8791647558413e6e692a"
         },
         {
           "path": "src/features/vnext/researchFunnel.ts",
@@ -4681,7 +4695,7 @@
           "path": "tests/vnextPredictionHashBudget.test.mjs",
           "mode": "100644",
           "before_sha256": null,
-          "after_sha256": "a6c114bc4db6d78a20cd192e9cb8d0d20c0442740aa22c5859d89ab36bdea90b"
+          "after_sha256": "dbead509672f7100f3784c1ac0ed505c12371eac66bbadb44436ea8f95bbc764"
         },
         {
           "path": "tests/vnextTraceValidationBudget.test.mjs",
@@ -4699,7 +4713,7 @@
           "path": "src/features/vnext/dailyRuntime.ts",
           "mode": "100644",
           "before_sha256": "01fe2480681368465530cb2feeb039161931051ac55e6f4ea1284a95fe47a2bf",
-          "after_sha256": "e8de1a9f71a1f3f550ca94a924a9a2a47a53b75cda9772bdbb4c62064e7630c1"
+          "after_sha256": "9768c9c269e4df1bcbb9c3fb9f3b883a144bba4ff2031a62b92e81ff5d5d87a5"
         },
         {
           "path": "tests/vnextSharedPreimage.test.mjs",
@@ -4735,7 +4749,19 @@
           "path": "tests/vnextDailyDatabase.integration.mjs",
           "mode": "100644",
           "before_sha256": "0742de82575a2f196f2d0c8543bbeeca0425a1939cf16fb22ecec1e93bcb08cb",
-          "after_sha256": "a7767bbbc313c1870543a40994f34c4707bd0ef725368c3595bab88b8c9e5caf"
+          "after_sha256": "8f8de2184b033f19cf33e7d1d0b0e1ffdd7e14bdd4805b19c0cbfdf57aecd00e"
+        },
+        {
+          "path": "tests/helpers/vnextFullSnapshotCapacity.mjs",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "5e9865a8a154fbf066cab2ec718a69b2f43bf80803c49c54491a6086950d31cb"
+        },
+        {
+          "path": "tests/vnextPrelockStageBudget.test.mjs",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "861aee1e6907d4ef665cbf5e1a46f623830acccb1318a6a0a8492700908db59d"
         }
       ],
       "scope": "OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_AND_CI_PREPARATION",

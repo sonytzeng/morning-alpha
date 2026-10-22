@@ -89,7 +89,9 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   if(!r.plan.length)await rpc('PLAN',plan);
   planLength=plan.length;
   const retainedAcquired='acquired' in r.checkpoint?r.checkpoint.acquired:undefined;
-  for(let i=r.cursor;i<plan.length&&due.length===0&&(!retainedAcquired||hasLock||Date.parse(p.clock())>=actionable);i++){
+  const resumePrepared=hasLock&&'key' in r.checkpoint&&r.checkpoint.finished!==true
+   &&new Date(Date.parse(p.clock())+8*3600000).toISOString().slice(0,10)===r.business_date;
+  for(let i=r.cursor;i<plan.length&&due.length===0&&!resumePrepared&&(!retainedAcquired||hasLock||Date.parse(p.clock())>=actionable);i++){
    // Lock a truthful partial-evidence evaluation before the existing 09:00
    // deadline. Long-history bootstrap may continue; never backdate its receipts.
    const current=Date.parse(p.clock());
@@ -98,7 +100,7 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
    const receipt=await collect(plan[i]);if(receipt===false)return finish('QUEUED','SOURCE_RETRY_PENDING');
    await rpc('CURSOR',{cursor:i+1});cursor=i+1;
   }
-  if(!hasLock&&Date.parse(p.clock())<actionable){
+  if(!hasLock&&Date.parse(p.clock())<actionable||resumePrepared){
   let acquired=retainedAcquired;
   if(!acquired){
   if(Date.now()+ASSEMBLY_ADMISSION_MS>=deadline)return finish('QUEUED','EVALUATION_CONTINUATION');
@@ -133,9 +135,16 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   retryAfter=3;
   return finish('QUEUED','ACQUIRED_SNAPSHOT_CONTINUATION');
   }
-  if(Date.parse(p.clock())<actionable){
+  if(hasLock||Date.parse(p.clock())<actionable){
+   // Operational CPU budget, not an evidence/selection threshold. Small
+   // snapshots retain the prior lifecycle; large immutable snapshots must not
+   // serialize all pre-lock checkpoints in the same Edge invocation.
+   const prelockStageLimit=new TextEncoder().encode(JSON.stringify(acquired)).byteLength>4*1024*1024?1:0;
    let state='key' in r.checkpoint?r.checkpoint as RunState:null;
    let savedAttempts={...state?.attempts};
+   // commitLocks above already received SQL's exact-batch reconciliation. Keep
+   // a private byte receipt; this confirmation never invokes a writer RPC.
+   const committedPrepared=hasLock&&'locks' in r.checkpoint?JSON.stringify(r.checkpoint.locks):null;
    const store:DailyStore={exclusive:async(_key,work)=>work(),load:async()=>state,save:async s=>{
     const startingStage=Object.entries(s.attempts).some(([stage,n])=>stage!=='ACQUISITION'&&(n??0)>(savedAttempts[stage as keyof typeof savedAttempts]??0));
     forwardBudget(startingStage?STAGE_RESERVE_MS:WRITE_RESERVE_MS);
@@ -144,11 +153,14 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
     // the unchanged engine still validates it before completing ACQUISITION.
     const checkpoint={...s,acquired:s.acquired??acquired};
     await rpc('CHECKPOINT',checkpoint);state=checkpoint;savedAttempts={...s.attempts};prepared||=!!s.locks;
-   },lock:async rows=>{forwardBudget();await commitLocks(rows);hasLock=true;}};
+   },lock:async rows=>{forwardBudget();await commitLocks(rows);hasLock=true;},
+   confirmCommitted:async rows=>{
+    if(committedPrepared===null||JSON.stringify(rows)!==committedPrepared)throw Error('COMMITTED_BATCH_UNCONFIRMED');
+   }};
    const result=await runDailyIntelligence({business_date:r.business_date,checkpoint:'NATURAL_MARKET_READY',mode:'FORWARD_SHADOW',provenance:'RETAINED_REAL_EVIDENCE',
     core_ready:true,core_busy:false,source_revision:acquired.snapshot_hash,source_hash:acquired.snapshot_hash,actionable_at:r.actionable_at},store,{
     acquire:async()=>acquired,clock:p.clock,outcomes:async()=>({state:'DURABLE_OUTCOME_QUEUE'}),
-    publication:locks=>dailyPublication(locks,(_,hash)=>({now:p.clock(),audience:'owner',server_entitlement_verified:true,input_hash:hash,approved_hash:null,approved_at:null,quality_reviewed:false,methodology_approved:false,use:'OWN_ANALYSIS',grants:[]}))});
+    publication:locks=>dailyPublication(locks,(_,hash)=>({now:p.clock(),audience:'owner',server_entitlement_verified:true,input_hash:hash,approved_hash:null,approved_at:null,quality_reviewed:false,methodology_approved:false,use:'OWN_ANALYSIS',grants:[]}))},20000,prelockStageLimit,prelockStageLimit>0);
    if(!['COMPLETE','ALREADY_COMPLETE'].includes(result.state)){
     if(predictionFailure)throw Error(predictionFailure);
     if(result.state==='BUDGET_YIELDED')return finish('QUEUED','FORWARD_PREPARATION_CONTINUATION');

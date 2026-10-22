@@ -155,3 +155,38 @@ test('Owner study rejects a changed snapshot phase, not a later wall-clock read 
  const denied=await persistedFoundationCandidateInput(data,intraday,ai,owner);
  assert.equal(denied.data.flows.length,0);assert(denied.data.failures.includes('MARKET_FLOW_READER_PHASE_MISMATCH'));
 });
+const reorderJson=v=>Array.isArray(v)?v.map(reorderJson):v&&typeof v==='object'
+ ?Object.fromEntries(Object.entries(v).reverse().map(([k,value])=>[k,reorderJson(value)])):v;
+test('JSONB market reread is idempotent but changed source, time, amounts and metadata remain conflicts',async()=>{
+ const capture=await normalizeMarketInstitutionalTwd(payload(),DATE,RECEIVED),data=evidenceRows();data.flows=[];
+ const first=await withMarketInstitutionalEvidence(data,identity,capture),saved=reorderJson(first),before=structuredClone(saved);
+ assert.notEqual(JSON.stringify(saved.flows[0]),JSON.stringify(capture.rows[0]));
+ const repeated=await withMarketInstitutionalEvidence(saved,identity,capture);
+ assert.deepEqual(repeated,saved);assert.deepEqual(saved,before);
+ for(const change of [r=>r.source_ref+='&different=1',r=>r.created_at='2026-09-06T22:49:59Z',
+  r=>{r.buy_amount++;r.sell_amount++;},r=>r.raw_payload.publication_approved=true,
+  r=>r.raw_payload.source_revision='0'.repeat(64),r=>r.raw_payload.new_metadata={order:['b','a']}]){
+  const changed=structuredClone(saved);change(changed.flows[0]);const original=structuredClone(changed);
+  const denied=await withMarketInstitutionalEvidence(changed,identity,capture);
+  assert(denied.failures.includes('MARKET_FLOW_CONFLICT'));assert.deepEqual(changed,original);
+ }
+});
+test('market input snapshot cannot change across digest await or alias the returned rows',async()=>{
+ const capture=await normalizeMarketInstitutionalTwd(payload(),DATE,RECEIVED),data=evidenceRows();data.flows=[];
+ const original=structuredClone(capture),before=structuredClone(data),id=structuredClone(identity);
+ const pending=withMarketInstitutionalEvidence(data,id,capture);
+ capture.rows[0].buy_amount+=100;capture.rows[0].sell_amount+=100;
+ capture.rows[0].raw_payload.source_revision='0'.repeat(64);
+ data.flows.push({...capture.rows[0],provider:'later-caller-mutation'});id.report_date='2099-01-01';
+ const merged=await pending;assert.equal(merged.failures.length,0);
+ assert.deepEqual(merged.flows,original.rows);assert.deepEqual(merged.quotes,before.quotes);
+ merged.flows[0].raw_payload.source_revision='b'.repeat(64);
+ assert.equal(capture.rows[0].raw_payload.source_revision,'0'.repeat(64));
+});
+test('capture-only mutation cannot put different reconciled amounts under the earlier revision',async()=>{
+ const capture=await normalizeMarketInstitutionalTwd(payload(),DATE,RECEIVED),data=evidenceRows();data.flows=[];
+ const original=structuredClone(capture),pending=withMarketInstitutionalEvidence(data,identity,capture);
+ capture.rows[0].buy_amount+=100;capture.rows[0].sell_amount+=100;
+ const result=await pending;assert.deepEqual(result.flows,original.rows);
+ assert.equal(result.failures.length,0);assert.equal(data.flows.length,0);
+});

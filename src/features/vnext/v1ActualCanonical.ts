@@ -29,7 +29,7 @@ export async function appendCanonicalActual(input: ActualCanonicalIds, rpc: Actu
   const response = await rpc(V1_ACTUAL_CANONICAL_FUNCTION, { p_source_revision_id: source, p_row_id: row });
   if (response.error) throw Error('ACTUAL_CANONICAL_RPC_DENIED');
   const result = object(response.data);
-  if (result.contract !== V1_ACTUAL_CANONICAL_CONTRACT || !['INSERTED', 'REPLAY'].includes(String(result.status))
+  if (result.contract !== V1_ACTUAL_CANONICAL_CONTRACT || (result.status !== 'INSERTED' && result.status !== 'REPLAY')
     || result.source_revision_id !== source || result.row_id !== row || !uuid(result.earnings_event_id) || !uuid(result.audit_id)
     || result.actual_only !== true || result.v1_ready !== false || result.member_publication_approved !== false) throw Error('ACTUAL_SQL_RECEIPT_INVALID');
   return { contract: V1_ACTUAL_CANONICAL_CONTRACT, status: result.status as ActualCanonicalResult['status'],

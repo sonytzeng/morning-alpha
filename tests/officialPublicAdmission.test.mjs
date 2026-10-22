@@ -12,7 +12,9 @@ import {
  FROZEN_SOURCE_UNION_R10,
  FROZEN_SOURCE_UNION_R11,FROZEN_SOURCE_UNION_R12,SOURCE_UNION_R12_FILES,
  FROZEN_SOURCE_UNION_R13,SOURCE_UNION_R14_FILES,FROZEN_SOURCE_UNION_R14,
+ FROZEN_SOURCE_UNION_R15,RUNTIME_INTEGRITY_FILES,
 } from './helpers/integrationAdmission.mjs';
+const runtimeAdded=RUNTIME_INTEGRITY_FILES.filter(r=>r.before_sha256===null||r.path==='src/features/vnext/researchFunnel.ts').map(r=>r.path);
 import {assemble as financial,CHANGED,CATALOG} from '../scripts/operations/financial-response-period-20261020/materialize.mjs';
 import {worker4Baseline} from '../scripts/operations/forward-cutoff-20261020/materialize.mjs';
 test('the ONE current seal is full, current and independent of either frozen parent proof',()=>{
@@ -29,7 +31,12 @@ test('current union preserves the7986 four-source Worker packet, never mixing or
  assert.deepEqual(recovery.bytes,base.bytes);
  const different=candidate.payload.files.filter((f,i)=>f.content!==base.payload.files[i].content).map(f=>f.name).sort();
  assert.deepEqual(different,[...CHANGED].sort());assert.equal(different.length,4);
- for(const path of CHANGED)assert.deepEqual(integrationPhysicalRead(path),sourceUnionParentRead('actual',path));
+ for(const path of CHANGED){
+  const frozen=sourceUnionParentRead('actual',path);
+  assert.equal(candidate.payload.files.find(f=>f.name===path).content,frozen.toString(),'sealed Worker5 keeps the original source');
+  if(['src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts'].includes(path))assert.equal(integrationHash(integrationPhysicalRead(path)),RUNTIME_INTEGRITY_FILES.find(r=>r.path===path).after_sha256,'current candidate is independently admitted, not substituted into Worker5');
+  else assert.deepEqual(integrationPhysicalRead(path),frozen);
+ }
  for(const p of ['src/features/vnext/contracts.ts','src/features/vnext/engine.ts','supabase/functions/_shared/decision-v1-evidence.ts']){
   const payload=candidate.payload.files.find(f=>f.name===p),old=base.payload.files.find(f=>f.name===p);
   if(old){
@@ -109,8 +116,8 @@ test('R5 full PR composition adds the old R4 root and three new paths, never a f
  const r9Added=SOURCE_UNION_R9_FILES.filter(r=>r.before_sha256===null).map(r=>r.path);
  const r10Added=SOURCE_UNION_R10_FILES.filter(r=>!old.files.some(f=>f.path===r.path)).map(r=>r.path);
  const r12Added=SOURCE_UNION_R12_FILES.filter(r=>r.before_sha256===null).map(r=>r.path);
- assert.deepEqual(m.files.filter(r=>![FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14].includes(r.path)).map(r=>r.path),paths);
- assert.deepEqual(integrationInventory(),[...paths,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14,INTEGRATION_MANIFEST].sort());
+ assert.deepEqual(m.files.filter(r=>![FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded].includes(r.path)).map(r=>r.path),paths);
+ assert.deepEqual(integrationInventory(),[...paths,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded,INTEGRATION_MANIFEST].sort());
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R5)).files.length,519,'R5 complete assertion stays frozen, not rewritten');
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R6)).files.length,520,'R6 complete assertion stays frozen, not rewritten');
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R11)).files.length,533,'R11 full root stays immutable, not relabelled as current');
@@ -153,7 +160,9 @@ test('R5 CI pins Deno2.9.2 and fully type-checks the exact research source offli
  assert.match(current,/uses: denoland\/setup-deno@v2\n        with:\n          deno-version: v2\.9\.2\n/);
  const block=current.split(/(?=^      - )/m).find(b=>b.includes(command));assert(block);
  assert.doesNotMatch(block,/\bif:|continue-on-error:|--no-check|--allow-|secrets\./);
- assert.deepEqual(integrationPhysicalRead('src/features/vnext/contracts.ts'),sourceUnionParentRead('registry','src/features/vnext/contracts.ts'));
+ const contracts='src/features/vnext/contracts.ts';
+ assert.equal(integrationHash(integrationPhysicalRead(contracts)),RUNTIME_INTEGRITY_FILES.find(r=>r.path===contracts).after_sha256,'the complete current contracts module is admitted before Deno checks');
+ assert.equal(integrationHash(sourceUnionParentRead('registry',contracts)),RUNTIME_INTEGRITY_FILES.find(r=>r.path===contracts).before_sha256,'the original registry contract remains immutable; shared serialization does not replace its frozen proof');
 });
 test('R8 current CI unconditionally runs both current synthetic suites and both research Deno checks AFTER complete admission',()=>{
  verifyIntegrationCandidate();

@@ -120,6 +120,18 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
    for(const stock of acquired.entry.stocks){const prior=entry.stocks.find(s=>s.symbol===stock.symbol);if(prior){stock.relative_strength=prior.relative_strength;stock.sector_return=prior.sector_return;stock.events_reviewed=prior.events_reviewed;stock.v2_status=prior.v2_status;}}
    const {snapshot_hash,...body}=acquired;void snapshot_hash;acquired.snapshot_hash=await snapshotHash(body);
   }
+  // Assembly and its first durable pin can already consume most of an Edge
+  // invocation's CPU allowance. Do not immediately serialize/validate the same
+  // multi-MB snapshot again in this invocation. This checkpoint is NOT an
+  // acquisition/quality PASS and has no request-bound attempt yet. The existing
+  // continuation reclaims a new SQL lease, reuses these exact bytes/cutoff, and
+  // the unchanged engine still validates before completing ACQUISITION.
+  forwardBudget();
+  await rpc('CHECKPOINT',{acquired});
+  // This is a completed-stage handoff, not a pending provider retry. A skipped
+  // restricted source must not carry its Retry-After into Handler's handoff.
+  retryAfter=3;
+  return finish('QUEUED','ACQUIRED_SNAPSHOT_CONTINUATION');
   }
   if(Date.parse(p.clock())<actionable){
    let state='key' in r.checkpoint?r.checkpoint as RunState:null;

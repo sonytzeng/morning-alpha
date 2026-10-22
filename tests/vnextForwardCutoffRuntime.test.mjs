@@ -94,8 +94,32 @@ function harness(t,{at=date+'T00:57:15.000Z',plan=fullPlan.filter(t=>t.kind==='P
   return Response.json({stat:'OK',date:month+'01',title:' '+symbol+' SYNTHETIC',
    fields:pendingTask.kind==='BENCHMARK'?['日期','開盤指數','最高指數','最低指數','收盤指數']:['日期','成交股數','成交金額','開盤價','最高價','最低價','收盤價'],data:[]});
  }};
+ const prepareAcquired=async()=>{
+  assert.deepEqual(run.checkpoint,{});phase='ASSEMBLY';
+  // Seed only the already durable assembly boundary. Use real retained cache
+  // rows and the current clock; do not prevalidate, evaluate, lock or rewind.
+  const acquired=await assembleDaily(date,companies,[...cache.values()],clock(),canonicalReady?market:null);
+  run.checkpoint={acquired};run.source_revision=acquired.snapshot_hash;phase='OTHER';
+  assert.deepEqual(Object.keys(run.checkpoint),['acquired']);assert.equal(committed.size,0);
+  return structuredClone(acquired);
+ };
  return {run,calls,claims,http,committed,committedAt,checkpoints,clock,advance,get dueRemaining(){return due.length;},setMarket:v=>{canonicalReady=v;},setDue:v=>{due=v;},
+  prepareAcquired,
   invoke:async budget=>{const start=calls.length;const result=await workDailyRun(run.id,ports,budget);return {result,calls:calls.slice(start)};}};
+}
+
+function assertAcquiredPin(h,invocation){
+ assert.equal(invocation.result.status,'QUEUED');assert.equal(invocation.result.reason,'ACQUIRED_SNAPSHOT_CONTINUATION');
+ assert.equal(invocation.result.continue,true);assert.equal(invocation.result.retry_after_seconds,3);
+ assert.deepEqual(Object.keys(h.run.checkpoint),['acquired'],'pin has no request binding, attempts, quality approval or locks');
+ assert.equal(h.run.checkpoint.acquired.inputs.length,72);assert.equal(h.run.source_revision,h.run.checkpoint.acquired.snapshot_hash);
+ assert.equal(h.committed.size,0);assert(!invocation.calls.some(c=>c.op==='PREDICTIONS'));
+ assert.equal(invocation.calls.filter(c=>c.op==='CHECKPOINT').length,1);assert.equal(h.checkpoints.length,1);
+ return structuredClone(h.run.checkpoint.acquired);
+}
+function assertAcquiredReuse(h,acquired,invocation){
+ assert.deepEqual(h.run.checkpoint.acquired,acquired);assert.equal(h.run.source_revision,acquired.snapshot_hash);
+ assert(!invocation.calls.some(c=>['SOURCES','ENTRY_SOURCE'].includes(c.op)));
 }
 
 test('dynamic reproducer: all retained sources can finish assembly after cutoff without any Forward lock',async t=>{
@@ -109,8 +133,9 @@ test('dynamic reproducer: all retained sources can finish assembly after cutoff 
 
 test('reserve window stops cold acquisition and runs the real 72x3 engine with truthful insufficient evidence',async t=>{
  const h=harness(t,{fetchMs:10000});const a=await h.invoke();
+ const acquired=assertAcquiredPin(h,a);h.advance(3000);const b=await h.invoke();assertAcquiredReuse(h,acquired,b);
  assert.equal(h.http.length,0,'do not consume the preparation window fetching deep history');
- assert.equal(h.committed.size,216);assert.equal(a.result.reason,'COLD_BOOTSTRAP_WITH_IMMUTABLE_LOCK');
+ assert.equal(h.committed.size,216);assert.equal(b.result.reason,'COLD_BOOTSTRAP_WITH_IMMUTABLE_LOCK');
  const locks=[...h.committed.values()].map(r=>r.body);
  assert(locks.every(l=>l.research.state==='INSUFFICIENT'&&l.entry.every(e=>e.status==='INSUFFICIENT_EVIDENCE')));
  assert(locks.every(l=>Date.parse(l.locked_at)<Date.parse(actionable)));assert(await verifyDailyLock(locks[0]));
@@ -124,13 +149,15 @@ test('original canonical wait remains in force; later available market is includ
  assert.equal(a.result.reason,'CANONICAL_PUBLICATION_PENDING');assert.equal(a.result.retry_after_seconds,30);
  assert.equal(h.committed.size,0);assert.equal(h.run.source_revision??null,null);
  h.advance(30000);h.setMarket(true);const b=await h.invoke();
- assert.equal(h.committed.size,216);assert.equal(b.result.reason,'COLD_BOOTSTRAP_WITH_IMMUTABLE_LOCK');
+ const acquired=assertAcquiredPin(h,b);h.advance(3000);const c=await h.invoke();assertAcquiredReuse(h,acquired,c);
+ assert.equal(h.committed.size,216);assert.equal(c.result.reason,'COLD_BOOTSTRAP_WITH_IMMUTABLE_LOCK');
  assert.deepEqual(h.run.checkpoint.acquired.entry.market,market);
 });
 
 test('unchanged last-minute canonical-unavailable fallback remains truthful insufficient evidence',async t=>{
  const h=harness(t,{at:date+'T00:59:15.000Z',plan:[fullPlan.find(t=>t.kind==='PRICE')],cursor:1,marketReady:false});
- const a=await h.invoke();assert.equal(a.result.status,'COMPLETE');assert.equal(h.committed.size,216);
+ const a=await h.invoke(),acquired=assertAcquiredPin(h,a);h.advance(3000);const b=await h.invoke();assertAcquiredReuse(h,acquired,b);
+ assert.equal(b.result.status,'COMPLETE');assert.equal(h.committed.size,216);
  assert.equal(h.run.checkpoint.acquired.entry.market,null);
  assert([...h.committed.values()].every(r=>r.body.research.state==='INSUFFICIENT'));
  assert.equal(h.run.checkpoint.publication.eligible,0);
@@ -138,32 +165,30 @@ test('unchanged last-minute canonical-unavailable fallback remains truthful insu
 
 test('expensive assembly checkpoints acquired, then resumes engine without SOURCES or revision replacement',async t=>{
  const h=harness(t,{at:date+'T00:57:10.000Z',cursor:fullPlan.length,plan:fullPlan,allRetained:true,sourcesMs:5000,assemblyHashMs:35});
- const a=await h.invoke();assert.equal(a.result.status,'QUEUED');assert.equal(a.result.reason,'FORWARD_PREPARATION_CONTINUATION');
- assert(h.run.source_revision);assert(h.run.checkpoint.acquired);assert(h.run.checkpoint.completed.includes('ACQUISITION'));
- assert.equal(h.committed.size,0);const revision=h.run.source_revision,acquired=structuredClone(h.run.checkpoint.acquired);
+ const a=await h.invoke(),acquired=assertAcquiredPin(h,a),revision=h.run.source_revision;
+ assert(h.run.source_revision);assert(h.run.checkpoint.acquired);
  h.advance(3000);const b=await h.invoke();
  assert.equal(b.result.status,'COMPLETE');assert.equal(h.committed.size,216);assert.equal(h.run.source_revision,revision);
- assert.deepEqual(h.run.checkpoint.acquired,acquired);assert(!b.calls.some(c=>['SOURCES','ENTRY_SOURCE'].includes(c.op)));
+ assertAcquiredReuse(h,acquired,b);assert(h.run.checkpoint.completed.includes('ACQUISITION'));
  assert([...h.committed.values()].every(r=>Date.parse(r.body.locked_at)<Date.parse(actionable)));
 });
 
-test('first acquisition-attempt checkpoint pins the revision before delayed acknowledgement; next lifecycle completes without SOURCES',async t=>{
- // Real assembly/key digests consume 50s of controlled elapsed CPU time after
+test('prevalidation pin survives delayed acknowledgement; next lifecycle starts acquisition attempt one without SOURCES',async t=>{
+ // Real assembly digests consume 50s of controlled elapsed CPU time after
  // a 10s SOURCES read. The first CHECKPOINT ack takes 6s (below the adapter's
  // 8s transport timeout), crossing the invocation reserve, not business cutoff.
  const hashMs=50000/(retainedReceipts.length+directoryReceipts.length+5);
  const h=harness(t,{at:date+'T00:56:00.000Z',plan:fullPlan,cursor:fullPlan.length,allRetained:true,
   sourcesMs:10000,assemblyHashMs:hashMs,firstCheckpointMs:6000});
- const a=await h.invoke();assert.equal(a.result.status,'QUEUED');assert.equal(a.result.reason,'FORWARD_PREPARATION_CONTINUATION');
- assert.equal(h.committed.size,0);const first=structuredClone(h.run.checkpoint);
- assert(first.key&&first.request_hash);assert.equal(first.attempts.ACQUISITION,1);assert.deepEqual(first.completed,[]);
+ const a=await h.invoke(),acquired=assertAcquiredPin(h,a),first=structuredClone(h.run.checkpoint);
+ const expected=await boundCheckpoint(acquired);
  h.advance(3000);const b=await h.invoke();
  assert.equal(b.result.status,'COMPLETE','second claim must not fail '+b.result.reason);assert.equal(h.committed.size,216);
- assert(first.acquired,'attempt-before-work must already pin assembled bytes, not claim validation completed');
- assert.equal(h.run.checkpoint.key,first.key);assert.equal(h.run.checkpoint.request_hash,first.request_hash);
- assert.equal(h.run.checkpoint.attempts.ACQUISITION,2,'resume does not reset the persisted attempt');
- assert.deepEqual(h.run.checkpoint.acquired,first.acquired);assert.equal(h.run.source_revision,first.acquired.snapshot_hash);
- assert(!b.calls.some(c=>['SOURCES','ENTRY_SOURCE'].includes(c.op)));
+ assert(first.acquired,'prevalidation pin retains assembled bytes without claiming validation completed');
+ assert.deepEqual(h.checkpoints[1].state,expected,'first validation attempt persists before any completed stage');
+ assert.equal(h.run.checkpoint.key,expected.key);assert.equal(h.run.checkpoint.request_hash,expected.request_hash);
+ assert.equal(h.run.checkpoint.attempts.ACQUISITION,1,'an assembly-only pin has not consumed a validation attempt');
+ assertAcquiredReuse(h,acquired,b);
  assert(h.checkpoints.every(c=>c.state.acquired?.snapshot_hash===first.acquired.snapshot_hash));
 });
 
@@ -202,12 +227,11 @@ for(const [label,reason,mutate]of[
 });
 
 test('acquired but unprepared checkpoint cannot stall legal cold bootstrap after cutoff',async t=>{
- const h=harness(t,{at:date+'T00:57:10.000Z',plan:fullPlan,allRetained:true,sourcesMs:5000,assemblyHashMs:35});
- const a=await h.invoke();assert.equal(a.result.reason,'FORWARD_PREPARATION_CONTINUATION');
- const acquired=structuredClone(h.run.checkpoint.acquired);assert(acquired);assert.equal(h.run.cursor,0);
- h.advance(180000);const b=await h.invoke();
+ const h=harness(t,{at:date+'T00:59:58.000Z',plan:fullPlan,allRetained:true});
+ const a=await h.invoke(),acquired=assertAcquiredPin(h,a);assert(acquired);assert.equal(h.run.cursor,0);
+ h.advance(3000);const b=await h.invoke();assert(Date.parse(h.clock())>=Date.parse(actionable));
  assert.equal(b.result.status,'EXPIRED');assert.equal(h.run.cursor,fullPlan.length);
- assert.equal(h.committed.size,0);assert.deepEqual(h.run.checkpoint.acquired,acquired);
+ assert.equal(h.committed.size,0);assertAcquiredReuse(h,acquired,b);
  assert(!b.calls.some(c=>['SOURCES','ENTRY_SOURCE','CHECKPOINT','PREDICTIONS'].includes(c.op)));
 });
 
@@ -218,6 +242,7 @@ test('invocation resource exhaustion is queued, not mislabeled business expiry',
 
 test('real lock hashing across cutoff cannot persist a newly backdated prepared batch',async t=>{
  const h=harness(t,{at:date+'T00:59:59.500Z',plan:[fullPlan.find(t=>t.kind==='PRICE')],cursor:1,engineHashMs:5,checkpointMs:0});
+ await h.prepareAcquired();
  const a=await h.invoke();assert(Date.parse(h.clock())>=Date.parse(actionable));
  assert.equal(h.committed.size,0);assert(!a.calls.some(c=>c.op==='PREDICTIONS'));
  assert(!h.checkpoints.some(c=>c.state.locks),'no new prepared lock checkpoint after crossing business cutoff');
@@ -239,6 +264,7 @@ test('late cold bootstrap still advances across bounded invocations, but never e
 
 test('SQL time veto stays EXPIRED with immutable prepared bytes; no-due terminal claim cannot replay them',async t=>{
  const h=harness(t,{at:date+'T00:59:40.000Z',plan:[fullPlan.find(t=>t.kind==='PRICE')],cursor:1,predictionMs:25000});
+ await h.prepareAcquired();
  const a=await h.invoke();assert.equal(a.result.status,'EXPIRED');assert.equal(a.result.reason,'FORWARD_TIME_INVALID');
  assert.equal(h.committed.size,0);assert.equal(h.run.checkpoint.locks.length,216);
  const prepared=structuredClone(h.run.checkpoint.locks);const b=await h.invoke();
@@ -249,6 +275,7 @@ test('SQL time veto stays EXPIRED with immutable prepared bytes; no-due terminal
 
 test('lost successful commit response can reconcile on the NEXT authorized lifecycle claim, not automatic continuation',async t=>{
  const h=harness(t,{plan:[fullPlan.find(t=>t.kind==='PRICE')],cursor:1,loseCommitResponse:true});
+ await h.prepareAcquired();
  const a=await h.invoke();assert.equal(a.result.status,'BLOCKED');assert.equal(h.committed.size,216);
  assert.equal(a.result.continue,false);assert.equal(h.run.state,'BLOCKED');assert.equal(h.run.lease,null);assert.equal(h.claims.length,1);
  const prepared=structuredClone(h.run.checkpoint.locks),committed=structuredClone([...h.committed]);
@@ -263,6 +290,7 @@ test('lost successful commit response can reconcile on the NEXT authorized lifec
 
 for(const terminal of ['COMPLETE','EXPIRED'])test(terminal+' without due work is not reclaimed; due work opens the existing claim gate',async t=>{
  const h=harness(t,{at:terminal==='COMPLETE'?date+'T00:57:15.000Z':date+'T01:10:00.000Z',plan:[fullPlan.find(t=>t.kind==='PRICE')],cursor:1});
+ if(terminal==='COMPLETE')await h.prepareAcquired();
  const a=await h.invoke();assert.equal(a.result.status,terminal);assert.equal(h.run.state,terminal);
  const b=await h.invoke();assert.deepEqual(b.result,{status:terminal,continue:false});assert.equal(b.calls.length,0);
  assert.deepEqual(h.claims.at(-1),{previous:terminal,status:terminal});
@@ -273,6 +301,7 @@ for(const terminal of ['COMPLETE','EXPIRED'])test(terminal+' without due work is
 
 test('confirmed pre-cutoff commit remains valid when read-only publication checks finish after cutoff',async t=>{
  const h=harness(t,{at:date+'T00:59:59.300Z',plan:[fullPlan.find(t=>t.kind==='PRICE')],cursor:1,engineHashMs:1,checkpointMs:0});
+ await h.prepareAcquired();
  const a=await h.invoke();assert.equal(a.result.status,'COMPLETE');assert.equal(h.committed.size,216);
  assert(Date.parse(h.clock())>=Date.parse(actionable));
  assert(Date.parse(a.calls.find(c=>c.op==='PREDICTIONS').at)<Date.parse(actionable));
@@ -281,6 +310,7 @@ test('confirmed pre-cutoff commit remains valid when read-only publication check
 
 test('pre-cutoff DB commit with post-cutoff response preserves success and still sweeps prior outcomes',async t=>{
  const h=harness(t,{at:date+'T00:59:40.000Z',plan:[fullPlan.find(t=>t.kind==='PRICE')],cursor:1,predictionAckMs:25000});
+ await h.prepareAcquired();
  h.setDue([{prediction:priorState.locks.find(l=>l.horizon==='SHORT'),horizons:[1]}]);
  const a=await h.invoke();assert.equal(a.result.status,'COMPLETE');assert.equal(h.committed.size,216);
  assert(Date.parse(h.committedAt[0])<Date.parse(actionable));assert(Date.parse(h.clock())>=Date.parse(actionable));

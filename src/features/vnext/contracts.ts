@@ -92,7 +92,22 @@ function stable(value: unknown): string {
   if (value && typeof value === 'object') return '{' + Object.keys(value).sort().map(k => JSON.stringify(k) + ':' + stable((value as Record<string, unknown>)[k])).join(',') + '}';
   throw Error('NON_CANONICAL_VALUE');
 }
-export async function snapshotHash(value: unknown): Promise<string> {
-  const bytes = new TextEncoder().encode(stable(value));
+async function hashCanonical(text: string): Promise<string> {
+  const bytes = new TextEncoder().encode(text);
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('');
+}
+export async function snapshotHash(value: unknown): Promise<string> {
+  return hashCanonical(stable(value));
+}
+/** Hash the unchanged {entry,input} preimage for each owned input. The caller
+ * must own immutable clones for this attempt. Only the canonical Entry text is
+ * shared within this call, never a validation result or hash across revisions.
+ * Keep digests sequential: 72 simultaneous full-Entry buffers can exceed the
+ * Edge isolate's memory limit. The encoded bytes match snapshotHash exactly. */
+export async function inputSnapshotHashes(inputs: readonly unknown[], entry: unknown): Promise<string[]> {
+  const entryText = stable(entry), hashes: string[] = [];
+  for (const input of inputs) {
+    hashes.push(await hashCanonical('{"entry":' + entryText + ',"input":' + stable(input) + '}'));
+  }
+  return hashes;
 }

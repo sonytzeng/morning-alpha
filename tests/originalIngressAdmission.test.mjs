@@ -20,17 +20,19 @@ import {
  FROZEN_SOURCE_UNION_R10,SOURCE_UNION_R11_BASE,SOURCE_UNION_R11_FILES,sourceUnionR11Lineage,
  FROZEN_SOURCE_UNION_R11,FROZEN_SOURCE_UNION_R12,SOURCE_UNION_R12_BASE,SOURCE_UNION_R12_HEAD,SOURCE_UNION_R12_FILES,sourceUnionR12Lineage,
  FROZEN_SOURCE_UNION_R13,SOURCE_UNION_R14_BASE,SOURCE_UNION_R14_FILES,sourceUnionR14Lineage,FROZEN_SOURCE_UNION_R14,SOURCE_UNION_R15_BASE,SOURCE_UNION_R15_FILES,sourceUnionR15Lineage,
+ FROZEN_SOURCE_UNION_R15,RUNTIME_INTEGRITY_FILES,RUNTIME_INTEGRITY_BASE,runtimeIntegrityLineage,
  integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHash,
  createSourceUnionComposition,verifyIntegrationCandidate,sourceUnionLineage,sourceUnionParentRead,reuseSourceUnionPinnedProof,
 } from './helpers/integrationAdmission.mjs';
+const runtimeAdded=RUNTIME_INTEGRITY_FILES.filter(r=>r.before_sha256===null||r.path==='src/features/vnext/researchFunnel.ts').map(r=>r.path);
 const flags=['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'];
 test('R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',()=>{
  const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);
- assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261022-v1-source-union-r15.json');
+ assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261022-runtime-integrity.json');
  assert.equal(FROZEN_SOURCE_UNION_R7,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r7.json');
  assert.equal(FROZEN_SOURCE_UNION,'docs/operations/evidence/core-member-integration-20261020-v1-source-union.json');
  assert.equal(FROZEN_SOURCE_UNION_NORMALIZER,'docs/operations/evidence/core-member-integration-20261020-v1-source-union-normalizer.json');
- assert.equal(m.files.length,538);assert.equal(integrationInventory().length,539);
+ assert.equal(m.files.length,546);assert.equal(integrationInventory().length,547);
  const r11=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R11));assert.equal(r11.files.length,533);
  const r11Inventory=execFileSync('git',['--no-replace-objects','diff','--no-renames','--name-only','-z',INTEGRATION_BASE,SOURCE_UNION_R12_BASE,'--'],{cwd:new URL('../',import.meta.url),encoding:'utf8'}).split('\0').filter(Boolean).sort();
  assert.equal(r11Inventory.length,534);assert.deepEqual(r11Inventory,[...r11.files.map(r=>r.path),FROZEN_SOURCE_UNION_R11].sort());
@@ -569,8 +571,8 @@ test('R8 pins seven independent exact before/after deltas and preserves the full
  const r9Added=SOURCE_UNION_R9_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);
  const r10Added=SOURCE_UNION_R10_FILES.filter(f=>!old.files.some(r=>r.path===f.path)).map(f=>f.path);
  const r12Added=SOURCE_UNION_R12_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);
- assert.equal(added.length,3);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R7,...added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14].sort());
- assert.equal(m.files.length,538);assert.deepEqual(integrationInventory(),[...m.files.map(f=>f.path),INTEGRATION_MANIFEST].sort());
+ assert.equal(added.length,3);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R7,...added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded].sort());
+ assert.equal(m.files.length,546);assert.deepEqual(integrationInventory(),[...m.files.map(f=>f.path),INTEGRATION_MANIFEST].sort());
  for(const row of r.files){
   const replacement=SOURCE_UNION_R12_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R11_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R9_FILES.find(f=>f.path===row.path);
   const immutable=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R9_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
@@ -653,7 +655,9 @@ test('R8 cannot self-certify altered pins, Master supersession, business review,
  const subset=fixture();subset.manifest.files=subset.manifest.files.filter(r=>SOURCE_UNION_R8_FILES.some(f=>f.path===r.path));subset.reseal();assert.throws(subset.verify,/EXACT_SCOPE/);
 });
 test('R8 retains every R7 admission test and all unadapted assertion bodies; exact R7 source is never rewritten',()=>{
- const adapted=new Set(['R7 complete physical current union preserves R4/R5/R6 assertions at their immutable parents',
+ const adapted=new Set([
+  'R5 CI pins Deno2.9.2 and fully type-checks the exact research source offline after admission',
+  'current union preserves the7986 four-source Worker packet, never mixing original contracts/engine','R7 complete physical current union preserves R4/R5/R6 assertions at their immutable parents',
   'R4 pins exactly four loader/metadata sources over cbb without source rights or Worker activation',
   'R4 admits current evaluator before the unchanged issuer review can reconstruct its exact R9 view',
   'R5 pins precisely the four frozen code deltas over dfec and revalidates all R4 source/root bytes',
@@ -678,7 +682,7 @@ test('R8 retains every R7 admission test and all unadapted assertion bodies; exa
    assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
   }
  }
- assert.equal(count,51);assert.equal(adapted.size,8);
+ assert.equal(count,51);assert.equal(adapted.size,10);
 });
 test('R9 admits the exact native PDF intake delta without changing the frozen R8 lineage or granting any business permission',()=>{
  const m=verifyIntegrationCandidate(),r=m.source_union.r9,old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R8));
@@ -688,12 +692,12 @@ test('R9 admits the exact native PDF intake delta without changing the frozen R8
  const added=SOURCE_UNION_R9_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);
  const r10Added=SOURCE_UNION_R10_FILES.filter(f=>!old.files.some(r=>r.path===f.path)).map(f=>f.path);
  const r12Added=SOURCE_UNION_R12_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);
- assert.equal(added.length,3);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R8,...added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14].sort());
+ assert.equal(added.length,3);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R8,...added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded].sort());
  for(const row of SOURCE_UNION_R9_FILES){
   assert.equal(old.files.find(f=>f.path===row.path)?.after_sha256??null,row.before_sha256);
   const immutable=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R10_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
   assert.equal(integrationHash(immutable),row.after_sha256,'exact R9 generation remains pinned');
-  const replacement=SOURCE_UNION_R12_FILES.find(f=>f.path===row.path);
+  const replacement=RUNTIME_INTEGRITY_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R12_FILES.find(f=>f.path===row.path);
   assert.equal(integrationHash(integrationPhysicalRead(row.path)),replacement?.after_sha256??row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);
  }
  for(const flag of ['source_admission','canonical_admission','quality_approval','production_authorized','publication_approval','thresholds_changed','worker_payload_changed','cle_payload_changed'])assert.equal(r[flag],false);
@@ -721,7 +725,9 @@ test('R9 rejects source, mode, inventory, old-generation and reflected-lineage d
  }
 });
 test('R9 preserves all 61 R8 admission assertions at their exact parent; only five explicit current-view cases are adapted',()=>{
- const adapted=new Set(['R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',
+ const adapted=new Set([
+  'R5 CI pins Deno2.9.2 and fully type-checks the exact research source offline after admission',
+  'current union preserves the7986 four-source Worker packet, never mixing original contracts/engine','R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',
   'R4 pins exactly four loader/metadata sources over cbb without source rights or Worker activation',
   'R4 admits current evaluator before the unchanged issuer review can reconstruct its exact R9 view',
   'R5 pins precisely the four frozen code deltas over dfec and revalidates all R4 source/root bytes',
@@ -743,7 +749,7 @@ test('R9 preserves all 61 R8 admission assertions at their exact parent; only fi
    assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
   }
  }
- assert.equal(count,61);assert.equal(adapted.size,10);
+ assert.equal(count,61);assert.equal(adapted.size,12);
 });
 test('R10 pins only the company-event identity correction over the unchanged complete R9 root',()=>{
  const m=verifyIntegrationCandidate(),r=m.source_union.r10,old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R9));
@@ -752,7 +758,7 @@ test('R10 pins only the company-event identity correction over the unchanged com
  assert.equal(old.files.length,529);assert.deepEqual(m.source_union.r9,old.source_union.r9);
  const added=SOURCE_UNION_R10_FILES.filter(f=>!old.files.some(r=>r.path===f.path)).map(f=>f.path);assert.equal(added.length,2);
  const r12Added=SOURCE_UNION_R12_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);
- assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R9,...added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14].sort());
+ assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R9,...added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded].sort());
  for(const row of SOURCE_UNION_R10_FILES){
   const prior=row.before_sha256===null?null:old.files.find(f=>f.path===row.path)?.after_sha256??integrationHash(execFileSync('git',['show',INTEGRATION_BASE+':'+row.path],{cwd:new URL('../',import.meta.url),stdio:['ignore','pipe','ignore']}));
   assert.equal(prior,row.before_sha256);
@@ -778,7 +784,9 @@ test('R10 rejects reflected source, mode, omission, old-generation and lineage c
  }
 });
 test('R10 retains all 64 R9 admission cases; four full-current inventory views only are adapted',()=>{
- const adapted=new Set(['R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',
+ const adapted=new Set([
+  'R5 CI pins Deno2.9.2 and fully type-checks the exact research source offline after admission',
+  'current union preserves the7986 four-source Worker packet, never mixing original contracts/engine','R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',
   'R4 pins exactly four loader/metadata sources over cbb without source rights or Worker activation',
   'R4 admits current evaluator before the unchanged issuer review can reconstruct its exact R9 view',
   'R5 pins precisely the four frozen code deltas over dfec and revalidates all R4 source/root bytes',
@@ -801,14 +809,14 @@ test('R10 retains all 64 R9 admission cases; four full-current inventory views o
    assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
   }
  }
- assert.equal(count,64);assert.equal(adapted.size,12);
+ assert.equal(count,64);assert.equal(adapted.size,14);
 });
 test('R11 admits only the retained incremental reuse fix and preserves the complete immutable R10 root',()=>{
  const m=verifyIntegrationCandidate(),r=m.source_union.r11,old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R10));
  assert.deepEqual(r,sourceUnionR11Lineage());assert.equal(SOURCE_UNION_R11_FILES.length,2);
  assert.equal(integrationHash(integrationPhysicalRead(FROZEN_SOURCE_UNION_R10)),'f97d3d429b3b93839522a6c8c8fdecda0ba2daa7a95fed0644143e5d1984d904');
  const r12Added=SOURCE_UNION_R12_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);
- assert.equal(old.files.length,532);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14].sort());
+ assert.equal(old.files.length,532);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded].sort());
  for(const [key,value]of Object.entries(old.source_union))assert.deepEqual(m.source_union[key],value);
  for(const row of SOURCE_UNION_R11_FILES){
   assert.equal(old.files.find(f=>f.path===row.path)?.after_sha256,row.before_sha256);
@@ -837,7 +845,9 @@ test('R11 cannot admit altered source, old code, mode, inventory, lineage, right
  }
 });
 test('R11 preserves all 67 R10 assertions; only five current inventory/source views are explicitly adapted',()=>{
- const adapted=new Set(['R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',
+ const adapted=new Set([
+  'R5 CI pins Deno2.9.2 and fully type-checks the exact research source offline after admission',
+  'current union preserves the7986 four-source Worker packet, never mixing original contracts/engine','R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',
   'R4 pins exactly four loader/metadata sources over cbb without source rights or Worker activation',
   'R4 admits current evaluator before the unchanged issuer review can reconstruct its exact R9 view',
   'R5 pins precisely the four frozen code deltas over dfec and revalidates all R4 source/root bytes',
@@ -862,7 +872,7 @@ test('R11 preserves all 67 R10 assertions; only five current inventory/source vi
    assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
   }
  }
- assert.equal(count,67);assert.equal(adapted.size,14);
+ assert.equal(count,67);assert.equal(adapted.size,16);
 });
 test('R13 pins the exact R12 nine-file commit, both immutable roots and the full current composition without authority',()=>{
  const m=verifyIntegrationCandidate(),r=m.source_union.r12,old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R11));
@@ -897,8 +907,8 @@ test('R13 pins the exact R12 nine-file commit, both immutable roots and the full
   assert.equal(row.mode,'100644');assert(!SOURCE_UNION_SUPPORT.includes(row.path));
  }
  const added=SOURCE_UNION_R12_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);assert.equal(added.length,2);
- assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R11,...added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14].sort());
- assert.equal(m.schema,'CORE_MEMBER_COMPOSITION_V1');assert.equal(m.files.length,538);assert.equal(integrationInventory().length,539);
+ assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R11,...added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded].sort());
+ assert.equal(m.schema,'CORE_MEMBER_COMPOSITION_V1');assert.equal(m.files.length,546);assert.equal(integrationInventory().length,547);
  assert.deepEqual(integrationInventory(),[...m.files.map(f=>f.path),INTEGRATION_MANIFEST].sort());
  for(const flag of flags)assert.equal(m[flag],false);
  for(const flag of ['source_admission','canonical_admission','quality_approval','rights_gate_changed','publication_approval','production_authorized','thresholds_changed','existing_release_payloads_changed'])assert.equal(r[flag],false);
@@ -977,6 +987,8 @@ test('R13 cannot reseal the frozen R11 root or substitute R12 parent, commit, so
 });
 test('R13 preserves all 70 R11 admission tests with only explicit current-view and nested preservation adaptations',()=>{
  const adapted=new Set([
+  'R5 CI pins Deno2.9.2 and fully type-checks the exact research source offline after admission',
+  'current union preserves the7986 four-source Worker packet, never mixing original contracts/engine',
   'R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',
   'R3 CI runs full admission before fixed Python controls, capacity negatives and current evaluator regressions',
   'R3 pins all eight exact sources to8c before/after bytes; only explicit R4/R7/R8 replacements differ in current',
@@ -1008,16 +1020,16 @@ test('R13 preserves all 70 R11 admission tests with only explicit current-view a
    assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
   }
  }
- assert.equal(count,70);assert.equal(adapted.size,16);assert.deepEqual([...changed].sort(),[...adapted].sort(),'only actual changed current views are named');
+ assert.equal(count,70);assert.equal(adapted.size,18);assert.deepEqual([...changed].sort(),[...adapted].sort(),'only actual changed current views are named');
 });
 test('R14 admits only the three exact evaluator JSONB/reread sources while preserving the frozen complete R13 tree',()=>{
  const m=verifyIntegrationCandidate(),r=m.source_union.r14,old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R13));
  assert.deepEqual(r,sourceUnionR14Lineage());assert.equal(r.base,SOURCE_UNION_R14_BASE);
  assert.equal(r.prior_root.revision,'9dcd21603d6f32dad57cfc2f8dfc14f56852ce35');
  assert.equal(integrationHash(integrationPhysicalRead(FROZEN_SOURCE_UNION_R13)),'5b1bb18cbd821dd3ebb7d11974492f19942b422922a92058e369a6fc8fa105a8');
- assert.equal(old.files.length,536);assert.equal(m.files.length,538);assert.equal(integrationInventory().length,539);
+ assert.equal(old.files.length,536);assert.equal(m.files.length,546);assert.equal(integrationInventory().length,547);
  for(const [key,value]of Object.entries(old.source_union))assert.deepEqual(m.source_union[key],value);
- assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14].sort());
+ assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded].sort());
  assert.deepEqual(r.files.map(f=>f.path),['supabase/functions/_shared/decision-v1-evidence.ts','tests/v1FundamentalRevisionSelection.test.mjs','tests/v1FundamentalRevisionDatabase.integration.mjs']);
  for(const row of r.files){
   const original=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R14_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
@@ -1045,6 +1057,8 @@ test('R14 rejects all source and frozen-root mutations, missing/mode changes and
 });
 test('R14 retains all 77 R13 admission assertions; only sixteen explicitly named current views change',()=>{
  const adapted=new Set([
+  'R5 CI pins Deno2.9.2 and fully type-checks the exact research source offline after admission',
+  'current union preserves the7986 four-source Worker packet, never mixing original contracts/engine',
   'R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',
   'R3 pins all eight exact sources to8c before/after bytes; only explicit R4/R7/R8 replacements differ in current',
   'R4 pins exactly four loader/metadata sources over cbb without source rights or Worker activation',
@@ -1074,15 +1088,15 @@ test('R14 retains all 77 R13 admission assertions; only sixteen explicitly named
    assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
   }
  }
- assert.equal(count,77);assert.equal(adapted.size,16);assert.deepEqual([...changed].sort(),[...adapted].sort());
+ assert.equal(count,77);assert.equal(adapted.size,18);assert.deepEqual([...changed].sort(),[...adapted].sort());
 });
 test('R15 pins only private market JSONB and snapshot deltas over the unchanged full R14 tree',()=>{
  const m=verifyIntegrationCandidate(),r=m.source_union.r15,old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R14));
  assert.deepEqual(r,sourceUnionR15Lineage());assert.equal(r.base,SOURCE_UNION_R15_BASE);
  assert.equal(integrationHash(integrationPhysicalRead(FROZEN_SOURCE_UNION_R14)),'7e3357b8ab1b9f0cf8b5fed2f58a046d8c010b0e9e76cb15eee3502d85a56264');
- assert.equal(old.files.length,537);assert.equal(m.files.length,538);assert.equal(integrationInventory().length,539);
+ assert.equal(old.files.length,537);assert.equal(m.files.length,546);assert.equal(integrationInventory().length,547);
  for(const [key,value]of Object.entries(old.source_union))assert.deepEqual(m.source_union[key],value);
- assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R14].sort());
+ assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded].sort());
  assert.deepEqual(r.files.map(f=>f.path),['supabase/functions/_shared/recommendation-market-institutional-candidate.ts',
   'tests/recommendationMarketInstitutionalCandidate.test.mjs','tests/recommendationMarketInstitutionalDatabase.integration.mjs']);
  for(const row of r.files){
@@ -1109,8 +1123,14 @@ test('R15 denies rehashed market sources, frozen-root changes, missing paths, mo
   const f=fixture();change(f.manifest.source_union.r15);f.reseal();assert.throws(f.verify,/LINEAGE_DRIFT/);
  }
 });
-test('R15 preserves all 80 R14 admission assertions; only eight explicit current inventory views adapt',()=>{
+test('Runtime integrity preserves all 83 R15 admission assertions; eighteen explicit binding and nested preservation views adapt',()=>{
  const adapted=new Set([
+  'R14 retains all 77 R13 admission assertions; only sixteen explicitly named current views change',
+  'R13 preserves all 70 R11 admission tests with only explicit current-view and nested preservation adaptations',
+  'R11 preserves all 67 R10 assertions; only five current inventory/source views are explicitly adapted',
+  'R10 retains all 64 R9 admission cases; four full-current inventory views only are adapted',
+  'R9 preserves all 61 R8 admission assertions at their exact parent; only five explicit current-view cases are adapted',
+  'R8 retains every R7 admission test and all unadapted assertion bodies; exact R7 source is never rewritten',
   'R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',
   'R8 pins seven independent exact before/after deltas and preserves the full frozen R7 root and lineage',
   'R9 admits the exact native PDF intake delta without changing the frozen R8 lineage or granting any business permission',
@@ -1119,18 +1139,74 @@ test('R15 preserves all 80 R14 admission assertions; only eight explicit current
   'R13 pins the exact R12 nine-file commit, both immutable roots and the full current composition without authority',
   'R14 admits only the three exact evaluator JSONB/reread sources while preserving the frozen complete R13 tree',
   'R5 full PR composition adds the old R4 root and three new paths, never a four-file-only seal or Worker grant',
+  'R15 pins only private market JSONB and snapshot deltas over the unchanged full R14 tree',
+  'current union preserves the7986 four-source Worker packet, never mixing original contracts/engine',
+  'R5 CI pins Deno2.9.2 and fully type-checks the exact research source offline after admission',
+  'Runtime integrity preserves all 83 R15 admission assertions; eighteen explicit binding and nested preservation views adapt',
  ]);
  const bodies=text=>{const starts=[...text.matchAll(/^test\('([^']+)'/gm)];return new Map(starts.map((r,i)=>[r[1],text.slice(r.index,starts[i+1]?.index??text.length).trimEnd()]));};
  let count=0;const changed=new Set();
  for(const path of ['tests/originalIngressAdmission.test.mjs','tests/officialPublicAdmission.test.mjs']){
-  const old=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R15_BASE+':'+path],{cwd:new URL('../',import.meta.url),encoding:'utf8'});
+  const old=execFileSync('git',['--no-replace-objects','show',RUNTIME_INTEGRITY_BASE+':'+path],{cwd:new URL('../',import.meta.url),encoding:'utf8'});
   const before=bodies(old),after=bodies(integrationPhysicalRead(path).toString());count+=before.size;
-  for(const [name,body]of before){const current=after.get(name);assert(current,'R14 assertion retained: '+name);
-   if(current!==body)changed.add(name);
-   if(!adapted.has(name))assert.equal(current,body,'R14 assertion body unchanged: '+name);
+  for(const [name,body]of before){
+   const activeName=name==='R15 preserves all 80 R14 admission assertions; only eight explicit current inventory views adapt'
+    ?'Runtime integrity preserves all 83 R15 admission assertions; eighteen explicit binding and nested preservation views adapt':name;
+   const current=after.get(activeName);assert(current,'R15 assertion retained: '+name);
+   if(current!==body)changed.add(activeName);
+   if(!adapted.has(activeName))assert.equal(current,body,'R15 assertion body unchanged: '+name);
    else assert((current.match(/\bassert[.(]/g)??[]).length>=(body.match(/\bassert[.(]/g)??[]).length,'no assertion reduction: '+name);
    assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
   }
  }
- assert.equal(count,80);assert.equal(adapted.size,8);assert.deepEqual([...changed].sort(),[...adapted].sort());
+ assert.equal(count,83);assert.equal(adapted.size,18);assert.deepEqual([...changed].sort(),[...adapted].sort());
+});
+test('runtime candidate binds the complete prior root, exact CPU/RPC changes and unconditional CI checks without any authority',()=>{
+ const m=verifyIntegrationCandidate(),r=m.source_union.runtime_integrity;
+ const prior=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R15));
+ assert.equal(integrationHash(integrationPhysicalRead(FROZEN_SOURCE_UNION_R15)),'6c28e2c50a7ba444ba3b9b2f7386b2779eaed5166eb8adabc90f1ea0d41cf458');
+ assert.equal(prior.files.length,538);assert.equal(runtimeAdded.length,7);
+ assert.equal(m.files.length,538+1+7);assert.equal(integrationInventory().length,m.files.length+1);
+ assert.deepEqual(m.files.map(f=>f.path),[...prior.files.map(f=>f.path),FROZEN_SOURCE_UNION_R15,...runtimeAdded].sort());
+ assert.deepEqual(r,runtimeIntegrityLineage());assert.equal(r.base,RUNTIME_INTEGRITY_BASE);
+ for(const [key,value]of Object.entries(prior.source_union))assert.deepEqual(m.source_union[key],value);
+ for(const row of RUNTIME_INTEGRITY_FILES){assert.equal(integrationHash(integrationPhysicalRead(row.path)),row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);}
+ const workflow=integrationPhysicalRead('.github/workflows/vnext-candidate.yml').toString();
+ const block=workflow.split('      - name: Exact current hash ownership, strict Canonical receipt and acquisition trace controls')[1]?.split('      - name:')[0];
+ assert(block);for(const p of ['vnextPredictionHashBudget','v1ActualCanonicalReceiptStatus','vnextTraceValidationBudget'])assert(block.includes('tests/'+p+'.test.mjs'));
+ assert.doesNotMatch(block,/\bif:|continue-on-error:|skip|secrets\./);
+ assert(workflow.includes('deno check --no-lock supabase/functions/vnext-daily-research-v1/index.ts'));
+ for(const flag of ['source_admission','canonical_admission','quality_approval','rights_gate_changed','publication_approval','production_authorized','thresholds_changed','existing_release_payloads_changed'])assert.equal(r[flag],false);
+});
+test('immutable Git lineage memoization returns owned trees and never caches live admission results',()=>{
+ const before=sourceUnionLineage(),tampered=sourceUnionLineage();
+ tampered.parents.actual='HEAD';tampered.runtime_integrity.files.pop();tampered.r15.production_authorized=true;
+ assert.deepEqual(sourceUnionLineage(),before,'caller mutation cannot poison immutable metadata');
+ for(const row of [RUNTIME_INTEGRITY_FILES[0],RUNTIME_INTEGRITY_FILES[3]]){
+  const f=fixture();f.verify();f.bytes.set(row.path,Buffer.concat([f.read(row.path),Buffer.from('\nWARM_CACHE_DRIFT')]));
+  const digest=integrationHash(f.read(row.path));f.manifest.files.find(r=>r.path===row.path).after_sha256=digest;
+  f.manifest.source_union.runtime_integrity.files.find(r=>r.path===row.path).after_sha256=digest;f.reseal();
+  assert.throws(f.verify,/SOURCE_DRIFT/,'warm immutable cache cannot admit reflected live source drift');
+  const g=fixture();g.verify();g.modes.set(row.path,'100755');g.manifest.files.find(r=>r.path===row.path).mode='100755';g.reseal();
+  assert.throws(g.verify,/MODE_DRIFT/,'warm cache never replaces the current mode read');
+ }
+ const unknown=fixture();unknown.verify();unknown.paths.push('src/features/vnext/unreviewed-live-file.ts');
+ unknown.bytes.set('src/features/vnext/unreviewed-live-file.ts',Buffer.from('export {};'));
+ unknown.modes.set('src/features/vnext/unreviewed-live-file.ts','100644');
+ assert.throws(unknown.verify,/INTEGRATION_UNKNOWN_PATH/,'live inventory is always re-enumerated');
+});
+test('runtime candidate rejects rewritten source pins, changed recovery sources, modes, missing inputs and invented authority',()=>{
+ for(const row of [...RUNTIME_INTEGRITY_FILES,{path:FROZEN_SOURCE_UNION_R15}]){
+  const f=fixture();f.verify();f.bytes.set(row.path,Buffer.concat([f.read(row.path),Buffer.from('\nUNREVIEWED_RUNTIME')]));
+  const hash=integrationHash(f.read(row.path));f.manifest.files.find(r=>r.path===row.path).after_sha256=hash;
+  const entry=f.manifest.source_union.runtime_integrity.files.find(r=>r.path===row.path);
+  if(entry)entry.after_sha256=hash;else f.manifest.source_union.runtime_integrity.prior_root.sha256=hash;
+  f.reseal();assert.throws(f.verify,/SOURCE_DRIFT/);assert.throws(()=>createSourceUnionComposition(f.read,f.paths,f.mode),/SOURCE_DRIFT/);
+  for(const mode of ['100755','120000']){const g=fixture();g.modes.set(row.path,mode);g.manifest.files.find(r=>r.path===row.path).mode=mode;g.reseal();assert.throws(g.verify,/MODE_DRIFT/);}
+  assert.throws(()=>verifyIntegrationCandidate(p=>{if(p===row.path)throw Error('RUNTIME_MISSING');return integrationPhysicalRead(p);}),/RUNTIME_MISSING/);
+ }
+ for(const change of [r=>r.base='HEAD',r=>r.files.pop(),r=>r.prior_root.sha256='0'.repeat(64),
+  ...['source_admission','canonical_admission','quality_approval','rights_gate_changed','publication_approval','production_authorized','thresholds_changed','existing_release_payloads_changed'].map(k=>r=>{r[k]=true;})]){
+  const f=fixture();change(f.manifest.source_union.runtime_integrity);f.reseal();assert.throws(f.verify,/LINEAGE_DRIFT/);
+ }
 });

@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync,lstatSync} from 'node:fs';
 import {createHash} from 'node:crypto';
+import {execFileSync} from 'node:child_process';
 import {worker4Baseline} from '../forward-cutoff-20261020/materialize.mjs';
 import {verifyIntegrationCandidate} from '../../../tests/helpers/integrationAdmission.mjs';
 const root=new URL('../../../',import.meta.url);
@@ -33,9 +34,17 @@ export function assemble(variant='candidate',read=physical){
  assert(['candidate','recovery'].includes(variant),'FINANCIAL_FIXED_VARIANT');
  verifyIntegrationCandidate(read);
  const bytes=read(CATALOG);assert.equal(sha(bytes),CATALOG_SHA256,'FINANCIAL_CATALOG_DRIFT');
- const c=JSON.parse(bytes);assert.deepEqual(c,propose(c.confirmed_sources,read),'FINANCIAL_CATALOG_CONTRACT');
+ // This is the immutable, already released Worker5 packet, not the current
+ // runtime candidate. Admit the entire live tree BEFORE selecting old bytes;
+ // injected current-source drift must never be hidden by historical decoding.
+ const sealedRead=path=>{
+  if(!CHANGED.includes(path))return read(path);
+  const prior=execFileSync('git',['--no-replace-objects','show','c50b09ba7c122dc0d2e32082e85764cf3250b806:'+path],{cwd:root,maxBuffer:1000000});
+  return prior;
+ };
+ const c=JSON.parse(bytes);assert.deepEqual(c,propose(c.confirmed_sources,sealedRead),'FINANCIAL_CATALOG_CONTRACT');
  const base=worker4Baseline(),payload=variant==='recovery'?base.payload:{...base.payload,
-  files:base.payload.files.map(f=>CHANGED.includes(f.name)?{name:f.name,content:read(f.name).toString('utf8')}:{...f})};
+  files:base.payload.files.map(f=>CHANGED.includes(f.name)?{name:f.name,content:sealedRead(f.name).toString('utf8')}:{...f})};
  const encoded=encode(payload);assert.equal(sha(encoded),c.payloads[variant].sha256,'FINANCIAL_PAYLOAD_DRIFT');
  assert.equal(encoded.length,c.payloads[variant].bytes);verifyIntegrationCandidate(read);
  return {payload,bytes:encoded,sha256:sha(encoded)};

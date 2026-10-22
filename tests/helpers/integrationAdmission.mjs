@@ -13,7 +13,107 @@ import {fileURLToPath} from 'node:url';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261022-v1-source-union-r15.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261022-runtime-integrity.json';
+export const FROZEN_SOURCE_UNION_R15='docs/operations/evidence/core-member-integration-20261022-v1-source-union-r15.json';
+export const RUNTIME_INTEGRITY_BASE='c50b09ba7c122dc0d2e32082e85764cf3250b806';
+export const RUNTIME_INTEGRITY_FILES=Object.freeze([
+ {
+  "path": ".github/workflows/core-evidence-candidate.yml",
+  "mode": "100644",
+  "before_sha256": "c84207a483c3d53a1a96c2e67700c034b918fbb214e830cd9fc7e271362d8451",
+  "after_sha256": "29606565cc1b0aabb113050f4bd210ae300ddbbc0959effad488e7db59e953ba"
+ },
+ {
+  "path": ".github/workflows/vnext-candidate.yml",
+  "mode": "100644",
+  "before_sha256": "727be694755623b7f0c53a5b59b835cc71e412a95fe4b6ca0acb7005a53b1e04",
+  "after_sha256": "b1a1479d9b25c738d694f17a24d27654e775be1d09893d1727278fb9ef3c1fa1"
+ },
+ {
+  "path": "scripts/operations/financial-response-period-20261020/materialize.mjs",
+  "mode": "100644",
+  "before_sha256": "b37b569f00a2113c2ad2369bab4c9be277ef7fcd8f41bd23dfd1eaea8f320a10",
+  "after_sha256": "304cde881e2c535ea74abdfeb072be8371583013c053a2c00d810fb2b78d360b"
+ },
+ {
+  "path": "src/features/vnext/dailyIntelligence.ts",
+  "mode": "100644",
+  "before_sha256": "ac379cf85344567f5ea7a863caf7378f6578bb8368a2cec758678c7ec9e22790",
+  "after_sha256": "1959e45c7b564b9c8111823291ec52dba0f100ba794b2fbd984b93b3c34ac0a7"
+ },
+ {
+  "path": "src/features/vnext/researchFunnel.ts",
+  "mode": "100644",
+  "before_sha256": "26e0e7e06002834bf7a853d0971147e7e1de40b3daae0cd9c8c10911e1c524c5",
+  "after_sha256": "2b8d956efdf648f735aabb23e756c84295f620db9cbda25c292b60e87baf8303"
+ },
+ {
+  "path": "src/features/vnext/v1ActualCanonical.ts",
+  "mode": "100644",
+  "before_sha256": "f1803634501b21d72cbd7309d06cfff7058af27da387edf4284663a244ac9936",
+  "after_sha256": "f159bdfeceb8f3695f5a445bfaf8f92047b7fe8136a6d2663abf3f074413febc"
+ },
+ {
+  "path": "tests/ciEvidenceDatabaseImage.test.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "304da6fbd0a6e3bf3e7fa5968343653ab93378e2db6130b8ddbf828a6294596a"
+ },
+ {
+  "path": "tests/v1ActualCanonicalReceiptStatus.test.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "90b328dc3235a82ed145bcd5c6b8d23a71a94cf24b7f8d474064dcba52397007"
+ },
+ {
+  "path": "tests/vnextPredictionHashBudget.test.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "a6c114bc4db6d78a20cd192e9cb8d0d20c0442740aa22c5859d89ab36bdea90b"
+ },
+ {
+  "path": "tests/vnextTraceValidationBudget.test.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "83ddb78171870954cfd858d7cd5c3ffd415df79b15839cac4d7777d5264b81bb"
+ },
+ {
+  "path": "src/features/vnext/contracts.ts",
+  "mode": "100644",
+  "before_sha256": "475e7bfc07ccc46c8b66c4f7e2e54bae1b99686df71b4b0a749276c41b2c0d73",
+  "after_sha256": "2730b5f6827287320ebe9aa3af1e1135aa7430363a506c7ded34391da8b1dfea"
+ },
+ {
+  "path": "src/features/vnext/dailyRuntime.ts",
+  "mode": "100644",
+  "before_sha256": "01fe2480681368465530cb2feeb039161931051ac55e6f4ea1284a95fe47a2bf",
+  "after_sha256": "e8de1a9f71a1f3f550ca94a924a9a2a47a53b75cda9772bdbb4c62064e7630c1"
+ },
+ {
+  "path": "tests/vnextSharedPreimage.test.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "90ec5754f94720bbe2f43957c03960ceb95413a4fd224054a01426795ec91fd6"
+ },
+ {
+  "path": "tests/vnextAcquisitionHandoff.test.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "4ce19db29593af7a20069e8774bb052b7a6cc33a030cb2c3225b8359c30e20cc"
+ },
+ {
+  "path": "tests/vnextDailyRuntimeRecovery.test.mjs",
+  "mode": "100644",
+  "before_sha256": "b4bdf66db5679868dbc77898b9e2138d9a33388ec58c4d4492a2a6f501fa326c",
+  "after_sha256": "552cf4339ba878e884b06eb02648491a262d74c80779651e20022f7c57c22c57"
+ },
+ {
+  "path": "tests/vnextForwardCutoffRuntime.test.mjs",
+  "mode": "100644",
+  "before_sha256": "cb0ef310499dd03d237afb9c3f49679d8050098b367d2de877d3d0d3ea638581",
+  "after_sha256": "4c57eb376a70645f768f2e03c1ae4fa7fcf58a8a16d1235cf2ad63cb44031db1"
+ }
+].map(Object.freeze));
 export const FROZEN_SOURCE_UNION_R14='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r14.json';
 export const SOURCE_UNION_R15_BASE='9ca773b354f257d997f1c3c4e42290f412192344';
 // Private market-source reread/snapshot fixes only. Never a release or rights grant.
@@ -347,6 +447,7 @@ export const INTEGRATION_DELTAS=Object.freeze([
  FROZEN_SOURCE_UNION_R11,...SOURCE_UNION_R12_FILES.map(row=>row.path),
  FROZEN_SOURCE_UNION_R13,...SOURCE_UNION_R14_FILES.map(row=>row.path),
  FROZEN_SOURCE_UNION_R14,...SOURCE_UNION_R15_FILES.map(row=>row.path),
+ FROZEN_SOURCE_UNION_R15,...RUNTIME_INTEGRITY_FILES.map(row=>row.path),
  FROZEN_PRODUCER15_MONTHLY_MANIFEST,
  'src/features/vnext/dailyAdapter.ts',
  'tests/vnextDailyDatabase.integration.mjs',
@@ -780,7 +881,15 @@ export function sourceUnionR5Lineage(){
   worker_payload_changed:false,cle_payload_changed:false,
   evidence:'OFFLINE_SYNTHETIC_EXACT_RESOURCE_AND_LICENSE_SCOPE_CONTROLS_NOT_REAL_REPLAY_OR_SOURCE_RIGHTS'};
 }
+// Only immutable, exact-revision Git metadata is memoized. Never cache a live
+// read, file mode, inventory, manifest digest or an admission/PASS result.
+// Every returned tree is owned by its caller, so mutation cannot poison trust.
+let immutableSourceUnionLineage;
 export function sourceUnionLineage(){
+ if(!immutableSourceUnionLineage)immutableSourceUnionLineage=buildSourceUnionLineage();
+ return structuredClone(immutableSourceUnionLineage);
+}
+function buildSourceUnionLineage(){
  const receipts=[
   {view:'actual',revision:SOURCE_UNION_PARENTS.actual,path:FROZEN_ACTUAL,sha256:'c23aa84a894faf51c536d34d51586a3cca6dd24a6c3d44026a7f5fcb9f54d1ee'},
   {view:'registry',revision:SOURCE_UNION_PARENTS.registry,path:FROZEN_REGISTRY,sha256:'0fe3ec91a03ebeeec1ac8d3fa00e44aa295bf74dbe25c6a620d55b4e3ea35c06'},
@@ -804,7 +913,29 @@ export function sourceUnionLineage(){
   assert.equal(row?.sha256,file.sha256,'UNION_PRIOR_NORMALIZER_PROOF_DRIFT');assert.equal(row?.mode,'100644','UNION_PRIOR_NORMALIZER_PROOF_MODE');}
  return {schema:'V1_SOURCE_UNION_CANDIDATE_1',base:SOURCE_UNION_BASE,parents:{...SOURCE_UNION_PARENTS},
   registry_support:{parent:REGISTRY_SUPPORT_PARENT,paths:[...REGISTRY_SUPPORT_PATHS]},receipts,
-  historical_proof,prior_normalizer_proof,normalizer:sourceUnionNormalizerLineage(),r3:sourceUnionR3Lineage(),r4:sourceUnionR4Lineage(),r5:sourceUnionR5Lineage(),r6:sourceUnionR6Lineage(),r7:sourceUnionR7Lineage(),r8:sourceUnionR8Lineage(),r9:sourceUnionR9Lineage(),r10:sourceUnionR10Lineage(),r11:sourceUnionR11Lineage(),r12:sourceUnionR12Lineage(),r14:sourceUnionR14Lineage(),r15:sourceUnionR15Lineage(),support_paths:[...SOURCE_UNION_SUPPORT],source_authorities_shared:false,member_gate_changed:false};
+  historical_proof,prior_normalizer_proof,normalizer:sourceUnionNormalizerLineage(),r3:sourceUnionR3Lineage(),r4:sourceUnionR4Lineage(),r5:sourceUnionR5Lineage(),r6:sourceUnionR6Lineage(),r7:sourceUnionR7Lineage(),r8:sourceUnionR8Lineage(),r9:sourceUnionR9Lineage(),r10:sourceUnionR10Lineage(),r11:sourceUnionR11Lineage(),r12:sourceUnionR12Lineage(),r14:sourceUnionR14Lineage(),r15:sourceUnionR15Lineage(),runtime_integrity:runtimeIntegrityLineage(),support_paths:[...SOURCE_UNION_SUPPORT],source_authorities_shared:false,member_gate_changed:false};
+}
+export function runtimeIntegrityLineage(){
+ const prior_root={revision:RUNTIME_INTEGRITY_BASE,path:FROZEN_SOURCE_UNION_R15,sha256:'6c28e2c50a7ba444ba3b9b2f7386b2779eaed5166eb8adabc90f1ea0d41cf458'};
+ const root=unionBlob(prior_root.revision,prior_root.path);
+ assert.equal(root?.sha256,prior_root.sha256,'RUNTIME_PRIOR_ROOT_DRIFT');assert.equal(root?.mode,'100644');
+ const old=JSON.parse(root.bytes);assert.equal(old.files.length,538,'RUNTIME_PRIOR_FULL_SCOPE');
+ assert.deepEqual(old.source_union.r15,sourceUnionR15Lineage(),'RUNTIME_PRIOR_LINEAGE_DRIFT');
+ assert.equal(RUNTIME_INTEGRITY_FILES.length,16);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,16);
+ for(const row of RUNTIME_INTEGRITY_FILES){
+  assert(!SOURCE_UNION_SUPPORT.includes(row.path));const before=unionBlob(RUNTIME_INTEGRITY_BASE,row.path);
+  assert.equal(before?.sha256??null,row.before_sha256,'RUNTIME_BEFORE_SOURCE_DRIFT:'+row.path);
+  // A previously unchanged baseline source is not a delta row in R15; its
+  // independently pinned baseline bytes remain the required before identity.
+  const prior=old.files.find(r=>r.path===row.path)?.after_sha256??unionBlob(INTEGRATION_BASE,row.path)?.sha256??null;
+  assert.equal(prior,row.before_sha256,'RUNTIME_PRIOR_ROW_DRIFT:'+row.path);
+  if(before)assert.equal(before.mode,row.mode);assert.equal(row.mode,'100644');assert.match(row.after_sha256,/^[a-f0-9]{64}$/);
+  assert.notEqual(row.before_sha256,row.after_sha256);
+ }
+ return {schema:'CURRENT_RUNTIME_INTEGRITY_CANDIDATE_V1',base:RUNTIME_INTEGRITY_BASE,prior_root,
+  files:RUNTIME_INTEGRITY_FILES.map(r=>({...r})),scope:'OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_AND_CI_PREPARATION',
+  source_admission:false,canonical_admission:false,quality_approval:false,rights_gate_changed:false,
+  publication_approval:false,production_authorized:false,thresholds_changed:false,existing_release_payloads_changed:false};
 }
 export function sourceUnionR15Lineage(){
  const prior_root={revision:SOURCE_UNION_R15_BASE,path:FROZEN_SOURCE_UNION_R14,sha256:'7e3357b8ab1b9f0cf8b5fed2f58a046d8c010b0e9e76cb15eee3502d85a56264'};
@@ -1109,6 +1240,12 @@ function sourceUnionExpected(){
   expected.set(FROZEN_SOURCE_UNION_R14,unionBlob(SOURCE_UNION_R15_BASE,FROZEN_SOURCE_UNION_R14));
   for(const file of SOURCE_UNION_R15_FILES){
    assert.equal(expected.get(file.path)?.sha256,file.before_sha256,'UNION_R15_BEFORE_COMPOSITION:'+file.path);
+   expected.set(file.path,{mode:file.mode,sha256:file.after_sha256});
+  }
+  assert(!expected.has(FROZEN_SOURCE_UNION_R15),'RUNTIME_PRIOR_RECEIPT_OVERLAP');
+  expected.set(FROZEN_SOURCE_UNION_R15,unionBlob(RUNTIME_INTEGRITY_BASE,FROZEN_SOURCE_UNION_R15));
+  for(const file of RUNTIME_INTEGRITY_FILES){
+   assert.equal(expected.get(file.path)?.sha256??null,file.before_sha256,'RUNTIME_BEFORE_COMPOSITION:'+file.path);
    expected.set(file.path,{mode:file.mode,sha256:file.after_sha256});
   }
   for(const p of support)expected.delete(p);

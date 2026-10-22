@@ -27,11 +27,20 @@ const day=(v:string)=>/^\d{4}-\d\d-\d\d$/.test(v)&&Number.isFinite(Date.parse(v+
 export function traceIssues(x:Trace,cutoff:string,exactPublication=false){
  const issues:string[]=[];
  if(!x.id||!sourceSafe(x.source)||!hashValid(x.evidence_hash))issues.push('LINEAGE_INVALID');
- if(!time(cutoff)||!time(x.first_seen_at)||!time(x.available_at)||!time(x.as_of))issues.push('TIME_METADATA_MISSING');
+ // Never retain validation across traces/calls. Compare the original timestamp,
+ // not the projection validator's fraction-normalized presentation value.
+ const parsed=new Map<string|null,number|null>();
+ const timestamp=(value:string|null)=>{
+  const known=parsed.get(value);if(known!==undefined)return known;
+  const result=time(value)?Date.parse(value):null;parsed.set(value,result);return result;
+ };
+ const cutoffAt=timestamp(cutoff),firstSeenAt=timestamp(x.first_seen_at),availableAt=timestamp(x.available_at),
+  asOf=timestamp(x.as_of),publishedAt=timestamp(x.published_at);
+ if(cutoffAt===null||firstSeenAt===null||availableAt===null||asOf===null)issues.push('TIME_METADATA_MISSING');
  if(x.published_at===null){if(exactPublication)issues.push('PUBLICATION_TIME_UNVERIFIED');}
- else if(!time(x.published_at))issues.push('PUBLICATION_TIME_INVALID');
- if([x.first_seen_at,x.available_at,x.as_of,x.published_at].some(t=>time(t)&&time(cutoff)&&Date.parse(t)>Date.parse(cutoff)))issues.push('FUTURE_EVIDENCE');
- if(time(x.available_at)&&[x.first_seen_at,x.as_of,x.published_at].some(t=>time(t)&&Date.parse(t)>Date.parse(x.available_at!)))issues.push('TIME_ORDER_INVALID');
+ else if(publishedAt===null)issues.push('PUBLICATION_TIME_INVALID');
+ if([firstSeenAt,availableAt,asOf,publishedAt].some(at=>at!==null&&cutoffAt!==null&&at>cutoffAt))issues.push('FUTURE_EVIDENCE');
+ if(availableAt!==null&&[firstSeenAt,asOf,publishedAt].some(at=>at!==null&&at>availableAt))issues.push('TIME_ORDER_INVALID');
  return unique(issues);
 }
 function consecutiveMonths(rows:ResearchFact[]){

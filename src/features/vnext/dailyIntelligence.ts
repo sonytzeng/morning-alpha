@@ -1,5 +1,5 @@
 /** Candidate only: no timer, HTTP endpoint, credential, Production writer or promotion. */
-import {HORIZONS, hashValid, snapshotHash, validTime, type Horizon} from './contracts.ts';
+import {HORIZONS, hashValid, snapshotHash, inputSnapshotHashes, validTime, type Horizon} from './contracts.ts';
 import {evaluateResearch, RESEARCH_FUNNEL_VERSION, traceIssues, publicationEligibility, type PublicationPolicy, type FunnelInput, type ResearchEvaluation} from './researchFunnel.ts';
 import {evaluateEntry, ENTRY_VERSION, type EntryInput, type EntryEvaluation} from '../../../research/entry-opportunity.ts';
 import {coveredCalendarDate, isMarketTradingDate, MARKET_CALENDAR_VERSION, previousMarketTradingDate} from '../../../supabase/functions/_shared/market-session-contract.mjs';
@@ -123,18 +123,34 @@ export async function runDailyIntelligence(request: DailyRequest, store: DailySt
      } else if (stage === 'PREDICTION_LOCK') {
       const now = ports.clock();
       if (request.mode === 'FORWARD_SHADOW' && Date.parse(now) >= Date.parse(request.actionable_at)) fail('LATE_LOCK_NOT_FORWARD');
+      // Own the complete preimage before the first digest await. A retained
+      // acquire/load alias cannot change the evidence between horizons, and a
+      // mutation since validation must not become a newly trusted revision.
+      const acquired = structuredClone(state.acquired!);
+      const {snapshot_hash, ...acquiredBody} = acquired;
+      if (snapshot_hash !== request.source_hash || snapshot_hash !== await snapshotHash(acquiredBody)) fail('ACQUISITION_HASH_MISMATCH');
       const locks: DailyLock[] = [];
+      // The full input + complete Entry capsule is identical for a stock's
+      // three horizons. Keep the original bytes/hash scope, but compute it
+      // once within this single lock attempt; never cache across revisions,
+      // retries or runs. Rehashing the full 72-stock Entry 216 times can spend
+      // the invocation budget before the prepared batch reaches SQL.
+      const hashes = await inputSnapshotHashes(acquired.inputs, acquired.entry);
+      const evidenceHashes = new Map(acquired.inputs.map((input, index) => [input.symbol, hashes[index]]));
       for (const r of state.research!) {
-       const input = state.acquired!.inputs.find(i => i.symbol === r.symbol)!;
+       const evidenceHash = evidenceHashes.get(r.symbol)!;
        const body = {id: key + ':' + r.symbol + ':' + r.horizon, business_date: request.business_date, mode: request.mode, provenance: request.provenance,
         symbol: r.symbol, company: r.company, horizon: r.horizon, strategy_version: r.version, entry_version: ENTRY_VERSION,
-        generated_at: now, locked_at: now, evidence_cutoff: state.acquired!.evidence_cutoff,
-        evidence_hash: await snapshotHash({input, entry: state.acquired!.entry}), actionable_at: request.actionable_at,
+        generated_at: now, locked_at: now, evidence_cutoff: acquired.evidence_cutoff,
+        evidence_hash: evidenceHash, actionable_at: request.actionable_at,
         target_sessions: HORIZONS[r.horizon].outcomes, research: r, entry: state.entry?.candidates.filter(c => c.symbol === r.symbol) ?? [],
         entry_gap: state.entry ? null : 'MATCHING_ENTRY_SOURCE_UNAVAILABLE', confirmation: r.confirmation, invalidation: r.invalidation, next_review_at: r.next_review_at};
        locks.push({...body, lock_hash: await snapshotHash(body)});
       }
       // Prepare in checkpoint first: crash after insert retries the same bytes.
+      // Do not re-expose the owned preimage via a retained checkpoint root
+      // until all three-horizon hashes have finished using it.
+      state.acquired = acquired;
       state.locks ??= locks; await store.save(state); await store.lock(state.locks);
      } else if (stage === 'OUTCOME') state.outcome = await bounded(s => ports.outcomes(state!.locks!, s), Math.min(timeoutMs, deadline - Date.now()));
      else state.publication = await bounded(s => ports.publication(state!.locks!, s), Math.min(timeoutMs, deadline - Date.now()));

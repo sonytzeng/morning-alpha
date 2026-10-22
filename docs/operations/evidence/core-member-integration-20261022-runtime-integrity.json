@@ -3103,7 +3103,7 @@
     {
       "path": "tests/originalIngressAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "7832182a618e43b058e579c0e1499124f0f6b79dae47c73626cfe309ea45d651",
+      "after_sha256": "c200d01471ec31b28745fd5c6438249e54e97edc4aa845e8b2f4e3ef84f96026",
       "mode": "100644",
       "origin": "composition"
     },

@@ -201,7 +201,7 @@ test('R3 CI runs full admission before fixed Python controls, capacity negatives
  assert.equal(integrationHash(priorWorkflow),'2d8b2095fca1e61e2b40430cf2394f18c78b36f6857927c6440690f71e486311');
  const names=text=>[...text.matchAll(/^    def (test_\w+)\(/gm)].map(m=>m[1]);
  const currentText=integrationPhysicalRead('tests/test_issuer_pdf_descriptor.py').toString();
- const current=names(currentText);assert.equal(current.length,77);
+ const current=names(currentText);assert.equal(current.length,82);assert.equal(new Set(current).size,82);
  const r11Text=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R12_BASE+':tests/test_issuer_pdf_descriptor.py'],{cwd:new URL('../',import.meta.url),encoding:'utf8'});
  const r11=names(r11Text);assert.equal(r11.length,65);for(const name of r11)assert(current.includes(name),'all65 R11 synthetic controls must remain: '+name);
  const old=names(execFileSync('git',['--no-replace-objects','show','9ff0f90e737484b1235cfb79c43fcaa5bd40d9d9:tests/test_issuer_pdf_descriptor.py'],{cwd:new URL('../',import.meta.url),encoding:'utf8'}));
@@ -215,8 +215,12 @@ test('R3 CI runs full admission before fixed Python controls, capacity negatives
  };
  const oldBodies=bodies(execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_NORMALIZER_PARENT+':tests/test_issuer_pdf_descriptor.py'],{cwd:new URL('../',import.meta.url),encoding:'utf8'}));
  const newBodies=bodies(currentText);
- assert.equal(oldBodies.size,45);assert.equal(newBodies.size,77);for(const [name,body]of oldBodies)assert.equal(newBodies.get(name),body,'unchanged original Python assertion body: '+name);
+ assert.equal(oldBodies.size,45);assert.equal(newBodies.size,82);for(const [name,body]of oldBodies)assert.equal(newBodies.get(name),body,'unchanged original Python assertion body: '+name);
  const r11Bodies=bodies(r11Text);assert.equal(r11Bodies.size,65);for(const [name,body]of r11Bodies)assert.equal(newBodies.get(name),body,'unchanged R11 Python assertion body: '+name);
+ const nativeBase=execFileSync('git',['--no-replace-objects','show','20147663c409ca05d2d23f1cc0a586ec28299f6a:tests/test_issuer_pdf_descriptor.py'],{cwd:new URL('../',import.meta.url),encoding:'utf8'});
+ assert.equal(integrationHash(Buffer.from(nativeBase)),'5a9e0b70584a6f8cdc952eadfc50270da45152baa99d542f390f3b6a34a5c46a');
+ const nativeBaseBodies=bodies(nativeBase);assert.equal(nativeBaseBodies.size,77);
+ for(const [name,body]of nativeBaseBodies)assert.equal(newBodies.get(name),body,'unchanged pre-native-format Python assertion body: '+name);
  // Keep the previously reviewed 62 controls AND their surrounding source bytes.
  // Only this exact added helper/three-control segment is removed for comparison;
  // this is not an exemption for current parser bytes or a private PDF replay.
@@ -235,6 +239,11 @@ test('R3 CI runs full admission before fixed Python controls, capacity negatives
   'test_content_flow_preserves_stated_unit_exception_not_ytd_or_approval','test_interim_revenue_must_not_use_the_percentage_cell_in_same_quarter',
   'test_interim_cannot_take_ytd_or_prior_year_even_with_expanded_axis','test_interim_note_period_shares_units_and_native_eps_must_agree',
   'test_interim_no_unrelated_currency_note_or_diluted_row','test_adjacent_note_decimal_only_when_native_tokens_touch',
+  'test_split_basic_statement_native_eps_without_fabricated_note_result',
+  'test_split_basic_rejects_prior_year_or_ytd_even_with_padded_descriptor',
+  'test_split_basic_rejects_percentage_revenue_and_unreported_eps',
+  'test_split_basic_keeps_basic_share_units_periods_and_formula_strict',
+  'test_opt_in_encrypted_read_requires_native_copy_permission_integrity_and_no_password',
  ]);
  const gate=workflow.indexOf('run: node --experimental-strip-types --test --test-concurrency=1 tests/originalIngressAdmission.test.mjs tests/officialPublicAdmission.test.mjs');
  const python=workflow.indexOf('uses: actions/setup-python@v5'),install=workflow.indexOf('python -m pip install --disable-pip-version-check pypdf==6.10.0 pdfplumber==0.11.9');
@@ -261,7 +270,7 @@ test('R3 pins all eight exact sources to8c before/after bytes; only explicit R4/
   assert(!SOURCE_UNION_SUPPORT.includes(row.path));
   const old=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R4_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
   assert.equal(integrationHash(old),row.after_sha256,'unchanged R3 generation at exact cbb');
-  const replacement=SOURCE_UNION_R14_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R12_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R9_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R8_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R7_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R4_FILES.find(r=>r.path===row.path);
+  const replacement=RUNTIME_INTEGRITY_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R14_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R12_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R9_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R8_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R7_FILES.find(r=>r.path===row.path)??SOURCE_UNION_R4_FILES.find(r=>r.path===row.path);
   assert.equal(integrationHash(integrationPhysicalRead(row.path)),replacement?.after_sha256??row.after_sha256);
   assert.equal(integrationPhysicalMode(row.path),'100644');
  }
@@ -1058,6 +1067,7 @@ test('R14 rejects all source and frozen-root mutations, missing/mode changes and
 });
 test('R14 retains all 77 R13 admission assertions; only sixteen explicitly named current views change',()=>{
  const adapted=new Set([
+  'R3 CI runs full admission before fixed Python controls, capacity negatives and current evaluator regressions',
   'R5 CI pins Deno2.9.2 and fully type-checks the exact research source offline after admission',
   'current union preserves the7986 four-source Worker packet, never mixing original contracts/engine',
   'R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',
@@ -1089,7 +1099,7 @@ test('R14 retains all 77 R13 admission assertions; only sixteen explicitly named
    assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
   }
  }
- assert.equal(count,77);assert.equal(adapted.size,18);assert.deepEqual([...changed].sort(),[...adapted].sort());
+ assert.equal(count,77);assert.equal(adapted.size,19);assert.deepEqual([...changed].sort(),[...adapted].sort());
 });
 test('R15 pins only private market JSONB and snapshot deltas over the unchanged full R14 tree',()=>{
  const m=verifyIntegrationCandidate(),r=m.source_union.r15,old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R14));
@@ -1126,6 +1136,8 @@ test('R15 denies rehashed market sources, frozen-root changes, missing paths, mo
 });
 test('Runtime integrity preserves all 83 R15 admission assertions; eighteen explicit binding and nested preservation views adapt',()=>{
  const adapted=new Set([
+  'R3 CI runs full admission before fixed Python controls, capacity negatives and current evaluator regressions',
+  'R3 pins all eight exact sources to8c before/after bytes; only explicit R4/R7/R8 replacements differ in current',
   'R14 retains all 77 R13 admission assertions; only sixteen explicitly named current views change',
   'R13 preserves all 70 R11 admission tests with only explicit current-view and nested preservation adaptations',
   'R11 preserves all 67 R10 assertions; only five current inventory/source views are explicitly adapted',
@@ -1160,7 +1172,7 @@ test('Runtime integrity preserves all 83 R15 admission assertions; eighteen expl
    assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
   }
  }
- assert.equal(count,83);assert.equal(adapted.size,18);assert.deepEqual([...changed].sort(),[...adapted].sort());
+ assert.equal(count,83);assert.equal(adapted.size,20);assert.deepEqual([...changed].sort(),[...adapted].sort());
 });
 test('runtime candidate binds the complete prior root, exact CPU/RPC changes and unconditional CI checks without any authority',()=>{
  const m=verifyIntegrationCandidate(),r=m.source_union.runtime_integrity;

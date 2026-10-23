@@ -12,7 +12,7 @@ import {fileURLToPath} from 'node:url';
 import {ADAPTER_VERSION,fetchSource} from '../../src/features/vnext/dailyAdapter.ts';
 import {snapshotHash,compareTime,validObservationTime} from '../../src/features/vnext/contracts.ts';
 import {historyUrl,tpexDailyUrl,officialDate} from '../../research/entry-official-history.ts';
-import {eventAlignmentFromDailyReceipts,eventAlignmentFromRetainedEvidence,withObservedCanonicalSectors} from '../../research/recommendation-event-alignment-candidate.ts';
+import {eventAlignmentFromDailyReceipts,eventAlignmentFromRetainedEvidence,withObservedCanonicalSectors,latestWholeEventAlignmentReceipts} from '../../research/recommendation-event-alignment-candidate.ts';
 import {normalizeOfficialDailyOpenDataCandidate,OFFICIAL_DAILY_OPEN_LIMITS} from '../../research/official-daily-open-data-candidate.ts';
 import {emptyEvidenceData} from '../../supabase/functions/_shared/decision-v1-data.ts';
 import {isMarketTradingDate,previousMarketTradingDate} from '../../supabase/functions/_shared/market-session-contract.mjs';
@@ -132,12 +132,7 @@ export async function validateReceipts(receipts,cutoff){
  }
 }
 async function latestWhole(receipts){
- const map=new Map();
- for(const r of receipts){const prior=map.get(r.task.url);
-  if(!prior||stamp(r.available_at)>stamp(prior.available_at))map.set(r.task.url,r);
-  else if(stamp(r.available_at)===stamp(prior.available_at))requireFact(await v2Hash(r)===await v2Hash(prior),'TIED_RESOURCE_CONFLICT');
- }
- const selected=[...map.values()].sort((a,b)=>a.task.url.localeCompare(b.task.url));
+ const selected=await latestWholeEventAlignmentReceipts(receipts);
  requireFact(new Set(selected.map(r=>r.task.key)).size===selected.length,'SELECTED_KEY_CONFLICT');return selected;
 }
 async function prove(input,receipts,at){

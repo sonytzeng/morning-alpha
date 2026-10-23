@@ -1171,7 +1171,7 @@
     {
       "path": "research/recommendation-event-alignment-candidate.ts",
       "before_sha256": null,
-      "after_sha256": "9e6513ed982f1f6aa6fd158af37344e0a3978cceab23c1d7e93f70ec4ca7be28",
+      "after_sha256": "7cc0a0bf0ee1dce52810162139c1dae92d5b9e514dc96cf5f7351a7c4cdc530c",
       "mode": "100644",
       "origin": "composition"
     },
@@ -1570,7 +1570,7 @@
     {
       "path": "scripts/vnext/event-alignment-refresh.mjs",
       "before_sha256": null,
-      "after_sha256": "919954f7fdbf5fee3b7ff446733c70c79112db9be42d4e70ad1157d032894060",
+      "after_sha256": "b3239added7dde07a311715b8b1070b587ac2a56ad9c1241d8198508d2288fcc",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2928,7 +2928,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "9616174cb4e30bcbb31658fcc8c818567142353f3cbe366986bc5a5a257d168d",
+      "after_sha256": "e54b99f4340d6079ed2c2662f9cfc2310c1fcd96738293e44054be9af7c0c370",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3103,7 +3103,7 @@
     {
       "path": "tests/originalIngressAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "c200d01471ec31b28745fd5c6438249e54e97edc4aa845e8b2f4e3ef84f96026",
+      "after_sha256": "683857b30735a0646dd5646822386f048064aa28c0c0cea7e49e9f97feca3062",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3264,7 +3264,7 @@
     {
       "path": "tests/recommendationEventAlignment.test.mjs",
       "before_sha256": null,
-      "after_sha256": "f307cbdfd491c24a71b0e144627292aaebc7ac70ced3bee791281774e43b51b1",
+      "after_sha256": "049c82fa746098947033ed45beb24726828970133acb3d9fff94ddcfc691019b",
       "mode": "100644",
       "origin": "composition"
     },
@@ -4786,9 +4786,27 @@
           "mode": "100644",
           "before_sha256": "5a9e0b70584a6f8cdc952eadfc50270da45152baa99d542f390f3b6a34a5c46a",
           "after_sha256": "9a5e692ae6b4994a3cbac6a7dd530289a7e3dca72b492109bfc6986bfd1b758d"
+        },
+        {
+          "path": "research/recommendation-event-alignment-candidate.ts",
+          "mode": "100644",
+          "before_sha256": "9e6513ed982f1f6aa6fd158af37344e0a3978cceab23c1d7e93f70ec4ca7be28",
+          "after_sha256": "7cc0a0bf0ee1dce52810162139c1dae92d5b9e514dc96cf5f7351a7c4cdc530c"
+        },
+        {
+          "path": "scripts/vnext/event-alignment-refresh.mjs",
+          "mode": "100644",
+          "before_sha256": "919954f7fdbf5fee3b7ff446733c70c79112db9be42d4e70ad1157d032894060",
+          "after_sha256": "b3239added7dde07a311715b8b1070b587ac2a56ad9c1241d8198508d2288fcc"
+        },
+        {
+          "path": "tests/recommendationEventAlignment.test.mjs",
+          "mode": "100644",
+          "before_sha256": "f307cbdfd491c24a71b0e144627292aaebc7ac70ced3bee791281774e43b51b1",
+          "after_sha256": "049c82fa746098947033ed45beb24726828970133acb3d9fff94ddcfc691019b"
         }
       ],
-      "scope": "OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE",
+      "scope": "OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE_AND_WHOLE_RETAINED_SOURCE_VERSIONS",
       "source_admission": false,
       "canonical_admission": false,
       "quality_approval": false,

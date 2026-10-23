@@ -95,6 +95,55 @@ test('SYNTHETIC: duplicate TAIEX session and source spoof fail closed rather tha
  const spoof=await receipts();spoof.find(r=>r.task.kind==='BENCHMARK').task.url='https://example.test/index';
  assert((await eventAlignmentFromDailyReceipts(identity,emptyEvidenceData(),spoof)).issues.includes('EVENT_ALIGNMENT_BENCHMARK_SOURCE_INVALID'));
 });
+test('SYNTHETIC: incremental source versions select the latest WHOLE receipt, never splice older missing rows',async()=>{
+ const source=await receipts(),old=source.find(r=>r.task.kind==='PRICE'&&r.task.symbols[0]==='2330');
+ const legacy=await eventAlignmentFromDailyReceipts(identity,emptyEvidenceData(),source);
+ assert.deepEqual(legacy.coverage.map(c=>c.symbol),symbols,'Single-version input keeps the existing ordered projection');
+ assert.equal(legacy.data.quotes[0].symbol,symbols[0]);
+ const later=structuredClone(old);later.task.key+=':incremental';later.task.scope+=':later';
+ later.available_at=later.first_seen_at=later.as_of='2026-09-07T00:20:00Z';
+ later.payload.rows.shift();
+ for(const row of later.payload.rows)row.available_at=row.first_seen_at=later.available_at;
+ await resign(later);
+ const input=[...source,later],hash=await v2Hash(input),data=emptyEvidenceData();
+ const out=await eventAlignmentFromDailyReceipts(identity,data,input);
+ const expected=await eventAlignmentFromDailyReceipts(identity,data,source.filter(r=>r!==old).concat(later)
+  .sort((a,b)=>a.task.url.localeCompare(b.task.url)));
+ assert.equal(out.issues.length,0);assert.equal(await v2Hash(out.data),await v2Hash(expected.data));
+ assert.equal(await v2Hash(out.decision),await v2Hash(expected.decision));assert.deepEqual(out.coverage,expected.coverage);
+ assert.equal(await v2Hash(input),hash);assert.deepEqual(data,emptyEvidenceData());
+ assert.notEqual(out.source_sha256,expected.source_sha256,'All retained versions stay bound by the input digest');
+ const selected=out.data.quotes.filter(q=>q.symbol==='2330'&&q.trading_date.startsWith(old.task.month));
+ assert(selected.length>0);assert(selected.every(q=>q.ingested_at===later.available_at));
+ assert(!selected.some(q=>q.trading_date===old.payload.rows[0].date),'An older-only day cannot repair the newer whole response');
+ const reversed=await eventAlignmentFromDailyReceipts(identity,data,[...input].reverse());
+ assert.equal(await v2Hash(reversed.data),await v2Hash(out.data));assert.equal(await v2Hash(reversed.decision),await v2Hash(out.decision));
+ const sameTask=structuredClone(later);sameTask.task=structuredClone(old.task);
+ const refreshed=await eventAlignmentFromDailyReceipts(identity,data,[...source,sameTask]);
+ assert.equal(refreshed.issues.length,0);assert.equal(await v2Hash(refreshed.data),await v2Hash(expected.data));
+ const retargeted=structuredClone(sameTask);retargeted.task.url=retargeted.task.url.replace('stockNo=2330','stockNo=2317');
+ await assert.rejects(eventAlignmentFromDailyReceipts(identity,data,[...source,retargeted]),/RECEIPT_KEY_CONFLICT/);
+});
+test('SYNTHETIC: equal-time distinct source revisions reject the whole resource and future versions cannot displace known data',async()=>{
+ const source=await receipts(),old=source.find(r=>r.task.kind==='PRICE'&&r.task.symbols[0]==='2330');
+ const changed=structuredClone(old);changed.task.key+=':same-time';changed.payload.rows[0].close+=.01;await resign(changed);
+ const rejected=await eventAlignmentFromDailyReceipts(identity,emptyEvidenceData(),[...source,changed]);
+ assert(rejected.issues.includes('EVENT_ALIGNMENT_TIED_RESOURCE_CONFLICT'));
+ assert(!rejected.data.quotes.some(q=>q.symbol==='2330'&&q.trading_date.startsWith(old.task.month)));
+ const future=structuredClone(old);future.task.key+=':future';
+ future.first_seen_at=future.available_at='2026-09-07T00:30:00.000001Z';
+ for(const row of future.payload.rows)row.available_at=row.first_seen_at=future.available_at;
+ await resign(future);
+ const out=await eventAlignmentFromDailyReceipts(identity,emptyEvidenceData(),[...source,future]);
+ const baseline=await eventAlignmentFromDailyReceipts(identity,emptyEvidenceData(),source);
+ assert.equal(await v2Hash(out.data.quotes),await v2Hash(baseline.data.quotes));
+ assert(out.issues.some(r=>r.startsWith('EVENT_ALIGNMENT_RECEIPT_NOT_ADMISSIBLE:')));
+ const corrupt=structuredClone(changed);corrupt.available_at=corrupt.first_seen_at='2026-09-07T00:20:00Z';
+ corrupt.payload_hash='0'.repeat(64);
+ const invalid=await eventAlignmentFromDailyReceipts(identity,emptyEvidenceData(),[...source,corrupt]);
+ assert(!invalid.data.quotes.some(q=>q.symbol==='2330'&&q.trading_date.startsWith(old.task.month)));
+ assert(invalid.data.quotes.some(q=>q.symbol==='2317'),'A corrupt resource does not erase unrelated stocks');
+});
 test('SYNTHETIC: original canonical price conflict cannot be silently replaced by official data',async()=>{
  const data=emptyEvidenceData();data.quotes.push({id:'conflict',symbol:'2330',trading_date:dates.at(-1),phase:'close',value:999,change_percent:0,captured_at:dates.at(-1)+'T13:30:00+08:00',ingested_at:received});
  const r=await eventAlignmentFromDailyReceipts(identity,data,await receipts());

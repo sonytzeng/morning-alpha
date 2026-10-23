@@ -160,6 +160,24 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "mode": "100644",
   "before_sha256": "5a9e0b70584a6f8cdc952eadfc50270da45152baa99d542f390f3b6a34a5c46a",
   "after_sha256": "9a5e692ae6b4994a3cbac6a7dd530289a7e3dca72b492109bfc6986bfd1b758d"
+ },
+ {
+  "path": "research/recommendation-event-alignment-candidate.ts",
+  "mode": "100644",
+  "before_sha256": "9e6513ed982f1f6aa6fd158af37344e0a3978cceab23c1d7e93f70ec4ca7be28",
+  "after_sha256": "7cc0a0bf0ee1dce52810162139c1dae92d5b9e514dc96cf5f7351a7c4cdc530c"
+ },
+ {
+  "path": "scripts/vnext/event-alignment-refresh.mjs",
+  "mode": "100644",
+  "before_sha256": "919954f7fdbf5fee3b7ff446733c70c79112db9be42d4e70ad1157d032894060",
+  "after_sha256": "b3239added7dde07a311715b8b1070b587ac2a56ad9c1241d8198508d2288fcc"
+ },
+ {
+  "path": "tests/recommendationEventAlignment.test.mjs",
+  "mode": "100644",
+  "before_sha256": "f307cbdfd491c24a71b0e144627292aaebc7ac70ced3bee791281774e43b51b1",
+  "after_sha256": "049c82fa746098947033ed45beb24726828970133acb3d9fff94ddcfc691019b"
  }
 ].map(Object.freeze));
 export const FROZEN_SOURCE_UNION_R14='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r14.json';
@@ -969,7 +987,7 @@ export function runtimeIntegrityLineage(){
  assert.equal(root?.sha256,prior_root.sha256,'RUNTIME_PRIOR_ROOT_DRIFT');assert.equal(root?.mode,'100644');
  const old=JSON.parse(root.bytes);assert.equal(old.files.length,538,'RUNTIME_PRIOR_FULL_SCOPE');
  assert.deepEqual(old.source_union.r15,sourceUnionR15Lineage(),'RUNTIME_PRIOR_LINEAGE_DRIFT');
- assert.equal(RUNTIME_INTEGRITY_FILES.length,24);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,24);
+ assert.equal(RUNTIME_INTEGRITY_FILES.length,27);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,27);
  for(const row of RUNTIME_INTEGRITY_FILES){
   assert(!SOURCE_UNION_SUPPORT.includes(row.path));const before=unionBlob(RUNTIME_INTEGRITY_BASE,row.path);
   assert.equal(before?.sha256??null,row.before_sha256,'RUNTIME_BEFORE_SOURCE_DRIFT:'+row.path);
@@ -981,7 +999,7 @@ export function runtimeIntegrityLineage(){
   assert.notEqual(row.before_sha256,row.after_sha256);
  }
  return {schema:'CURRENT_RUNTIME_INTEGRITY_CANDIDATE_V1',base:RUNTIME_INTEGRITY_BASE,prior_root,
-  files:RUNTIME_INTEGRITY_FILES.map(r=>({...r})),scope:'OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE',
+  files:RUNTIME_INTEGRITY_FILES.map(r=>({...r})),scope:'OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE_AND_WHOLE_RETAINED_SOURCE_VERSIONS',
   source_admission:false,canonical_admission:false,quality_approval:false,rights_gate_changed:false,
   publication_approval:false,production_authorized:false,thresholds_changed:false,existing_release_payloads_changed:false};
 }

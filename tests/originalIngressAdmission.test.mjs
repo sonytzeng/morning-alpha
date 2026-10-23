@@ -543,7 +543,7 @@ test('R7 admits only the existing private refresh caller, its controls and curre
  for(const row of r.files){
   const immutable=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R8_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
   assert.equal(integrationHash(immutable),row.after_sha256);
-  const replacement=SOURCE_UNION_R12_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R9_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R8_FILES.find(f=>f.path===row.path);
+  const replacement=RUNTIME_INTEGRITY_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R12_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R9_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R8_FILES.find(f=>f.path===row.path);
   assert.equal(integrationHash(integrationPhysicalRead(row.path)),replacement?.after_sha256??row.after_sha256);assert.equal(integrationPhysicalMode(row.path),row.mode);
   assert.equal(old.files.find(f=>f.path===row.path).after_sha256,row.before_sha256);assert(!SOURCE_UNION_SUPPORT.includes(row.path));
  }
@@ -1067,6 +1067,7 @@ test('R14 rejects all source and frozen-root mutations, missing/mode changes and
 });
 test('R14 retains all 77 R13 admission assertions; only sixteen explicitly named current views change',()=>{
  const adapted=new Set([
+  'R7 admits only the existing private refresh caller, its controls and current Master over frozen R6',
   'R3 CI runs full admission before fixed Python controls, capacity negatives and current evaluator regressions',
   'R5 CI pins Deno2.9.2 and fully type-checks the exact research source offline after admission',
   'current union preserves the7986 four-source Worker packet, never mixing original contracts/engine',
@@ -1099,7 +1100,7 @@ test('R14 retains all 77 R13 admission assertions; only sixteen explicitly named
    assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
   }
  }
- assert.equal(count,77);assert.equal(adapted.size,19);assert.deepEqual([...changed].sort(),[...adapted].sort());
+ assert.equal(count,77);assert.equal(adapted.size,20);assert.deepEqual([...changed].sort(),[...adapted].sort());
 });
 test('R15 pins only private market JSONB and snapshot deltas over the unchanged full R14 tree',()=>{
  const m=verifyIntegrationCandidate(),r=m.source_union.r15,old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R14));
@@ -1136,6 +1137,7 @@ test('R15 denies rehashed market sources, frozen-root changes, missing paths, mo
 });
 test('Runtime integrity preserves all 83 R15 admission assertions; eighteen explicit binding and nested preservation views adapt',()=>{
  const adapted=new Set([
+  'R7 admits only the existing private refresh caller, its controls and current Master over frozen R6',
   'R3 CI runs full admission before fixed Python controls, capacity negatives and current evaluator regressions',
   'R3 pins all eight exact sources to8c before/after bytes; only explicit R4/R7/R8 replacements differ in current',
   'R14 retains all 77 R13 admission assertions; only sixteen explicitly named current views change',
@@ -1172,7 +1174,7 @@ test('Runtime integrity preserves all 83 R15 admission assertions; eighteen expl
    assert.doesNotMatch(current.split('\n')[0],/\btest\.skip\b|\bskip\s*:/);
   }
  }
- assert.equal(count,83);assert.equal(adapted.size,20);assert.deepEqual([...changed].sort(),[...adapted].sort());
+ assert.equal(count,83);assert.equal(adapted.size,21);assert.deepEqual([...changed].sort(),[...adapted].sort());
 });
 test('runtime candidate binds the complete prior root, exact CPU/RPC changes and unconditional CI checks without any authority',()=>{
  const m=verifyIntegrationCandidate(),r=m.source_union.runtime_integrity;

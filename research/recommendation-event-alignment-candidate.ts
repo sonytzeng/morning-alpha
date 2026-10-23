@@ -8,7 +8,7 @@ import { v2Bars, v2Hash, type V2Input, type Bar } from '../supabase/functions/_s
 import { V2_INDEX_URL, type BenchmarkClose } from '../supabase/functions/_shared/recommendation-shadow-v2-sources.ts';
 import { isMarketTradingDate, previousMarketTradingDate } from '../supabase/functions/_shared/market-session-contract.mjs';
 import { historyUrl, tpexDailyUrl } from './entry-official-history.ts';
-import { snapshotHash } from '../src/features/vnext/contracts.ts';
+import { snapshotHash, compareTime, validObservationTime } from '../src/features/vnext/contracts.ts';
 import type { SourceReceipt } from '../src/features/vnext/dailyAdapter.ts';
 
 export const EVENT_ALIGNMENT_CONTRACT = 'RECOMMENDATION_EVENT_ALIGNMENT_CANDIDATE_V1';
@@ -31,6 +31,28 @@ const text = (v: unknown): v is string => typeof v === 'string' && v.trim().leng
 const closeAt = (date: string) => date + 'T13:30:00+08:00';
 const references = (v: unknown): string[] => typeof v === 'string' ? [v] : Array.isArray(v) ? v.flatMap(references) : [];
 const indexSource = (date: string) => V2_INDEX_URL + '?date=' + date.slice(0, 7).replace('-', '') + '01&response=json#' + date;
+
+/** Reuse a COMPLETE latest response for each resource, not a union of rows
+ * from different source versions. Callers validate source/hash/scope first;
+ * this selection is never source admission or a correction authority. Keep
+ * original receipts/times intact, including a newly missing day. */
+export async function latestWholeEventAlignmentReceipts(receipts: readonly SourceReceipt[]): Promise<SourceReceipt[]> {
+  receipts = structuredClone(receipts);
+  const groups = new Map<string, SourceReceipt[]>();
+  for (const receipt of receipts) {
+    if (!validObservationTime(receipt.available_at) || !text(receipt.task.url)) throw Error('EVENT_ALIGNMENT_RECEIPT_TIME_INVALID');
+    groups.set(receipt.task.url, [...(groups.get(receipt.task.url) ?? []), receipt]);
+  }
+  const selected: SourceReceipt[] = [];
+  for (const group of groups.values()) {
+    const ordered = [...group].sort((a,b) => compareTime(b.available_at,a.available_at));
+    const latest = ordered[0], ties = ordered.filter(r => compareTime(r.available_at,latest.available_at) === 0);
+    const digest = await v2Hash(latest);
+    for (const tied of ties.slice(1)) if (await v2Hash(tied) !== digest) throw Error('EVENT_ALIGNMENT_TIED_RESOURCE_CONFLICT');
+    selected.push(latest);
+  }
+  return selected.sort((a,b) => a.task.url.localeCompare(b.task.url));
+}
 
 /** Preserve a caller's minimal read-only observation verbatim. created/updated
  * timestamps do NOT prove when this observer learned the taxonomy. Receipt
@@ -247,17 +269,46 @@ export async function eventAlignmentFromV2(input: V2Input, expectedHash: string,
  * Official current industry rows are diagnostic only; never rewrite universe. */
 export async function eventAlignmentFromDailyReceipts(identity: DecisionIdentity, data: EvidenceData, receipts: SourceReceipt[], reviews: CausalReview[] = []) {
   if (receipts.length > 1500) throw Error('EVENT_ALIGNMENT_RECEIPT_LIMIT');
+  // Own the validated bytes before the first hash await; a later caller edit
+  // cannot retarget a selected version or the cutoff used to select it.
+  ({identity,data,receipts,reviews} = structuredClone({identity,data,receipts,reviews}));
   const cutoff = stamp(identity.generated_at), bySymbol = new Map<string, Series>(), benchmark: BenchmarkClose[] = [], classifications: Classification[] = [], issues: string[] = [];
-  const keys = new Set<string>();
+  const keys = new Map<string, SourceReceipt['task']>(), eligible: SourceReceipt[] = [], invalidResources = new Set<string>();
   for (const receipt of receipts) {
     const { task } = receipt;
     if (!['PRICE', 'OTC_PRICE', 'BENCHMARK', 'DIRECTORY', 'EVENT'].includes(task.kind)) continue;
     if (['PRICE', 'OTC_PRICE'].includes(task.kind)) for (const symbol of task.symbols) {
       if (!bySymbol.has(symbol)) bySymbol.set(symbol, { symbol, provider: task.kind === 'PRICE' ? 'twse_official_stock_day' : 'tpex_official_daily_quotes', bars: [] });
     }
-    if (keys.has(task.key)) { issues.push('EVENT_ALIGNMENT_DUPLICATE_RECEIPT'); continue; } keys.add(task.key);
-    if (receipt.status !== 'OK' || !known(receipt.available_at, cutoff) || receipt.first_seen_at !== receipt.available_at
-      || !sha(receipt.raw_hash) || receipt.payload_hash !== await snapshotHash(receipt.payload)) { issues.push('EVENT_ALIGNMENT_RECEIPT_NOT_ADMISSIBLE:' + task.key); continue; }
+    const priorTask = keys.get(task.key);
+    // A task key is NOT a source revision ID: finite-age refreshes may retain
+    // multiple complete responses for the exact same immutable task. A key
+    // retargeted to another task is a conflict, never a version to select.
+    if (priorTask && await snapshotHash(priorTask) !== await snapshotHash(task)) throw Error('EVENT_ALIGNMENT_RECEIPT_KEY_CONFLICT');
+    keys.set(task.key,task);
+    if (receipt.status !== 'OK' || !validObservationTime(receipt.available_at) || !validObservationTime(identity.generated_at)
+      || compareTime(receipt.available_at,identity.generated_at) > 0 || receipt.first_seen_at !== receipt.available_at
+      || !sha(receipt.raw_hash) || receipt.payload_hash !== await snapshotHash(receipt.payload)) {
+      issues.push('EVENT_ALIGNMENT_RECEIPT_NOT_ADMISSIBLE:' + task.key);
+      // A known invalid current version must not silently reveal an older
+      // apparently complete response. A genuine future receipt is simply not
+      // part of this cutoff and cannot displace the then-known version.
+      if (!(validObservationTime(receipt.available_at) && validObservationTime(identity.generated_at)
+        && compareTime(receipt.available_at,identity.generated_at) > 0)) invalidResources.add(task.url);
+      continue;
+    }
+    eligible.push(receipt);
+  }
+  const groups = new Map<string, SourceReceipt[]>();
+  for (const receipt of eligible) if (!invalidResources.has(receipt.task.url)) groups.set(receipt.task.url,[...(groups.get(receipt.task.url) ?? []),receipt]);
+  const versioned = [...groups.values()].some(group => group.length > 1);
+  const selected: SourceReceipt[] = [];
+  for (const group of groups.values()) {
+    try { selected.push(...await latestWholeEventAlignmentReceipts(group)); }
+    catch { issues.push('EVENT_ALIGNMENT_TIED_RESOURCE_CONFLICT'); }
+  }
+  for (const receipt of versioned ? selected.sort((a,b) => a.task.url.localeCompare(b.task.url)) : selected) {
+    const {task} = receipt;
     const rows = receipt.payload.rows;
     if (!Array.isArray(rows)) { issues.push('EVENT_ALIGNMENT_RECEIPT_ROWS_INVALID'); continue; }
     if (task.kind === 'EVENT') continue; // Index metadata is never causal review.
@@ -279,5 +330,8 @@ export async function eventAlignmentFromDailyReceipts(identity: DecisionIdentity
       series.bars.push({ date, open: Number(r.open), high: Number(r.high), low: Number(r.low), close: Number(r.close), volume: Number(r.volume), amount: Number(r.amount), source_ref: task.url, available_at: String(available) }); bySymbol.set(symbol, series);
     }
   }
-  return await assemble(identity, data, [...bySymbol.values()], benchmark, reviews, classifications, await v2Hash(receipts), issues);
+  // A legacy single-version input keeps its original projection order/hashes.
+  // Only the newly supported multi-version case needs canonical series order.
+  const series = [...bySymbol.values()];
+  return await assemble(identity, data, versioned ? series.sort((a,b) => a.symbol.localeCompare(b.symbol)) : series, benchmark, reviews, classifications, await v2Hash(receipts), issues);
 }

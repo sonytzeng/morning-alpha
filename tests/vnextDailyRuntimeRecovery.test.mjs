@@ -22,7 +22,7 @@ async function checkpoint(){
  assert.equal(state.locks.length,216);assert(await verifyDailyLock(state.locks[0]));return state;
 }
 async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,lockError=null,throughHandler=false,providerWaitSeconds=0,providerStatus=200,
- leaseUntil,finishError=null,onFinish=()=>{},advanceSleep=()=>{},continuationError=null,claimStatus='ACQUIRED',claimError=null,onClaim=()=>{},rpcErrorOp=null}={}){
+ leaseUntil,finishError=null,onFinish=()=>{},advanceSleep=()=>{},continuationError=null,claimStatus='ACQUIRED',claimError=null,onClaim=()=>{},rpcErrorOp=null,clock=()=>at}={}){
  const dirs=await directoryPlan(date),cache=new Map(await Promise.all(dirs.map(async t=>[t.key,await receipt(t,at,{rows:t.exchange==='TWSE'?companies:[]})])));
  const calls=[],http=[],stored=[],locked=[],sources=[...cache.values()];let pending=due,checkpointState=saved,run={id:'isolated-run',business_date:date,
   actionable_at:date+'T09:00:00+08:00',lease:'isolated-lease',...(leaseUntil===undefined?{}:{lease_until:leaseUntil}),fence:2,plan,cursor,checkpoint:checkpointState};
@@ -38,7 +38,7 @@ async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,loc
   if(op==='DUE_OUTCOMES')return pending;
   if(op==='SOURCES')return sources;
   if(op==='ENTRY_SOURCE')return {};
-  if(op==='CHECKPOINT'){checkpointState=structuredClone(data);return {};}
+  if(op==='CHECKPOINT'){checkpointState=structuredClone(data);run.checkpoint=checkpointState;return {};}
   if(op==='PREDICTIONS'){if(lockError)throw Error(lockError);locked.push(...data);return {};}
   if(op==='OUTCOME')return {};
   if(op==='OUTCOME_CHECKED'){pending=pending.filter(p=>p.prediction.id!==data.id);return {};}
@@ -51,7 +51,7 @@ async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,loc
   return Response.json({stat:'OK',date:month+'01',title:' '+symbol+' 合成隔離控制',fields:symbol?
    ['日期','成交股數','成交金額','開盤價','最高價','最低價','收盤價']:['日期','開盤指數','最高指數','最低指數','收盤指數'],data:[]});
  };
- const ports={rpc,fetcher,clock:()=>at,sleep:async()=>{}};
+ const ports={rpc,fetcher,clock,sleep:async()=>{}};
  const sleeps=[],continuations=[];let result;
  if(throughHandler){
   run.id='11111111-1111-4111-8111-111111111111';const tasks=[];
@@ -60,7 +60,7 @@ async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,loc
   assert.equal(response.status,202);await Promise.all(tasks);
   result=calls.findLast(c=>c.op==='FINISH')?.data;
  }else result=await workDailyRun(run.id,ports);
- return {result,calls,http,stored,locked,run,sleeps,continuations,checkpoint:checkpointState};
+ return {result,calls,http,stored,locked,run,sleeps,continuations,get checkpoint(){return checkpointState;},invoke:()=>workDailyRun(run.id,ports)};
 }
 test('cold acquisition prioritizes latest prices across all 72 before older history, without discarding tasks',async()=>{
  const plan=await acquisitionPlan(date,companies),price=plan.filter(t=>t.kind==='PRICE');
@@ -91,16 +91,38 @@ test('permanent official403 cannot starve184 event/financial tasks or turn absen
   assert.equal(a.http.length,1);assert.equal(a.run.cursor,0);assert.equal(a.result.reason,'SOURCE_RETRY_PENDING');
  }
 });
-test('deadline produces immutable truthful insufficient judgments while cold bootstrap continues',async()=>{
- const a=await runner({at:'2026-10-12T00:59:15Z',plan:await acquisitionPlan(date,companies),cold:true});
- assert.equal(a.http.length,0);assert.equal(a.locked.length,216);
- assert(a.locked.every(p=>p.body.research.state==='INSUFFICIENT'&&p.body.locked_at==='2026-10-12T00:59:15Z'));
- assert.equal(a.result.reason,'COLD_BOOTSTRAP_WITH_IMMUTABLE_LOCK');
- for(const at of ['2026-10-12T00:59:00Z','2026-10-12T00:59:59.999Z']){
-  const boundary=await runner({at,plan:await acquisitionPlan(date,companies),cold:true});
-  assert.equal(boundary.http.length,0);assert.equal(boundary.locked.length,216);
-  assert(boundary.locked.every(p=>p.body.research.state==='INSUFFICIENT'&&p.body.locked_at===at));
-  assert.equal(boundary.result.reason,'COLD_BOOTSTRAP_WITH_IMMUTABLE_LOCK');
+test('deadline produces immutable truthful insufficient judgments while cold bootstrap continues',async t=>{
+ const clock=wallClock(t,'2026-10-12T00:59:00Z'),plan=await acquisitionPlan(date,companies);
+ for(const at of ['2026-10-12T00:59:00Z','2026-10-12T00:59:15Z','2026-10-12T00:59:59.999Z']){
+  clock.advance(Date.parse(at)-clock.now);
+  const expires=Date.parse(at)+3000>=Date.parse(date+'T01:00:00Z');
+  // With no cold tasks outstanding, the last boundary isolates true expiry;
+  // the earlier cases retain the original unfinished cold-bootstrap plan.
+  const a=await runner({at,plan,cursor:expires?plan.length:0,cold:true,clock:()=>new Date(clock.now).toISOString()});
+  assert.equal(a.http.length,0);assert.equal(a.locked.length,0);
+  assert.equal(a.result.status,'QUEUED');assert.equal(a.result.reason,'ACQUIRED_SNAPSHOT_CONTINUATION');
+  assert.equal(a.result.continue,true);assert.equal(a.result.retry_after_seconds,3);
+  assert.deepEqual(Object.keys(a.checkpoint),['acquired'],'pin has no request binding, attempts, quality approval or locks');
+  assert.equal(a.calls.filter(c=>c.op==='CHECKPOINT').length,1);assert(!a.calls.some(c=>c.op==='PREDICTIONS'));
+  assert.equal(a.run.checkpoint,a.checkpoint,'next claim sees the persisted pin');
+  const acquired=structuredClone(a.checkpoint.acquired),start=a.calls.length;
+  assert.equal(acquired.evidence_cutoff,new Date(Date.parse(at)).toISOString());
+  // A second explicitly authorized lifecycle invocation, not an auto-retry.
+  clock.advance(3000);const b=await a.invoke();
+  assert.equal(clock.now,Date.parse(at)+3000);assert.equal(a.http.length,0);
+  assert.deepEqual(a.checkpoint.acquired,acquired);
+  assert(!a.calls.slice(start).some(c=>['SOURCES','ENTRY_SOURCE'].includes(c.op)));
+  if(expires){
+   assert.equal(b.status,'EXPIRED');assert.equal(b.reason,'LATE_ACQUISITION_NOT_FORWARD');assert.equal(b.continue,false);
+   assert.equal(a.locked.length,0);assert.deepEqual(a.checkpoint,{acquired});
+   assert(!a.calls.slice(start).some(c=>['CHECKPOINT','PREDICTIONS'].includes(c.op)));
+  }else{
+   assert.equal(a.locked.length,216);
+   assert(a.locked.every(p=>p.body.research.state==='INSUFFICIENT'&&p.body.locked_at===new Date(Date.parse(at)+3000).toISOString()
+    &&p.body.evidence_cutoff===acquired.evidence_cutoff));
+   assert.equal(b.status,'QUEUED');assert.equal(b.reason,'COLD_BOOTSTRAP_WITH_IMMUTABLE_LOCK');
+   assert.equal(a.checkpoint.attempts.ACQUISITION,1);
+  }
  }
 });
 test('after the deadline, newly acquired data cannot be backdated into Forward',async()=>{

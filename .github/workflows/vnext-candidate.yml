@@ -21,6 +21,10 @@ jobs:
       - env:
           NODE_OPTIONS: --experimental-strip-types
         run: node --experimental-strip-types --test tests/vnextContracts.test.mjs tests/vnextValidation.test.mjs tests/vnextRealEvidence.test.mjs tests/vnextFoundation.test.mjs tests/vnextMember.test.mjs tests/vnextPublication.test.mjs tests/vnextResearchFunnel.test.mjs tests/vnextStockResearch.test.mjs tests/vnextPublicationReview.test.mjs tests/vnextAdmission.test.mjs tests/vnextBlockers.test.mjs tests/vnextClearance.test.mjs tests/vnextDailyIntelligence.test.mjs
+      - name: Exact current hash ownership, strict Canonical receipt and acquisition trace controls
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextPredictionHashBudget.test.mjs tests/vnextPrelockStageBudget.test.mjs tests/v1ActualCanonicalReceiptStatus.test.mjs tests/vnextTraceValidationBudget.test.mjs tests/vnextSharedPreimage.test.mjs tests/vnextAcquisitionHandoff.test.mjs tests/vnextDailyRuntimeRecovery.test.mjs tests/vnextForwardCutoffRuntime.test.mjs
       - name: Current source and live inventory negative controls (no build race)
         env:
           NODE_OPTIONS: --experimental-strip-types

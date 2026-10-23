@@ -97,7 +97,7 @@ test('provider parser structure is bounded before allocation; malformed HTML can
  assert.throws(()=>[...financialRows('<tr><td>'+'x'.repeat(32769)+'</td></tr>')],/FINANCIAL_CELL_LIMIT/);
  assert.throws(()=>[...financialRows('<tr><td>x</tr>')],/FINANCIAL_UNCLOSED_CELL/);
  assert.deepEqual([...financialRows('<table><tr><th>公司代號</th><th>營業收入</th></tr><tr><td>2330</td><td><b>123</b></td></tr></table>')],[['公司代號','營業收入'],['2330','123']]);
- const data=parseFinancial('公開資訊觀測站上市公司<table><tr><th>公司代號</th><th>營業收入</th><th>基本每股盈餘（元）</th></tr><tr><td>2330</td><td>123</td><td>2.5</td></tr></table>',{kind:'FINANCIAL_YTD',year:2026,quarter:2,symbols:['2330'],url:'https://mopsov.twse.com.tw',exchange:'TWSE'},'2026-10-14T01:00:00Z');
+ const data=parseFinancial('公開資訊觀測站上市公司<h2>民國115年第2季</h2><table><tr><th>公司代號</th><th>營業收入</th><th>基本每股盈餘（元）</th></tr><tr><td>2330</td><td>123</td><td>2.5</td></tr></table>',{kind:'FINANCIAL_YTD',year:2026,quarter:2,symbols:['2330'],url:'https://mopsov.twse.com.tw',exchange:'TWSE'},'2026-10-14T01:00:00Z');
  assert.equal(data.rows[0].values.revenue,123);assert.equal(data.rows[0].values.eps,2.5);assert.equal(data.rows[0].published_at,null);
 });
 test('portable parser copies stay byte-equivalent to reviewed sources; no filesystem dependency',()=>{

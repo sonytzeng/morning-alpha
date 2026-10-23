@@ -1,4 +1,6 @@
-/** Read-side only. Column lists are the 2026-09-07 Production catalog contract.
+/** Read-side only. Column lists use the Production catalog contract, including
+ * the existing earnings JSONB source identity (rechecked 2026-10-21). It stays
+ * internal to the evaluator; public evidence projections never return it.
  * No provider calls, RPC, writes, credentials, or AI scores. Pagination overflow is
  * insufficient evidence, never an apparently complete stock screen. */
 export type Row = Record<string, unknown>;
@@ -13,7 +15,7 @@ export const DATA_QUERIES = {
   quotes: { table: 'market_quotes', columns: 'id,provider,symbol,asset_type,market,trading_date,phase,value,change_percent,captured_at,freshness_status,quality_status,raw_payload,ingested_at', time: 'captured_at', available: 'ingested_at', days: 65, cap: 6000 },
   news: { table: 'news_events', columns: 'id,title,summary,source_name,source_url,published_at,event_type,symbols,sectors,created_at', time: 'published_at', available: 'created_at', days: 4, cap: 500 },
   flows: { table: 'institutional_flows', columns: 'id,provider,market,trading_date,institution_type,symbol,buy_amount,sell_amount,net_amount,currency,captured_at,source_ref,created_at', time: 'captured_at', available: 'created_at', days: 10, cap: 1000 },
-  earnings: { table: 'earnings_events', columns: 'id,provider,symbol,fiscal_period,announced_at,revenue_actual,revenue_consensus,eps_actual,eps_consensus,guidance_direction,source_ref,created_at', time: 'announced_at', available: 'created_at', days: 550, cap: 1000 },
+  earnings: { table: 'earnings_events', columns: 'id,provider,symbol,fiscal_period,announced_at,revenue_actual,revenue_consensus,eps_actual,eps_consensus,guidance_direction,source_ref,raw_payload,created_at', time: 'announced_at', available: 'created_at', days: 550, cap: 1000 },
   universe: { table: 'sector_stock_map', columns: 'id,symbol,stock_name,sector,is_active,created_at,updated_at', time: 'updated_at', available: 'created_at', days: null, cap: 1000 },
   mappings: { table: 'catalyst_tw_mappings', columns: 'id,catalyst_id,stock_symbol,company_name,sector,transmission_path,taiwan_supply_chain_relation,confirmation_condition,invalidation_condition,source_refs,created_at', time: 'created_at', available: 'created_at', days: 7, cap: 500 },
   catalysts: { table: 'research_catalysts', columns: 'id,title,summary,event_at,source_refs,status,created_at', time: 'event_at', available: 'created_at', days: 7, cap: 500 },

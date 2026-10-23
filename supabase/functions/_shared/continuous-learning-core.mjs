@@ -191,7 +191,6 @@ export function buildReview(input) {
 
   const abnormal = finiteNumber(input.abnormalReturn);
   const priceInScore = finiteNumber(input.priceInScore);
-  const catalystScore = finiteNumber(input.catalystScore);
   const surpriseScore = finiteNumber(input.surpriseScore);
   const mappingScore = finiteNumber(input.mappingScore);
   const timingCorrect = input.timingCorrect;
@@ -202,12 +201,14 @@ export function buildReview(input) {
       review_result: timingCorrect === false ? 'partial' : 'correct',
       direction_accuracy: 'correct',
       timing_accuracy: timingCorrect === false ? 'incorrect' : timingCorrect === true ? 'correct' : 'inconclusive',
-      catalyst_accuracy: catalystScore === null ? 'unverified' : 'correct',
-      surprise_accuracy: surpriseScore === null ? 'unverified' : 'correct',
+      // A matching price direction validates only that direction. A score is
+      // not independent evidence that the catalyst/surprise/price-in was right.
+      catalyst_accuracy: 'unverified',
+      surprise_accuracy: 'unverified',
       taiwan_mapping_accuracy: input.scope === 'symbol'
         ? mappingCorrect === null ? 'unverified' : mappingCorrect ? 'correct' : 'incorrect'
         : 'not_applicable',
-      price_in_accuracy: priceInScore === null ? 'unverified' : 'correct',
+      price_in_accuracy: 'unverified',
       error_type: null,
       root_cause: '主要方向獲得市場結果確認。',
       missed_signal: null,
@@ -235,19 +236,19 @@ export function buildReview(input) {
   }
   if (priceInScore !== null && priceInScore >= 70) {
     errorType = 'price_in_misjudged';
-    rootCause = 'Catalyst 可能正確，但市場已提前反映，交易方向沒有延續。';
+    rootCause = '價格方向未獲確認；Price-in 是待查假設，尚未由獨立事件證據證實。';
     lesson = 'Catalyst Correct 不等於 Trade Correct；高 Price-in 必須降低追價信心。';
     falseSignal = '把已被定價的 Catalyst 誤判為新的可交易 Surprise。';
     ruleCandidate = { action: 'reduce_confidence_when_high_price_in', adjustment: -8 };
   } else if (input.scope === 'symbol' && mappingCorrect === false && mappingScore !== null && mappingScore >= 70) {
     errorType = 'taiwan_mapping_error';
-    rootCause = '事件方向未有效傳導到指定台股，受惠鏈映射過強。';
+    rootCause = '個股相對價格表現未支持原方向，但不能僅憑報酬證明事件因果映射錯誤。';
     lesson = '台灣映射需同時驗證個股相對大盤與族群表現。';
     falseSignal = '供應鏈敘事存在，但資金沒有進入指定個股。';
     ruleCandidate = { action: 'downgrade_mapping_without_relative_strength', adjustment: -7 };
   } else if (surpriseScore !== null && surpriseScore >= 70) {
     errorType = 'surprise_misread';
-    rootCause = '事件被評為高 Surprise，但市場價格沒有依預期方向反應。';
+    rootCause = '高 Surprise 分數未獲價格方向支持；仍需獨立事件證據判定 Surprise 本身是否正確。';
     lesson = 'Surprise 必須以價格與量能確認，不可只看新聞語意。';
   }
 
@@ -255,12 +256,12 @@ export function buildReview(input) {
     review_result: 'incorrect',
     direction_accuracy: 'incorrect',
     timing_accuracy: timingCorrect === true ? 'correct' : 'incorrect',
-    catalyst_accuracy: catalystScore === null ? 'unverified' : 'incorrect',
-    surprise_accuracy: surpriseScore === null ? 'unverified' : 'incorrect',
+    catalyst_accuracy: 'unverified',
+    surprise_accuracy: 'unverified',
     taiwan_mapping_accuracy: input.scope === 'symbol'
       ? mappingCorrect === null ? 'unverified' : mappingCorrect ? 'correct' : 'incorrect'
       : 'not_applicable',
-    price_in_accuracy: priceInScore === null ? 'unverified' : priceInScore >= 70 ? 'incorrect' : 'unverified',
+    price_in_accuracy: 'unverified',
     error_type: errorType,
     root_cause: rootCause,
     missed_signal: missedSignal,
@@ -283,6 +284,61 @@ export function safeAverage(values) {
   const valid = (values || []).map(finiteNumber).filter((value) => value !== null);
   if (valid.length === 0) return null;
   return Math.round((valid.reduce((sum, value) => sum + value, 0) / valid.length) * 10000) / 10000;
+}
+
+/** Candidate review only. Same thresholds/adjustments as CLE v1; never promote
+ * or apply a rule. Keep a whole report-date cohort out of training, and require
+ * each training label to have actually been observed before the first OOS call.
+ * A later download/report date is not proof of historical label availability. */
+export function temporalLearningCandidate(items, reviewedAt) {
+  const at = Date.parse(reviewedAt);
+  if (typeof reviewedAt !== 'string' || !Number.isFinite(at)) throw new Error('LEARNING_REVIEW_TIME_INVALID');
+  if (!Array.isArray(items) || items.length > 2000) throw new Error('LEARNING_REVIEW_WINDOW_LIMIT');
+  const excluded = {};
+  const reject = reason => { excluded[reason] = (excluded[reason] || 0) + 1; };
+  const counts = new Map();
+  for (const item of items) {
+    const id = item?.prediction?.id;
+    if (typeof id === 'string' && id) counts.set(id, (counts.get(id) || 0) + 1);
+  }
+  const valid = items.filter(item => {
+    const p = item?.prediction, r = item?.review, o = item?.outcome;
+    if (p?.id && counts.get(p.id) > 1) { reject('DUPLICATE_PREDICTION_ID'); return false; }
+    const predictionAt = Date.parse(p?.prediction_at), labelAt = Date.parse(o?.evaluated_at);
+    if (typeof p?.id !== 'string' || !p.id || !/^\d{4}-\d\d-\d\d$/.test(p.report_date || '')
+      || !Number.isFinite(predictionAt) || !Number.isFinite(labelAt)
+      || labelAt <= predictionAt || labelAt > at || predictionAt > at
+      || new Date(predictionAt + 8 * 3600000).toISOString().slice(0, 10) !== p.report_date
+      || p.record_status !== 'valid' || !LEARNING_DATA_QUALITY.has(p.data_quality_status)
+      || r?.prediction_id !== p.id || r.learning_eligible !== true || !['correct', 'incorrect'].includes(r.review_result)
+      || o?.prediction_id !== p.id || o.horizon !== 'close' || o.target_date !== p.report_date
+      || o.status !== 'completed' || !LEARNING_DATA_QUALITY.has(o.data_quality_status)) {
+      reject('SAMPLE_NOT_VERIFIED'); return false;
+    }
+    return true;
+  }).sort((a, b) => a.prediction.report_date.localeCompare(b.prediction.report_date)
+    || a.prediction.prediction_at.localeCompare(b.prediction.prediction_at)
+    || a.prediction.id.localeCompare(b.prediction.id));
+  const models = new Set(valid.map(item => item.prediction.model_version));
+  if (models.size !== 1 || [...models].some(v => typeof v !== 'string' || !v || v === 'unknown')) {
+    if (valid.length) excluded.MODEL_VERSION_SCOPE_UNVERIFIED = valid.length;
+    return { version: 'CLE_TEMPORAL_REVIEW_V2', training: [], outOfSample: [], training_rate: null,
+      adjustment: null, enough: false, excluded, first_oos_prediction_at: null };
+  }
+  const boundary = valid[Math.floor(valid.length * 0.7)]?.prediction.report_date;
+  const outOfSample = valid.filter(item => item.prediction.report_date >= boundary);
+  const firstOosAt = outOfSample.length ? Math.min(...outOfSample.map(item => Date.parse(item.prediction.prediction_at))) : NaN;
+  const training = valid.filter(item => {
+    if (!(item.prediction.report_date < boundary)) return false;
+    if (Date.parse(item.outcome.evaluated_at) >= firstOosAt) { reject('TRAINING_LABEL_NOT_AVAILABLE'); return false; }
+    return true;
+  });
+  const trainingRate = training.length ? training.filter(item => item.review.review_result === 'correct').length / training.length : null;
+  const adjustment = training.length < 20 || trainingRate === null || (trainingRate >= 0.55 && trainingRate < 0.75)
+    ? null : trainingRate < 0.55 ? -8 : 4;
+  return { version: 'CLE_TEMPORAL_REVIEW_V2', training, outOfSample, training_rate: trainingRate,
+    adjustment, enough: training.length >= 20 && outOfSample.length >= 10, excluded,
+    first_oos_prediction_at: Number.isFinite(firstOosAt) ? new Date(firstOosAt).toISOString() : null };
 }
 
 export function stableCaseSignature(review, dimensions) {

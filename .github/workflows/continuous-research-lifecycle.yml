@@ -1,0 +1,23 @@
+name: Continuous research lifecycle
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  continuous-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.5.4
+      - run: npm ci --ignore-scripts
+      - run: node --experimental-strip-types --test tests/continuousLearningCore.test.mjs tests/continuousLearningTemporal.test.mjs tests/continuousLearningIntegration.test.mjs tests/continuousLearningRelease.test.mjs tests/vnextOutcomeCacheRecovery.test.mjs tests/vnextContinuousUpdate.test.mjs
+      - run: deno check --no-lock supabase/functions/continuous-learning-engine/index.ts supabase/functions/vnext-daily-research-v1/index.ts

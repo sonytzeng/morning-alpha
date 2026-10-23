@@ -50,16 +50,35 @@ export type Projection = {
   reason: string; confirmation: string[]; invalidation: string[]; next_review_at: string;
   evidence: { summary: string; source: string; source_ref: string; available_at: string; classification: ClaimClass }[];
 };
-export function validTime(value: string): boolean {
-  if (typeof value !== 'string') return false;
-  const match = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(?:\.\d{1,3})?(?:Z|[+-](\d\d):(\d\d))$/.exec(value);
-  if (!match) return false;
+function parseTime(value: string, maxFractionDigits: 3 | 6 = 6): { second: number; microsecond: number } | null {
+  if (typeof value !== 'string') return null;
+  const match = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(?:\.(\d{1,6}))?(?:Z|[+-](\d\d):(\d\d))$/.exec(value);
+  if (!match || match[0] !== value || (match[7]?.length ?? 0) > maxFractionDigits) return null;
   const [year, month, day, hour, minute, second] = match.slice(1, 7).map(Number);
   const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
   const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  return month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1]
+  if (!(month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1]
     && hour < 24 && minute < 60 && second < 60
-    && Number(match[7] ?? 0) < 24 && Number(match[8] ?? 0) < 60 && Number.isFinite(Date.parse(value));
+    && Number(match[8] ?? 0) < 24 && Number(match[9] ?? 0) < 60)) return null;
+  // Parse only whole seconds for calendar/timezone conversion, never the fraction.
+  const milliseconds = Date.parse(value.replace(/\.\d{1,6}(?=Z$|[+-]\d\d:\d\d$)/, ''));
+  if (!Number.isFinite(milliseconds)) return null;
+  // Separate fields stay exact even when an epoch-microsecond number would not.
+  return { second: milliseconds / 1000, microsecond: Number((match[7] ?? '').padEnd(6, '0')) };
+}
+/** Shared callers retain the millisecond-only contract until their comparisons are migrated. */
+export function validTime(value: string): boolean {
+  return parseTime(value, 3) !== null;
+}
+/** Original observations may retain PostgreSQL microseconds; compare them with compareTime. */
+export function validObservationTime(value: string): boolean {
+  return parseTime(value) !== null;
+}
+/** Exact chronological ordering (-1/0/1); invalid input returns NaN, like Date.parse. */
+export function compareTime(left: string, right: string): number {
+  const a = parseTime(left), b = parseTime(right);
+  if (!a || !b) return NaN;
+  return Math.sign(a.second - b.second || a.microsecond - b.microsecond);
 }
 export const hashValid = (value: string) => /^[a-f0-9]{64}$/.test(value);
 export function sourceSafe(value: string): boolean {
@@ -73,7 +92,22 @@ function stable(value: unknown): string {
   if (value && typeof value === 'object') return '{' + Object.keys(value).sort().map(k => JSON.stringify(k) + ':' + stable((value as Record<string, unknown>)[k])).join(',') + '}';
   throw Error('NON_CANONICAL_VALUE');
 }
-export async function snapshotHash(value: unknown): Promise<string> {
-  const bytes = new TextEncoder().encode(stable(value));
+async function hashCanonical(text: string): Promise<string> {
+  const bytes = new TextEncoder().encode(text);
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('');
+}
+export async function snapshotHash(value: unknown): Promise<string> {
+  return hashCanonical(stable(value));
+}
+/** Hash the unchanged {entry,input} preimage for each owned input. The caller
+ * must own immutable clones for this attempt. Only the canonical Entry text is
+ * shared within this call, never a validation result or hash across revisions.
+ * Keep digests sequential: 72 simultaneous full-Entry buffers can exceed the
+ * Edge isolate's memory limit. The encoded bytes match snapshotHash exactly. */
+export async function inputSnapshotHashes(inputs: readonly unknown[], entry: unknown): Promise<string[]> {
+  const entryText = stable(entry), hashes: string[] = [];
+  for (const input of inputs) {
+    hashes.push(await hashCanonical('{"entry":' + entryText + ',"input":' + stable(input) + '}'));
+  }
+  return hashes;
 }

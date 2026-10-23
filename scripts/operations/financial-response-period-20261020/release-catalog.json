@@ -1,0 +1,59 @@
+{
+  "schema": "FINANCIAL_RESPONSE_PERIOD_RELEASE_V1",
+  "production_authorized": false,
+  "base": "7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3",
+  "confirmed_sources": {
+    "src/features/vnext/dailyRuntime.ts": "01fe2480681368465530cb2feeb039161931051ac55e6f4ea1284a95fe47a2bf",
+    "src/features/vnext/dailyAdapter.ts": "8596a858c0b645519ae0b8631dbfab978ff677bf6f33248c2157ba63e958c229",
+    "src/features/vnext/dailyParsers.mjs": "2593386f7d8be30e757a4c5d93715363f58f031d6681f4af750e348989a59800",
+    "src/features/vnext/dailyIntelligence.ts": "ac379cf85344567f5ea7a863caf7378f6578bb8368a2cec758678c7ec9e22790"
+  },
+  "metadata": {
+    "project_id": "cttfzgvhiewfckydcrci",
+    "name": "vnext-daily-research-v1",
+    "entrypoint_path": "supabase/functions/vnext-daily-research-v1/index.ts",
+    "verify_jwt": true
+  },
+  "changes": [
+    {
+      "path": "src/features/vnext/dailyRuntime.ts",
+      "before_sha256": "c3c3fc74881831295c4cf19970ba77b77182b6c171e5dde1f3db6610666cea48",
+      "after_sha256": "01fe2480681368465530cb2feeb039161931051ac55e6f4ea1284a95fe47a2bf"
+    },
+    {
+      "path": "src/features/vnext/dailyAdapter.ts",
+      "before_sha256": "31f8648b4be3119a420cb25781e37643860a8e05fc5e16f99162dc72e18ad794",
+      "after_sha256": "8596a858c0b645519ae0b8631dbfab978ff677bf6f33248c2157ba63e958c229"
+    },
+    {
+      "path": "src/features/vnext/dailyParsers.mjs",
+      "before_sha256": "e6b1ad234ab7b0036223416776eba2809588ad7adb2f8255e9472003abd3e6f5",
+      "after_sha256": "2593386f7d8be30e757a4c5d93715363f58f031d6681f4af750e348989a59800"
+    },
+    {
+      "path": "src/features/vnext/dailyIntelligence.ts",
+      "before_sha256": "22bdb3d495ec6c06fd6b2382524ef1727d6078d457fec3a2f724f15a6fc8528b",
+      "after_sha256": "ac379cf85344567f5ea7a863caf7378f6578bb8368a2cec758678c7ec9e22790"
+    }
+  ],
+  "payloads": {
+    "candidate": {
+      "sha256": "7986f277660d0b9a3500d7f45a32be247f1d1d7514c1590b5db2956ace2fd596",
+      "bytes": 933136
+    },
+    "recovery": {
+      "sha256": "34a0fe4a0b17dc56a72c43d7687738047b59d695ae1bbda676b85f321d9c0762",
+      "bytes": 924165
+    }
+  },
+  "sdk": "2.57.4",
+  "verify_jwt": true,
+  "sql": false,
+  "source_admission": false,
+  "formal_v1_threshold_change": false,
+  "caller_change": false,
+  "member_rights_change": false,
+  "payment_change": false,
+  "manual_research_run": false,
+  "recovery": "FIXED_WORKER4_SOURCE_FUNCTIONAL_EQUIVALENCE_NOT_IDENTICAL_PHYSICAL_ESZIP"
+}

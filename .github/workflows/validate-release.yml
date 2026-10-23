@@ -220,13 +220,28 @@ jobs:
           MA_ISOLATED_TEST_DB: ma_production_evidence_recorder_test1
           MA_TEST_PGPORT: 55439
         run: node --test tests/productionEvidenceRecorderDatabase.integration.mjs
+      - name: Pin the unchanged Atomic historical replay clock, not Production SQL
+        run: |
+          docker run -d --name "ma-news-clock-ci-${{ github.run_id }}-atomic" --network none \
+            --env POSTGRES_PASSWORD=isolated-ci-only \
+            --env 'FAKETIME=@2026-10-20 00:35:00' ma-runtime-sparse-ci
+          for attempt in $(seq 1 30); do
+            if docker exec "ma-news-clock-ci-${{ github.run_id }}-atomic" pg_isready -U postgres; then break; fi
+            sleep 1
+          done
+          docker exec "ma-news-clock-ci-${{ github.run_id }}-atomic" pg_isready -U postgres
       - name: Isolated 9/24 Atomic row-contract exact rejection replay
         env:
           NODE_OPTIONS: --experimental-strip-types
           MA_LOCAL_SCOPE: ma-atomic-row-contract-20260924
           MA_ISOLATED_TEST_DB: ma_atomic_row_contract_test1
           MA_TEST_PGPORT: 55439
+          MA_TEST_DOCKER_CONTAINER: ma-news-clock-ci-${{ github.run_id }}-atomic
+          MA_TEST_PSQL: ${{ github.workspace }}/tests/helpers/clockedPsql.mjs
         run: node --test tests/atomicRowContract20260924Database.integration.mjs
+      - name: Remove only the disposable Atomic replay clock
+        if: always()
+        run: docker rm -f "ma-news-clock-ci-${{ github.run_id }}-atomic" 2>/dev/null || true
       - name: Core consolidation publication, ACL parity, replay and acceptance
         env:
           NODE_OPTIONS: --experimental-strip-types

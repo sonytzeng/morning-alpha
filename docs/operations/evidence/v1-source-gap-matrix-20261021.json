@@ -1,0 +1,2203 @@
+{
+  "schema": "V1_PER_STOCK_RETAINED_CANONICAL_GAP_MATRIX_V1",
+  "observed_at": "2026-10-21T00:51:06.160302+00:00",
+  "business_date": "2026-10-21",
+  "formal_decision_generated_at": "2026-10-20T23:06:46.892Z",
+  "formal_decision_md5": "d6ef3b8fde4faab0ea67bcb094d45098",
+  "denominator": 72,
+  "formal_summary": {
+    "status": "BLOCKED",
+    "none_count": 0,
+    "ready_count": 0,
+    "watch_count": 0,
+    "blocked_count": 72,
+    "universe_count": 72,
+    "evaluated_count": 0,
+    "evaluation_phase": "PREMARKET",
+    "reason_distribution": {
+      "THREE_INSTITUTIONS_MISSING": 72,
+      "MARKET_REQUIRED_INSTITUTIONAL": 72,
+      "SOURCED_COMPANY_CATALYST_MAPPING_MISSING": 72,
+      "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING": 72,
+      "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING": 72
+    },
+    "not_yet_observable_count": 0
+  },
+  "canonical_counts": {
+    "flows": 0,
+    "earnings": 0,
+    "mappings": 0,
+    "catalysts": 0
+  },
+  "status_semantics": {
+    "retained": "Existing normalized SourceReceipt inventory, not Provider raw bytes or source admission",
+    "request_period": "A request label is not proof of financial response period",
+    "legal_use": "Dataset rights, internal canonical rights and member-publication rights must be reviewed separately",
+    "private_actuals": "2330 and 2454 retained direct-quarter packets are private input only, not canonical or complete expectations"
+  },
+  "matrix": [
+    {
+      "status": "BLOCKED",
+      "symbol": "1504",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "344d072eb1b742a1169ed846ce0c6d64",
+        "event_index_rows": 9,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "1513",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "040c6deff4f6a6ac208756d5f4f89af5",
+        "event_index_rows": 4,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "1514",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "cc5dbbb70c043a743257b479f2840614",
+        "event_index_rows": 2,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "1519",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "cd56f594d3ea99213a9106fadb3dfdc5",
+        "event_index_rows": 0,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "1590",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "409f3152ee11248289efb9ebcb380a6b",
+        "event_index_rows": 21,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "1605",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "9044f89d6a102e1767aa3400c9fa6bd2",
+        "event_index_rows": 2,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "1760",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "cce88d5510cba169204ce94cee82f6e4",
+        "event_index_rows": 0,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2049",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "d54cb9ab5b35373f1899225761469baf",
+        "event_index_rows": 0,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2208",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "46ca4eb17f945d191ba1fc6c9c70987b",
+        "event_index_rows": 4,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:23.063+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2303",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "ee245158b03e24829951964903c333cc",
+        "event_index_rows": 14,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2308",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "bb0c61fdf90df31a44660c7599124636",
+        "event_index_rows": 40,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2317",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "b97a90b6f530617d1748359f10cba728",
+        "event_index_rows": 68,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2330",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "96764a010712a4751be89b5d785622ee",
+        "event_index_rows": 14,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 4,
+      "private_direct_quarter_scope": "SOURCE_RETAINED_INPUT_UNADMITTED_NOT_CANONICAL",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2337",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "5043e9767918cd2d7921c03d7ac985f0",
+        "event_index_rows": 2,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:23.063+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2344",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "65dff54a5ce97a5a32e088e062299388",
+        "event_index_rows": 21,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2356",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "2cf99b72c944dc6d85c1a24d1651510b",
+        "event_index_rows": 14,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2357",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "e336a5763e48df20ab641d40e22f7b21",
+        "event_index_rows": 4,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2368",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "5c73566f9b0d4b73bd7888b4c9996e16",
+        "event_index_rows": 24,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2376",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "b12fe9674307be1e899689e58651ed09",
+        "event_index_rows": 0,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2377",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "9c1884e5f2294e188edc0812871f2ead",
+        "event_index_rows": 0,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2379",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "74180810f283318a2b10149e7076221d",
+        "event_index_rows": 12,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2382",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "5a0ab0207c57adbdbf20b20036c709cf",
+        "event_index_rows": 12,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2383",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "4df91fada07b973863c9260c4917792e",
+        "event_index_rows": 8,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2408",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "c97c2c83f4184093f1d2830497f20f04",
+        "event_index_rows": 36,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2421",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "b0a9779c29065b84cb00cfd3ac9150b0",
+        "event_index_rows": 2,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2454",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "78f7c3633c5a36ecbb9b243427ee2eb0",
+        "event_index_rows": 14,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 4,
+      "private_direct_quarter_scope": "SOURCE_RETAINED_INPUT_UNADMITTED_NOT_CANONICAL",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2520",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "84221ff701049cf8127220fffdb99ee8",
+        "event_index_rows": 2,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2539",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "351c94d0449039cce48bdc4d16e9a7cf",
+        "event_index_rows": 2,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2542",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "c75c311b2bdb5ad96c6023b8ad273f86",
+        "event_index_rows": 19,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2548",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "9a3628b020da7e6ea5f70438e2a94005",
+        "event_index_rows": 8,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2603",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "7d8bc288479bb1ce3c3ae62a19bcae1f",
+        "event_index_rows": 8,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2609",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "b1cabea69a141ee01fe5cbc6c6bde500",
+        "event_index_rows": 8,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2610",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "d5ff3d769ce166e523dc20e7c9ba1d26",
+        "event_index_rows": 6,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2615",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "6a8876e4949b57a066b77e467e3b8608",
+        "event_index_rows": 6,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2618",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "6d1424b713be5c4a711f04d206fd72f9",
+        "event_index_rows": 2,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2634",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "a9cf5ce062ff1ec89ae767bd73b3bd28",
+        "event_index_rows": 2,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2881",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "0ea44c7e74209e5a9100722fbe998228",
+        "event_index_rows": 63,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2882",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "96d4b779c3c0e1c6b2f601ffdaa2fc7a",
+        "event_index_rows": 38,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2884",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "c580d3da814296885fc14940e5c65aa9",
+        "event_index_rows": 58,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2885",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "0462bfb0bfa655654a9cd5e2f77f956f",
+        "event_index_rows": 68,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2886",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "4ba5a520613f5c9b5bebb934fe1b3ed9",
+        "event_index_rows": 18,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2891",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "c252f82ba55a4b336883e48f1d5a38af",
+        "event_index_rows": 112,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2892",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "b40a22f3251b140ac64834b030986fbc",
+        "event_index_rows": 14,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3006",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "19b2dbefeeaccf7cb02ea70bfc538133",
+        "event_index_rows": 20,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3017",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "79542a8f971f62f760e8ab188303adc3",
+        "event_index_rows": 16,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3034",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "db231d34a2840bc24ebabeb58cc8c503",
+        "event_index_rows": 4,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3037",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "6ef06d1a0f6149b2f4902b04bb968963",
+        "event_index_rows": 30,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3081",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "48029877906c11772fc714cd3124a06c",
+        "event_index_rows": 3,
+        "first_retained_at": "2026-10-18T23:00:40.772+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:30.737+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3189",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "48eac8db63beaeaa53d22686dbdf1191",
+        "event_index_rows": 14,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3231",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "aafc8b22ee6501f074fb70f70a547d81",
+        "event_index_rows": 32,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3324",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "8fc94eb79e98c7b684dcd11cf8b274e9",
+        "event_index_rows": 14,
+        "first_retained_at": "2026-10-18T23:00:40.772+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:30.737+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3363",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "e5c6fe00ce31941fc3758679b272a02b",
+        "event_index_rows": 10,
+        "first_retained_at": "2026-10-18T23:00:40.772+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:30.737+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3443",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "a6df9a6933059970c4ee32aadc51509f",
+        "event_index_rows": 12,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3450",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "ff230324c107f7d96ee5b3fb17d63c46",
+        "event_index_rows": 6,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3529",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "b87e1a7974ccf8609850a248b59989ea",
+        "event_index_rows": 4,
+        "first_retained_at": "2026-10-18T23:00:40.772+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:30.737+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3653",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "fe10df98d0770f29d96399c3237b342b",
+        "event_index_rows": 2,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3661",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "2c9f127f36f5edba340150c66345da90",
+        "event_index_rows": 2,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3711",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "e3112df8bdc3b00da2b3c2e6d4c1f6ee",
+        "event_index_rows": 136,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "4566",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "e5938e55fd369ececd7b41cd9c06d3e8",
+        "event_index_rows": 4,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "4743",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "6b6dd18a34e73e2b7873908131416f49",
+        "event_index_rows": 4,
+        "first_retained_at": "2026-10-18T23:00:40.772+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:27.875+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "4908",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "d899d37ad09b60f9c6b1b22aeb64312d",
+        "event_index_rows": 4,
+        "first_retained_at": "2026-10-18T23:00:40.772+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:30.737+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "4979",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "571d9bb23c27260a01b48af6a16c9618",
+        "event_index_rows": 4,
+        "first_retained_at": "2026-10-18T23:00:40.772+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:30.737+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "6213",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "e693a692cfd24e2bfd3b74815dd32aeb",
+        "event_index_rows": 32,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "6230",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "4b0fd8c15dfe390fcb28207b9dfbb871",
+        "event_index_rows": 6,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:23.063+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "6274",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "4ec55cf366ab876e0f28eac703c6a78b",
+        "event_index_rows": 5,
+        "first_retained_at": "2026-10-18T23:00:40.772+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:30.737+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "6446",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "fcc5d7ee7f44d7ec73f4c4a4369dbb8f",
+        "event_index_rows": 8,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "6488",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "29fdf99b66c9f5a85ddf69f6e5343947",
+        "event_index_rows": 7,
+        "first_retained_at": "2026-10-18T23:00:40.772+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:30.737+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "6547",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "4c7c879bab0c048288ab0e58a5e433cf",
+        "event_index_rows": 2,
+        "first_retained_at": "2026-10-18T23:00:40.772+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:27.875+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "6669",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "887140c50d356c6c719762c864eaf9fb",
+        "event_index_rows": 15,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "8033",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "57149d9f99231ce55fe0f7319e7dfb77",
+        "event_index_rows": 0,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "8046",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "eff35926f95f8c8ee4c8cf0ccd34a15c",
+        "event_index_rows": 2,
+        "first_retained_at": "2026-10-18T23:00:14.978+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:47.417+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "8299",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "retained": {
+        "share_days": 21,
+        "revenue_months": 36,
+        "source_set_md5": "b820cff1fa88bd2fffd6a3475d624149",
+        "event_index_rows": 8,
+        "first_retained_at": "2026-10-18T23:00:40.772+00:00",
+        "direct_actual_rows": 0,
+        "latest_retained_at": "2026-10-20T23:12:30.737+00:00",
+        "proven_source_period_rows": 0,
+        "requested_financial_periods": 9
+      },
+      "canonical_mapping": 0,
+      "canonical_earnings": 0,
+      "canonical_institutional": 0,
+      "private_direct_quarter_inputs": 0,
+      "private_direct_quarter_scope": "NOT_PROVEN_BY_THIS_INVENTORY",
+      "native_stock_institutional_twd": "NOT_PRESENT_IN_RETAINED_SHARE_ROWS_OR_CANONICAL",
+      "consensus_vintage": "NOT_PROVEN",
+      "member_publication": "NOT_APPROVED"
+    }
+  ],
+  "production_operations": 0,
+  "thresholds_changed": false,
+  "stock_recommendation_delivered": false
+}

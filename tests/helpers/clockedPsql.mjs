@@ -14,7 +14,7 @@ const args=process.argv.slice(2);let input;
 for(let i=0;i<args.length;i++){
  if(args[i]==='-h')assert.equal(args[++i],'127.0.0.1');
  else if(args[i]==='-p'){assert.match(args[i+1],/^\d+$/);args[++i]='5432';}
- else if(args[i]==='-d')assert.match(args[++i],/^(?:postgres|ma_(?:txf_session_parity|tw_cash_phase|premarket_parity)_test\d+)$/);
+ else if(args[i]==='-d')assert.match(args[++i],/^(?:postgres|ma_(?:txf_session_parity|tw_cash_phase|premarket_parity|atomic_row_contract)_test\d+)$/);
  else if(args[i]==='-f'){
   const path=resolve(args[++i]),local=relative(root,path);
   assert.match(local,/^(?:tests\/fixtures|supabase\/migrations)\/[^/]+\.sql$/);

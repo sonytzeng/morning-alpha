@@ -1,0 +1,62 @@
+name: Original observation ingress candidate
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  current-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_OPTIONS: --experimental-strip-types
+      MA_ISOLATED_DB_TMPFS: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+      - name: Admit the complete actual source, never a historical substitute
+        run: node --experimental-strip-types --test tests/originalIngressAdmission.test.mjs
+      - name: Install locked candidate dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Current original timestamp, contract and ingress unit controls
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextContracts.test.mjs tests/vnextOriginalTimestamp.test.ts tests/vnextOriginalIngress.test.mjs tests/vnextOriginalRegistryIngress.test.mjs
+      - name: Type check current source
+        run: npm run type-check
+      - name: Lint current source
+        run: npm run lint
+      - name: Build current source
+        run: npm run build
+      - name: Disposable synthetic PostgreSQL and loopback PostgREST only
+        run: node --experimental-strip-types tests/vnextOriginalIngressDatabase.integration.mjs
+      - name: Prepare the existing isolated PostgreSQL clock image
+        timeout-minutes: 5
+        run: |
+          if docker build --quiet -t ma-runtime-sparse-ci:latest - < tests/fixtures/runtime-sparse-postgres.Dockerfile >/dev/null 2>&1; then
+            echo '{"phase":"IMAGE_PREPARE","class":"READY"}'
+          else
+            code=$?
+            printf '{"phase":"IMAGE_PREPARE","class":"IMAGE_BUILD_FAILED","exit_code":%s}\n' "$code"
+            exit "$code"
+          fi
+      - name: Approved Registry to original atomic RPC, isolated PostgreSQL17 only
+        run: node --experimental-strip-types tests/vnextOriginalRegistryIngressDatabase.integration.mjs
+  historical-cold-source-proof:
+    needs: current-candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+      - name: Unchanged 7bfc cold-source assertions, not current ingress evidence
+        run: node --experimental-strip-types --test tests/coldSourcePriorityAdmission.test.mjs

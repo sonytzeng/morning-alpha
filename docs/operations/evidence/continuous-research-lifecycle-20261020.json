@@ -1,0 +1,49 @@
+{
+  "schema": "CONTINUOUS_RESEARCH_LIFECYCLE_CANDIDATE_V1",
+  "base_candidate": "af22f6b77f564cf9374b2a4415632ea8f38ea1c4",
+  "production_deployed": false,
+  "production_readonly_checked_at": "2026-10-20T03:55:23.480534Z",
+  "learning_production": {
+    "function_version": 17,
+    "status": "ACTIVE",
+    "verify_jwt": false,
+    "eszip_sha256": "9c36d75abed3d80a83dad644cb9bdab2d5fbb18c7d292c23ee5c8461c9f65884",
+    "observed_succeeded_dates": ["2026-10-15", "2026-10-16", "2026-10-19"],
+    "market_predictions_each_date": 1,
+    "symbol_predictions_in_window": 0,
+    "stock_accuracy_claimed": false
+  },
+  "repairs": ["OUTCOME_CACHE_PREFIX_STARVATION", "LEARNING_DAILY_ONLY_WINDOW", "OUT_OF_SAMPLE_SELECTION_LEAKAGE", "SHADOW_TAIPEI_START_BOUNDARY", "PRICE_DIRECTION_NOT_CAUSAL_ACCURACY", "CROSS_MODEL_SAMPLE_POOLING"],
+  "unchanged": ["V1_THRESHOLDS", "PRODUCTION_RULE_APPLICATION", "PROMOTION_GUARDS", "AUTH_RLS", "CRON", "SECRETS", "MEMBER_ENTITLEMENT", "REPORT", "LINE", "PAYMENT"],
+  "validation_scope": "ISOLATED_CONTROLS_NOT_NATURAL_FORWARD_OR_INVESTMENT_PERFORMANCE",
+  "production_learning_release_go": false,
+  "retained_source_aggregate_checked_at": "2026-10-20T04:13:56.965604Z",
+  "retained_source_observation": {
+    "scope": "READONLY_DATABASE_AGGREGATES_NOT_RAW_EVIDENCE_OR_LICENSE_APPROVAL",
+    "acquired_dates_observed": ["2026-10-19", "2026-10-20"],
+    "on_20261020": {
+      "directory": {"receipts": 2, "rows": 72},
+      "price": {"receipts": 647, "rows": 12403},
+      "otc_price": {"receipts": 177, "rows": 1947},
+      "benchmark": {"receipts": 11, "rows": 212},
+      "revenue": {"receipts": 72, "rows": 2592},
+      "institutional": {"receipts": 40, "rows": 1440},
+      "financial_ytd": {"receipts": 19, "rows": 648, "symbols": 72, "basis": "AS_REPORTED_YTD", "requested_period_from": "2024-Q2", "requested_period_through": "2026-Q2", "source_period_validation": "REQUEST_TASK_LABEL_NOT_VERIFIED_OFFICIAL_PERIOD", "published_at_present": 0, "eps_key_present": 648, "numeric_eps_values": 648, "numeric_revenue_each_requested_period": 65, "symbols_each_requested_period": 72},
+      "cashflow_ytd": {"receipts": 19, "rows": 648, "symbols": 72, "basis": "AS_REPORTED_YTD", "published_at_present": 0},
+      "event": {"receipts": 144, "rows": 575, "empty_receipts": 42},
+      "action": {"receipts": 6, "rows": 79, "empty_receipts": 4}
+    },
+    "quarterly_actual_or_research_qualified_claimed": false,
+    "raw_hash_receipt_count_is_report_or_recommendation_acceptance": false
+  },
+  "learning_source_readback": {"matched": 20, "total": 20, "base": "7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3"},
+  "learning_rollback_blocker": null,
+  "exact_payloads": {"worker_candidate": "565d67d93f1ec7cd2c5a9f14f1d226bbd5c287f0109d5df765e5e5899ef81dba", "worker_recovery": "34a0fe4a0b17dc56a72c43d7687738047b59d695ae1bbda676b85f321d9c0762", "learning_candidate": "cc26e4fe4a83b2e3d0a2374f4380a6c14af309d7444f19f33905674e261f7004", "learning_recovery": "dbda560ebd0c80281f6f5fea98420ef2f64406312b08d31c0118b6c272526636", "learning_files": 67, "sdk": "2.57.4", "recovery_is_original_eszip_bit_identical": false},
+  "isolated_checks": {"outcome_cache_controls": 13, "continuous_update_controls": 4, "original_runtime_controls": 45, "learning_core_controls": 8, "temporal_learning_controls": 12, "closing_learning_contract_controls": 22, "runtime_learning_closing_total_pass": 104, "payload_admission_integration_total_pass": 32, "failed": 0, "skipped": 0, "type_check": "PASS", "lint": "PASS", "build": "PASS", "diff_check": "PASS", "fresh_postgres_postgrest_http": "PASS", "runtime_force_rls_tables": 8, "owned_db_container_network_residue": 0},
+  "new_learning_rule_promotion": "HOLD_UNTIL_VERSION_SCOPED_PRODUCTION_CONSUMER_REVIEW_AND_OWNER_APPROVAL",
+  "formal_v1_evaluated": 0,
+  "formal_v1_universe": 72,
+  "full_stock_delivery": false,
+  "payment": "DISABLED",
+  "commercial_stability": "0/5_NOT_AUTOMATICALLY_CREDITED"
+}

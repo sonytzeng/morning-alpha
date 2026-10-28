@@ -20,7 +20,7 @@ jobs:
         run: npm ci
       - env:
           NODE_OPTIONS: --experimental-strip-types
-        run: node --experimental-strip-types --test tests/vnextContracts.test.mjs tests/vnextValidation.test.mjs tests/vnextRealEvidence.test.mjs tests/vnextFoundation.test.mjs tests/vnextMember.test.mjs tests/vnextPublication.test.mjs tests/vnextResearchFunnel.test.mjs tests/vnextStockResearch.test.mjs tests/vnextPublicationReview.test.mjs tests/vnextAdmission.test.mjs tests/vnextBlockers.test.mjs tests/vnextClearance.test.mjs tests/vnextDailyIntelligence.test.mjs
+        run: node --experimental-strip-types --test tests/vnextContracts.test.mjs tests/vnextValidation.test.mjs tests/vnextRealEvidence.test.mjs tests/vnextFoundation.test.mjs tests/vnextMember.test.mjs tests/vnextPublication.test.mjs tests/vnextResearchFunnel.test.mjs tests/vnextStockResearch.test.mjs tests/vnextPublicationReview.test.mjs tests/vnextAdmission.test.mjs tests/vnextBlockers.test.mjs tests/vnextClearance.test.mjs tests/vnextDailyIntelligence.test.mjs tests/vnextRetainedQuarterFinancials.test.mjs
       - name: Exact current hash ownership, strict Canonical receipt and acquisition trace controls
         env:
           NODE_OPTIONS: --experimental-strip-types

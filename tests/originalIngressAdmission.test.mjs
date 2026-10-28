@@ -1113,7 +1113,10 @@ test('R15 pins only private market JSONB and snapshot deltas over the unchanged 
   'tests/recommendationMarketInstitutionalCandidate.test.mjs','tests/recommendationMarketInstitutionalDatabase.integration.mjs']);
  for(const row of r.files){
   const original=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R15_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
-  assert.equal(integrationHash(original),row.before_sha256);assert.equal(integrationHash(integrationPhysicalRead(row.path)),row.after_sha256);
+  const current=RUNTIME_INTEGRITY_FILES.find(file=>file.path===row.path);
+  assert.equal(integrationHash(original),row.before_sha256);
+  if(current)assert.equal(current.before_sha256,row.after_sha256,'runtime replacement starts at the immutable R15 source');
+  assert.equal(integrationHash(integrationPhysicalRead(row.path)),current?.after_sha256??row.after_sha256);
   assert.equal(integrationPhysicalMode(row.path),row.mode);assert(!SOURCE_UNION_SUPPORT.includes(row.path));
  }
  for(const flag of ['source_admission','canonical_admission','quality_approval','rights_gate_changed','publication_approval','production_authorized','thresholds_changed','existing_release_payloads_changed'])assert.equal(r[flag],false);
@@ -1135,7 +1138,7 @@ test('R15 denies rehashed market sources, frozen-root changes, missing paths, mo
   const f=fixture();change(f.manifest.source_union.r15);f.reseal();assert.throws(f.verify,/LINEAGE_DRIFT/);
  }
 });
-test('Runtime integrity preserves all 83 R15 admission assertions; eighteen explicit binding and nested preservation views adapt',()=>{
+test('Runtime integrity preserves all 83 R15 admission assertions; twenty-one explicit binding and nested preservation views adapt',()=>{
  const adapted=new Set([
   'R7 admits only the existing private refresh caller, its controls and current Master over frozen R6',
   'R3 CI runs full admission before fixed Python controls, capacity negatives and current evaluator regressions',
@@ -1157,7 +1160,7 @@ test('Runtime integrity preserves all 83 R15 admission assertions; eighteen expl
   'R15 pins only private market JSONB and snapshot deltas over the unchanged full R14 tree',
   'current union preserves the7986 four-source Worker packet, never mixing original contracts/engine',
   'R5 CI pins Deno2.9.2 and fully type-checks the exact research source offline after admission',
-  'Runtime integrity preserves all 83 R15 admission assertions; eighteen explicit binding and nested preservation views adapt',
+  'Runtime integrity preserves all 83 R15 admission assertions; twenty-one explicit binding and nested preservation views adapt',
  ]);
  const bodies=text=>{const starts=[...text.matchAll(/^test\('([^']+)'/gm)];return new Map(starts.map((r,i)=>[r[1],text.slice(r.index,starts[i+1]?.index??text.length).trimEnd()]));};
  let count=0;const changed=new Set();
@@ -1166,7 +1169,7 @@ test('Runtime integrity preserves all 83 R15 admission assertions; eighteen expl
   const before=bodies(old),after=bodies(integrationPhysicalRead(path).toString());count+=before.size;
   for(const [name,body]of before){
    const activeName=name==='R15 preserves all 80 R14 admission assertions; only eight explicit current inventory views adapt'
-    ?'Runtime integrity preserves all 83 R15 admission assertions; eighteen explicit binding and nested preservation views adapt':name;
+    ?'Runtime integrity preserves all 83 R15 admission assertions; twenty-one explicit binding and nested preservation views adapt':name;
    const current=after.get(activeName);assert(current,'R15 assertion retained: '+name);
    if(current!==body)changed.add(activeName);
    if(!adapted.has(activeName))assert.equal(current,body,'R15 assertion body unchanged: '+name);

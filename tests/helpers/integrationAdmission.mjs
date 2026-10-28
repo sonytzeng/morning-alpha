@@ -190,7 +190,9 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "mode": "100644",
   "before_sha256": "14b78b0e766b5d2a50ae1c3b13595822a671ee4496ca7d2525442dcfce017bec",
   "after_sha256": "47fa6bce59e1638c1dc9ef42b4e06a35ab0556a2c8466b96b6ff9c65940389aa"
- }
+ },
+ {"path":"supabase/functions/_shared/recommendation-market-institutional-candidate.ts","mode":"100644","before_sha256":"77a6a2c4dbbad3766d869f531b7c77901ce6c07a0c491f2e6eacd2b9be6a11bf","after_sha256":"b8332b244d660cce6ef0df73046396869d6f2ebb325182dbbf0e2ccaf7203c6e"},
+ {"path":"tests/recommendationMarketInstitutionalCandidate.test.mjs","mode":"100644","before_sha256":"4ca93ba39923bab3b7e1fca20f6c6f18b2ec8ab4193d338beea56f2b7cef4064","after_sha256":"a4c7eabeb892f41bd621f6a397b7c22d11b231286d28ea1a4ff6769c023a690f"}
 ].map(Object.freeze));
 export const FROZEN_SOURCE_UNION_R14='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r14.json';
 export const SOURCE_UNION_R15_BASE='9ca773b354f257d997f1c3c4e42290f412192344';
@@ -999,7 +1001,7 @@ export function runtimeIntegrityLineage(){
  assert.equal(root?.sha256,prior_root.sha256,'RUNTIME_PRIOR_ROOT_DRIFT');assert.equal(root?.mode,'100644');
  const old=JSON.parse(root.bytes);assert.equal(old.files.length,538,'RUNTIME_PRIOR_FULL_SCOPE');
  assert.deepEqual(old.source_union.r15,sourceUnionR15Lineage(),'RUNTIME_PRIOR_LINEAGE_DRIFT');
- assert.equal(RUNTIME_INTEGRITY_FILES.length,29);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,29);
+ assert.equal(RUNTIME_INTEGRITY_FILES.length,31);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,31);
  for(const row of RUNTIME_INTEGRITY_FILES){
   assert(!SOURCE_UNION_SUPPORT.includes(row.path));const before=unionBlob(RUNTIME_INTEGRITY_BASE,row.path);
   assert.equal(before?.sha256??null,row.before_sha256,'RUNTIME_BEFORE_SOURCE_DRIFT:'+row.path);

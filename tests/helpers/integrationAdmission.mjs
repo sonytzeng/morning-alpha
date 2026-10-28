@@ -27,7 +27,7 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "path": ".github/workflows/vnext-candidate.yml",
   "mode": "100644",
   "before_sha256": "727be694755623b7f0c53a5b59b835cc71e412a95fe4b6ca0acb7005a53b1e04",
-  "after_sha256": "0aac7753cedea279479105cdb46cffbaaa962187edbc0ccc033b23a417cf6111"
+  "after_sha256": "ef0fab19e1d265f7ccea8349c70c401966790d05d5547dcc862cd13783db603f"
  },
  {
   "path": "scripts/operations/financial-response-period-20261020/materialize.mjs",

@@ -1,7 +1,7 @@
 name: VNext research candidate
 on:
   pull_request:
-    branches: [main, codex/member-main-integration-20261015]
+    branches: [main, codex/member-main-integration-20261015, codex/official-source-wiring-20261020]
 permissions:
   contents: read
 jobs:

@@ -142,7 +142,7 @@
     {
       "path": ".github/workflows/vnext-candidate.yml",
       "before_sha256": null,
-      "after_sha256": "0aac7753cedea279479105cdb46cffbaaa962187edbc0ccc033b23a417cf6111",
+      "after_sha256": "ef0fab19e1d265f7ccea8349c70c401966790d05d5547dcc862cd13783db603f",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2928,7 +2928,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "1d9ffca99df2d7ec3611a1a588f49af8f29d18826e1e0bc67ef06baa56c57cf7",
+      "after_sha256": "249a3c41ca22d0ea6fdc9ab4f576f65b7bd1d4a81ad0152b90b695e149cef3fc",
       "mode": "100644",
       "origin": "composition"
     },
@@ -4653,7 +4653,7 @@
           "path": ".github/workflows/vnext-candidate.yml",
           "mode": "100644",
           "before_sha256": "727be694755623b7f0c53a5b59b835cc71e412a95fe4b6ca0acb7005a53b1e04",
-          "after_sha256": "0aac7753cedea279479105cdb46cffbaaa962187edbc0ccc033b23a417cf6111"
+          "after_sha256": "ef0fab19e1d265f7ccea8349c70c401966790d05d5547dcc862cd13783db603f"
         },
         {
           "path": "scripts/operations/financial-response-period-20261020/materialize.mjs",

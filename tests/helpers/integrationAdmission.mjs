@@ -81,7 +81,7 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "path": "src/features/vnext/contracts.ts",
   "mode": "100644",
   "before_sha256": "475e7bfc07ccc46c8b66c4f7e2e54bae1b99686df71b4b0a749276c41b2c0d73",
-  "after_sha256": "2730b5f6827287320ebe9aa3af1e1135aa7430363a506c7ded34391da8b1dfea"
+  "after_sha256": "32195b3a1cd1b060324a403c9adf2109399f0d30cdbe829d5a0493f4af8a8068"
  },
  {
   "path": "src/features/vnext/dailyRuntime.ts",
@@ -93,7 +93,7 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "path": "tests/vnextSharedPreimage.test.mjs",
   "mode": "100644",
   "before_sha256": null,
-  "after_sha256": "90ec5754f94720bbe2f43957c03960ceb95413a4fd224054a01426795ec91fd6"
+  "after_sha256": "b20c0b799edff3f0f3af2d765e09bb76f84bf0f22f013d47379b21f0bc8bf497"
  },
  {
   "path": "tests/vnextAcquisitionHandoff.test.mjs",

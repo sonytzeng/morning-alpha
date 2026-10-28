@@ -269,3 +269,70 @@ test('a failed handoff is attempted only once, with no inline FINISH or provider
   leaseUntil:new Date(clock.now+100000).toISOString(),finishError:'DATABASE_RPC_REJECTED',advanceSleep:clock.advance,continuationError:'VNEXT_CONTINUATION_HTTP_503'});
  assert.equal(a.continuations.length,1);assert.equal(a.calls.filter(c=>c.op==='FINISH').length,1);assert.equal(a.http.length,0);assert.equal(a.locked.length,0);
 });
+
+// Cached/exhausted RPC work is bounded independently of provider fetches.
+const id='00000000-0000-4000-8000-000000000001';
+function cachedAcquisitionFixture({cursor=0,total=1358,mode='CACHE',clock='2026-10-28T00:00:00Z'}={}){
+ const plan=Array.from({length:total},(_,i)=>({key:'task-'+i,kind:'PRICE',url:'https://www.twse.com.tw/test/'+i,format:'json',scope:'TEST',symbols:['2330'],max_age_days:7}));
+ const run={id,business_date:'2026-10-28',actionable_at:'2026-10-28T01:00:00Z',lease:'test',fence:0,plan,checkpoint:{},cursor};
+ const sourceCalls=[],cursorWrites=[],finishWrites=[],other=[];
+ const companies=RECOMMENDATION_UNIVERSE.map((symbol,i)=>({symbol,company:'Synthetic '+symbol,industry:'TEST',exchange:i<61?'TWSE':'TPEX'}));
+ const ports={clock:()=>clock,sleep:async()=>{},fetcher:()=>{throw Error('NETWORK_FORBIDDEN');},rpc:async(name,args)=>{
+  if(name==='claim_vnext_daily_research_v1'){run.fence++;return {status:'ACQUIRED',run:structuredClone({...run,lease_until:new Date(Date.now()+99000).toISOString()})};}
+  assert.equal(name,'vnext_daily_runtime_v1');assert.equal(args.p_fence,run.fence);
+  const op=args.p_op,d=args.p_data;
+  if(op==='DUE_OUTCOMES')return [];
+  if(op==='SOURCE_BEGIN'){
+   if(d.kind==='DIRECTORY')return {status:'CACHE',receipt:{status:'OK',task:d,payload:{rows:companies.filter(c=>c.exchange===d.exchange)}}};
+   sourceCalls.push(d.key);
+   if(mode==='WAIT_RETRY')return {status:mode,retry_at:'2026-10-28T00:01:00Z'};
+   return mode==='CACHE'?{status:mode,receipt:{status:'OK',task:d,payload:{rows:[]}}}:{status:mode};
+  }
+  if(op==='CURSOR'){assert.equal(d.cursor,run.cursor+1);run.cursor=d.cursor;cursorWrites.push(d.cursor);return {status:'STORED'};}
+  if(op==='FINISH'){finishWrites.push(d);return {status:'STORED'};}
+  if(op==='SOURCES'){other.push(op);return [];}
+  if(op==='ENTRY_SOURCE'){other.push(op);return {};}
+  throw Error('UNEXPECTED_'+op);
+ }};
+ return {run,ports,sourceCalls,cursorWrites,finishWrites,other};
+}
+test('bounded cached acquisition: cached acquisition yields after bounded work with a durable cursor and no evaluation writes',async()=>{
+ const f=cachedAcquisitionFixture();const result=await workDailyRun(id,f.ports);
+ assert.equal(result.reason,'ACQUISITION_CONTINUATION');assert.equal(result.continue,true);
+ assert.equal(f.run.cursor,32);assert.equal(f.sourceCalls.length,32);assert.deepEqual(f.other,[]);
+ assert.deepEqual(f.finishWrites,[{status:'QUEUED',reason:'ACQUISITION_CONTINUATION'}]);
+});
+test('bounded cached acquisition: successive leases resume at the saved cursor without refetching or skipping cached tasks',async()=>{
+ const f=cachedAcquisitionFixture({cursor:1239});await workDailyRun(id,f.ports);await workDailyRun(id,f.ports);
+ assert.equal(f.run.cursor,1303);assert.equal(new Set(f.sourceCalls).size,64);
+ assert.deepEqual(f.sourceCalls,Array.from({length:64},(_,i)=>'task-'+(1239+i)));
+ assert.deepEqual(f.cursorWrites,Array.from({length:64},(_,i)=>1240+i));
+ assert.equal(f.run.actionable_at,'2026-10-28T01:00:00Z');assert.deepEqual(f.run.checkpoint,{});
+});
+test('bounded cached acquisition: exhausted source tasks also yield instead of permitting unbounded cache-free traversal',async()=>{
+ const f=cachedAcquisitionFixture({mode:'EXHAUSTED'});const result=await workDailyRun(id,f.ports);
+ assert.equal(result.reason,'ACQUISITION_CONTINUATION');assert.equal(f.run.cursor,32);assert.equal(f.sourceCalls.length,32);
+});
+test('bounded cached acquisition: provider retry deadline remains authoritative and does not advance the cursor',async()=>{
+ const f=cachedAcquisitionFixture({cursor:1239,mode:'WAIT_RETRY'});const result=await workDailyRun(id,f.ports);
+ assert.equal(result.reason,'SOURCE_RETRY_PENDING');assert.equal(result.retry_after_seconds,60);assert.equal(f.run.cursor,1239);
+ assert.deepEqual(f.cursorWrites,[]);assert.equal(f.sourceCalls.length,1);
+});
+test('bounded cached acquisition: the 180-second Forward preparation window still takes priority over acquisition batching',async()=>{
+ const f=cachedAcquisitionFixture({cursor:1239,clock:'2026-10-28T00:57:00Z'});const result=await workDailyRun(id,f.ports);
+ assert.equal(result.reason,'CANONICAL_PUBLICATION_PENDING');assert.equal(result.retry_after_seconds,30);
+ assert.equal(f.run.cursor,1239);assert.deepEqual(f.sourceCalls,[]);assert.deepEqual(f.other,['SOURCES','ENTRY_SOURCE']);
+});
+test('bounded cached acquisition: final task at the batch boundary proceeds to Canonical without a redundant lease',async()=>{
+ const f=cachedAcquisitionFixture({cursor:1326});const result=await workDailyRun(id,f.ports);
+ assert.equal(f.run.cursor,1358);assert.equal(f.sourceCalls.length,32);
+ assert.equal(result.reason,'CANONICAL_PUBLICATION_PENDING');assert.equal(result.retry_after_seconds,30);
+ assert.deepEqual(f.other,['SOURCES','ENTRY_SOURCE']);
+});
+test('bounded cached acquisition: a fully cached late plan drains without creating or backdating predictions',async()=>{
+ const f=cachedAcquisitionFixture({cursor:1239,clock:'2026-10-28T01:01:00Z'});let result,leases=0;
+ while(f.run.cursor<1358){assert(leases<4);result=await workDailyRun(id,f.ports);leases++;}
+ assert.equal(leases,4);assert.equal(f.sourceCalls.length,119);assert.equal(new Set(f.sourceCalls).size,119);
+ assert.equal(result.status,'EXPIRED');assert.equal(result.reason,'LATE_ACQUISITION_NOT_FORWARD');
+ assert.equal(result.continue,false);assert.deepEqual(f.other,[]);assert.deepEqual(f.run.checkpoint,{});
+});

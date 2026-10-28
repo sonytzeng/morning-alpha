@@ -229,10 +229,16 @@ for(const [label,reason,mutate]of[
 test('acquired but unprepared checkpoint cannot stall legal cold bootstrap after cutoff',async t=>{
  const h=harness(t,{at:date+'T00:59:58.000Z',plan:fullPlan,allRetained:true});
  const a=await h.invoke(),acquired=assertAcquiredPin(h,a);assert(acquired);assert.equal(h.run.cursor,0);
- h.advance(3000);const b=await h.invoke();assert(Date.parse(h.clock())>=Date.parse(actionable));
- assert.equal(b.result.status,'EXPIRED');assert.equal(h.run.cursor,fullPlan.length);
- assert.equal(h.committed.size,0);assertAcquiredReuse(h,acquired,b);
- assert(!b.calls.some(c=>['SOURCES','ENTRY_SOURCE','CHECKPOINT','PREDICTIONS'].includes(c.op)));
+ h.advance(3000);let leases=0;
+ while(h.run.cursor<fullPlan.length){
+  assert(leases<Math.ceil(fullPlan.length/32));const cursor=h.run.cursor,b=await h.invoke();leases++;
+  assert(Date.parse(h.clock())>=Date.parse(actionable));assert.equal(h.run.cursor,Math.min(cursor+32,fullPlan.length));
+  assert.equal(b.result.status,h.run.cursor===fullPlan.length?'EXPIRED':'QUEUED');
+  assert.equal(b.result.reason,h.run.cursor===fullPlan.length?'LATE_ACQUISITION_NOT_FORWARD':'ACQUISITION_CONTINUATION');
+  assert.equal(h.committed.size,0);assertAcquiredReuse(h,acquired,b);
+  assert(!b.calls.some(c=>['SOURCES','ENTRY_SOURCE','CHECKPOINT','PREDICTIONS'].includes(c.op)));
+ }
+ assert.equal(leases,Math.ceil(fullPlan.length/32));
 });
 
 test('invocation resource exhaustion is queued, not mislabeled business expiry',async t=>{

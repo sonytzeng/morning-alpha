@@ -17,6 +17,9 @@ const failure=(e:unknown)=>{const msg=e instanceof Error?e.message:'';return /^[
 // RPC/CPU latency is not guaranteed: recheck at each durable stage boundary and
 // leave SQL's current-time veto authoritative for a delayed prediction insert.
 const FORWARD_PREPARE_MS=180000,ASSEMBLY_ADMISSION_MS=45000,STAGE_RESERVE_MS=20000,WRITE_RESERVE_MS=5000;
+// Cached and exhausted tasks consume RPC/JSON CPU too. Bound their traversal
+// independently of the existing eight-provider-fetch and wall-clock budgets.
+const ACQUISITION_TASKS_PER_INVOCATION=32;
 export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
  const claimStarted=Date.now();
  const claim=object(await p.rpc('claim_vnext_daily_research_v1',{p_run:id}));if(claim.status!=='ACQUIRED')return {status:String(claim.status),continue:false};
@@ -91,12 +94,12 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   const retainedAcquired='acquired' in r.checkpoint?r.checkpoint.acquired:undefined;
   const resumePrepared=hasLock&&'key' in r.checkpoint&&r.checkpoint.finished!==true
    &&new Date(Date.parse(p.clock())+8*3600000).toISOString().slice(0,10)===r.business_date;
-  for(let i=r.cursor;i<plan.length&&due.length===0&&!resumePrepared&&(!retainedAcquired||hasLock||Date.parse(p.clock())>=actionable);i++){
+  for(let i=r.cursor,processed=0;i<plan.length&&due.length===0&&!resumePrepared&&(!retainedAcquired||hasLock||Date.parse(p.clock())>=actionable);i++,processed++){
    // Lock a truthful partial-evidence evaluation before the existing 09:00
    // deadline. Long-history bootstrap may continue; never backdate its receipts.
    const current=Date.parse(p.clock());
    if(!hasLock&&current>=actionable-FORWARD_PREPARE_MS&&current<actionable)break;
-   if(Date.now()+14000>=deadline||fetched>=8)return finish('QUEUED','ACQUISITION_CONTINUATION');
+   if(processed>=ACQUISITION_TASKS_PER_INVOCATION||Date.now()+14000>=deadline||fetched>=8)return finish('QUEUED','ACQUISITION_CONTINUATION');
    const receipt=await collect(plan[i]);if(receipt===false)return finish('QUEUED','SOURCE_RETRY_PENDING');
    await rpc('CURSOR',{cursor:i+1});cursor=i+1;
   }

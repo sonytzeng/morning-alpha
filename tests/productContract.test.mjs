@@ -16,7 +16,8 @@ import { entryAuthTransition } from './helpers/entryWorkerAuthIntegrity.mjs';
 import { cockpitTransition } from './helpers/ownerCockpitIntegrity.mjs';
 import { academyV11Transition } from './helpers/academyV11Integrity.mjs';
 import { newsReportTransition } from './helpers/marketNewsReportIntegrity.mjs';
-import { vnextTransition } from './helpers/vnextIntegrity.mjs';
+import { vnextTransition, vnextPrior } from './helpers/vnextIntegrity.mjs';
+import { verifyIntegrationCandidate } from './helpers/integrationAdmission.mjs';
 
 test('Core freeze plus explicitly authorized 9/8 incident: unapproved producers, Cron and canonical readers unchanged', () => {
   // Read-side get-report-payload and exactly two new evidence modules are the
@@ -42,6 +43,12 @@ test('Core freeze plus explicitly authorized 9/8 incident: unapproved producers,
   const vnext=vnextTransition(); // Exact live hashes/scope checked before ADD exclusion.
   const successorAdditions=new Set([...successor.manifest.files,...hardGate.manifest.files,...worker.manifest.files,...promotion.manifest.files,...ownerBackend.manifest.files,...marketNews.manifest.files,...entry.manifest.files,...entryAuth.manifest.files,...cockpit.manifest.files,...academyV11.manifest.files,...newsReport.manifest.files.map(r=>({...r,operation:r.before_sha256===null?'ADD':'MODIFY'}))].filter(r=>r.operation==='ADD').map(r=>r.path));
   for(const row of vnext.manifest.files)if(row.before_sha256===null)successorAdditions.add(row.path);
+  // The current composition includes later Core and runtime additions which
+  // never existed in the immutable member predecessor. Admit every current
+  // byte first, then prove absence at the fixed VNext baseline. Do not infer
+  // absence from a failed historical read or silently skip an unknown file.
+  const composition=verifyIntegrationCandidate();
+  for(const row of composition.files)if(vnextPrior(row.path)===null)successorAdditions.add(row.path);
   const files = execFileSync('git',['ls-files','supabase','.github/workflows','src/lib/decisionEvidence.ts','src/lib/runtimeDecisionTimeline.ts','src/services/resolveActiveReport.ts'],{encoding:'utf8'}).trim().split('\n').filter(f=>!approved.has(f)&&!subscriberApproval.newCandidatePaths.includes(f)&&!successorAdditions.has(f));
   const hash = createHash('sha256');
   for(const row of incident.files)assert.equal(createHash('sha256').update(promotion.predecessorRead(row.path)).digest('hex'),subscriberApproval.fileHash(row),row.path);

@@ -18,6 +18,12 @@ export const FROZEN_SOURCE_UNION_R15='docs/operations/evidence/core-member-integ
 export const RUNTIME_INTEGRITY_BASE='c50b09ba7c122dc0d2e32082e85764cf3250b806';
 export const RUNTIME_INTEGRITY_FILES=Object.freeze([
  {
+ "path": "tests/productContract.test.mjs",
+ "mode": "100644",
+ "before_sha256": "04372d65109e49c7b58336574eb1627c851b051b8cd2991539f145efefd6f420",
+ "after_sha256": "a5d1ff284f7e74ebd5ca94490fd749df14a3d0104dd29167210d12facd644ee7"
+},
+ {
   "path": ".github/workflows/core-evidence-candidate.yml",
   "mode": "100644",
   "before_sha256": "c84207a483c3d53a1a96c2e67700c034b918fbb214e830cd9fc7e271362d8451",
@@ -1089,7 +1095,7 @@ export function runtimeIntegrityLineage(){
  assert.equal(root?.sha256,prior_root.sha256,'RUNTIME_PRIOR_ROOT_DRIFT');assert.equal(root?.mode,'100644');
  const old=JSON.parse(root.bytes);assert.equal(old.files.length,538,'RUNTIME_PRIOR_FULL_SCOPE');
  assert.deepEqual(old.source_union.r15,sourceUnionR15Lineage(),'RUNTIME_PRIOR_LINEAGE_DRIFT');
- assert.equal(RUNTIME_INTEGRITY_FILES.length,44);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,44);
+ assert.equal(RUNTIME_INTEGRITY_FILES.length,45);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,45);
  for(const row of RUNTIME_INTEGRITY_FILES){
   assert(!SOURCE_UNION_SUPPORT.includes(row.path));const before=unionBlob(RUNTIME_INTEGRITY_BASE,row.path);
   assert.equal(before?.sha256??null,row.before_sha256,'RUNTIME_BEFORE_SOURCE_DRIFT:'+row.path);

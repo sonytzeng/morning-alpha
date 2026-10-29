@@ -2956,7 +2956,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "f277653b1c73101430ad2475065b92d179ab6b3b119235b91843de5f11c4e26b",
+      "after_sha256": "f6a1e7be33f22065a054e0bd2d6f71a3820999d75413a07760f5bae1b836be1c",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3215,9 +3215,9 @@
     {
       "path": "tests/productContract.test.mjs",
       "before_sha256": "57c667f0dc0ad5556212cb285d132c6c4b8d219a08b8bfd567143473a6df8d54",
-      "after_sha256": "04372d65109e49c7b58336574eb1627c851b051b8cd2991539f145efefd6f420",
+      "after_sha256": "a5d1ff284f7e74ebd5ca94490fd749df14a3d0104dd29167210d12facd644ee7",
       "mode": "100644",
-      "origin": "member"
+      "origin": "composition"
     },
     {
       "path": "tests/providerCapabilityClaimDatabase.integration.mjs",
@@ -4671,6 +4671,12 @@
         "sha256": "6c28e2c50a7ba444ba3b9b2f7386b2779eaed5166eb8adabc90f1ea0d41cf458"
       },
       "files": [
+        {
+          "path": "tests/productContract.test.mjs",
+          "mode": "100644",
+          "before_sha256": "04372d65109e49c7b58336574eb1627c851b051b8cd2991539f145efefd6f420",
+          "after_sha256": "a5d1ff284f7e74ebd5ca94490fd749df14a3d0104dd29167210d12facd644ee7"
+        },
         {
           "path": ".github/workflows/core-evidence-candidate.yml",
           "mode": "100644",

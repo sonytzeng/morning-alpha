@@ -256,6 +256,30 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "mode": "100644",
   "before_sha256": "93719393e732a22b2be449da3c2667842133cc6b9cd260295a1bc6b4a025f2b9",
   "after_sha256": "e4fbd780ddabad82d7b1058980b00729e7b1987e7427bee8bbfedbce9bc3d693"
+ },
+ {
+  "path": "src/features/research/cockpit.ts",
+  "mode": "100644",
+  "before_sha256": "5fcbb18d73af49674914de59fd1c3f88eda62d8be98e83af0a072d343f38ea65",
+  "after_sha256": "b69eec441785b7eadcae5561fb93973c637caa020288bf3a5c2c31123e23d068"
+ },
+ {
+  "path": "src/pages/admin/analysis/OwnerCockpit.tsx",
+  "mode": "100644",
+  "before_sha256": "45ce7e4e776b9ffb7250b7603255928f839d8e8bb27c30b11afdc19f383e29fd",
+  "after_sha256": "8d3609d68b6045205a39d10c19477544765558204e54222a21b288d4df05be70"
+ },
+ {
+  "path": "tests/ownerCockpit.test.mjs",
+  "mode": "100644",
+  "before_sha256": "2eb47cb345b6edc91248d859f5ffdaa248454208b26bb5ac1e8431e7bbf25cec",
+  "after_sha256": "f36f853fdcbd555e46fd8d5d472d714081b27285efc6d22bf025af197e1564c5"
+ },
+ {
+  "path": "tests/browser/ownerCockpitSupabaseMock.ts",
+  "mode": "100644",
+  "before_sha256": "8d7aeff2c25fe152a5b169da50d4f6aea6a341061e9fd3de0abadb5d14e4029e",
+  "after_sha256": "0f7477c3f09758ac90a1046ece6e1283f3b4d44b4298a4e9b0a1fac7f87a62f2"
  }
 ].map(Object.freeze));
 export const FROZEN_SOURCE_UNION_R14='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r14.json';
@@ -1065,7 +1089,7 @@ export function runtimeIntegrityLineage(){
  assert.equal(root?.sha256,prior_root.sha256,'RUNTIME_PRIOR_ROOT_DRIFT');assert.equal(root?.mode,'100644');
  const old=JSON.parse(root.bytes);assert.equal(old.files.length,538,'RUNTIME_PRIOR_FULL_SCOPE');
  assert.deepEqual(old.source_union.r15,sourceUnionR15Lineage(),'RUNTIME_PRIOR_LINEAGE_DRIFT');
- assert.equal(RUNTIME_INTEGRITY_FILES.length,40);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,40);
+ assert.equal(RUNTIME_INTEGRITY_FILES.length,44);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,44);
  for(const row of RUNTIME_INTEGRITY_FILES){
   assert(!SOURCE_UNION_SUPPORT.includes(row.path));const before=unionBlob(RUNTIME_INTEGRITY_BASE,row.path);
   assert.equal(before?.sha256??null,row.before_sha256,'RUNTIME_BEFORE_SOURCE_DRIFT:'+row.path);

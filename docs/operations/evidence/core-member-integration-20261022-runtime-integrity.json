@@ -1738,7 +1738,7 @@
     {
       "path": "src/features/research/cockpit.ts",
       "before_sha256": "1e18dab897e2b56ee434dc31c1d2e6cf4e93a0988cdf82f68e07e4ec2804e961",
-      "after_sha256": "5fcbb18d73af49674914de59fd1c3f88eda62d8be98e83af0a072d343f38ea65",
+      "after_sha256": "b69eec441785b7eadcae5561fb93973c637caa020288bf3a5c2c31123e23d068",
       "mode": "100644",
       "origin": "composition"
     },
@@ -1927,7 +1927,7 @@
     {
       "path": "src/pages/admin/analysis/OwnerCockpit.tsx",
       "before_sha256": "68637a4827c5d13b0216d46191ac516c5bdf6e4eebd6b7141718b857c2cc7020",
-      "after_sha256": "45ce7e4e776b9ffb7250b7603255928f839d8e8bb27c30b11afdc19f383e29fd",
+      "after_sha256": "8d3609d68b6045205a39d10c19477544765558204e54222a21b288d4df05be70",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2730,6 +2730,13 @@
       "origin": "member"
     },
     {
+      "path": "tests/browser/ownerCockpitSupabaseMock.ts",
+      "before_sha256": "8d7aeff2c25fe152a5b169da50d4f6aea6a341061e9fd3de0abadb5d14e4029e",
+      "after_sha256": "0f7477c3f09758ac90a1046ece6e1283f3b4d44b4298a4e9b0a1fac7f87a62f2",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "tests/browser/vnext.client.ts",
       "before_sha256": null,
       "after_sha256": "389f78ffae1f70ccf2ab099fdaf9bbe147f838d1095270805824ec8622f83151",
@@ -2949,7 +2956,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "d67a0b9596ba5711fc88667b6525eea94a1a931ec99f1622aa147b2827ad8ff1",
+      "after_sha256": "f277653b1c73101430ad2475065b92d179ab6b3b119235b91843de5f11c4e26b",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3096,7 +3103,7 @@
     {
       "path": "tests/officialPublicAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "404ac4954da5f8c6c5f273e03c06d4c9e7bd7317db8efa962ccf15a4aee13b57",
+      "after_sha256": "eef33f9933ff801d668fe562585558ef4d2db6d9b14657fb020b5b601038e4d5",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3124,7 +3131,7 @@
     {
       "path": "tests/originalIngressAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "732fda4457ee89a9eb42b90629a748251a136955ecc1ac5beea9dd8f2fab95c1",
+      "after_sha256": "89552e673d254271ce9fa1b8549b9fb0a33e7fb2738348d99d8757e93164bffc",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3138,7 +3145,7 @@
     {
       "path": "tests/ownerCockpit.test.mjs",
       "before_sha256": "b1367752d55f9a88af86a637b0272ec0cae9c5cc53252df8467d6482b470438f",
-      "after_sha256": "2eb47cb345b6edc91248d859f5ffdaa248454208b26bb5ac1e8431e7bbf25cec",
+      "after_sha256": "f36f853fdcbd555e46fd8d5d472d714081b27285efc6d22bf025af197e1564c5",
       "mode": "100644",
       "origin": "composition"
     },
@@ -4903,6 +4910,30 @@
           "mode": "100644",
           "before_sha256": "93719393e732a22b2be449da3c2667842133cc6b9cd260295a1bc6b4a025f2b9",
           "after_sha256": "e4fbd780ddabad82d7b1058980b00729e7b1987e7427bee8bbfedbce9bc3d693"
+        },
+        {
+          "path": "src/features/research/cockpit.ts",
+          "mode": "100644",
+          "before_sha256": "5fcbb18d73af49674914de59fd1c3f88eda62d8be98e83af0a072d343f38ea65",
+          "after_sha256": "b69eec441785b7eadcae5561fb93973c637caa020288bf3a5c2c31123e23d068"
+        },
+        {
+          "path": "src/pages/admin/analysis/OwnerCockpit.tsx",
+          "mode": "100644",
+          "before_sha256": "45ce7e4e776b9ffb7250b7603255928f839d8e8bb27c30b11afdc19f383e29fd",
+          "after_sha256": "8d3609d68b6045205a39d10c19477544765558204e54222a21b288d4df05be70"
+        },
+        {
+          "path": "tests/ownerCockpit.test.mjs",
+          "mode": "100644",
+          "before_sha256": "2eb47cb345b6edc91248d859f5ffdaa248454208b26bb5ac1e8431e7bbf25cec",
+          "after_sha256": "f36f853fdcbd555e46fd8d5d472d714081b27285efc6d22bf025af197e1564c5"
+        },
+        {
+          "path": "tests/browser/ownerCockpitSupabaseMock.ts",
+          "mode": "100644",
+          "before_sha256": "8d7aeff2c25fe152a5b169da50d4f6aea6a341061e9fd3de0abadb5d14e4029e",
+          "after_sha256": "0f7477c3f09758ac90a1046ece6e1283f3b4d44b4298a4e9b0a1fac7f87a62f2"
         }
       ],
       "scope": "OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE_AND_WHOLE_RETAINED_SOURCE_VERSIONS",

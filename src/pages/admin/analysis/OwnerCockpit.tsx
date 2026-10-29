@@ -1,11 +1,11 @@
 import {useEffect,useState,type ReactNode} from 'react';
 import {supabase} from '@/lib/supabase';
 import {readTradingLab,type TradingLabData} from '@/features/research/tradingLab';
-import {cockpitToday,taipeiToday,plainAction,plainRegime,plainEvidence,strategyNames,entryNames,filterResearch,researchStockNames,safePlan,money} from '@/features/research/cockpit';
-import type {EntryEvaluation,EntryResult} from '../../../types/research-source-contracts';
+import {cockpitToday,taipeiToday,plainAction,plainRegime,plainEvidence,strategyNames,entryNames,filterResearch,researchStockNames,safePlan,money,dailyLockedEntry,type CockpitEntry} from '@/features/research/cockpit';
+import type {EntryResult} from '../../../types/research-source-contracts';
 import CockpitJournal from './CockpitJournal';
 import './cockpit.css';
-type ReadData={today_date:string;latest:EntryEvaluation|null;history:EntryEvaluation[];forward_sample:number;outcome_sample:number};
+type ReadData={today_date:string;latest:CockpitEntry|null;history:CockpitEntry[];forward_sample:number;outcome_sample:number};
 function parseEntry(v:unknown):ReadData{const r=v as ReadData&{owner_only:boolean;shadow_only:boolean;production_eligible:boolean};
  if(!r||r.owner_only!==true||r.shadow_only!==true||r.production_eligible!==false||![r.forward_sample,r.outcome_sample].every(n=>Number.isInteger(n)&&n>=0))throw Error('ENTRY_CONTRACT');
  if(r.latest&&(!Array.isArray(r.latest.candidates)||r.latest.candidates.some(c=>!(c.strategy in strategyNames)||!(c.status in entryNames))))throw Error('ENTRY_CONTRACT');return {...r,history:[]};}
@@ -15,12 +15,17 @@ export default function OwnerCockpit({children}:{children:ReactNode}){
  const [error,setError]=useState(''),[loading,setLoading]=useState(true),[clock,setClock]=useState(()=>taipeiToday()),[denied,setDenied]=useState(false);
  useEffect(()=>{let active=true,generation=0;const timer=setInterval(()=>setClock(taipeiToday()),60000);
   const {data:auth}=supabase.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT'||event==='SIGNED_IN'){generation++;if(active){setLab(null);setEntry(null);setCatalogNames({});setDenied(true);}}});const g=generation;
-  void(async()=>{try{const [l,e]=await Promise.all([supabase.functions.invoke('owner-trading-lab-v1',{body:{operation:'READ'}}),supabase.rpc('get_owner_entry_opportunity_v1')]);
+  const requestDate=taipeiToday();
+  void(async()=>{try{const [l,e,d]=await Promise.all([supabase.functions.invoke('owner-trading-lab-v1',{body:{operation:'READ'}}),supabase.rpc('get_owner_entry_opportunity_v1'),supabase.rpc('get_owner_vnext_daily_v1',{p_date:requestDate})]);
    if(!active||g!==generation)return;
-   if(e.error?.code==='42501'){setDenied(true);return;}
+   if(e.error?.code==='42501'||d.error?.code==='42501'){setDenied(true);return;}
    if(!l.error&&!l.data?.error)setLab(readTradingLab(l.data));else setError('今日市場資料暫時無法讀取；不是市場沒有機會。');
    if(e.error){setError('進場研究暫時無法讀取，請稍後再試。');return;}
    const parsed=parseEntry(e.data),h=await supabase.from('entry_opportunity_runs').select('business_date,mode,result').eq('mode','HISTORICAL_REPLAY').order('evaluation_time',{ascending:false}).order('locked_at',{ascending:false}).limit(20);
+   if(d.error)throw Error('DAILY_ENTRY_READ');
+   const natural=await dailyLockedEntry(d.data,requestDate);
+   if(!active||g!==generation||taipeiToday()!==requestDate)return;
+   if(natural&&(!parsed.latest||Date.parse(natural.evaluation_time)>Date.parse(parsed.latest.evaluation_time)))parsed.latest=natural;
    if(!active||g!==generation)return;if(h.error){setError('歷史研究目前無法讀取。');return;}
    const dates=new Set<string>();for(const x of h.data||[]){const r=parseEntry({...e.data,latest:x.result}).latest;if(!r||r.business_date!==x.business_date||r.mode!=='HISTORICAL_REPLAY')throw Error('ENTRY_HISTORY');if(!dates.has(r.business_date)){parsed.history.push(r);dates.add(r.business_date);}}
    setEntry(parsed);

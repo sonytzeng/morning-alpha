@@ -2970,7 +2970,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "715adc3d8a31f216d1f7aa12b143bbe1936e6973a1b5c309c5a44c77cf8d36bb",
+      "after_sha256": "31769df05dacec5809dddb1eff40e6a2f5d3c176fd67ed0d254d5414c751fd83",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3229,7 +3229,7 @@
     {
       "path": "tests/productContract.test.mjs",
       "before_sha256": "57c667f0dc0ad5556212cb285d132c6c4b8d219a08b8bfd567143473a6df8d54",
-      "after_sha256": "a5d1ff284f7e74ebd5ca94490fd749df14a3d0104dd29167210d12facd644ee7",
+      "after_sha256": "2f17ca5fb7e246317734649db4aa5abc7ba1a767aae1c44e9b463632dec4a5b7",
       "mode": "100644",
       "origin": "composition"
     },
@@ -4703,7 +4703,7 @@
           "path": "tests/productContract.test.mjs",
           "mode": "100644",
           "before_sha256": "04372d65109e49c7b58336574eb1627c851b051b8cd2991539f145efefd6f420",
-          "after_sha256": "a5d1ff284f7e74ebd5ca94490fd749df14a3d0104dd29167210d12facd644ee7"
+          "after_sha256": "2f17ca5fb7e246317734649db4aa5abc7ba1a767aae1c44e9b463632dec4a5b7"
         },
         {
           "path": ".github/workflows/core-evidence-candidate.yml",

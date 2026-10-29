@@ -21,7 +21,7 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
  "path": "tests/productContract.test.mjs",
  "mode": "100644",
  "before_sha256": "04372d65109e49c7b58336574eb1627c851b051b8cd2991539f145efefd6f420",
- "after_sha256": "a5d1ff284f7e74ebd5ca94490fd749df14a3d0104dd29167210d12facd644ee7"
+ "after_sha256": "2f17ca5fb7e246317734649db4aa5abc7ba1a767aae1c44e9b463632dec4a5b7"
 },
  {
   "path": ".github/workflows/core-evidence-candidate.yml",

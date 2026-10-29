@@ -73,6 +73,14 @@ try{
  const foundation=read('supabase/migrations/20261004033642_intelligence_foundation_owner_shadow_v1.sql');sql(foundation.slice(foundation.indexOf('create function public.is_research_owner_v1()'),foundation.indexOf('create table public.research_feature_versions')));
  // Apply exact candidate first with actual DB clock: validates real SQL/schema.
  sql(read(migration));checks.push('Fresh DB exact migration applied');
+ const rollback=read('scripts/operations/vnext-checkpoint-state-20261029/runtime-v8-rollback.sql');
+ sql(rollback.split('-- BEGIN EXACT V8 RPC\n')[1].split('-- END EXACT V8 RPC')[0]);
+ const compactMigration=read('supabase/migrations/20261029055349_vnext_compact_checkpoint_state.sql');
+ const acl=sql("select jsonb_build_object('acl',proacl::text,'definer',prosecdef,'config',proconfig) from pg_proc where oid='public.vnext_daily_runtime_v1(uuid,uuid,integer,text,jsonb)'::regprocedure");
+ sql(compactMigration);
+ assert.equal(sql("select jsonb_build_object('acl',proacl::text,'definer',prosecdef,'config',proconfig) from pg_proc where oid='public.vnext_daily_runtime_v1(uuid,uuid,integer,text,jsonb)'::regprocedure"),acl);
+ assert.throws(()=>sql(compactMigration),/CHECKPOINT_STATE_BASELINE_DRIFT/);
+ checks.push('Exact deployed RPC baseline -> guarded compact migration; ACL/definer/search_path preserved; reapply refused');
  const count=sql("select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='vnext_runtime' and c.relkind='r' and c.relrowsecurity and c.relforcerowsecurity");assert.equal(count,'8');
  // Clock injection is exclusively this disposable test database, after exact DDL.
  for(const fname of ['enqueue_vnext_daily_research_v1','claim_vnext_daily_research_v1','vnext_daily_runtime_v1','get_owner_vnext_daily_v1']){
@@ -267,7 +275,12 @@ try{
   assert.equal((await bigOp('SOURCE_BEGIN',task)).status,'FETCH');await bigOp('SOURCE_SAVE',{text:canonical(receipt)});
  }
  const bigAcquired=await fullCapacityAcquired('2026-10-22',at);assert(Buffer.byteLength(JSON.stringify(bigAcquired))>16_000_000);
- await bigOp('PLAN',[bigDirs[0]]);await bigOp('CURSOR',{cursor:1});await bigOp('CHECKPOINT',{acquired:bigAcquired});await bigOp('FINISH',{status:'QUEUED'});
+ await bigOp('PLAN',[bigDirs[0]]);await bigOp('CURSOR',{cursor:1});await bigOp('CHECKPOINT',{acquired:bigAcquired});
+ const initialBigFingerprint=sql(`select md5(checkpoint::text) from vnext_runtime.runs where id='${bigRun.run_id}'`);
+ await assert.rejects(()=>bigOp('CHECKPOINT_STATE',{source_revision:'f'.repeat(64),checkpoint:{}}),/CHECKPOINT_STATE_INVALID/);
+ await assert.rejects(()=>bigOp('CHECKPOINT_STATE',{source_revision:bigAcquired.snapshot_hash,checkpoint:{acquired:bigAcquired}}),/CHECKPOINT_STATE_INVALID/);
+ assert.equal(sql(`select md5(checkpoint::text) from vnext_runtime.runs where id='${bigRun.run_id}'`),initialBigFingerprint);
+ await bigOp('FINISH',{status:'QUEUED'});
  const bigFingerprint=sql(`select md5((checkpoint->'acquired')::text) from vnext_runtime.runs where id='${bigRun.run_id}'`);
  for(const [index,stage] of ['ACQUISITION','RESEARCH','ENTRY'].entries()){
   advance(new Date(Date.parse('2026-10-22T00:58:00Z')+index*3000).toISOString());
@@ -279,18 +292,26 @@ try{
  }
  advance('2026-10-22T00:58:09.000Z');
  const bigPorts={rpc,clock:()=>at,sleep:async()=>{},fetcher:async()=>{throw Error('NO_CAPACITY_PROVIDER');}};
- const bigCommitted=await workDailyRun(bigRun.run_id,bigPorts);
- assert.equal(bigCommitted.status,'QUEUED');assert.equal(bigCommitted.reason,'FORWARD_PREPARATION_CONTINUATION');
+ const bigPrepared=await workDailyRun(bigRun.run_id,bigPorts);
+ assert.equal(bigPrepared.status,'QUEUED');assert.equal(bigPrepared.reason,'FORWARD_PREPARATION_CONTINUATION');
+ assert.equal(sql(`select count(*) from vnext_runtime.predictions where run_id='${bigRun.run_id}'`),'0');
+ assert.equal(sql(`select jsonb_array_length(checkpoint->'locks')=216 and not(checkpoint->'completed' ? 'PREDICTION_LOCK') and lease is null from vnext_runtime.runs where id='${bigRun.run_id}'`),'t');
+ const bigPreparedFingerprint=sql(`select md5((checkpoint->'locks')::text) from vnext_runtime.runs where id='${bigRun.run_id}'`);
+ // The fifth invocation is the writer. Lose its reply and FINISH, preserving
+ // the exact prepared checkpoint until a later fenced recovery confirms SQL.
+ advance('2026-10-22T00:58:12.000Z');dropCommitReply=true;
+ await assert.rejects(()=>workDailyRun(bigRun.run_id,bigPorts),/ISOLATED_PROCESS_INTERRUPTED/);
  assert.equal(sql(`select count(*) from vnext_runtime.predictions where run_id='${bigRun.run_id}'`),'216');
- assert.equal(sql(`select (checkpoint->'completed' ? 'PREDICTION_LOCK') and not (checkpoint->>'finished')::boolean and lease is null from vnext_runtime.runs where id='${bigRun.run_id}'`),'t');
+ assert.equal(sql(`select not(checkpoint->'completed' ? 'PREDICTION_LOCK') and not (checkpoint->>'finished')::boolean and lease is not null from vnext_runtime.runs where id='${bigRun.run_id}'`),'t');
  // Post-cutoff continuation may only reconcile the already committed batch.
  advance('2026-10-22T01:00:03.000Z');
  const bigFinal=await workDailyRun(bigRun.run_id,bigPorts);
  assert.equal(bigFinal.status,'COMPLETE');assert.equal(sql(`select count(*) from vnext_runtime.predictions where run_id='${bigRun.run_id}'`),'216');
  assert.equal(sql(`select md5((checkpoint->'acquired')::text) from vnext_runtime.runs where id='${bigRun.run_id}'`),bigFingerprint);
+ assert.equal(sql(`select md5((checkpoint->'locks')::text) from vnext_runtime.runs where id='${bigRun.run_id}'`),bigPreparedFingerprint);
  assert.equal(sql(`select (checkpoint->>'finished')::boolean and checkpoint->'completed' ? 'PUBLICATION' from vnext_runtime.runs where id='${bigRun.run_id}'`),'t');
  assert.equal(sql('select count(*) from vnext_runtime.publication_status where approved'),'0');
- checks.push('Full72x250 >16MB synthetic snapshot: prelock and committed-only handoffs release leases; exact216-lock SQL batch survives post-cutoff bookkeeping, no duplicate or member approval');
+ checks.push('Full72x250 >16MB synthetic snapshot: compact prelock and prepared-only handoffs; separate writer loses reply, post-cutoff exact216 reconciliation finishes bookkeeping without duplicate or member approval');
  // Roll back only the new execution entrypoints, retaining immutable research.
  const preserved=sql("select jsonb_build_object('prediction',md5((select string_agg(payload_text,E'\\n'order by id)from vnext_runtime.predictions)),'outcome',md5((select string_agg(payload::text,E'\\n'order by id)from vnext_runtime.outcomes)),'audit',count(*))from vnext_runtime.audit");
  sql('revoke execute on function public.enqueue_vnext_daily_research_v1(date,text,uuid),public.claim_vnext_daily_research_v1(uuid),public.vnext_daily_runtime_v1(uuid,uuid,integer,text,jsonb) from service_role');

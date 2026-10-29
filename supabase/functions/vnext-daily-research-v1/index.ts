@@ -6,7 +6,7 @@ const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:f
 // Fixed vocabulary only. Error prose, request arguments and credentials never
 // enter this diagnostic; the original refusal and lease behavior is unchanged.
 const rpcNames=['enqueue_vnext_daily_research_v1','claim_vnext_daily_research_v1','vnext_daily_runtime_v1'];
-const runtimeOps=['PLAN','SOURCE_BEGIN','SOURCE_SAVE','SOURCE_FAIL','CURSOR','ENTRY_SOURCE','SOURCES','CHECKPOINT','PREDICTIONS','DUE_OUTCOMES','OUTCOME','OUTCOME_CHECKED','FINISH'];
+const runtimeOps=['PLAN','SOURCE_BEGIN','SOURCE_SAVE','SOURCE_FAIL','CURSOR','ENTRY_SOURCE','SOURCES','CHECKPOINT','CHECKPOINT_STATE','PREDICTIONS','DUE_OUTCOMES','OUTCOME','OUTCOME_CHECKED','FINISH'];
 const sqlStates=['08000','08001','08003','08004','08006','08007','08P01','22023','22P02','23503','23505','23514','40001','40P01','42501','42703','42883','42P01','53200','53300','54000','54001','55P03','57014','P0001','P0002','P0003','XX000'];
 const postgrestCodes=['PGRST000','PGRST001','PGRST002','PGRST003','PGRST100','PGRST102','PGRST103','PGRST106','PGRST107','PGRST108','PGRST116','PGRST200','PGRST201','PGRST202','PGRST203','PGRST204','PGRST205','PGRST300','PGRST301','PGRST302'];
 const timeoutCodes=['23','ETIMEDOUT','UND_ERR_CONNECT_TIMEOUT','UND_ERR_HEADERS_TIMEOUT','UND_ERR_BODY_TIMEOUT'];

@@ -87,13 +87,14 @@ async function validateAcquired(a: AcquiredResearch, request: DailyRequest, now:
 }
 /** Runs outside the Core request. Caller enqueues after READY, never awaits this
  * from Report/LINE. Store must provide mutual exclusion + durable checkpoints. */
-export async function runDailyIntelligence(request: DailyRequest, store: DailyStore, ports: DailyPorts, timeoutMs = 20000, prelockStageLimit = 0, yieldAfterLock = false) {
+export async function runDailyIntelligence(request: DailyRequest, store: DailyStore, ports: DailyPorts, timeoutMs = 20000, prelockStageLimit = 0, yieldAfterLock = false, yieldAfterPrepare = false) {
  const deadline = Date.now() + 60000;
  if (!/^[A-Z0-9_]{1,40}$/.test(request.checkpoint) || !request.source_revision || request.source_revision.length > 256 || !hashValid(request.source_hash)
   || !['HISTORICAL_REPLAY', 'FORWARD_SHADOW'].includes(request.mode) || !['RETAINED_REAL_EVIDENCE', 'SYNTHETIC_CONTROL'].includes(request.provenance)
   || !validTime(request.actionable_at) || !validTime(ports.clock()) || !Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 20000
   || !Number.isInteger(prelockStageLimit) || prelockStageLimit < 0 || prelockStageLimit > 3
-  || typeof yieldAfterLock !== 'boolean' || yieldAfterLock && !store.confirmCommitted) fail('REQUEST_INVALID');
+  || typeof yieldAfterLock !== 'boolean' || yieldAfterLock && !store.confirmCommitted
+  || typeof yieldAfterPrepare !== 'boolean' || yieldAfterPrepare && (!yieldAfterLock || !store.confirmCommitted)) fail('REQUEST_INVALID');
  if (!coveredCalendarDate('TW', request.business_date)) return {state: 'CALENDAR_UNKNOWN', core_awaits_research: false};
  if (!isMarketTradingDate('TW', request.business_date)) return {state: 'CLOSED_NO_EXECUTION', core_awaits_research: false};
  if (!request.core_ready || request.core_busy) return {state: 'DEFERRED_CORE_PRIORITY', core_awaits_research: false};
@@ -179,7 +180,12 @@ export async function runDailyIntelligence(request: DailyRequest, store: DailySt
       // Do not re-expose the owned preimage via a retained checkpoint root
       // until all three-horizon hashes have finished using it.
       state.acquired = acquired;
-      state.locks ??= locks; await store.save(state); await store.lock(state.locks);
+      state.locks ??= locks; await store.save(state);
+      // This handoff is only preparation. The runtime must replay these exact
+      // bytes through SQL on its next fenced invocation before bookkeeping can
+      // claim a committed batch. It never authorizes a new late Forward insert.
+      if (yieldAfterPrepare) return {state: 'BUDGET_YIELDED', key, checkpoint: state, core_awaits_research: false};
+      await store.lock(state.locks);
       }
      } else if (stage === 'OUTCOME') state.outcome = await bounded(s => ports.outcomes(state!.locks!, s), Math.min(timeoutMs, deadline - Date.now()));
      else state.publication = await bounded(s => ports.publication(state!.locks!, s), Math.min(timeoutMs, deadline - Date.now()));

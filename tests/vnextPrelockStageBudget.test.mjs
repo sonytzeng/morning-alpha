@@ -3,6 +3,8 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {runDailyIntelligence} from '../src/features/vnext/dailyIntelligence.ts';
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
 import {fullCapacityAcquired} from './helpers/vnextFullSnapshotCapacity.mjs';
+import {workDailyRun} from '../src/features/vnext/dailyRuntime.ts';
+import {directoryPlan} from '../src/features/vnext/dailyAdapter.ts';
 const date='2026-10-22',at=date+'T00:58:00.000Z',actionable=date+'T01:00:00.000Z';
 const acquired=await fullCapacityAcquired(date,at);
 const request={business_date:date,checkpoint:'SYNTHETIC_STAGE_BUDGET',mode:'FORWARD_SHADOW',provenance:'RETAINED_REAL_EVIDENCE',
@@ -82,4 +84,76 @@ test('explicit committed-only handoff needs read-only capability and never repea
  const exact=structuredClone(h.locks[0]);h.ports.clock=()=>date+'T01:00:03.000Z';
  const final=await runDailyIntelligence(request,h.store,h.ports,20000,0,true);
  assert.equal(final.state,'COMPLETE');assert.equal(h.locks.length,1);assert.deepEqual(h.locks[0],exact);assert.equal(confirms,1);
+});
+test('prepared-only handoff durably yields without writing or claiming a committed batch',async()=>{
+ const h=harness();h.store.confirmCommitted=async rows=>{
+  if(h.locks.length!==1)throw Error('SYNTHETIC_BATCH_NOT_COMMITTED');
+  assert.deepEqual(rows,h.locks[0]);
+ };
+ for(let i=0;i<3;i++)assert.equal((await runDailyIntelligence(request,h.store,h.ports,20000,1,true,true)).state,'BUDGET_YIELDED');
+ const prepared=await runDailyIntelligence(request,h.store,h.ports,20000,1,true,true);
+ assert.equal(prepared.state,'BUDGET_YIELDED');assert.equal(h.state.locks.length,216);
+ assert.equal(h.locks.length,0);assert(!h.state.completed.includes('PREDICTION_LOCK'));assert.equal(h.state.finished,false);
+ assert.equal(h.state.attempts.PREDICTION_LOCK,1);const original=structuredClone(h.state.locks);
+ await assert.rejects(()=>runDailyIntelligence(request,h.store,h.ports,20000,1,true,true),/SYNTHETIC_BATCH_NOT_COMMITTED/);
+ await h.store.lock(original); // Explicit outer runtime/SQL reconciliation, not engine inference.
+ assert.equal((await runDailyIntelligence(request,h.store,h.ports,20000,1,true,true)).state,'COMPLETE');
+ assert.equal(h.locks.length,1);assert.equal(h.state.attempts.PREDICTION_LOCK,1);
+ const normal=harness();await runDailyIntelligence(request,normal.store,normal.ports);
+ assert.deepEqual(original,normal.locks[0]);assert.deepEqual(h.locks[0],original);
+ assert.equal(h.state.publication.eligible,0);
+});
+test('prepared-only execution policy rejects invalid flags and an unconfirmed late batch',async()=>{
+ for(const value of [null,1,'true',[],{}]){
+  const h=harness();await assert.rejects(()=>runDailyIntelligence(request,h.store,h.ports,20000,1,true,value),/REQUEST_INVALID/);
+  assert.equal(h.state,null);assert.equal(h.locks.length,0);
+ }
+ const invalid=harness();invalid.store.confirmCommitted=async()=>{};
+ await assert.rejects(()=>runDailyIntelligence(request,invalid.store,invalid.ports,20000,1,false,true),/REQUEST_INVALID/);
+ assert.equal(invalid.state,null);
+ const h=harness();h.store.confirmCommitted=async()=>{throw Error('SYNTHETIC_UNCOMMITTED');};
+ for(let i=0;i<4;i++)await runDailyIntelligence(request,h.store,h.ports,20000,1,true,true);
+ const before=structuredClone(h.state);h.ports.clock=()=>actionable;
+ await assert.rejects(()=>runDailyIntelligence(request,h.store,h.ports,20000,1,true,true),/SYNTHETIC_UNCOMMITTED/);
+ assert.deepEqual(h.state,before);assert.equal(h.locks.length,0);
+});
+test('large runtime keeps acquired bytes server-side and writes only on the invocation after durable216 preparation',async()=>{
+ const directories=await directoryPlan(date),companies=acquired.inputs.map(i=>({symbol:i.symbol,company:i.company,exchange:'TWSE',industry:'24'}));
+ const run={id:'synthetic-compact-run',business_date:date,actionable_at:actionable,lease:'synthetic-lease',fence:1,
+  plan:[{key:'completed-control'}],cursor:1,source_revision:acquired.snapshot_hash,checkpoint:{acquired:structuredClone(acquired)}};
+ const writes=[],committed=[],calls=[];let invocation=0;
+ const rpc=async(name,args)=>{
+  if(name==='claim_vnext_daily_research_v1'){run.fence++;return {status:'ACQUIRED',run:structuredClone(run)};}
+  const {p_op:op,p_data:data}=args;calls.push({op,invocation});
+  if(op==='DUE_OUTCOMES')return [];
+  if(op==='SOURCE_BEGIN')return {status:'CACHE',receipt:{task:directories.find(d=>d.key===data.key),status:'OK',payload:{rows:data.exchange==='TWSE'?companies:[]}}};
+  if(op==='CHECKPOINT_STATE'){
+   assert.equal(data.source_revision,run.source_revision);assert(!('acquired' in data.checkpoint));
+   if(run.checkpoint.locks)assert(!('locks' in data.checkpoint),'already durable lock bytes omitted');
+   const retained={acquired:run.checkpoint.acquired,...(run.checkpoint.locks?{locks:run.checkpoint.locks}:{})};
+   run.checkpoint={...structuredClone(data.checkpoint),...retained};
+   writes.push({invocation,bytes:Buffer.byteLength(JSON.stringify(data)),preparing:!!data.checkpoint.locks});return {};
+  }
+  if(op==='PREDICTIONS'){
+   assert.equal(invocation,5,'SQL write has its own invocation after prepare');assert.equal(data.length,216);
+   assert.deepEqual(data.map(p=>p.body),run.checkpoint.locks);committed.push(...structuredClone(data));return {};
+  }
+  if(op==='FINISH'){run.state=data.status;run.reason=data.reason;return {};}
+  throw Error('UNEXPECTED_COMPACT_CONTROL_'+op);
+ };
+ const ports={rpc,clock:()=>at,sleep:async()=>{},fetcher:async()=>{throw Error('UNEXPECTED_NETWORK');}};
+ for(invocation=1;invocation<=4;invocation++){
+  const result=await workDailyRun(run.id,ports);assert.equal(result.status,'QUEUED');
+  assert.equal(result.reason,'FORWARD_PREPARATION_CONTINUATION');assert.equal(committed.length,0);
+  assert.equal(await snapshotHash(run.checkpoint.acquired),await snapshotHash(acquired));
+ }
+ assert.equal(run.checkpoint.locks.length,216);assert(!run.checkpoint.completed.includes('PREDICTION_LOCK'));
+ assert.deepEqual(writes.filter(w=>w.preparing).map(w=>w.invocation),[4]);
+ assert(writes.every(w=>w.bytes<6_000_000));assert(!calls.some(c=>c.op==='CHECKPOINT'));
+ invocation=5;assert.equal((await workDailyRun(run.id,ports)).status,'COMPLETE');
+ assert.equal(committed.length,216);assert.equal(run.checkpoint.finished,true);assert(run.checkpoint.completed.includes('PUBLICATION'));
+ assert.deepEqual(run.checkpoint.attempts,{ACQUISITION:1,RESEARCH:1,ENTRY:1,PREDICTION_LOCK:1,OUTCOME:1,PUBLICATION:1});
+ assert.equal(run.checkpoint.publication.publishes,false);assert.equal(run.checkpoint.publication.eligible,0);
+ const normal=harness();await runDailyIntelligence({...request,checkpoint:'NATURAL_MARKET_READY'},normal.store,normal.ports);
+ assert.deepEqual(committed.map(p=>p.body),normal.locks[0]);
 });

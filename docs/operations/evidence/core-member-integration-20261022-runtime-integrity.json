@@ -2632,7 +2632,7 @@
       "origin": "composition"
     },
     {
-      "path": "supabase/migrations/20261029143928_vnext_daily_publication_ingress.sql",
+      "path": "supabase/migrations/20261029144410_vnext_daily_publication_ingress.sql",
       "before_sha256": null,
       "after_sha256": "fe8701eb9d75772f5f401eeb79bd59fe347d74707aa023b46a71dcc97c812924",
       "mode": "100644",
@@ -2970,7 +2970,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "f0a39ec41755a060d9d01d69597d78d6f676d62e8c4f7dfba23dea338ba113ac",
+      "after_sha256": "715adc3d8a31f216d1f7aa12b143bbe1936e6973a1b5c309c5a44c77cf8d36bb",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3656,7 +3656,7 @@
     {
       "path": "tests/vnextDailyPublicationIngress.integration.mjs",
       "before_sha256": null,
-      "after_sha256": "536212c37b0e80b551debf2301690250d3aac4cbe475a626e1c58557cdff5948",
+      "after_sha256": "238348b71bdda96104a701ac49eab7804038f143629a76a0beb734cc7768ea32",
       "mode": "100644",
       "origin": "composition"
     },
@@ -4979,7 +4979,7 @@
           "path": "tests/vnextDailyPublicationIngress.integration.mjs",
           "mode": "100644",
           "before_sha256": null,
-          "after_sha256": "536212c37b0e80b551debf2301690250d3aac4cbe475a626e1c58557cdff5948"
+          "after_sha256": "238348b71bdda96104a701ac49eab7804038f143629a76a0beb734cc7768ea32"
         },
         {
           "path": "tests/vnextPublicationHandoff.test.mjs",
@@ -4994,7 +4994,7 @@
           "after_sha256": "bf2fe9f74fa2e9487f0f93659b7d8eb33c2127f0c46c47f195de57869aec8df7"
         },
         {
-          "path": "supabase/migrations/20261029143928_vnext_daily_publication_ingress.sql",
+          "path": "supabase/migrations/20261029144410_vnext_daily_publication_ingress.sql",
           "mode": "100644",
           "before_sha256": null,
           "after_sha256": "fe8701eb9d75772f5f401eeb79bd59fe347d74707aa023b46a71dcc97c812924"

@@ -297,7 +297,7 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "path": "tests/vnextDailyPublicationIngress.integration.mjs",
   "mode": "100644",
   "before_sha256": null,
-  "after_sha256": "536212c37b0e80b551debf2301690250d3aac4cbe475a626e1c58557cdff5948"
+  "after_sha256": "238348b71bdda96104a701ac49eab7804038f143629a76a0beb734cc7768ea32"
  },
  {
   "path": "tests/vnextPublicationHandoff.test.mjs",
@@ -312,7 +312,7 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "after_sha256": "bf2fe9f74fa2e9487f0f93659b7d8eb33c2127f0c46c47f195de57869aec8df7"
  },
  {
-  "path": "supabase/migrations/20261029143928_vnext_daily_publication_ingress.sql",
+  "path": "supabase/migrations/20261029144410_vnext_daily_publication_ingress.sql",
   "mode": "100644",
   "before_sha256": null,
   "after_sha256": "fe8701eb9d75772f5f401eeb79bd59fe347d74707aa023b46a71dcc97c812924"

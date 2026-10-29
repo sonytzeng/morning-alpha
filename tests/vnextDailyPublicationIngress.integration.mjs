@@ -22,7 +22,7 @@ try{
  await db.exec(read('supabase/migrations/20261012080628_vnext_member_publication_control_candidate.sql'));
  const before=await db.query("select relname,relrowsecurity,relforcerowsecurity from pg_class where relnamespace='vnext_private'::regnamespace and relkind='r' order by relname");
  const ingressSql=read('src/features/vnext/dailyPublicationIngress.candidate.sql');
- assert.equal(read('supabase/migrations/20261029143928_vnext_daily_publication_ingress.sql'),ingressSql);
+ assert.equal(read('supabase/migrations/20261029144410_vnext_daily_publication_ingress.sql'),ingressSql);
  await db.exec(ingressSql);
  assert.deepEqual((await db.query("select relname,relrowsecurity,relforcerowsecurity from pg_class where relnamespace='vnext_private'::regnamespace and relkind='r' order by relname")).rows,before.rows);
  for(const role of ['anon','authenticated'])for(const fn of ['stage_vnext_daily_publication_v1(text,text,text[])','stage_vnext_daily_publication_batch_v1(uuid)'])

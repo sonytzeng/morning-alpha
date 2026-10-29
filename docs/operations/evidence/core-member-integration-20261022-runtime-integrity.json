@@ -1785,6 +1785,13 @@
       "origin": "member"
     },
     {
+      "path": "src/features/vnext/dailyPublicationIngress.candidate.sql",
+      "before_sha256": null,
+      "after_sha256": "fe8701eb9d75772f5f401eeb79bd59fe347d74707aa023b46a71dcc97c812924",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "src/features/vnext/dailyRuntime.ts",
       "before_sha256": "b2ee9bfd1618b6eb7f85494ae55a1d6dc14693f48571e007d9d6a019f861ae91",
       "after_sha256": "4d9f6fc4c9ac33f7fe7aa012cb944c4837d8fba4ad464123507f1ec526b075a3",
@@ -2571,14 +2578,14 @@
     {
       "path": "supabase/functions/vnext-daily-research-v1/handler.ts",
       "before_sha256": "ff721bc0a848b5e8cc4e089b440b0d3e179a124c13e8acd7054512047b0a4466",
-      "after_sha256": "ea4ceab840aac823ad130e052477dce346a455ce700606c4f80db990c05a4954",
+      "after_sha256": "bf2fe9f74fa2e9487f0f93659b7d8eb33c2127f0c46c47f195de57869aec8df7",
       "mode": "100644",
       "origin": "composition"
     },
     {
       "path": "supabase/functions/vnext-daily-research-v1/index.ts",
       "before_sha256": "4fcada158ef706c7a08b665ad1d7e3d2da9faa58aba9887ef5c6bb9d198ea939",
-      "after_sha256": "6127e8bcfdb20b3d1c076756a274db55f1d25dc25a7787206b539ee811e83b5c",
+      "after_sha256": "d83b6ea041b31bbe55f605aa695b7bdb1ed1a5ec52caa9ffdba80a7a85c7b7d5",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2621,6 +2628,13 @@
       "path": "supabase/migrations/20261029055349_vnext_compact_checkpoint_state.sql",
       "before_sha256": null,
       "after_sha256": "050a75a16870fc65c9f6581fe77545071dcb3ff735081b27908762b2f2a2b053",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "supabase/migrations/20261029143928_vnext_daily_publication_ingress.sql",
+      "before_sha256": null,
+      "after_sha256": "fe8701eb9d75772f5f401eeb79bd59fe347d74707aa023b46a71dcc97c812924",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2956,7 +2970,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "f6a1e7be33f22065a054e0bd2d6f71a3820999d75413a07760f5bae1b836be1c",
+      "after_sha256": "f0a39ec41755a060d9d01d69597d78d6f676d62e8c4f7dfba23dea338ba113ac",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3131,7 +3145,7 @@
     {
       "path": "tests/originalIngressAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "89552e673d254271ce9fa1b8549b9fb0a33e7fb2738348d99d8757e93164bffc",
+      "after_sha256": "556d313acc86eaa710295bf008f5770f2b4d4cf3b3dd99f6c41804773e7654a9",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3640,6 +3654,13 @@
       "origin": "member"
     },
     {
+      "path": "tests/vnextDailyPublicationIngress.integration.mjs",
+      "before_sha256": null,
+      "after_sha256": "536212c37b0e80b551debf2301690250d3aac4cbe475a626e1c58557cdff5948",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "tests/vnextDailyReal.integration.mjs",
       "before_sha256": null,
       "after_sha256": "45508ab53fe7cb66e787c6f591a555031e8a0b6c58a61db4994642415e1d4e96",
@@ -3778,6 +3799,13 @@
       "after_sha256": "0aadfb93d4e9dd5d58a6215b45c67efd13b5e6c76a697e10b5990d8dda07059b",
       "mode": "100644",
       "origin": "member"
+    },
+    {
+      "path": "tests/vnextPublicationHandoff.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "d9517b4e19b202e9509478b648463435657f237cb8b7e373e37d0233006a3fa2",
+      "mode": "100644",
+      "origin": "composition"
     },
     {
       "path": "tests/vnextPublicationReal.integration.mjs",
@@ -4867,7 +4895,7 @@
           "path": "supabase/functions/vnext-daily-research-v1/index.ts",
           "mode": "100644",
           "before_sha256": "fbc591c736dbc15913feeec381c14433b96004c4f03cce38ae21673af4c6c89d",
-          "after_sha256": "6127e8bcfdb20b3d1c076756a274db55f1d25dc25a7787206b539ee811e83b5c"
+          "after_sha256": "d83b6ea041b31bbe55f605aa695b7bdb1ed1a5ec52caa9ffdba80a7a85c7b7d5"
         },
         {
           "path": "tests/cWorkerRpcFailureDiagnostics.integration.mjs",
@@ -4940,6 +4968,36 @@
           "mode": "100644",
           "before_sha256": "8d7aeff2c25fe152a5b169da50d4f6aea6a341061e9fd3de0abadb5d14e4029e",
           "after_sha256": "0f7477c3f09758ac90a1046ece6e1283f3b4d44b4298a4e9b0a1fac7f87a62f2"
+        },
+        {
+          "path": "src/features/vnext/dailyPublicationIngress.candidate.sql",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "fe8701eb9d75772f5f401eeb79bd59fe347d74707aa023b46a71dcc97c812924"
+        },
+        {
+          "path": "tests/vnextDailyPublicationIngress.integration.mjs",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "536212c37b0e80b551debf2301690250d3aac4cbe475a626e1c58557cdff5948"
+        },
+        {
+          "path": "tests/vnextPublicationHandoff.test.mjs",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "d9517b4e19b202e9509478b648463435657f237cb8b7e373e37d0233006a3fa2"
+        },
+        {
+          "path": "supabase/functions/vnext-daily-research-v1/handler.ts",
+          "mode": "100644",
+          "before_sha256": "ea4ceab840aac823ad130e052477dce346a455ce700606c4f80db990c05a4954",
+          "after_sha256": "bf2fe9f74fa2e9487f0f93659b7d8eb33c2127f0c46c47f195de57869aec8df7"
+        },
+        {
+          "path": "supabase/migrations/20261029143928_vnext_daily_publication_ingress.sql",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "fe8701eb9d75772f5f401eeb79bd59fe347d74707aa023b46a71dcc97c812924"
         }
       ],
       "scope": "OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE_AND_WHOLE_RETAINED_SOURCE_VERSIONS",

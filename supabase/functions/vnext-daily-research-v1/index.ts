@@ -23,4 +23,8 @@ Deno.serve(req=>handleVnextDaily(req,{
  }return r.data;},
  background:p=>{const rt=(globalThis as unknown as {EdgeRuntime?:{waitUntil:(p:Promise<unknown>)=>void}}).EdgeRuntime;if(!rt)throw Error('BACKGROUND_REQUIRED');rt.waitUntil(p);},
  continueRun:run_id=>continueVnextRun(run_id,{url,gatewayJwt:Deno.env.get('RECOMMENDATION_GATEWAY_ANON_JWT')??'',cronSecret:Deno.env.get('CRON_SECRET')??'',fetcher:fetch}),
+ stagePublication:async run_id=>{
+  const result=await db.rpc('stage_vnext_daily_publication_batch_v1',{p_run:run_id});
+  if(result.error)throw Error('PUBLICATION_INTAKE_FAILED');
+ },
 }));

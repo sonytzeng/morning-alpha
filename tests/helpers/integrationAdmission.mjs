@@ -213,7 +213,7 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "path": "supabase/functions/vnext-daily-research-v1/index.ts",
   "mode": "100644",
   "before_sha256": "fbc591c736dbc15913feeec381c14433b96004c4f03cce38ae21673af4c6c89d",
-  "after_sha256": "6127e8bcfdb20b3d1c076756a274db55f1d25dc25a7787206b539ee811e83b5c"
+  "after_sha256": "d83b6ea041b31bbe55f605aa695b7bdb1ed1a5ec52caa9ffdba80a7a85c7b7d5"
  },
  {
   "path": "tests/cWorkerRpcFailureDiagnostics.integration.mjs",
@@ -286,6 +286,36 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "mode": "100644",
   "before_sha256": "8d7aeff2c25fe152a5b169da50d4f6aea6a341061e9fd3de0abadb5d14e4029e",
   "after_sha256": "0f7477c3f09758ac90a1046ece6e1283f3b4d44b4298a4e9b0a1fac7f87a62f2"
+ },
+ {
+  "path": "src/features/vnext/dailyPublicationIngress.candidate.sql",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "fe8701eb9d75772f5f401eeb79bd59fe347d74707aa023b46a71dcc97c812924"
+ },
+ {
+  "path": "tests/vnextDailyPublicationIngress.integration.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "536212c37b0e80b551debf2301690250d3aac4cbe475a626e1c58557cdff5948"
+ },
+ {
+  "path": "tests/vnextPublicationHandoff.test.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "d9517b4e19b202e9509478b648463435657f237cb8b7e373e37d0233006a3fa2"
+ },
+ {
+  "path": "supabase/functions/vnext-daily-research-v1/handler.ts",
+  "mode": "100644",
+  "before_sha256": "ea4ceab840aac823ad130e052477dce346a455ce700606c4f80db990c05a4954",
+  "after_sha256": "bf2fe9f74fa2e9487f0f93659b7d8eb33c2127f0c46c47f195de57869aec8df7"
+ },
+ {
+  "path": "supabase/migrations/20261029143928_vnext_daily_publication_ingress.sql",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "fe8701eb9d75772f5f401eeb79bd59fe347d74707aa023b46a71dcc97c812924"
  }
 ].map(Object.freeze));
 export const FROZEN_SOURCE_UNION_R14='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r14.json';
@@ -1095,7 +1125,7 @@ export function runtimeIntegrityLineage(){
  assert.equal(root?.sha256,prior_root.sha256,'RUNTIME_PRIOR_ROOT_DRIFT');assert.equal(root?.mode,'100644');
  const old=JSON.parse(root.bytes);assert.equal(old.files.length,538,'RUNTIME_PRIOR_FULL_SCOPE');
  assert.deepEqual(old.source_union.r15,sourceUnionR15Lineage(),'RUNTIME_PRIOR_LINEAGE_DRIFT');
- assert.equal(RUNTIME_INTEGRITY_FILES.length,45);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,45);
+ assert.equal(RUNTIME_INTEGRITY_FILES.length,50);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,50);
  for(const row of RUNTIME_INTEGRITY_FILES){
   assert(!SOURCE_UNION_SUPPORT.includes(row.path));const before=unionBlob(RUNTIME_INTEGRITY_BASE,row.path);
   assert.equal(before?.sha256??null,row.before_sha256,'RUNTIME_BEFORE_SOURCE_DRIFT:'+row.path);

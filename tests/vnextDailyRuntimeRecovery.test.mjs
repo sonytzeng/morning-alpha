@@ -1,7 +1,7 @@
 /** Synthetic contract controls, NOT natural Production evidence or performance. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {acquisitionPlan,directoryPlan,outcomePlan,assembleDaily} from '../src/features/vnext/dailyAdapter.ts';
+import {acquisitionPlan,directoryPlan,outcomePlan,assembleDaily,normalizeSource} from '../src/features/vnext/dailyAdapter.ts';
 import {workDailyRun} from '../src/features/vnext/dailyRuntime.ts';
 import {handleVnextDaily} from '../supabase/functions/vnext-daily-research-v1/handler.ts';
 import {runDailyIntelligence,verifyDailyLock} from '../src/features/vnext/dailyIntelligence.ts';
@@ -335,4 +335,70 @@ test('bounded cached acquisition: a fully cached late plan drains without creati
  assert.equal(leases,4);assert.equal(f.sourceCalls.length,119);assert.equal(new Set(f.sourceCalls).size,119);
  assert.equal(result.status,'EXPIRED');assert.equal(result.reason,'LATE_ACQUISITION_NOT_FORWARD');
  assert.equal(result.continue,false);assert.deepEqual(f.other,[]);assert.deepEqual(f.run.checkpoint,{});
+});
+
+const indexURL='https://openapi.twse.com.tw/v1/indicesReport/MI_5MINS_HIST';
+async function indexFixture(){
+ const business='2026-10-29',at='2026-10-29T00:58:00.000000Z',plan=await acquisitionPlan(business,companies);
+ const task=plan.find(t=>t.url===indexURL),raw=[
+  {Date:'1151027',OpeningIndex:'100',HighestIndex:'102',LowestIndex:'99',ClosingIndex:'100'},
+  {Date:'1151028',OpeningIndex:'100',HighestIndex:'103',LowestIndex:'99',ClosingIndex:'102'}];
+ const payload=await normalizeSource(task,raw,at),saved=await receipt(task,at,payload);
+ const market={value:{direction:'偏多觀察',regime:'range'},source_ref:'synthetic-canonical',observed_at:at,available_at:at};
+ return {business,at,task,raw,saved,market};
+}
+test('current benchmark uses documented TWSE OpenAPI while historical month requests remain explicit',async()=>{
+ const f=await indexFixture(),plan=await acquisitionPlan(f.business,companies),benchmarks=plan.filter(t=>t.kind==='BENCHMARK');
+ assert.equal(benchmarks.filter(t=>t.url===indexURL).length,1);assert.equal(f.task.month,'2026-10');
+ assert.equal(f.task.benchmark_response_contract,'TWSE_OPENAPI_INDEX_V1');assert.equal(f.task.max_age_days,1);
+ assert(benchmarks.filter(t=>t.month!=='2026-10').every(t=>t.url.includes('date='+t.month.replace('-','')+'01')&&!t.benchmark_response_contract));
+ assert.equal(new Set(plan.map(t=>t.key)).size,plan.length);assert(plan.length<=1600);
+});
+test('OpenAPI index validates native fields, source binding, period and complete session before normalization',async()=>{
+ const f=await indexFixture();assert.equal(f.saved.payload.rows[1].close,102);assert.equal(f.saved.payload.rows[1].source,indexURL);
+ assert.equal(f.saved.payload.rows[1].published_at,null);assert.equal(f.saved.payload.rows[1].first_seen_at,f.at);
+ for(const mutate of [x=>x.push({...x[0],extra:'unreviewed'}),x=>x[0].ClosingIndex=100,x=>delete x[0].OpeningIndex,
+  x=>x[0].Date='1150928',x=>x[1].HighestIndex='1',x=>x[1].Date='1151030']){
+  const raw=structuredClone(f.raw);mutate(raw);await assert.rejects(()=>normalizeSource(f.task,raw,f.at),/BENCHMARK_/);
+ }
+ for(const task of [{...f.task,url:'https://example.test/index'},{...f.task,benchmark_response_contract:undefined}])
+  await assert.rejects(()=>normalizeSource(task,f.raw,f.at),/BENCHMARK_OPENAPI_SCHEMA/);
+ await assert.rejects(()=>normalizeSource(f.task,[],f.at),/BENCHMARK_OPENAPI_SCHEMA/);
+});
+test('complete official sessions enrich missing market change without V2, preserving direction, cutoff and input ownership',async()=>{
+ const f=await indexFixture(),before=structuredClone(f),a=await assembleDaily(f.business,companies,[f.saved],f.at,f.market);
+ assert(Math.abs(a.entry.market.value.change_percent-2)<1e-10);assert.equal(a.entry.market.value.direction,f.market.value.direction);
+ assert.equal(a.entry.market.value.regime,f.market.value.regime);assert.equal(a.entry.evaluation_time,f.at);
+ assert(a.entry.market.source_ref.includes('benchmark-2026-10-27:'));assert(a.entry.market.source_ref.includes('benchmark-2026-10-28:'));
+ assert.deepEqual(f,before);assert(a.entry.stocks.every(s=>s.relative_strength===null&&s.sector_return===null&&s.events_reviewed===null));
+ const legacy=structuredClone(f.saved);delete legacy.task.benchmark_response_contract;
+ legacy.task.url='https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?date=20261001&response=json';
+ for(const row of legacy.payload.rows)row.source=legacy.task.url;legacy.payload_hash=await snapshotHash(legacy.payload);
+ const equal=await assembleDaily(f.business,companies,[f.saved,legacy],f.at,f.market);
+ assert(Math.abs(equal.entry.market.value.change_percent-2)<1e-10);assert(equal.entry.market.source_ref.includes(legacy.task.url));
+ legacy.payload.rows[0].close=101;legacy.payload_hash=await snapshotHash(legacy.payload);
+ assert.deepEqual((await assembleDaily(f.business,companies,[f.saved,legacy],f.at,f.market)).entry.market,f.market,'conflicting official versions are not silently selected');
+
+ const absent=await assembleDaily(f.business,companies,[f.saved],f.at);assert.equal(absent.entry.market,null);
+ const explicit={...f.market,value:{...f.market.value,change_percent:4}};
+ assert.deepEqual((await assembleDaily(f.business,companies,[f.saved],f.at,explicit)).entry.market,explicit);
+});
+test('partial, duplicate, wrong-scope and malformed official sessions cannot supply missing market change',async()=>{
+ const f=await indexFixture();
+ for(const mutate of [r=>r.payload.rows.pop(),r=>r.payload.rows.push({...r.payload.rows[0]}),
+  r=>r.payload.rows[0].source='https://example.test/index',r=>r.payload.rows[0].session_scope='UNKNOWN',
+  r=>r.payload.rows[0].evidence_hash='bad',r=>r.payload.rows[0].first_seen_at='2999-01-01T00:00:00Z']){
+  const r=structuredClone(f.saved);mutate(r);r.payload_hash=await snapshotHash(r.payload);
+  assert.deepEqual((await assembleDaily(f.business,companies,[r],f.at,f.market)).entry.market,f.market);
+ }
+ for(const value of [null,'2']){const m={...f.market,value:{...f.market.value,change_percent:value}};
+  assert.deepEqual((await assembleDaily(f.business,companies,[f.saved],f.at,m)).entry.market,m,'never repair an explicit invalid market value');}
+});
+test('official index availability honors PostgreSQL microseconds and never uses a later receipt to enrich earlier Canonical',async()=>{
+ const f=await indexFixture(),cutoff='2026-10-29T00:58:00.000000Z',later='2026-10-29T00:58:00.000001Z';
+ const r=structuredClone(f.saved);r.first_seen_at=later;r.available_at=later;
+ for(const b of r.payload.rows){b.first_seen_at=later;b.available_at=later;}r.payload_hash=await snapshotHash(r.payload);
+ assert.deepEqual((await assembleDaily(f.business,companies,[r],cutoff,f.market)).entry.market,f.market);
+ const m={...f.market,observed_at:later,available_at:later};
+ assert.deepEqual((await assembleDaily(f.business,companies,[f.saved],cutoff,m)).entry.market,m);
 });

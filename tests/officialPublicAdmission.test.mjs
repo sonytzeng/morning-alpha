@@ -34,7 +34,7 @@ test('current union preserves the7986 four-source Worker packet, never mixing or
  for(const path of CHANGED){
   const frozen=sourceUnionParentRead('actual',path);
   assert.equal(candidate.payload.files.find(f=>f.name===path).content,frozen.toString(),'sealed Worker5 keeps the original source');
-  if(['src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts'].includes(path))assert.equal(integrationHash(integrationPhysicalRead(path)),RUNTIME_INTEGRITY_FILES.find(r=>r.path===path).after_sha256,'current candidate is independently admitted, not substituted into Worker5');
+  if(['src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts','src/features/vnext/dailyAdapter.ts'].includes(path))assert.equal(integrationHash(integrationPhysicalRead(path)),RUNTIME_INTEGRITY_FILES.find(r=>r.path===path).after_sha256,'current candidate is independently admitted, not substituted into Worker5');
   else assert.deepEqual(integrationPhysicalRead(path),frozen);
  }
  for(const p of ['src/features/vnext/contracts.ts','src/features/vnext/engine.ts','supabase/functions/_shared/decision-v1-evidence.ts']){

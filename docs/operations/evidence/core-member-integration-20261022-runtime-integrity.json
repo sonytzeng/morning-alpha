@@ -51,7 +51,7 @@
     {
       "path": ".github/workflows/core-member-integration.yml",
       "before_sha256": null,
-      "after_sha256": "4c05de1bfd5dd83fa8556a6cb7c93e9947b394cb01f51807248733c89b66c9f5",
+      "after_sha256": "fec84aadbd14abde206e612a4e05629e9cbb8270f957765ef57445900822d9ef",
       "mode": "100644",
       "origin": "composition"
     },
@@ -142,7 +142,7 @@
     {
       "path": ".github/workflows/vnext-candidate.yml",
       "before_sha256": null,
-      "after_sha256": "683ea1e58377305d532ba672ab33848d877b487b378abc2d756714648f7bcc12",
+      "after_sha256": "2c2c3bf5c36a83de94055f7ee778ad78f2c56cc40b49b258e14a9ae1206ad2e5",
       "mode": "100644",
       "origin": "composition"
     },
@@ -1148,6 +1148,13 @@
       "origin": "member"
     },
     {
+      "path": "research/entry-official-history.ts",
+      "before_sha256": "b0dd603063b1e5487cbad4ff4feb98859445903f1381c8ea20dc00d566819e38",
+      "after_sha256": "ee942744a9273c359c84a91bcc821471cc436be16b44c88421fceefdb76316b3",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "research/issuer-actual-canonical-intake.ts",
       "before_sha256": null,
       "after_sha256": "d969282264342e6609221ed27fdf772c339d8cad8d3805756ef0b5861c3b796a",
@@ -1158,6 +1165,13 @@
       "path": "research/issuer-actual-v1-input.ts",
       "before_sha256": null,
       "after_sha256": "9859a908e507f05f9e242ed177f91f6fd2f0a5e8989b55eac7f61937b42b75fe",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "research/issuer-quarter-observations.ts",
+      "before_sha256": null,
+      "after_sha256": "be352603185f73007a56624ebf7eb3553709865c4eb42ae1ead4b17b7d8993db",
       "mode": "100644",
       "origin": "composition"
     },
@@ -1617,6 +1631,13 @@
       "origin": "member"
     },
     {
+      "path": "scripts/vnext/issuer-quarter-observations.mjs",
+      "before_sha256": null,
+      "after_sha256": "50ad0ee42b6bd1fbf1b2e262cadf263f957a8be39c0787214c6e909cfc41a41c",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "scripts/vnext/member-admission.mjs",
       "before_sha256": null,
       "after_sha256": "e174605270dba5ad37b06d2ba6c2fa437adf69005084db8cec1feedeef57a387",
@@ -1759,7 +1780,7 @@
     {
       "path": "src/features/vnext/dailyAdapter.ts",
       "before_sha256": "08556661bf9739c947278a3153486c412083eab241fba187bb2b9968d61e622a",
-      "after_sha256": "ea02b43723072873f01e35b60962102db16f7715783c9fd8feec85bdf1b7bf53",
+      "after_sha256": "c5109bcec99a8d1a7d8fceb3b70ea29fb5ada888e20609ffdca3006d1dc087b8",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2970,7 +2991,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "31769df05dacec5809dddb1eff40e6a2f5d3c176fd67ed0d254d5414c751fd83",
+      "after_sha256": "b0e22293f02b43beac36d814a8eaac235f747f696ee1dcdb9c8490be08e6da71",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3117,7 +3138,7 @@
     {
       "path": "tests/officialPublicAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "eef33f9933ff801d668fe562585558ef4d2db6d9b14657fb020b5b601038e4d5",
+      "after_sha256": "fd8b7cedb93de42b30ca87586ba4e0ef49bf9b0a4290eff4ff3e2a664990b77b",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3145,7 +3166,7 @@
     {
       "path": "tests/originalIngressAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "556d313acc86eaa710295bf008f5770f2b4d4cf3b3dd99f6c41804773e7654a9",
+      "after_sha256": "1c547e1e4b71b3192d0da78b607dcdf31cc53762810de781402b0e5f0fdbafb1",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3717,6 +3738,13 @@
       "origin": "composition"
     },
     {
+      "path": "tests/vnextIssuerQuarterObservations.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "701d04a749068ee919c746d356885f1e97af605e99cdfcd468c9a190bc7a3f27",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "tests/vnextMember.test.mjs",
       "before_sha256": null,
       "after_sha256": "2c661ea3cdd74c1af4f472b756af4498d1232a1f7133425900e08101ad85d64c",
@@ -3888,6 +3916,13 @@
       "path": "tests/vnextTraceValidationBudget.test.mjs",
       "before_sha256": null,
       "after_sha256": "83ddb78171870954cfd858d7cd5c3ffd415df79b15839cac4d7777d5264b81bb",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "tests/vnextTwseDailyPrices.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "e60554b5f1310b145019ac33d2a50f2134838946524d4321de8a1c041702e05c",
       "mode": "100644",
       "origin": "composition"
     },
@@ -4715,7 +4750,7 @@
           "path": ".github/workflows/vnext-candidate.yml",
           "mode": "100644",
           "before_sha256": "727be694755623b7f0c53a5b59b835cc71e412a95fe4b6ca0acb7005a53b1e04",
-          "after_sha256": "683ea1e58377305d532ba672ab33848d877b487b378abc2d756714648f7bcc12"
+          "after_sha256": "2c2c3bf5c36a83de94055f7ee778ad78f2c56cc40b49b258e14a9ae1206ad2e5"
         },
         {
           "path": "scripts/operations/financial-response-period-20261020/materialize.mjs",
@@ -4919,7 +4954,7 @@
           "path": "src/features/vnext/dailyAdapter.ts",
           "mode": "100644",
           "before_sha256": "8596a858c0b645519ae0b8631dbfab978ff677bf6f33248c2157ba63e958c229",
-          "after_sha256": "ea02b43723072873f01e35b60962102db16f7715783c9fd8feec85bdf1b7bf53"
+          "after_sha256": "c5109bcec99a8d1a7d8fceb3b70ea29fb5ada888e20609ffdca3006d1dc087b8"
         },
         {
           "path": "tests/vnextColdSourcePriority.test.mjs",
@@ -4998,9 +5033,39 @@
           "mode": "100644",
           "before_sha256": null,
           "after_sha256": "fe8701eb9d75772f5f401eeb79bd59fe347d74707aa023b46a71dcc97c812924"
+        },
+        {
+          "path": "research/entry-official-history.ts",
+          "mode": "100644",
+          "before_sha256": "b0dd603063b1e5487cbad4ff4feb98859445903f1381c8ea20dc00d566819e38",
+          "after_sha256": "ee942744a9273c359c84a91bcc821471cc436be16b44c88421fceefdb76316b3"
+        },
+        {
+          "path": "research/issuer-quarter-observations.ts",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "be352603185f73007a56624ebf7eb3553709865c4eb42ae1ead4b17b7d8993db"
+        },
+        {
+          "path": "scripts/vnext/issuer-quarter-observations.mjs",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "50ad0ee42b6bd1fbf1b2e262cadf263f957a8be39c0787214c6e909cfc41a41c"
+        },
+        {
+          "path": "tests/vnextIssuerQuarterObservations.test.mjs",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "701d04a749068ee919c746d356885f1e97af605e99cdfcd468c9a190bc7a3f27"
+        },
+        {
+          "path": "tests/vnextTwseDailyPrices.test.mjs",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "e60554b5f1310b145019ac33d2a50f2134838946524d4321de8a1c041702e05c"
         }
       ],
-      "scope": "OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE_AND_WHOLE_RETAINED_SOURCE_VERSIONS",
+      "scope": "OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE_AND_WHOLE_RETAINED_SOURCE_VERSIONS_BULK_DAILY_PRICES_AND_ISSUER_QUARTER_OBSERVATIONS",
       "source_admission": false,
       "canonical_admission": false,
       "quality_approval": false,

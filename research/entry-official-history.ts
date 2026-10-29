@@ -55,6 +55,38 @@ export function tpexDailyUrl(date:string){
  if(officialDate(date)!==date)throw Error('REQUEST_DATE_INVALID');
  const u=new URL('https://www.tpex.org.tw/www/zh-tw/afterTrading/dailyQuotes');u.searchParams.set('date',date.replaceAll('-','/'));u.searchParams.set('response','json');return u.href;
 }
+export function twseDailyUrl(date:string){
+ if(officialDate(date)!==date)throw Error('REQUEST_DATE_INVALID');
+ return `https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=${date.replaceAll('-','')}&type=ALLBUT0999&response=json`;
+}
+/** The issuer table explicitly includes ordinary, odd-lot, after-hours and
+ * block trades, matching STOCK_DAY. Never scale its native shares/TWD by 1000. */
+export function parseTwseDaily(p:Payload,date:string,symbols:string[],receivedAt:string){
+ const source=twseDailyUrl(date);
+ if(String(p.stat).toLowerCase()!=='ok'||officialDate(p.date)!==date||!Array.isArray(p.tables)
+  ||!Number.isFinite(Date.parse(receivedAt))||Date.parse(receivedAt)<Date.parse(date+'T13:30:00+08:00'))throw Error('DAILY_SESSION_INVALID');
+ const tables=(p.tables as {title?:unknown;fields?:unknown;data?:unknown;notes?:unknown}[])
+  .filter(t=>Array.isArray(t.fields)&&t.fields[0]==='證券代號'&&t.fields.includes('收盤價'));
+ const expected=['證券代號','證券名稱','成交股數','成交筆數','成交金額','開盤價','最高價','最低價','收盤價'];
+ const title=`${Number(date.slice(0,4))-1911}年${date.slice(5,7)}月${date.slice(8)}日 每日收盤行情`;
+ if(tables.length!==1)throw Error('DAILY_TABLE_AMBIGUOUS');const table=tables[0];
+ const fields=table.fields;
+ if(!Array.isArray(fields)||expected.some((f,i)=>fields[i]!==f)||!Array.isArray(table.data)
+  ||!String(table.title).startsWith(title)||!Array.isArray(table.notes)
+  ||!table.notes.includes('本統計資訊含一般、零股、盤後定價、鉅額交易，不含拍賣、標購。'))throw Error('DAILY_SCHEMA_OR_SCOPE_CHANGED');
+ const rows=table.data as Row[];if(rows.some(r=>!Array.isArray(r)))throw Error('DAILY_ROW_INVALID');
+ const daily=symbols.map(symbol=>{
+  const matches=rows.filter(r=>r[0]===symbol);if(matches.length!==1)return {symbol,bar:null,reason:matches.length?'DUPLICATE_SYMBOL':'SYMBOL_MISSING'};
+  const r=matches[0],values=[r[5],r[6],r[7],r[8],r[2],r[4]].map(officialNumber);
+  if(values.some(v=>v===null||v<=0))return {symbol,bar:null,reason:'NO_VALID_TRADING_OHLCV_AMOUNT'};
+  const [open,high,low,close,volume,amount]=values as number[];
+  if(high<Math.max(open,close)||low>Math.min(open,close)||!Number.isSafeInteger(volume)||!Number.isSafeInteger(amount))return {symbol,bar:null,reason:'OHLCV_AMOUNT_INVALID'};
+  return {symbol,bar:{date,open,high,low,close,volume,amount,available_at:receivedAt,source_ref:source} satisfies Bar,reason:null};
+ });
+ return {date,exchange:'TWSE',source_ref:source,received_at:receivedAt,daily,exact_volume_amount:true,
+  volume_unit:'SHARES',amount_unit:'TWD',volume_amount_scope:'OFFICIAL_STOCK_DAY',
+  provenance:'RETROSPECTIVE_PUBLIC_ACQUISITION',availability_basis:'ACTUAL_RECEIPT_NOT_BACKDATED'};
+}
 export function parseTpexDaily(p:Payload,date:string,symbols:string[],receivedAt:string){
  const source=tpexDailyUrl(date);
  if(String(p.stat).toLowerCase()!=='ok'||officialDate(p.date)!==date||!Array.isArray(p.tables)||

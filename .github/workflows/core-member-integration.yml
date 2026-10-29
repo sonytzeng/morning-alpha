@@ -66,7 +66,7 @@ jobs:
       - name: Current retained-quarter adapter and unchanged research funnel refusal controls
         env:
           NODE_OPTIONS: --experimental-strip-types
-        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextRetainedQuarterFinancials.test.mjs tests/vnextResearchFunnel.test.mjs tests/vnextStockResearch.test.mjs
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextRetainedQuarterFinancials.test.mjs tests/vnextIssuerQuarterObservations.test.mjs tests/vnextTwseDailyPrices.test.mjs tests/vnextResearchFunnel.test.mjs tests/vnextStockResearch.test.mjs
       - name: Check out the immutable pre-quarter-family C source proofs only
         uses: actions/checkout@v4
         with:

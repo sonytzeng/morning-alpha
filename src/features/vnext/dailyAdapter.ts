@@ -2,7 +2,7 @@
 import {snapshotHash, HORIZONS, validObservationTime, compareTime} from './contracts.ts';
 import {previousMarketTradingDate, coveredCalendarDate, isMarketTradingDate} from '../../../supabase/functions/_shared/market-session-contract.mjs';
 import {RECOMMENDATION_UNIVERSE} from '../../../supabase/functions/_shared/recommendation-stock-evidence.ts';
-import {historyUrl, parseOfficialHistory, tpexDailyUrl, parseTpexDaily, companyDirectory, type Exchange} from '../../../research/entry-official-history.ts';
+import {historyUrl, parseOfficialHistory, tpexDailyUrl, parseTpexDaily, twseDailyUrl, parseTwseDaily, companyDirectory, type Exchange} from '../../../research/entry-official-history.ts';
 import {parseRevenue, parseInstitutional, parseFinancial, parseIndex, parseEventIndex, ACTION_SOURCES, parseActionInventory} from './dailyParsers.mjs';
 import type {AcquiredResearch} from './dailyIntelligence.ts';
 import type {DailyBar, ResearchFact, FunnelInput} from './researchFunnel.ts';
@@ -40,6 +40,7 @@ export async function acquisitionPlan(date:string,companies:Company[]):Promise<S
  if(companies.length!==72||JSON.stringify(companies.map(c=>c.symbol).sort())!==JSON.stringify([...RECOMMENDATION_UNIVERSE].sort()))throw Error('UNIVERSE_DRIFT');
  const dates=sessionsBefore(date),through=dates.at(-1)!,months=[...new Set(dates.map(d=>d.slice(0,7)))],tasks:Omit<SourceTask,'key'>[]=[];
  const add=(t:Omit<SourceTask,'key'|'scope'|'max_age_days'>,age=1)=>tasks.push({...t,scope:ADAPTER_VERSION+(age===1?':'+date:''),max_age_days:age});
+ add({kind:'TWSE_PRICE_DAY',url:twseDailyUrl(through),format:'json',symbols:companies.filter(c=>c.exchange==='TWSE').map(c=>c.symbol),exchange:'TWSE',date:through});
  for(const c of companies.filter(c=>c.exchange==='TWSE'))for(const month of months)add({kind:'PRICE',url:historyUrl(c.exchange,c.symbol,month),format:'json',symbols:[c.symbol],exchange:c.exchange,month},month===through.slice(0,7)?1:7);
  const otc=companies.filter(c=>c.exchange==='TPEX').map(c=>c.symbol);
  for(const d of dates)add({kind:'OTC_PRICE',url:tpexDailyUrl(d),format:'json',symbols:otc,date:d,exchange:'TPEX'},d===through?1:7);
@@ -66,6 +67,7 @@ export async function acquisitionPlan(date:string,companies:Company[]):Promise<S
  const institutionalDates=new Set(dates.slice(-RESEARCH_RULES.medium_institutional_sessions));
  const revenuePeriods=new Set(tasks.filter(t=>t.kind==='REVENUE').map(t=>t.period!).sort().filter((p,i,a)=>a.indexOf(p)===i).slice(-RESEARCH_RULES.medium_months));
  const priority=(t:Omit<SourceTask,'key'>)=>{
+  if(t.kind==='TWSE_PRICE_DAY')return -1;
   if(t.kind==='PRICE'||t.kind==='BENCHMARK')return warmMonths.has(t.month!)?0:3;
   if(t.kind==='OTC_PRICE')return warmDates.has(t.date!)?0:3;
   if(t.kind==='REVENUE'&&revenuePeriods.has(t.period!)||t.kind==='INSTITUTIONAL'&&institutionalDates.has(t.date!))return 1;
@@ -110,6 +112,13 @@ export async function normalizeSource(task:SourceTask,raw:unknown,at:string):Pro
   const history=t.kind==='PRICE'?parseOfficialHistory(t.exchange!,t.symbols[0],t.month!,p,at):null;
   const records=history?history.bars.map(bar=>({symbol:t.symbols[0],bar})):parseTpexDaily(p,t.date!,t.symbols,at).daily.filter(r=>r.bar).map(r=>({symbol:r.symbol,bar:r.bar!}));
   return {rows:await Promise.all(records.map(async({symbol,bar})=>({symbol,...bar,id:`bar-${symbol}-${bar.date}`,source:t.url,published_at:null,first_seen_at:at,as_of:bar.date+'T13:30:00+08:00',evidence_hash:await snapshotHash(bar),session_scope:history?.volume_amount_scope??'INCLUDES_ODD_AFTERHOURS_BLOCK_TRADES'}))),rejected:history?.rejected??[]};
+ }
+ if(t.kind==='TWSE_PRICE_DAY'){
+  if(t.exchange!=='TWSE'||!t.date||t.url!==twseDailyUrl(t.date))throw Error('DAILY_SOURCE_IDENTITY_INVALID');
+  const daily=parseTwseDaily(p,t.date,t.symbols,at);
+  return {rows:await Promise.all(daily.daily.filter(r=>r.bar).map(async({symbol,bar})=>({symbol,...bar!,id:`bar-${symbol}-${bar!.date}`,source:t.url,
+   published_at:null,first_seen_at:at,as_of:bar!.date+'T13:30:00+08:00',evidence_hash:await snapshotHash(bar),session_scope:daily.volume_amount_scope}))),
+   rejected:daily.daily.filter(r=>!r.bar).map(r=>({symbol:r.symbol,reason:r.reason}))};
  }
  if(t.kind==='REVENUE')return parseRevenue(String(raw),{...t,period:t.period!},at);
  if(t.kind==='INSTITUTIONAL')return parseInstitutional(raw,{...t,exchange:t.exchange!,date:t.date!},at);
@@ -197,7 +206,17 @@ export async function assembleDaily(date:string,companies:Company[],receipts:Sou
    }
   }
  }
- const allBars=[...records('PRICE'),...records('OTC_PRICE')],facts=[...records('REVENUE'),...records('INSTITUTIONAL'),...records('FINANCIAL_YTD'),...records('CASHFLOW_YTD')];
+ const historyBars=[...records('PRICE'),...records('OTC_PRICE')],dailyBars=records('TWSE_PRICE_DAY'),priceKeys=new Map<string,Record<string,unknown>[]>();
+ const barKey=(b:Record<string,unknown>)=>String(b.symbol)+':'+String(b.date);
+ for(const b of historyBars){const k=barKey(b);priceKeys.set(k,[...(priceKeys.get(k)??[]),b]);}
+ const dailyKeys=new Map<string,Record<string,unknown>[]>();for(const b of dailyBars){const k=barKey(b);dailyKeys.set(k,[...(dailyKeys.get(k)??[]),b]);}
+ for(const [key,rows] of dailyKeys){
+  const prior=priceKeys.get(key)??[],b=rows[0];
+  if(rows.length!==1||prior.length>1||prior.some(p=>p.session_scope!==b.session_scope||['open','high','low','close','volume','amount'].some(k=>p[k]!==b[k]))){
+   priceKeys.delete(key);sourceIssues.push({kind:'TWSE_PRICE_DAY',key,reason:'OFFICIAL_PRICE_SOURCE_CONFLICT'});
+  }else if(!prior.length)priceKeys.set(key,rows);
+ }
+ const allBars=[...priceKeys.values()].flat(),facts=[...records('REVENUE'),...records('INSTITUTIONAL'),...records('FINANCIAL_YTD'),...records('CASHFLOW_YTD')];
  const inputs:FunnelInput[]=companies.map(c=>({symbol:c.symbol,company:c.company,cutoff,through,next_session:date,expected_sessions:dates,
   bars:allBars.filter(b=>b.symbol===c.symbol&&dates.includes(String(b.date))).sort((a,b)=>String(a.date).localeCompare(String(b.date))) as DailyBar[],
   facts:facts.filter(f=>f.symbol===c.symbol) as ResearchFact[],v1_missing:Object.fromEntries(Object.keys(HORIZONS).map(h=>[h,['INDEPENDENT_V1_NOT_EVALUATED']])) as FunnelInput['v1_missing']}));

@@ -51,7 +51,7 @@ export async function acquireCompanyEvents(options:{symbols:readonly string[];fe
  for(const source of COMPANY_EVENT_SOURCES){
   try{
    options.signal.throwIfAborted();
-   const response=await options.fetcher(source.url,{redirect:'error',signal:AbortSignal.any([options.signal,AbortSignal.timeout(4000)])});
+   const response=await options.fetcher(source.url,{redirect:'error',signal:AbortSignal.any([options.signal,AbortSignal.timeout(12000)])});
    if(!response.ok){await response.body?.cancel();results.push({source:source.url,http:response.status,status:'SOURCE_HTTP_FAILURE',events:[]});continue;}
    const reader=response.body?.getReader();if(!reader)throw Error('BODY');let size=0,body='';const decoder=new TextDecoder();
    try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>3_000_000){await reader.cancel();throw Error('LIMIT');}body+=decoder.decode(value,{stream:true});}}

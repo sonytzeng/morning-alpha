@@ -1,5 +1,6 @@
 // Synthetic parser regressions only; not official facts, causal approval or E2E.
 import test from 'node:test';
+import {isMarketTradingDate,previousMarketTradingDate} from '../supabase/functions/_shared/market-session-contract.mjs';
 import assert from 'node:assert/strict';
 import {COMPANY_EVENT_SOURCES, normalizeCompanyEvents, acquireCompanyEvents} from '../supabase/functions/_shared/recommendation-company-events.ts';
 const source = COMPANY_EVENT_SOURCES[0], received = '2026-09-07T01:00:00.000Z';
@@ -52,4 +53,28 @@ test('malformed public response is isolated without credentials, retries or cont
   assert.deepEqual(calls,COMPANY_EVENT_SOURCES.map(s=>s.url));
   assert(result.every(r=>r.status==='SOURCE_UNAVAILABLE_OR_INVALID'&&r.events.length===0));
   assert.doesNotMatch(JSON.stringify(result),/PRIVATE_EXPLANATION|SYNTHETIC_SOURCE_SUBJECT|DIFFERENT/);
+});
+
+// Bounded acquisition tolerates a valid official response beyond the old 4s cap.
+test('a slow official event source completes within its bounded request window',async()=>{
+ const result=await acquireCompanyEvents({symbols:['2330'],now:()=>received,signal:AbortSignal.timeout(15000),
+  fetcher:async(url,init)=>{
+   if(url===COMPANY_EVENT_SOURCES[1].url){await new Promise(resolve=>setTimeout(resolve,4200));init.signal.throwIfAborted();}
+   return Response.json([row()]);
+  }});
+ assert(result.every(r=>r.status==='PASS'&&r.events.length===1));
+ assert(result.every(r=>r.events[0].bullishness===null&&r.events[0].impact_review==='REQUIRED'));
+});
+test('an already cancelled caller never issues event requests',async()=>{
+ const c=new AbortController();c.abort();let calls=0;
+ const result=await acquireCompanyEvents({symbols:['2330'],now:()=>received,signal:c.signal,fetcher:async()=>{calls++;return Response.json([row()]);}});
+ assert.equal(calls,0);assert(result.every(r=>r.status==='SOURCE_UNAVAILABLE_OR_INVALID'));
+});
+
+test('the shared calendar retains the producer exceptional closure in the 20-session window',()=>{
+ assert.equal(isMarketTradingDate('TW','2026-10-23'),false);
+ assert.equal(previousMarketTradingDate('TW','2026-10-27'),'2026-10-22');
+ let d=previousMarketTradingDate('TW','2026-10-29');const days=[];
+ for(let i=0;i<20;i++){days.push(d);d=previousMarketTradingDate('TW',d);}
+ assert.equal(days.length,20);assert.equal(days[0],'2026-10-28');assert(!days.includes('2026-10-23'));
 });

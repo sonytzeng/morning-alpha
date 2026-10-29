@@ -66,6 +66,12 @@ test('bounded hash workload can reach the unchanged SQL lock boundary without la
   if(op==='SOURCE_BEGIN'){const payload={rows:data.exchange==='TWSE'?companies:[]};return {status:'CACHE',receipt:{task:data,payload,version:'VNEXT_DAILY_OFFICIAL_1',status:'OK'}};}
   if(op==='DUE_OUTCOMES')return [];
   if(op==='CHECKPOINT'){run.checkpoint=structuredClone(data);return {};}
+  if(op==='CHECKPOINT_STATE'){
+   assert.equal(data.source_revision,run.checkpoint.acquired.snapshot_hash);assert(!('acquired' in data.checkpoint));
+   const retained={acquired:run.checkpoint.acquired,...(run.checkpoint.locks?{locks:run.checkpoint.locks}:{})};
+   if(run.checkpoint.locks)assert(!('locks' in data.checkpoint));
+   run.checkpoint={...structuredClone(data.checkpoint),...retained};return {};
+  }
   if(op==='PREDICTIONS'){
    assert(now<Date.parse(actionable),'new inserts still obey actual wall-clock cutoff');
    assert.equal(data.length,216);
@@ -84,9 +90,10 @@ test('bounded hash workload can reach the unchanged SQL lock boundary without la
   assert.equal(counts().count,0,'large-snapshot preparation must yield before any evidence lock digest');
   assert.deepEqual(run.checkpoint.acquired,before);now+=3000;
  }
- const committedHandoff=await workDailyRun(run.id,ports);
- assert.equal(committedHandoff.status,'QUEUED');assert.equal(committedHandoff.reason,'FORWARD_PREPARATION_CONTINUATION');
- assert.equal(committed.size,216);assert(run.checkpoint.completed.includes('PREDICTION_LOCK'));now+=3000;
+ const preparedHandoff=await workDailyRun(run.id,ports);
+ assert.equal(preparedHandoff.status,'QUEUED');assert.equal(preparedHandoff.reason,'FORWARD_PREPARATION_CONTINUATION');
+ assert.equal(committed.size,0);assert.equal(run.checkpoint.locks.length,216);
+ assert(!run.checkpoint.completed.includes('PREDICTION_LOCK'));now+=3000;
  const result=await workDailyRun(run.id,ports);
  assert.equal(result.status,'COMPLETE','repeated full-entry hashing must not consume the complete invocation before prepared commit');
  assert.equal(committed.size,216);assert.equal(counts().count,72);

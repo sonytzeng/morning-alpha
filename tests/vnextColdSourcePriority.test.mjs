@@ -12,11 +12,20 @@ const baselines={
  '2026-10-19':[1462,'6a9f84c73f93ae3cec8cdfb01324acf708c1a5a583ab9e03c263aee950fcacde','4e58b5bfc0eb1633697045f24375af6cf298bdf219b1c85dc6a9d0dfb6c74656'],
  '2026-11-02':[1462,'f2a9d728babdd7780cf45cf5c7d9c32eec0511840ab27a3dc6ec6a018dfd7b7c','750774357b2afd407910e9cd88e0fec285dd74106b4d6b467f2890a8f38c50df'],
 };
-test('cold ordering preserves original tasks; only 40 financial cache keys add the explicit response-period contract',async()=>{
+// Explicit new-calendar expectation; the original pre-exception baselines stay above.
+const correctedCalendarBaselines={'2026-11-02':[1462,'db043b47a45ded528494c6ed22a3ea357b237b3069dc0dcccb924bd645ee12fe','609098f8d533df60e252650fad565dd347ac3e848f74f139dba6b8c7250d93be']};
+test('cold ordering preserves original tasks with 40 financial contracts and one explicitly versioned current index source',async()=>{
  for(const [date,[count,keys,tasks]] of Object.entries(baselines)){
   const plan=await acquisitionPlan(date,companies);
   assert.equal(plan.length,count);assert.equal(new Set(plan.map(t=>t.key)).size,count);
   const legacy=await Promise.all(plan.map(async t=>{
+   if(t.benchmark_response_contract){
+    assert.equal(t.kind,'BENCHMARK');assert.equal(t.benchmark_response_contract,'TWSE_OPENAPI_INDEX_V1');
+    assert.equal(t.url,'https://openapi.twse.com.tw/v1/indicesReport/MI_5MINS_HIST');
+    const {key,benchmark_response_contract,...before}=t;void benchmark_response_contract;
+    before.url=`https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?date=${t.month.replace('-','')}01&response=json`;
+    const oldKey=await snapshotHash(before);assert.notEqual(key,oldKey);return {...before,key:oldKey};
+   }
    if(!['FINANCIAL_YTD','CASHFLOW_YTD'].includes(t.kind)){assert(!Object.hasOwn(t,'financial_response_contract'));return t;}
    assert.equal(t.financial_response_contract,'MOPS_RESPONSE_PERIOD_V1');
    const {key,financial_response_contract,...before}=t;void financial_response_contract;
@@ -24,8 +33,11 @@ test('cold ordering preserves original tasks; only 40 financial cache keys add t
    return {...before,key:oldKey};
   }));
   assert.equal(plan.filter(t=>t.financial_response_contract).length,40);
-  assert.equal(await snapshotHash(legacy.map(t=>t.key).sort()),keys);
-  assert.equal(await snapshotHash([...legacy].sort((a,b)=>a.key.localeCompare(b.key))),tasks);
+  assert.equal(plan.filter(t=>t.benchmark_response_contract).length,1);
+  const corrected=correctedCalendarBaselines[date];
+  if(corrected){assert.equal(count,corrected[0]);assert(!plan.some(t=>t.date==='2026-10-23'));assert(sessionsBefore(date).includes('2026-10-22'));}
+  assert.equal(await snapshotHash(legacy.map(t=>t.key).sort()),corrected?.[1]??keys);
+  assert.equal(await snapshotHash([...legacy].sort((a,b)=>a.key.localeCompare(b.key))),corrected?.[2]??tasks);
  }
 });
 test('all 72 latest20 windows and TAIEX precede MEDIUM, which precedes deep price bootstrap',async()=>{

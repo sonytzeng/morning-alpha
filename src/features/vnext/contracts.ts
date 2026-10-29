@@ -105,9 +105,20 @@ export async function snapshotHash(value: unknown): Promise<string> {
  * Keep digests sequential: 72 simultaneous full-Entry buffers can exceed the
  * Edge isolate's memory limit. The encoded bytes match snapshotHash exactly. */
 export async function inputSnapshotHashes(inputs: readonly unknown[], entry: unknown): Promise<string[]> {
-  const entryText = stable(entry), hashes: string[] = [];
+  // Encode the shared prefix once. Re-encoding the complete multi-stock Entry
+  // for every input adds CPU and transient strings without changing the hash
+  // preimage. Reuse the buffer only after each awaited digest has resolved.
+  const encoder = new TextEncoder();
+  const prefix = encoder.encode('{"entry":' + stable(entry) + ',"input":');
+  const hashes: string[] = [];
+  let bytes = new Uint8Array(0);
   for (const input of inputs) {
-    hashes.push(await hashCanonical('{"entry":' + entryText + ',"input":' + stable(input) + '}'));
+    const suffix = encoder.encode(stable(input) + '}');
+    const length = prefix.byteLength + suffix.byteLength;
+    if (bytes.byteLength < length) { bytes = new Uint8Array(length); bytes.set(prefix); }
+    bytes.set(suffix, prefix.byteLength);
+    // Exclude the previous input's tail when the new canonical value is shorter.
+    hashes.push(Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes.subarray(0, length))), b => b.toString(16).padStart(2, '0')).join(''));
   }
   return hashes;
 }

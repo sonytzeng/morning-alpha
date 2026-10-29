@@ -52,3 +52,38 @@ test('72x250 synthetic full-input scope matches the original hash for every stoc
  assert.equal(hashes.length,72);assert.deepEqual(hashes,expected);
  t.diagnostic(JSON.stringify({kind:'SYNTHETIC_72x250_SCOPE_EQUIVALENCE',inputs:72,bars:18000,scope_changed:false,forward_sample:0}));
 });
+
+
+test('shared UTF-8 prefix preserves the complete canonical preimage and SHA-256',async t=>{
+ const inputs=[null,true,false,0,-0,1.25,[],{},'台積電🙂',{'𠮷':'\ud800',quote:'"\\\n'},[null,{z:1,a:2}],'x'.repeat(10000),null,'short'];
+ const entry={company:'測試🙂',nested:{z:null,a:['\udfff','漢字']},number:1e-10};
+ const expected=await Promise.all(inputs.map(input=>snapshotHash({entry,input})));
+ const digest=crypto.subtle.digest.bind(crypto.subtle),decoder=new TextDecoder();
+ let active=0,peak=0;const actualPreimages=[];
+ t.mock.method(crypto.subtle,'digest',async(algorithm,bytes)=>{
+  active++;peak=Math.max(peak,active);actualPreimages.push(decoder.decode(bytes));
+  const copy=Uint8Array.from(bytes);await Promise.resolve();assert.deepEqual(bytes,copy);
+  try{return await digest(algorithm,bytes);}finally{active--;}
+ });
+ assert.deepEqual(await inputSnapshotHashes(inputs,entry),expected);
+ assert.equal(actualPreimages.length,inputs.length);assert.equal(peak,1);
+ for(let i=0;i<inputs.length;i++)assert.deepEqual(JSON.parse(actualPreimages[i]),JSON.parse(JSON.stringify({entry,input:inputs[i]})));
+});
+
+test('the shared Entry is UTF-8 encoded once per call, with no cross-call cache',async t=>{
+ const encode=TextEncoder.prototype.encode;let prefixes=0;
+ t.mock.method(TextEncoder.prototype,'encode',function(value){if(value.startsWith('{"entry":'))prefixes++;return encode.call(this,value);});
+ const entry={stock:'2330',amount:100},inputs=Array.from({length:72},(_,i)=>({symbol:String(i)}));
+ const before=await inputSnapshotHashes(inputs,entry);assert.equal(prefixes,1);
+ entry.amount++;
+ const after=await inputSnapshotHashes(inputs,entry);assert.equal(prefixes,2);
+ assert(before.every((hash,i)=>hash!==after[i]));
+ assert.deepEqual(await inputSnapshotHashes([],entry),[]);
+});
+
+test('unsupported canonical values still fail closed',async()=>{
+ for(const invalid of [undefined,NaN,Infinity,()=>{},Symbol('x')]){
+  await assert.rejects(inputSnapshotHashes([invalid],null),/NON_CANONICAL_VALUE/);
+  await assert.rejects(inputSnapshotHashes([null],invalid),/NON_CANONICAL_VALUE/);
+ }
+});

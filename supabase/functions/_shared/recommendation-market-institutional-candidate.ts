@@ -4,6 +4,7 @@
 import type { DecisionIdentity, EvidenceData, Row } from './decision-v1-data.ts';
 import { previousMarketTradingDate, isMarketTradingDate } from './market-session-contract.mjs';
 import { evaluationPhase } from './recommendation-phase.ts';
+import { compareTime, validObservationTime } from '../../../src/features/vnext/contracts.ts';
 
 export const MARKET_FLOW_CONTRACT = 'TWSE_BFI82U_MARKET_TWD_CANDIDATE_V1';
 const ENDPOINT = 'https://www.twse.com.tw/rwd/zh/fund/BFI82U';
@@ -138,7 +139,11 @@ export async function withMarketInstitutionalEvidence(data: EvidenceData, identi
   catch { return fail('MARKET_FLOW_INVALID'); }
   const cutoff = timestamp(identity.generated_at), available = timestamp(capture.available_at);
   const expected = previousMarketTradingDate('TW', identity.report_date);
+  // PostgreSQL receipts preserve six fractional digits. Date.parse truncates
+  // them, so it cannot authorize evidence at the same millisecond as cutoff.
   if (evaluationPhase(identity.generated_at) !== 'PREMARKET' || !identity.is_trading_day || !Number.isFinite(cutoff)
+    || !validObservationTime(identity.generated_at) || !validObservationTime(capture.available_at)
+    || compareTime(capture.available_at, identity.generated_at) > 0
     || capture.status !== 'PASS' || capture.contract !== MARKET_FLOW_CONTRACT || capture.trading_date !== expected
     || !Number.isFinite(available) || available > cutoff || capture.first_seen_at !== capture.available_at
     || capture.source !== marketFlowSource(capture.trading_date) || !SHA.test(capture.source_revision ?? '') || capture.rows.length !== 3) return fail('MARKET_FLOW_NOT_ADMISSIBLE');

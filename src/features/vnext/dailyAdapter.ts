@@ -1,22 +1,23 @@
 /** Date-driven, official-source-only adapter. No historical file or credential fallback. */
-import {snapshotHash, HORIZONS} from './contracts.ts';
+import {snapshotHash, HORIZONS, validObservationTime, compareTime} from './contracts.ts';
 import {previousMarketTradingDate, coveredCalendarDate, isMarketTradingDate} from '../../../supabase/functions/_shared/market-session-contract.mjs';
 import {RECOMMENDATION_UNIVERSE} from '../../../supabase/functions/_shared/recommendation-stock-evidence.ts';
-import {historyUrl, parseOfficialHistory, tpexDailyUrl, parseTpexDaily, companyDirectory, type Exchange} from '../../../research/entry-official-history.ts';
+import {historyUrl, parseOfficialHistory, tpexDailyUrl, parseTpexDaily, twseDailyUrl, parseTwseDaily, companyDirectory, type Exchange} from '../../../research/entry-official-history.ts';
 import {parseRevenue, parseInstitutional, parseFinancial, parseIndex, parseEventIndex, ACTION_SOURCES, parseActionInventory} from './dailyParsers.mjs';
 import type {AcquiredResearch} from './dailyIntelligence.ts';
 import type {DailyBar, ResearchFact, FunnelInput} from './researchFunnel.ts';
-import {RESEARCH_RULES} from './researchFunnel.ts';
+import {RESEARCH_RULES,traceIssues} from './researchFunnel.ts';
 import type {EntryInput} from '../../../research/entry-opportunity.ts';
 import {targetSessions} from './dailyOutcome.ts';
 import type {DailyLock} from './dailyIntelligence.ts';
 
 export const ADAPTER_VERSION='VNEXT_DAILY_OFFICIAL_1';
+const INDEX_OPEN_API='https://openapi.twse.com.tw/v1/indicesReport/MI_5MINS_HIST';
 export type Company={symbol:string;company:string;exchange:Exchange;industry:string};
 export type SourceTask={key:string;kind:string;url:string;format:'json'|'text';scope:string;
  symbols:string[];exchange?:Exchange;month?:string;date?:string;period?:string;year?:number;quarter?:number;
  from?:string;through?:string;form?:Record<string,string>;action_index?:number;max_age_days:number;
- financial_response_contract?:'MOPS_RESPONSE_PERIOD_V1'};
+ financial_response_contract?:'MOPS_RESPONSE_PERIOD_V1';benchmark_response_contract?:'TWSE_OPENAPI_INDEX_V1'};
 export type SourceReceipt={task:SourceTask;first_seen_at:string;available_at:string;published_at:null;as_of:string;
  version:string;raw_hash:string;payload_hash:string;payload:Record<string,unknown>;status:'OK'|'UNAVAILABLE';reason:string|null};
 const day=(at:string)=>new Date(Date.parse(at)+8*3600000).toISOString().slice(0,10);
@@ -39,10 +40,11 @@ export async function acquisitionPlan(date:string,companies:Company[]):Promise<S
  if(companies.length!==72||JSON.stringify(companies.map(c=>c.symbol).sort())!==JSON.stringify([...RECOMMENDATION_UNIVERSE].sort()))throw Error('UNIVERSE_DRIFT');
  const dates=sessionsBefore(date),through=dates.at(-1)!,months=[...new Set(dates.map(d=>d.slice(0,7)))],tasks:Omit<SourceTask,'key'>[]=[];
  const add=(t:Omit<SourceTask,'key'|'scope'|'max_age_days'>,age=1)=>tasks.push({...t,scope:ADAPTER_VERSION+(age===1?':'+date:''),max_age_days:age});
+ add({kind:'TWSE_PRICE_DAY',url:twseDailyUrl(through),format:'json',symbols:companies.filter(c=>c.exchange==='TWSE').map(c=>c.symbol),exchange:'TWSE',date:through});
  for(const c of companies.filter(c=>c.exchange==='TWSE'))for(const month of months)add({kind:'PRICE',url:historyUrl(c.exchange,c.symbol,month),format:'json',symbols:[c.symbol],exchange:c.exchange,month},month===through.slice(0,7)?1:7);
  const otc=companies.filter(c=>c.exchange==='TPEX').map(c=>c.symbol);
  for(const d of dates)add({kind:'OTC_PRICE',url:tpexDailyUrl(d),format:'json',symbols:otc,date:d,exchange:'TPEX'},d===through?1:7);
- for(const month of months)add({kind:'BENCHMARK',url:`https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?date=${month.replace('-','')}01&response=json`,format:'json',symbols:[],month},month===through.slice(0,7)?1:7);
+ for(const month of months){const current=month===through.slice(0,7);add({kind:'BENCHMARK',url:current?INDEX_OPEN_API:`https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?date=${month.replace('-','')}01&response=json`,format:'json',symbols:[],month,...(current?{benchmark_response_contract:'TWSE_OPENAPI_INDEX_V1' as const}:{})},current?1:7);}
  const [y,m]=date.split('-').map(Number);
  for(const exchange of ['TWSE','TPEX'] as const){const market=exchange==='TWSE'?'sii':'otc',symbols=companies.filter(c=>c.exchange===exchange).map(c=>c.symbol);
   for(let i=1;i<=36;i++){const d=new Date(Date.UTC(y,m-1-i,1)),period=d.toISOString().slice(0,7),year=d.getUTCFullYear(),month=d.getUTCMonth()+1;
@@ -65,6 +67,7 @@ export async function acquisitionPlan(date:string,companies:Company[]):Promise<S
  const institutionalDates=new Set(dates.slice(-RESEARCH_RULES.medium_institutional_sessions));
  const revenuePeriods=new Set(tasks.filter(t=>t.kind==='REVENUE').map(t=>t.period!).sort().filter((p,i,a)=>a.indexOf(p)===i).slice(-RESEARCH_RULES.medium_months));
  const priority=(t:Omit<SourceTask,'key'>)=>{
+  if(t.kind==='TWSE_PRICE_DAY')return -1;
   if(t.kind==='PRICE'||t.kind==='BENCHMARK')return warmMonths.has(t.month!)?0:3;
   if(t.kind==='OTC_PRICE')return warmDates.has(t.date!)?0:3;
   if(t.kind==='REVENUE'&&revenuePeriods.has(t.period!)||t.kind==='INSTITUTIONAL'&&institutionalDates.has(t.date!))return 1;
@@ -110,11 +113,27 @@ export async function normalizeSource(task:SourceTask,raw:unknown,at:string):Pro
   const records=history?history.bars.map(bar=>({symbol:t.symbols[0],bar})):parseTpexDaily(p,t.date!,t.symbols,at).daily.filter(r=>r.bar).map(r=>({symbol:r.symbol,bar:r.bar!}));
   return {rows:await Promise.all(records.map(async({symbol,bar})=>({symbol,...bar,id:`bar-${symbol}-${bar.date}`,source:t.url,published_at:null,first_seen_at:at,as_of:bar.date+'T13:30:00+08:00',evidence_hash:await snapshotHash(bar),session_scope:history?.volume_amount_scope??'INCLUDES_ODD_AFTERHOURS_BLOCK_TRADES'}))),rejected:history?.rejected??[]};
  }
+ if(t.kind==='TWSE_PRICE_DAY'){
+  if(t.exchange!=='TWSE'||!t.date||t.url!==twseDailyUrl(t.date))throw Error('DAILY_SOURCE_IDENTITY_INVALID');
+  const daily=parseTwseDaily(p,t.date,t.symbols,at);
+  return {rows:await Promise.all(daily.daily.filter(r=>r.bar).map(async({symbol,bar})=>({symbol,...bar!,id:`bar-${symbol}-${bar!.date}`,source:t.url,
+   published_at:null,first_seen_at:at,as_of:bar!.date+'T13:30:00+08:00',evidence_hash:await snapshotHash(bar),session_scope:daily.volume_amount_scope}))),
+   rejected:daily.daily.filter(r=>!r.bar).map(r=>({symbol:r.symbol,reason:r.reason}))};
+ }
  if(t.kind==='REVENUE')return parseRevenue(String(raw),{...t,period:t.period!},at);
  if(t.kind==='INSTITUTIONAL')return parseInstitutional(raw,{...t,exchange:t.exchange!,date:t.date!},at);
  if(t.kind==='FINANCIAL_YTD'||t.kind==='CASHFLOW_YTD')return parseFinancial(String(raw),{...t,year:t.year!,quarter:t.quarter!,exchange:t.exchange!},at);
  if(t.kind==='EVENT')return parseEventIndex(raw,{...t,symbol:t.symbols[0],year:t.year!,month:Number(t.month),from:t.from!,through:t.through!,url:t.url+'?'+new URLSearchParams(t.form)},at);
- if(t.kind==='BENCHMARK')return {rows:parseIndex(raw,t.month,at,t.url).map((b:Record<string,unknown>)=>({...b,id:'benchmark-'+b.date,volume:null,amount:null,session_scope:'TAIEX_OFFICIAL'}))};
+ if(t.kind==='BENCHMARK'){
+  if(t.benchmark_response_contract!==undefined||t.url===INDEX_OPEN_API){
+   const fields=['Date','OpeningIndex','HighestIndex','LowestIndex','ClosingIndex'];
+   if(t.benchmark_response_contract!=='TWSE_OPENAPI_INDEX_V1'||t.url!==INDEX_OPEN_API||!/^\d{4}-\d\d$/.test(t.month??'')
+    ||!Array.isArray(raw)||!raw.length||raw.length>32||raw.some(r=>!r||typeof r!=='object'||Array.isArray(r)
+     ||Object.keys(r).sort().join('|')!==[...fields].sort().join('|')||fields.some(k=>typeof r[k]!=='string')))throw Error('BENCHMARK_OPENAPI_SCHEMA');
+   raw={stat:'OK',date:t.month!.replace('-','')+'01',fields:['日期','開盤指數','最高指數','最低指數','收盤指數'],data:raw.map(r=>fields.map(k=>r[k]))};
+  }
+  return {rows:parseIndex(raw,t.month,at,t.url).map((b:Record<string,unknown>)=>({...b,id:'benchmark-'+b.date,volume:null,amount:null,session_scope:'TAIEX_OFFICIAL'}))};
+ }
  if(t.kind==='ACTION')return {rows:parseActionInventory(ACTION_SOURCES[t.action_index!],raw,t.symbols,t.url,at,t.from,t.through),complete:false};
  throw Error('SOURCE_KIND_INVALID');
 }
@@ -154,7 +173,50 @@ export async function assembleDaily(date:string,companies:Company[],receipts:Sou
   return matched;
  });
  const records=(k:string)=>admitted.filter(r=>r.task.kind===k).flatMap(r=>Array.isArray(r.payload.rows)?r.payload.rows as Record<string,unknown>[]:[]);
- const allBars=[...records('PRICE'),...records('OTC_PRICE')],facts=[...records('REVENUE'),...records('INSTITUTIONAL'),...records('FINANCIAL_YTD'),...records('CASHFLOW_YTD')];
+ // Canonical direction/regime remains authoritative. Bind its missing index
+ // change to two complete official sessions already known at this cutoff;
+ // neither an unrelated latest quote nor an unpromoted V2 run is required.
+ if(market&&market.value.change_percent===undefined&&market.source_ref
+  &&[market.observed_at,market.available_at,cutoff].every(validObservationTime)
+  &&compareTime(market.observed_at,market.available_at)<=0&&compareTime(market.available_at,cutoff)<=0){
+  const expected=dates.slice(-2),selected=expected.map(d=>admitted.filter(r=>r.task.kind==='BENCHMARK').flatMap(r=>
+   (Array.isArray(r.payload.rows)?r.payload.rows as Record<string,unknown>[]:[]).filter(b=>b.date===d).map(b=>({r,b}))));
+  // Different official endpoints may retain the same session. Require equal
+  // native OHLC and unique endpoint rows; conflicts never select a winner.
+  if(expected.length===2&&selected.every(xs=>xs.length>0&&new Set(xs.map(x=>x.r.task.url)).size===xs.length
+   &&xs.every(x=>['open','high','low','close'].every(k=>x.b[k]===xs[0].b[k])))){
+   const pairs=selected.flat(),ok=pairs.every(({r,b})=>
+    (r.task.url===INDEX_OPEN_API&&r.task.benchmark_response_contract==='TWSE_OPENAPI_INDEX_V1'
+     ||r.task.url===`https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?date=${r.task.month?.replace('-','')}01&response=json`)
+    &&b.source===r.task.url&&b.session_scope==='TAIEX_OFFICIAL'&&b.id==='benchmark-'+b.date
+    &&[r.first_seen_at,r.available_at].every(validObservationTime)
+    &&compareTime(r.first_seen_at,r.available_at)<=0&&compareTime(r.available_at,cutoff)<=0
+    &&b.first_seen_at===r.first_seen_at&&b.available_at===r.available_at
+    &&[b.open,b.high,b.low,b.close].every(v=>typeof v==='number'&&Number.isFinite(v)&&v>0)
+    &&Number(b.high)>=Math.max(Number(b.open),Number(b.close))&&Number(b.low)<=Math.min(Number(b.open),Number(b.close))
+    &&typeof b.as_of==='string'&&b.as_of===b.date+'T13:30:00+08:00'
+    &&traceIssues(b as unknown as DailyBar,cutoff).length===0);
+   if(ok){
+    const change=(Number(selected[1][0].b.close)/Number(selected[0][0].b.close)-1)*100;
+    const latest=(values:string[])=>values.reduce((a,b)=>compareTime(a,b)>=0?a:b);
+    if(Number.isFinite(change))market={...market,value:{...market.value,change_percent:change},
+     observed_at:latest([market.observed_at,...pairs.map(({r})=>r.first_seen_at)]),
+     available_at:latest([market.available_at,...pairs.map(({r})=>r.available_at)]),
+     source_ref:market.source_ref+pairs.map(({r,b})=>'|'+r.task.url+'#'+b.id+':'+b.evidence_hash).join('')};
+   }
+  }
+ }
+ const historyBars=[...records('PRICE'),...records('OTC_PRICE')],dailyBars=records('TWSE_PRICE_DAY'),priceKeys=new Map<string,Record<string,unknown>[]>();
+ const barKey=(b:Record<string,unknown>)=>String(b.symbol)+':'+String(b.date);
+ for(const b of historyBars){const k=barKey(b);priceKeys.set(k,[...(priceKeys.get(k)??[]),b]);}
+ const dailyKeys=new Map<string,Record<string,unknown>[]>();for(const b of dailyBars){const k=barKey(b);dailyKeys.set(k,[...(dailyKeys.get(k)??[]),b]);}
+ for(const [key,rows] of dailyKeys){
+  const prior=priceKeys.get(key)??[],b=rows[0];
+  if(rows.length!==1||prior.length>1||prior.some(p=>p.session_scope!==b.session_scope||['open','high','low','close','volume','amount'].some(k=>p[k]!==b[k]))){
+   priceKeys.delete(key);sourceIssues.push({kind:'TWSE_PRICE_DAY',key,reason:'OFFICIAL_PRICE_SOURCE_CONFLICT'});
+  }else if(!prior.length)priceKeys.set(key,rows);
+ }
+ const allBars=[...priceKeys.values()].flat(),facts=[...records('REVENUE'),...records('INSTITUTIONAL'),...records('FINANCIAL_YTD'),...records('CASHFLOW_YTD')];
  const inputs:FunnelInput[]=companies.map(c=>({symbol:c.symbol,company:c.company,cutoff,through,next_session:date,expected_sessions:dates,
   bars:allBars.filter(b=>b.symbol===c.symbol&&dates.includes(String(b.date))).sort((a,b)=>String(a.date).localeCompare(String(b.date))) as DailyBar[],
   facts:facts.filter(f=>f.symbol===c.symbol) as ResearchFact[],v1_missing:Object.fromEntries(Object.keys(HORIZONS).map(h=>[h,['INDEPENDENT_V1_NOT_EVALUATED']])) as FunnelInput['v1_missing']}));

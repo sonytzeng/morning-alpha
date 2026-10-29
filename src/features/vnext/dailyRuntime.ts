@@ -17,6 +17,9 @@ const failure=(e:unknown)=>{const msg=e instanceof Error?e.message:'';return /^[
 // RPC/CPU latency is not guaranteed: recheck at each durable stage boundary and
 // leave SQL's current-time veto authoritative for a delayed prediction insert.
 const FORWARD_PREPARE_MS=180000,ASSEMBLY_ADMISSION_MS=45000,STAGE_RESERVE_MS=20000,WRITE_RESERVE_MS=5000;
+// Cached and exhausted tasks consume RPC/JSON CPU too. Bound their traversal
+// independently of the existing eight-provider-fetch and wall-clock budgets.
+const ACQUISITION_TASKS_PER_INVOCATION=32;
 export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
  const claimStarted=Date.now();
  const claim=object(await p.rpc('claim_vnext_daily_research_v1',{p_run:id}));if(claim.status!=='ACQUIRED')return {status:String(claim.status),continue:false};
@@ -91,12 +94,12 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   const retainedAcquired='acquired' in r.checkpoint?r.checkpoint.acquired:undefined;
   const resumePrepared=hasLock&&'key' in r.checkpoint&&r.checkpoint.finished!==true
    &&new Date(Date.parse(p.clock())+8*3600000).toISOString().slice(0,10)===r.business_date;
-  for(let i=r.cursor;i<plan.length&&due.length===0&&!resumePrepared&&(!retainedAcquired||hasLock||Date.parse(p.clock())>=actionable);i++){
+  for(let i=r.cursor,processed=0;i<plan.length&&due.length===0&&!resumePrepared&&(!retainedAcquired||hasLock||Date.parse(p.clock())>=actionable);i++,processed++){
    // Lock a truthful partial-evidence evaluation before the existing 09:00
    // deadline. Long-history bootstrap may continue; never backdate its receipts.
    const current=Date.parse(p.clock());
    if(!hasLock&&current>=actionable-FORWARD_PREPARE_MS&&current<actionable)break;
-   if(Date.now()+14000>=deadline||fetched>=8)return finish('QUEUED','ACQUISITION_CONTINUATION');
+   if(processed>=ACQUISITION_TASKS_PER_INVOCATION||Date.now()+14000>=deadline||fetched>=8)return finish('QUEUED','ACQUISITION_CONTINUATION');
    const receipt=await collect(plan[i]);if(receipt===false)return finish('QUEUED','SOURCE_RETRY_PENDING');
    await rpc('CURSOR',{cursor:i+1});cursor=i+1;
   }
@@ -145,6 +148,7 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
    // commitLocks above already received SQL's exact-batch reconciliation. Keep
    // a private byte receipt; this confirmation never invokes a writer RPC.
    const committedPrepared=hasLock&&'locks' in r.checkpoint?JSON.stringify(r.checkpoint.locks):null;
+   let preparedBytes='locks' in r.checkpoint?JSON.stringify(r.checkpoint.locks):null;
    const store:DailyStore={exclusive:async(_key,work)=>work(),load:async()=>state,save:async s=>{
     const startingStage=Object.entries(s.attempts).some(([stage,n])=>stage!=='ACQUISITION'&&(n??0)>(savedAttempts[stage as keyof typeof savedAttempts]??0));
     forwardBudget(startingStage?STAGE_RESERVE_MS:WRITE_RESERVE_MS);
@@ -152,7 +156,20 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
     // checkpoint. This is a recoverable snapshot, NOT validation/quality PASS:
     // the unchanged engine still validates it before completing ACQUISITION.
     const checkpoint={...s,acquired:s.acquired??acquired};
-    await rpc('CHECKPOINT',checkpoint);state=checkpoint;savedAttempts={...s.attempts};prepared||=!!s.locks;
+    if(prelockStageLimit>0){
+     // The acquired snapshot is already durably pinned. Keep it server-side
+     // instead of re-sending it with every mutable stage checkpoint. Once a
+     // prepared batch is pinned, omit it only after exact local byte equality.
+     const compact:Partial<RunState>={...s};delete compact.acquired;
+     const lockBytes=s.locks?JSON.stringify(s.locks):null;
+     if(preparedBytes!==null){
+      if(lockBytes!==preparedBytes)throw Error('PREPARED_LOCKS_IMMUTABLE');
+      delete compact.locks;
+     }
+     await rpc('CHECKPOINT_STATE',{source_revision:acquired.snapshot_hash,checkpoint:compact});
+     preparedBytes??=lockBytes;
+    }else await rpc('CHECKPOINT',checkpoint);
+    state=checkpoint;savedAttempts={...s.attempts};prepared||=!!s.locks;
    },lock:async rows=>{forwardBudget();await commitLocks(rows);hasLock=true;},
    confirmCommitted:async rows=>{
     if(committedPrepared===null||JSON.stringify(rows)!==committedPrepared)throw Error('COMMITTED_BATCH_UNCONFIRMED');
@@ -160,7 +177,7 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
    const result=await runDailyIntelligence({business_date:r.business_date,checkpoint:'NATURAL_MARKET_READY',mode:'FORWARD_SHADOW',provenance:'RETAINED_REAL_EVIDENCE',
     core_ready:true,core_busy:false,source_revision:acquired.snapshot_hash,source_hash:acquired.snapshot_hash,actionable_at:r.actionable_at},store,{
     acquire:async()=>acquired,clock:p.clock,outcomes:async()=>({state:'DURABLE_OUTCOME_QUEUE'}),
-    publication:locks=>dailyPublication(locks,(_,hash)=>({now:p.clock(),audience:'owner',server_entitlement_verified:true,input_hash:hash,approved_hash:null,approved_at:null,quality_reviewed:false,methodology_approved:false,use:'OWN_ANALYSIS',grants:[]}))},20000,prelockStageLimit,prelockStageLimit>0);
+    publication:locks=>dailyPublication(locks,(_,hash)=>({now:p.clock(),audience:'owner',server_entitlement_verified:true,input_hash:hash,approved_hash:null,approved_at:null,quality_reviewed:false,methodology_approved:false,use:'OWN_ANALYSIS',grants:[]}))},20000,prelockStageLimit,prelockStageLimit>0,prelockStageLimit>0);
    if(!['COMPLETE','ALREADY_COMPLETE'].includes(result.state)){
     if(predictionFailure)throw Error(predictionFailure);
     if(result.state==='BUDGET_YIELDED')return finish('QUEUED','FORWARD_PREPARATION_CONTINUATION');

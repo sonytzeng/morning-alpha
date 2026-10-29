@@ -190,3 +190,36 @@ test('capture-only mutation cannot put different reconciled amounts under the ea
  const result=await pending;assert.deepEqual(result.flows,original.rows);
  assert.equal(result.failures.length,0);assert.equal(data.flows.length,0);
 });
+test('premarket cutoff preserves all six fractional digits and equivalent timezone offsets',async()=>{
+ const data=evidenceRows();data.flows=[];
+ const at={...identity,generated_at:'2026-09-06T23:00:00.123456Z'};
+ for(const received of ['2026-09-06T23:00:00.123455Z','2026-09-06T23:00:00.123456Z','2026-09-07T07:00:00.123456+08:00']){
+  const capture=await normalizeMarketInstitutionalTwd(payload(),DATE,received);
+  const joined=await withMarketInstitutionalEvidence(data,at,capture);
+  assert.equal(joined.failures.length,0);assert.equal(joined.flows.length,3);
+ }
+ for(const received of ['2026-09-06T23:00:00.123457Z','2026-09-07T07:00:00.123457+08:00']){
+  const capture=await normalizeMarketInstitutionalTwd(payload(),DATE,received);
+  const joined=await withMarketInstitutionalEvidence(data,at,capture);
+  assert.equal(joined.flows.length,0);assert(joined.failures.includes('MARKET_FLOW_NOT_ADMISSIBLE'));
+ }
+ assert.deepEqual(data.flows,[]);
+});
+test('completed-session totals become prior-session input only at the next premarket',async()=>{
+ const data=evidenceRows();data.flows=[];
+ const p=payload();p.date='20260907';
+ const capture=await normalizeMarketInstitutionalTwd(p,'2026-09-07','2026-09-07T06:00:00.123456Z');
+ const sameDay={...identity,generated_at:'2026-09-07T06:10:00Z'};
+ const denied=await withMarketInstitutionalEvidence(data,sameDay,capture);
+ assert.equal(denied.flows.length,0);assert(denied.failures.includes('MARKET_FLOW_NOT_ADMISSIBLE'));
+ for(const q of data.quotes)if(q.symbol==='TAIEX'&&q.phase==='intraday'){
+  q.trading_date='2026-09-07';q.captured_at='2026-09-07T05:30:00Z';q.ingested_at='2026-09-07T05:35:00Z';q.phase='close';
+ }
+ const nextDay={...identity,report_date:'2026-09-08',today_date:'2026-09-08',generated_at:'2026-09-07T23:00:00Z',data_as_of:'2026-09-07T23:00:00Z'};
+ const joined=await withMarketInstitutionalEvidence(data,nextDay,capture);
+ assert.equal(joined.failures.length,0);assert.deepEqual(joined.flows,capture.rows);
+ const decision=buildEvidenceDecision(joined,nextDay);
+ assert.equal(decision.stock_opportunities.length,0);assert.equal(decision.phase_evaluation.evaluated_count,0);
+ assert(decision.phase_evaluation.candidates.every(c=>c.reasons.includes('THREE_INSTITUTIONS_MISSING')));
+ assert(decision.phase_evaluation.candidates.every(c=>!c.reasons.includes('MARKET_REQUIRED_INSTITUTIONAL')));
+});

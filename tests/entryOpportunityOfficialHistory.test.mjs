@@ -35,6 +35,18 @@ test('TPEX daily all-trade totals preserve exact shares/TWD and never fall back 
  const duplicate=structuredClone(p);duplicate.tables[1].data.push(row);assert.equal(parseTpexDaily(duplicate,'2026-09-01',['6488'],at).daily[0].reason,'DUPLICATE_SYMBOL');
  const rounded=structuredClone(p);rounded.tables[0].fields[8]='成交張數';assert.throws(()=>parseTpexDaily(rounded,'2026-09-01',['6488'],at),/SCHEMA/);
 });
+test('TPEX all-trade bars reject populated same-day responses before the block session ends',()=>{
+ const fields=['代號','名稱','收盤','漲跌','開盤','最高','最低','均價','成交股數','成交金額(元)'];
+ const p={stat:'ok',date:'20261030',tables:[{fields,data:[['6488','公開公司','102','+2','100','105','98','101','1,234,567','123,456,789']]}]};
+ for(const receipt of ['2026-10-30T15:45:31+08:00','2026-10-30T16:59:59+08:00','2026-10-30T09:00:00Z']){
+  assert.throws(()=>parseTpexDaily(p,'2026-10-30',['6488'],receipt),/DAILY_ALL_TRADES_SESSION_INCOMPLETE/);
+ }
+ const nextMorning='2026-11-02T07:00:00+08:00';
+ const result=parseTpexDaily(p,'2026-10-30',['6488'],nextMorning);
+ assert.equal(result.daily[0].bar.available_at,nextMorning);
+ assert.equal(result.daily[0].bar.volume,1234567);
+ assert.equal(result.volume_amount_scope,'INCLUDES_ODD_AFTERHOURS_BLOCK_TRADES');
+});
 test('wrong symbol/month/schema and duplicate days reject rather than contaminating cache',()=>{
  for(const mutate of [p=>p.title='115年09月 2317 stock',p=>p.date='20260801',p=>p.fields=['日期','成交張數',...fields.slice(2)],p=>p.data.push(p.data[0]),p=>p.data[0][0]='115/08/31']){
   const p=structuredClone(tw());mutate(p);assert.throws(()=>parseOfficialHistory('TWSE','2330',month,p,at));}

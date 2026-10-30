@@ -1,7 +1,7 @@
 {
   "schema": "PRIVATE_RETAINED_ISSUER_FINANCIALS_V1",
-  "created_at": "2026-10-30T06:16:45.018001+00:00",
-  "source_study_sha256": "a27fcbd9af1292d30c3016f6d75879bdd91c0a0790592ea62a807614ffd1b477",
+  "created_at": "2026-10-30T08:27:15.413Z",
+  "source_study_sha256": "a3fd197aaea77be8f754659841a31c6fc9e205487ab1be46a6a57f89295ea319",
   "source_admitted": false,
   "member_publication_approved": false,
   "methodology_promoted": false,
@@ -1018,13 +1018,154 @@
       "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
       "id": "issuer-quarter:3231:2026-Q2:EPS:ae526998abe77b9f18313ea455a7f0692b217fd99126deb3e5ac71993e33de95",
       "evidence_hash": "bf8160725a74ba3d04c231c9b066e0b7aabf99ebf9314b5bdce28d42bd3e4279"
+    },
+    {
+      "symbol": "2454",
+      "kind": "EPS",
+      "period": "2026-Q3",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 17.5,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "BASIC",
+        "consolidation": "CONSOLIDATED"
+      },
+      "source": "https://www.mediatek.com/hubfs/MediaTek-Assets/Pdfs/Quarterly%20Earnings%20Release/2026/Quarterly%20Earnings%20Release-2026Q3/Financial%20Statements.pdf",
+      "source_sha256": "0dc9c68f2a2bf4aeb5cca0a3d955b6784bfe0d95acc8aa52e3940a32d4ceb4fc",
+      "source_bytes": 67475,
+      "published_at": null,
+      "first_seen_at": "2026-10-30T08:20:26.494439+00:00",
+      "available_at": "2026-10-30T08:20:31.686958+00:00",
+      "as_of": "2026-09-30T23:59:59+08:00",
+      "source_locator": {
+        "page": 1,
+        "row": "Basic Earnings Per Share (NTD)",
+        "column": "3Q 2026"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "id": "issuer-quarter:2454:2026-Q3:EPS:0dc9c68f2a2bf4aeb5cca0a3d955b6784bfe0d95acc8aa52e3940a32d4ceb4fc",
+      "evidence_hash": "812e66abbf4fc038622471fa76f8cd913c4dbcf46648af9725e4fabaa871b986"
+    },
+    {
+      "symbol": "2454",
+      "kind": "MARGIN",
+      "period": "2026-Q3",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 46.3,
+        "unit": "PERCENT",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN",
+        "consolidation": "CONSOLIDATED"
+      },
+      "source": "https://www.mediatek.com/hubfs/MediaTek-Assets/Pdfs/Quarterly%20Earnings%20Release/2026/Quarterly%20Earnings%20Release-2026Q3/Press%20Release.pdf",
+      "source_sha256": "83dfc5eef25580141ed307f69574e03544b204d9972bf19829fcb2047fc15c7d",
+      "source_bytes": 357176,
+      "published_at": null,
+      "first_seen_at": "2026-10-30T08:20:26.493395+00:00",
+      "available_at": "2026-10-30T08:20:31.709261+00:00",
+      "as_of": "2026-09-30T23:59:59+08:00",
+      "source_locator": {
+        "page": 4,
+        "row": "Gross profit, Percentage of Revenue",
+        "column": "3Q26"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "id": "issuer-quarter:2454:2026-Q3:MARGIN:83dfc5eef25580141ed307f69574e03544b204d9972bf19829fcb2047fc15c7d",
+      "evidence_hash": "2d07d05878f5ad88bf3969ac276dd6d200445aa005a7995e54df3bbde3686899"
+    },
+    {
+      "symbol": "2379",
+      "kind": "MARGIN",
+      "period": "2025-Q3",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 49.7,
+        "unit": "PERCENT",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN",
+        "consolidation": "CONSOLIDATED"
+      },
+      "source": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=237920261029E001.pdf&functionName=t100sb02_1",
+      "source_sha256": "a932519715e4cf4ac1fa437f36c345d1753440d443c99b44ad9c2790b6599041",
+      "source_bytes": 1509561,
+      "published_at": null,
+      "first_seen_at": "2026-10-30T08:20:26.495096+00:00",
+      "available_at": "2026-10-30T08:22:10.487220+00:00",
+      "as_of": "2025-09-30T23:59:59+08:00",
+      "source_locator": {
+        "page": 14,
+        "row": "Gross Profit, %",
+        "column": "3Q25"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "id": "issuer-quarter:2379:2025-Q3:MARGIN:a932519715e4cf4ac1fa437f36c345d1753440d443c99b44ad9c2790b6599041",
+      "evidence_hash": "e29241ff3527a17afd8c237c81da4c7e25a79b6aee35e9849ad63ca122749ddb"
+    },
+    {
+      "symbol": "2379",
+      "kind": "MARGIN",
+      "period": "2026-Q2",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 47,
+        "unit": "PERCENT",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN",
+        "consolidation": "CONSOLIDATED"
+      },
+      "source": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=237920261029E001.pdf&functionName=t100sb02_1",
+      "source_sha256": "a932519715e4cf4ac1fa437f36c345d1753440d443c99b44ad9c2790b6599041",
+      "source_bytes": 1509561,
+      "published_at": null,
+      "first_seen_at": "2026-10-30T08:20:26.495096+00:00",
+      "available_at": "2026-10-30T08:22:10.487220+00:00",
+      "as_of": "2026-06-30T23:59:59+08:00",
+      "source_locator": {
+        "page": 14,
+        "row": "Gross Profit, %",
+        "column": "2Q26"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "id": "issuer-quarter:2379:2026-Q2:MARGIN:a932519715e4cf4ac1fa437f36c345d1753440d443c99b44ad9c2790b6599041",
+      "evidence_hash": "af2a1210a758dd0d8ffdcae3ddd47d8d5375029e41e534e5c18db5be40710b4f"
+    },
+    {
+      "symbol": "2379",
+      "kind": "MARGIN",
+      "period": "2026-Q3",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 47.4,
+        "unit": "PERCENT",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN",
+        "consolidation": "CONSOLIDATED"
+      },
+      "source": "https://mopsov.twse.com.tw/server-java/FileDownLoad?step=9&filePath=%2Fhome%2Fhtml%2Fnas%2FSTR%2F&fileName=237920261029E001.pdf&functionName=t100sb02_1",
+      "source_sha256": "a932519715e4cf4ac1fa437f36c345d1753440d443c99b44ad9c2790b6599041",
+      "source_bytes": 1509561,
+      "published_at": null,
+      "first_seen_at": "2026-10-30T08:20:26.495096+00:00",
+      "available_at": "2026-10-30T08:22:10.487220+00:00",
+      "as_of": "2026-09-30T23:59:59+08:00",
+      "source_locator": {
+        "page": 14,
+        "row": "Gross Profit, %",
+        "column": "3Q26"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "id": "issuer-quarter:2379:2026-Q3:MARGIN:a932519715e4cf4ac1fa437f36c345d1753440d443c99b44ad9c2790b6599041",
+      "evidence_hash": "a64979d65464ec1124b0ad8b4d976bf9b8c7f26a057cf7f90ae94b5ad2a28fdc"
     }
   ],
-  "known_release_deadlines": {
-    "2454": "2026-10-30T15:00:00+08:00"
-  },
-  "release_deadline_sources": {
-    "2454": "https://www.mediatek.com/investor-relations/ir-events"
-  },
+  "known_release_deadlines": {},
+  "release_deadline_sources": {},
   "max_age_days": 7
 }

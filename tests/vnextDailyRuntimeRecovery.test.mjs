@@ -67,9 +67,9 @@ test('SYNTHETIC future-clock worker pins eligible retained financial facts once 
  const binding=structuredClone(retainedIssuerFinancials);
  const a=await runner({at:'2026-11-02T00:59:30Z',businessDate:'2026-11-02',issuerFinancials:binding});
  assert.equal(a.result.reason,'ACQUIRED_SNAPSHOT_CONTINUATION');
- const pinned=structuredClone(a.checkpoint.acquired);assert.equal(pinned.inputs.flatMap(i=>i.facts).length,25);
+ const pinned=structuredClone(a.checkpoint.acquired);assert.equal(pinned.inputs.flatMap(i=>i.facts).length,38);
  assert.equal(pinned.inputs.find(i=>i.symbol==='2330').facts.length,12);
- assert.equal(pinned.inputs.find(i=>i.symbol==='2454').facts.length,0);
+ assert.equal(pinned.inputs.find(i=>i.symbol==='2454').facts.length,10);
  binding.expectedHash='0'.repeat(64); // A changed release cannot rewrite prior acquisition.
  await a.invoke();assert.deepEqual(a.checkpoint.acquired,pinned);assert.equal(a.locked.length,216);
  assert(a.locked.every(l=>l.body.research.state==='INSUFFICIENT'));

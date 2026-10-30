@@ -18,7 +18,7 @@ async function mutatedPacket(change){const p=clone(packet);change(p);return [p,a
 
 test('sealed real issuer facts join all 72 inputs without changing quotes, cutoffs or permission flags',async()=>{
  const a=await acquired(),before=clone(a),out=await mergeIssuerFinancials(a,packet,expectedHash);
- assert.deepEqual(a,before);assert.equal(out.inputs.length,72);assert.equal(out.inputs.flatMap(i=>i.facts).length,33);
+ assert.deepEqual(a,before);assert.equal(out.inputs.length,72);assert.equal(out.inputs.flatMap(i=>i.facts).length,38);
  assert.equal(await snapshotHash(packet),expectedHash);assert.notEqual(out.snapshot_hash,a.snapshot_hash);
  for(const i of out.inputs){assert.deepEqual(i.bars,[]);assert.equal(i.cutoff,a.evidence_cutoff);for(const f of i.facts){assert.equal(f.symbol,i.symbol);assert.equal(f.published_at,null);assert.equal(f.source_admitted,false);assert.equal(f.member_publication_approved,false);}}
  const t=out.inputs.find(i=>i.symbol==='2330'),long=evaluateResearch(t,'LONG');
@@ -37,17 +37,33 @@ test('future packet and seven-day expiry do not inject old observations into a n
  }
 });
 test('known next release invalidates that issuer at the exact boundary, while other issuers remain available',async()=>{
- const deadline=packet.known_release_deadlines['2454'];
- const before=await mergeIssuerFinancials(await acquired(new Date(Date.parse(deadline)-1).toISOString()),packet,expectedHash);
- const after=await mergeIssuerFinancials(await acquired(deadline),packet,expectedHash);
- assert.equal(before.inputs.find(i=>i.symbol==='2454').facts.length,8);assert.equal(after.inputs.find(i=>i.symbol==='2454').facts.length,0);
+ // Synthetic future release: the real 10/30 Q3 release is now inspected.
+ const deadline=time(86400000),[p,h]=await mutatedPacket(p=>{
+  p.known_release_deadlines['2454']=deadline;
+  p.release_deadline_sources['2454']='https://www.mediatek.com/investor-relations/financial-information';
+ });
+ const before=await mergeIssuerFinancials(await acquired(new Date(Date.parse(deadline)-1).toISOString()),p,h);
+ const after=await mergeIssuerFinancials(await acquired(deadline),p,h);
+ assert.equal(before.inputs.find(i=>i.symbol==='2454').facts.length,10);assert.equal(after.inputs.find(i=>i.symbol==='2454').facts.length,0);
  assert.equal(after.inputs.find(i=>i.symbol==='2330').facts.length,12);assert(after.source_issues.some(i=>i.key==='2454'&&i.reason==='NEW_ISSUER_RELEASE_REQUIRES_REVIEW'));
 });
 test('a newer reported period prevents stale retained quarterly series from masking missing new data',async()=>{
  const a=await acquired(),i=a.inputs.find(i=>i.symbol==='2454');
- i.facts.push({kind:'FINANCIAL_YTD',period:'2026-Q3',basis:'AS_REPORTED_YTD',values:{}});await rehash(a);
+ i.facts.push({kind:'FINANCIAL_YTD',period:'2026-Q4',basis:'AS_REPORTED_YTD',values:{}});await rehash(a);
  const out=await mergeIssuerFinancials(a,packet,expectedHash);
  assert.deepEqual(out.inputs.find(i=>i.symbol==='2454').facts,i.facts);assert(out.source_issues.some(i=>i.key==='2454'&&i.reason==='NEWER_FINANCIAL_PERIOD_REQUIRES_REVIEW'));
+});
+test('reviewed Q3 release supplies basic EPS and gross margin without guessing Realtek EPS basis or CAPEX',async()=>{
+ const out=await mergeIssuerFinancials(await acquired(),packet,expectedHash);
+ const media=out.inputs.find(i=>i.symbol==='2454').facts;
+ assert.equal(media.find(f=>f.kind==='EPS'&&f.period==='2026-Q3').values.value,17.5);
+ assert.equal(media.find(f=>f.kind==='EPS'&&f.period==='2026-Q3').values.measurement_basis,'BASIC');
+ assert.equal(media.find(f=>f.kind==='MARGIN'&&f.period==='2026-Q3').values.value,46.3);
+ assert.deepEqual(media.filter(f=>f.kind==='EPS').map(f=>f.period).sort().slice(-4),['2025-Q4','2026-Q1','2026-Q2','2026-Q3']);
+ const realtek=out.inputs.find(i=>i.symbol==='2379').facts;
+ assert.equal(realtek.find(f=>f.kind==='MARGIN'&&f.period==='2026-Q3').values.value,47.4);
+ assert(!realtek.some(f=>f.kind==='EPS'&&f.period==='2026-Q3'));
+ assert(![...media,...realtek].some(f=>f.kind==='CAPEX'));
 });
 test('changed retained bytes, forged admission and missing immutable preimage are rejected',async()=>{
  const a=await acquired(),p=clone(packet);p.facts[0].values.value+=1;

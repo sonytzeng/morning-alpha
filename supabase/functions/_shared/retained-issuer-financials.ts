@@ -6,5 +6,5 @@ export const retainedIssuerFinancials={
  // every fact before using it. Deno's inferred heterogeneous JSON union adds
  // optional undefined keys that do not exist in the actual JSON bytes.
  packet:packet as unknown as IssuerFinancialPacket,
- expectedHash:'c7388e8c74040d84a0d765aa587abc5a52efac0cfbef7e59c8cc242081793deb',
+ expectedHash:'ba31adff1451a974b68a201c5cebfcc072b9a4b9e56c2b9c0ab088b578c2a942',
 };

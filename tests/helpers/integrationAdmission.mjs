@@ -111,7 +111,7 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "path": "tests/vnextDailyRuntimeRecovery.test.mjs",
   "mode": "100644",
   "before_sha256": "b4bdf66db5679868dbc77898b9e2138d9a33388ec58c4d4492a2a6f501fa326c",
-  "after_sha256": "d8f044db023c889ff81ba2645f508ab1506e8ac708c4fa503e7aa49ffe74d7ff"
+  "after_sha256": "480802f87054d9772268179059229cbb3e6ad13f37540f84c9dd6da8e1f23d19"
  },
  {
   "path": "tests/vnextForwardCutoffRuntime.test.mjs",
@@ -321,7 +321,7 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "path": "research/entry-official-history.ts",
   "mode": "100644",
   "before_sha256": "b0dd603063b1e5487cbad4ff4feb98859445903f1381c8ea20dc00d566819e38",
-  "after_sha256": "ee942744a9273c359c84a91bcc821471cc436be16b44c88421fceefdb76316b3"
+  "after_sha256": "5d48388908b08a119ca7525d7cacf5cf6de912fda16ca44ee674a649d5c93805"
  },
  {
   "path": "research/issuer-quarter-observations.ts",
@@ -423,19 +423,25 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "path": "supabase/functions/_shared/retained-issuer-financials.ts",
   "mode": "100644",
   "before_sha256": null,
-  "after_sha256": "d8bf0349b538e197fc70428463032116820d576e0e81ab3b3770f8a57bd428e7"
+  "after_sha256": "d1c14ade16be15036fbdac9d8da9b4744a463742a607ce330357738388ba226d"
  },
  {
   "path": "supabase/functions/_shared/retained-issuer-financials-20261030.json",
   "mode": "100644",
   "before_sha256": null,
-  "after_sha256": "d75ad5c00800df8fac4a84a44a7a0cc0ada32f9b89949456b5e5f9d9c69e6b44"
+  "after_sha256": "4a4e4ba4c5dda188a5b6d70b3a00fc56b7edd69cec3ad1954a90c5a5b9e1103b"
  },
  {
   "path": "tests/vnextIssuerFinancialIntake.test.mjs",
   "mode": "100644",
   "before_sha256": null,
-  "after_sha256": "5811498edb2be92e014d1f2cf12791ff8a3f5304091e7efa57a7258b1fdda723"
+  "after_sha256": "a46e99d503b3696f99362c5cb37cbb25861ed97000dad53c89f6c0506ff3fbde"
+ },
+ {
+  "path": "tests/entryOpportunityOfficialHistory.test.mjs",
+  "mode": "100644",
+  "before_sha256": "3ceddfd45e35488dab202c00abf3634a80f4c39cd0ee9b8376425af0e039ed3d",
+  "after_sha256": "be8b5ba69e51eb229880c82fc3cb154db0e3167c469e9d06de900d4777d2d3be"
  }
 ].map(Object.freeze));
 export const FROZEN_SOURCE_UNION_R14='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r14.json';
@@ -1245,7 +1251,7 @@ export function runtimeIntegrityLineage(){
  assert.equal(root?.sha256,prior_root.sha256,'RUNTIME_PRIOR_ROOT_DRIFT');assert.equal(root?.mode,'100644');
  const old=JSON.parse(root.bytes);assert.equal(old.files.length,538,'RUNTIME_PRIOR_FULL_SCOPE');
  assert.deepEqual(old.source_union.r15,sourceUnionR15Lineage(),'RUNTIME_PRIOR_LINEAGE_DRIFT');
- assert.equal(RUNTIME_INTEGRITY_FILES.length,70);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,70);
+ assert.equal(RUNTIME_INTEGRITY_FILES.length,71);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,71);
  for(const row of RUNTIME_INTEGRITY_FILES){
   assert(!SOURCE_UNION_SUPPORT.includes(row.path));const before=unionBlob(RUNTIME_INTEGRITY_BASE,row.path);
   assert.equal(before?.sha256??null,row.before_sha256,'RUNTIME_BEFORE_SOURCE_DRIFT:'+row.path);

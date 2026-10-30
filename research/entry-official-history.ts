@@ -91,6 +91,10 @@ export function parseTpexDaily(p:Payload,date:string,symbols:string[],receivedAt
  const source=tpexDailyUrl(date);
  if(String(p.stat).toLowerCase()!=='ok'||officialDate(p.date)!==date||!Array.isArray(p.tables)||
   !Number.isFinite(Date.parse(receivedAt))||Date.parse(receivedAt)<Date.parse(date+'T13:30:00+08:00'))throw Error('DAILY_SESSION_INVALID');
+ // This endpoint includes block trades, whose session lasts until 17:00.
+ // A populated response after the regular close can still be provisional.
+ // The following-day research run is unaffected; never backdate receipt.
+ if(Date.parse(receivedAt)<=Date.parse(date+'T17:00:00+08:00'))throw Error('DAILY_ALL_TRADES_SESSION_INCOMPLETE');
  const expected=['代號','名稱','收盤','漲跌','開盤','最高','最低','均價','成交股數','成交金額(元)'];
  const tables=p.tables as {fields?:unknown;data?:unknown}[];
  if(tables.some(t=>{const f=t.fields;return !Array.isArray(f)||expected.some((name,i)=>f[i]!==name)||!Array.isArray(t.data);}))throw Error('DAILY_SCHEMA_CHANGED');

@@ -9,6 +9,11 @@ import {dailyStore} from '../scripts/vnext/daily-store.mjs';
 import {previousMarketTradingDate} from '../supabase/functions/_shared/market-session-contract.mjs';
 import {entryFixture} from './helpers/entryFixtures.mjs';
 import {readOwnerResearch} from '../scripts/vnext/owner-research-server.mjs';
+import vm from 'node:vm';
+import ts from 'typescript';
+import React from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {HORIZONS} from '../src/features/vnext/contracts.ts';
 // These controls are synthetic; they do not represent market observations,
 // licenses, Production users, or a successful investment strategy.
 const now='2026-10-12T00:00:00.000Z',source='https://example.test/synthetic-control';
@@ -82,3 +87,52 @@ test('candidate owner payload never reaches anonymous/free/premium; controls are
 });
 test('Outcome uses independent horizon dates and fails closed beyond official calendar',()=>{assert.deepEqual(targetSessions('2026-10-08T09:00:00+08:00',2),['2026-10-08','2026-10-12']);assert.equal(targetSessions('2040-01-01T09:00:00+08:00',20),null);});
 test('Outcome maturity, gaps, adjustment and execution never turn daily bars into fills',async()=>{const f=await fixture(),r=await runDailyIntelligence(f.request,f.store,f.ports),lock=r.checkpoint.locks[0];const s={symbol:lock.symbol,observed_at:now,bars:[],benchmark:[],actions:null,invalidation:null};assert.equal((await researchOutcome(lock,1,s)).state,'NOT_MATURED');s.observed_at='2026-10-12T06:00:00Z';assert.equal((await researchOutcome(lock,1,s)).state,'UNKNOWN');const bar={date:'2026-10-12',id:'b',source,evidence_hash:'b'.repeat(64),published_at:null,first_seen_at:s.observed_at,available_at:s.observed_at,as_of:'2026-10-12T05:30:00Z',open:100,high:104,low:98,close:103,volume:100,amount:10000,session_scope:'SYNTHETIC'};s.bars=[bar];s.benchmark=[bar];const o=await researchOutcome(lock,1,s);assert.equal(o.state,'OBSERVED_NOT_PERFORMANCE');assert(o.reasons.includes('CORPORATE_ACTION_COVERAGE_UNVERIFIED'));assert.equal(o.net_return,null);assert.equal(o.mfe,null);assert.equal(o.performance_eligible,false);assert.equal(o.observations.relative_price_change,null);await assert.rejects(()=>researchOutcome(lock,250,s),/SCOPE_INVALID/);let n=0;const sweep=await outcomeSweep(r.checkpoint.locks,async()=>s,async()=>n++,1);assert.equal(sweep.processed,1);assert.equal(sweep.remaining,215);assert.equal(n,3);});
+
+// Render the actual component with labelled synthetic entry results. These are
+// presentation controls, not proof of a Production publication or a real entry.
+const entryUiSource=readFileSync(new URL('../src/pages/vnext/DailyIntelligence.tsx',import.meta.url),'utf8');
+const entryUiExports={};
+vm.runInNewContext(ts.transpileModule(entryUiSource,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React}}).outputText,{
+ exports:entryUiExports,React,require:name=>{
+  if(name==='react')return React;
+  if(name==='@/features/vnext/contracts')return {HORIZONS};
+  throw Error('UNEXPECTED_DAILY_UI_IMPORT:'+name);
+ },
+});
+const syntheticEntries=()=>[
+ {strategy:'OVERSOLD_REVERSAL',status:'WAIT_CONFIRMATION',reasons:['合成反轉仍待收盤確認'],trigger:'合成反轉觸發條件',invalidation:'合成反轉失效條件'},
+ {strategy:'PULLBACK_ENTRY',status:'AVOID_ENTRY',reasons:['合成回檔風險過高'],trigger:'不得顯示的回檔買價',invalidation:'不得顯示的回檔停損'},
+ {strategy:'BREAKOUT_CONTINUATION',status:'ENTRY_READY',reasons:['合成突破研究條件符合'],trigger:'合成突破觸發條件',invalidation:'合成突破失效條件'},
+];
+function entryUi(entry=syntheticEntries(),missing=false){
+ const row={symbol:'9999',company:'合成展示控制',horizon:'SHORT',state:'QUALIFIED',reason:'合成觀察理由',confirmation:'合成觀察確認',invalidation:'合成觀察取消',risk:'合成風險',next_review_at:'2026-10-12T13:30:00+08:00',entry_source_missing:missing,entry};
+ const data={through:'2026-10-08',evaluated_at:now,locked_at:now,source_hash:'a'.repeat(64),run_key:'b'.repeat(64),stages:[],pending_outcomes:0,unknown_outcomes:0,
+  summary:{horizons:Object.fromEntries(Object.keys(HORIZONS).map(h=>[h,{scanned:1,qualified:1,rejected:0,insufficient:0}])),entry_source_missing_symbols:missing?1:0},rows:[row]};
+ return renderToStaticMarkup(React.createElement(entryUiExports.default,{data}));
+}
+test('daily UI exposes each retained strategy reason, conditional trigger and invalidation without claiming a fill',()=>{
+ const html=entryUi();
+ for(const text of ['超跌反轉：等待條件確認','趨勢回檔：不適合進場','突破延續：研究條件符合，尚未確認成交','合成反轉仍待收盤確認','合成反轉觸發條件','合成反轉失效條件','合成突破觸發條件','合成突破失效條件','本期間各股已有三種進場判斷'])assert(html.includes(text),text);
+ assert(!html.includes('不得顯示'));assert(!/<details[^>]*\bopen/.test(html));
+ assert(html.includes('不是今日推薦或事前預測'));
+});
+test('daily UI counts an incomplete judgment even when the source adapter exists',()=>{
+ const entries=syntheticEntries();entries[2]={...entries[2],status:'INSUFFICIENT_EVIDENCE',reasons:['合成缺少事件來源']};
+ const html=entryUi(entries,false);
+ assert(html.includes('本期間有 1 檔的進場研究仍有資料缺口'));assert(html.includes('合成缺少事件來源'));
+ assert(!html.includes('合成突破觸發條件'));assert(!html.includes('合成突破失效條件'));
+ assert(html.includes('合成反轉觸發條件'));
+});
+test('daily UI suppresses stale actionable strings when the matching source is missing',()=>{
+ const html=entryUi(syntheticEntries(),true);
+ assert.equal((html.match(/資料不足，無法判斷/g)||[]).length,3);
+ assert(!html.includes('合成反轉觸發條件'));assert(!html.includes('合成突破觸發條件'));
+ assert(!html.includes('合成反轉仍待收盤確認'));assert(!html.includes('合成突破研究條件符合'));
+ assert(!html.includes('研究條件符合，尚未確認成交'));
+});
+test('daily UI treats absent, duplicate and unknown strategy statuses as unavailable',()=>{
+ for(const entries of [[],[...syntheticEntries(),syntheticEntries()[0]],syntheticEntries().map(e=>({...e,status:'UNRECOGNIZED'}))]){
+  const html=entryUi(entries);assert(html.includes('本期間有 1 檔的進場研究仍有資料缺口'));
+  assert(!html.includes('合成反轉觸發條件'));assert(!html.includes('UNRECOGNIZED'));
+ }
+});

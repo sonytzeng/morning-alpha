@@ -109,24 +109,18 @@ export default function MarketDataCards({ report }: Props) {
     });
   }
 
-  // 5. 台指期夜盤
+  // Reports do not carry a session discriminator; never label regular fallback as night data.
   if (report.taiex_futures_change != null) {
     const val = report.taiex_futures_change;
     const isUp = val > 0;
     allCards.push({
       key: 'tx',
-      label: '台指期夜盤',
+      label: '台指期（報告資料時點）',
       value: `${isUp ? '+' : ''}${val.toFixed(2)}%`,
-      status: isUp ? 'up' : 'down',
-      plainText: isUp
-        ? val > 0.5
-          ? '外資昨晚看好台股，今天早上可能開高。'
-          : '台指期小漲，開盤氣氛中性偏多。'
-        : val < -0.5
-          ? '外資期貨走弱，早上開盤可能承壓。'
-          : '台指期小跌，開盤可能稍微整理。',
-      taiwanImpact: '直接影響今天台股開盤位置與盤初方向。',
-      beginnerTip: '台指期是「提前開盤的台股」，漲跌不代表整天走勢，但影響開盤氣氛。',
+      status: isUp ? 'up' : val < 0 ? 'down' : 'flat',
+      plainText: '此數值可能採用前一交易日一般盤資料，請配合報告日期與資料時間判讀。',
+      taiwanImpact: '供觀察期貨走勢，無法單憑此數值判定今天開盤方向。',
+      beginnerTip: '一般盤與夜盤的資料時段不同；這個數字不代表目前即時行情。',
     });
   }
 

@@ -26,7 +26,7 @@ export const REQUIRED_PROVIDER_SLOTS = Object.freeze([
     key: 'TXF', provider: 'fugle_futopt', sourceSymbol: 'TXF1!', market: 'TW',
     endpoint: 'futopt/intraday/quote/TXF1!',
     discoveryEndpoint: 'futopt/intraday/tickers?type=FUTURE&exchange=TAIFEX&session={session}&product=TXF',
-    backup: 'same_provider_session_or_discovered_contract',
+    backup: 'same_provider_session_or_discovered_contract_then_taifex_prior_regular',
   }),
 ]);
 
@@ -59,6 +59,7 @@ const ALLOWED_MARKET_FIELDS = new Set([
   'lastTrade', 'total', 'trade', 'price', 'time', 'session', 'product', 'contractType', 'startDate',
   'endDate', 'settlementDate', 'data', 'c', 'd', 'dp', 'h', 'l', 'o', 'pc', 't',
   'msgArray', 'z', 'pz', 'a', 'y',
+  'source_url', 'source_sha256', 'source_bytes', 'received_at',
 ]);
 
 function sanitizeValue(value, depth) {

@@ -51,7 +51,7 @@
     {
       "path": ".github/workflows/core-member-integration.yml",
       "before_sha256": null,
-      "after_sha256": "fec84aadbd14abde206e612a4e05629e9cbb8270f957765ef57445900822d9ef",
+      "after_sha256": "815ee3fa5444cf2ad46222c97793b5f015a6c5407ef9ea6217c905f6a5805ce8",
       "mode": "100644",
       "origin": "composition"
     },
@@ -1736,6 +1736,13 @@
       "origin": "composition"
     },
     {
+      "path": "src/components/base/MarketDataCards.tsx",
+      "before_sha256": "70ab222646c660fcab89dfca643c7e7fdc238f76fda4c739656100257aa7edfc",
+      "after_sha256": "5acf51daefed3833def4feb50f8a798a66430b9ed9a71ba8172287818b171947",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "src/components/feature/Navbar.tsx",
       "before_sha256": "a70fef7d3e750189f182a15b332462f9b0dae240b4ccd6729b91ea253c7d4a00",
       "after_sha256": "a6c44781d0efdf111dfbf0acb8102930c91bbfaf5dc608faeab506e07e51baa7",
@@ -1988,11 +1995,18 @@
       "origin": "member"
     },
     {
+      "path": "src/pages/terms/page.tsx",
+      "before_sha256": "ffa4211f565cff2b0910bfd5123e56cce50f1dc716f50bd556939f79352062fa",
+      "after_sha256": "29432033baa30c8a21773fc625c29cee8a33c5cf9ea0aa686da5f2b5d61de0bf",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "src/pages/vnext/DailyIntelligence.tsx",
       "before_sha256": null,
-      "after_sha256": "0559880ef40f2a8d1c6ebcd57d0bef481088da1a63a2a84ee42afb4af4a5a22d",
+      "after_sha256": "c10b24c2aeb20ac2fac6d740b957b09e2e442bdf684041128291d14be7ef5bc0",
       "mode": "100644",
-      "origin": "member"
+      "origin": "composition"
     },
     {
       "path": "src/pages/vnext/Foundation.tsx",
@@ -2464,6 +2478,20 @@
       "origin": "composition"
     },
     {
+      "path": "supabase/functions/_shared/production-evidence-recorder.mjs",
+      "before_sha256": "77774b8d21784907698938f78516becfbeb837090055ee123361fd62dd1871f3",
+      "after_sha256": "37bae62bdaabe5800c46a315d087daffdf21623bc2bd7bf49fbdf7697de73482",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "supabase/functions/_shared/provider-reliability-contract.mjs",
+      "before_sha256": "5055b45ce48a2a79146adcb5001f478d467d479054bd932170028d54bf3a03b7",
+      "after_sha256": "e89df87a18f1eb5fc3cce58f2e5f80aaa432b84ad09b0922905a4eea76238695",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "supabase/functions/_shared/recommendation-company-events.ts",
       "before_sha256": "4b756d518e88d6d3f7e4cfce9944bcc6a2f3f51577a92b9408fee7618b3713b1",
       "after_sha256": "fcaf51fe9a582841842c65d816e7d0e7515b1e303332c54debc9317ee830f928",
@@ -2534,6 +2562,13 @@
       "origin": "composition"
     },
     {
+      "path": "supabase/functions/_shared/required-provider-validation.mjs",
+      "before_sha256": "bdc25704006e5830d602496ba1c4f82c59ce7b1d521e86a08d456cdfd2c4895d",
+      "after_sha256": "778585553b9a847e4e8e10d0744dedc9b5dbb4bdd97db7dea9f66ed744c7583c",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "supabase/functions/_shared/research-owner-field-access.ts",
       "before_sha256": null,
       "after_sha256": "5c2d0530fb07970fcdc648da9f7f8013b853b175361aca07f86e007f27789683",
@@ -2555,6 +2590,13 @@
       "origin": "composition"
     },
     {
+      "path": "supabase/functions/_shared/taifex-regular-fallback.mjs",
+      "before_sha256": null,
+      "after_sha256": "77cc9a58ba051bd907cbb6f8622645c15fd0593a2e244216a6e04159ce2c7aec",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "supabase/functions/continuous-learning-engine/index.ts",
       "before_sha256": "acf3214cf183e2c8eb37b8c615b6742dd9e08567f8af32a33e777d491c036102",
       "after_sha256": "347a9dd5aca98f53a57df44f54893ae7fce3bc79e857ea041af740d450cd2805",
@@ -2562,9 +2604,23 @@
       "origin": "composition"
     },
     {
+      "path": "supabase/functions/fetch-market-data-v10/index.ts",
+      "before_sha256": "6f3a812cba7f747bc538df5483bb17d7db7b877ea36d427b078106a2e8301b0b",
+      "after_sha256": "74163f645671b063ef69ee94fec5553e3a34f9bd2e203bfd8a905c5568444c0e",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "supabase/functions/get-report-payload/index.ts",
       "before_sha256": "eb3008ceb7e72cc007680f9885ca56e02e1feb7e85a16c8758a0542c75e92d79",
       "after_sha256": "0e1ee98314a8d1df4edc6ef0f0d000002496ad5a669e2ae46b4822ecf82fd72d",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "supabase/functions/market-readiness-preflight/index.ts",
+      "before_sha256": "12d58db830f7ad7aece346d650b517d2b6b1e4fe1b924ada6e9469e870bcf299",
+      "after_sha256": "b7d852ea1b1772ef05fd3ebe8d53ed7b984e3e445174e58aeb95bb378b9cc673",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2991,7 +3047,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "b0e22293f02b43beac36d814a8eaac235f747f696ee1dcdb9c8490be08e6da71",
+      "after_sha256": "445e7f03d7cd9b4a82410e53924dc663b1573fc56e8baebdb2eecea097cf0b3c",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3138,7 +3194,7 @@
     {
       "path": "tests/officialPublicAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "fd8b7cedb93de42b30ca87586ba4e0ef49bf9b0a4290eff4ff3e2a664990b77b",
+      "after_sha256": "93ad3f401614808b224f62d2e830f8f34c79b52c3680ee4ef5cc9f08611b61a4",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3166,7 +3222,7 @@
     {
       "path": "tests/originalIngressAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "1c547e1e4b71b3192d0da78b607dcdf31cc53762810de781402b0e5f0fdbafb1",
+      "after_sha256": "a916ae43ea11b1a44343bb9f3e140744e1d5746b24ffd26409cf4ffe29ee0a70",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3507,6 +3563,13 @@
       "origin": "composition"
     },
     {
+      "path": "tests/taifexRegularFallback.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "40eefd106604c1c74d1141d8864cc2a04a346ed33bace5ea3a323b6f629e5dd7",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "tests/test_inline_xbrl.py",
       "before_sha256": null,
       "after_sha256": "dc4957e6411af88dcffc6e13eab78edb1c4a9a6c1d7ab80e89f9efb3222ed902",
@@ -3670,9 +3733,9 @@
     {
       "path": "tests/vnextDailyIntelligence.test.mjs",
       "before_sha256": null,
-      "after_sha256": "cd10b666ffa6b5efab8a7c1d6a18deb66efa12b6a86b41d578bdfb56c81508c6",
+      "after_sha256": "5db3fe921dc60ac8c1102a22deefbba8831705cf0d4ca6db328e966787befa99",
       "mode": "100644",
-      "origin": "member"
+      "origin": "composition"
     },
     {
       "path": "tests/vnextDailyPublicationIngress.integration.mjs",
@@ -5063,9 +5126,75 @@
           "mode": "100644",
           "before_sha256": null,
           "after_sha256": "e60554b5f1310b145019ac33d2a50f2134838946524d4321de8a1c041702e05c"
+        },
+        {
+          "path": "src/pages/vnext/DailyIntelligence.tsx",
+          "mode": "100644",
+          "before_sha256": "0559880ef40f2a8d1c6ebcd57d0bef481088da1a63a2a84ee42afb4af4a5a22d",
+          "after_sha256": "c10b24c2aeb20ac2fac6d740b957b09e2e442bdf684041128291d14be7ef5bc0"
+        },
+        {
+          "path": "tests/vnextDailyIntelligence.test.mjs",
+          "mode": "100644",
+          "before_sha256": "cd10b666ffa6b5efab8a7c1d6a18deb66efa12b6a86b41d578bdfb56c81508c6",
+          "after_sha256": "5db3fe921dc60ac8c1102a22deefbba8831705cf0d4ca6db328e966787befa99"
+        },
+        {
+          "path": "src/components/base/MarketDataCards.tsx",
+          "mode": "100644",
+          "before_sha256": "70ab222646c660fcab89dfca643c7e7fdc238f76fda4c739656100257aa7edfc",
+          "after_sha256": "5acf51daefed3833def4feb50f8a798a66430b9ed9a71ba8172287818b171947"
+        },
+        {
+          "path": "src/pages/terms/page.tsx",
+          "mode": "100644",
+          "before_sha256": "ffa4211f565cff2b0910bfd5123e56cce50f1dc716f50bd556939f79352062fa",
+          "after_sha256": "29432033baa30c8a21773fc625c29cee8a33c5cf9ea0aa686da5f2b5d61de0bf"
+        },
+        {
+          "path": "supabase/functions/_shared/required-provider-validation.mjs",
+          "mode": "100644",
+          "before_sha256": "bdc25704006e5830d602496ba1c4f82c59ce7b1d521e86a08d456cdfd2c4895d",
+          "after_sha256": "778585553b9a847e4e8e10d0744dedc9b5dbb4bdd97db7dea9f66ed744c7583c"
+        },
+        {
+          "path": "supabase/functions/_shared/provider-reliability-contract.mjs",
+          "mode": "100644",
+          "before_sha256": "5055b45ce48a2a79146adcb5001f478d467d479054bd932170028d54bf3a03b7",
+          "after_sha256": "e89df87a18f1eb5fc3cce58f2e5f80aaa432b84ad09b0922905a4eea76238695"
+        },
+        {
+          "path": "supabase/functions/_shared/production-evidence-recorder.mjs",
+          "mode": "100644",
+          "before_sha256": "77774b8d21784907698938f78516becfbeb837090055ee123361fd62dd1871f3",
+          "after_sha256": "37bae62bdaabe5800c46a315d087daffdf21623bc2bd7bf49fbdf7697de73482"
+        },
+        {
+          "path": "supabase/functions/_shared/taifex-regular-fallback.mjs",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "77cc9a58ba051bd907cbb6f8622645c15fd0593a2e244216a6e04159ce2c7aec"
+        },
+        {
+          "path": "supabase/functions/fetch-market-data-v10/index.ts",
+          "mode": "100644",
+          "before_sha256": "6f3a812cba7f747bc538df5483bb17d7db7b877ea36d427b078106a2e8301b0b",
+          "after_sha256": "74163f645671b063ef69ee94fec5553e3a34f9bd2e203bfd8a905c5568444c0e"
+        },
+        {
+          "path": "supabase/functions/market-readiness-preflight/index.ts",
+          "mode": "100644",
+          "before_sha256": "12d58db830f7ad7aece346d650b517d2b6b1e4fe1b924ada6e9469e870bcf299",
+          "after_sha256": "b7d852ea1b1772ef05fd3ebe8d53ed7b984e3e445174e58aeb95bb378b9cc673"
+        },
+        {
+          "path": "tests/taifexRegularFallback.test.mjs",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "40eefd106604c1c74d1141d8864cc2a04a346ed33bace5ea3a323b6f629e5dd7"
         }
       ],
-      "scope": "OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE_AND_WHOLE_RETAINED_SOURCE_VERSIONS_BULK_DAILY_PRICES_AND_ISSUER_QUARTER_OBSERVATIONS",
+      "scope": "OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE_AND_WHOLE_RETAINED_SOURCE_VERSIONS_BULK_DAILY_PRICES_AND_ISSUER_QUARTER_OBSERVATIONS_AND_RETAINED_ENTRY_PRESENTATION_AND_FREE_TAIFEX_PRIOR_REGULAR_FALLBACK",
       "source_admission": false,
       "canonical_admission": false,
       "quality_approval": false,

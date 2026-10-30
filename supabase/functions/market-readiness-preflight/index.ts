@@ -1,3 +1,4 @@
+import { resolveTaifexRegularQuote } from '../_shared/taifex-regular-fallback.mjs';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
 import { PREMARKET_REPORT_DEADLINE_MINUTES } from '../_shared/premarket-provider-readiness.mjs';
@@ -28,7 +29,7 @@ import {
   fetchRequiredFinnhubResponse,
   normalizeRequiredFinnhubQuote,
   normalizeRequiredTaiwanCoreQuote,
-  resolveRequiredTxfQuote,
+  resolveTxfQuoteWithFallback,
   validateRequiredProviderEvidence,
 } from '../_shared/required-provider-validation.mjs';
 import {
@@ -38,7 +39,7 @@ import {
   scheduleProductionEvidenceRecording,
 } from '../_shared/production-evidence-recorder.mjs';
 
-const VERSION = 'MARKET_READINESS_PREFLIGHT_V4_TW_PHASE_CONTRACT';
+const VERSION = 'MARKET_READINESS_PREFLIGHT_V5_TAIFEX_PRIOR_REGULAR';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -280,9 +281,10 @@ async function checkFugleQuote(
   if (!apiKey) {
     return checkedResult(slot, endpoint, { status: null, payload: null, error: 'CONFIGURATION_MISSING' }, false, captureSample);
   }
-  const resolved = await resolveRequiredTxfQuote(
+  const resolved = await resolveTxfQuoteWithFallback(
     (path: string) => fetchRequiredFugleResponse(path, apiKey),
     { phase: 'premarket', tradingDate, observedAt: String(evidenceInput.observedAt || '') },
+    resolveTaifexRegularQuote,
   );
   const last = resolved.observations.at(-1) || { status: null, payload: null, error: 'PROVIDER_REQUEST_REJECTED' };
   const response = resolved.response || last;
@@ -294,7 +296,7 @@ async function checkFugleQuote(
   const observations = await Promise.all(resolved.observations
     .filter((item: JsonRecord) => item.endpoint !== checked.endpoint)
     .map((item: JsonRecord) => providerObservation(String(item.endpoint), item as { status: number | null; payload: unknown; error: string | null }, captureSample)));
-  return { ...checked, source_symbol: String(resolved.quote?.sourceSymbol || slot.sourceSymbol),
+  return { ...checked, provider: resolved.quote?.provider || String(resolved.observations.at(-1)?.provider || slot.provider), source_symbol: String(resolved.quote?.sourceSymbol || slot.sourceSymbol),
     ...(observations.length ? { observations } : {}),
     recorder: {
       rawPayload: response.payload,

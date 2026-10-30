@@ -346,6 +346,72 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "mode": "100644",
   "before_sha256": null,
   "after_sha256": "e60554b5f1310b145019ac33d2a50f2134838946524d4321de8a1c041702e05c"
+ },
+ {
+  "path": "src/pages/vnext/DailyIntelligence.tsx",
+  "mode": "100644",
+  "before_sha256": "0559880ef40f2a8d1c6ebcd57d0bef481088da1a63a2a84ee42afb4af4a5a22d",
+  "after_sha256": "c10b24c2aeb20ac2fac6d740b957b09e2e442bdf684041128291d14be7ef5bc0"
+ },
+ {
+  "path": "tests/vnextDailyIntelligence.test.mjs",
+  "mode": "100644",
+  "before_sha256": "cd10b666ffa6b5efab8a7c1d6a18deb66efa12b6a86b41d578bdfb56c81508c6",
+  "after_sha256": "5db3fe921dc60ac8c1102a22deefbba8831705cf0d4ca6db328e966787befa99"
+ },
+ {
+  "path": "src/components/base/MarketDataCards.tsx",
+  "mode": "100644",
+  "before_sha256": "70ab222646c660fcab89dfca643c7e7fdc238f76fda4c739656100257aa7edfc",
+  "after_sha256": "5acf51daefed3833def4feb50f8a798a66430b9ed9a71ba8172287818b171947"
+ },
+ {
+  "path": "src/pages/terms/page.tsx",
+  "mode": "100644",
+  "before_sha256": "ffa4211f565cff2b0910bfd5123e56cce50f1dc716f50bd556939f79352062fa",
+  "after_sha256": "29432033baa30c8a21773fc625c29cee8a33c5cf9ea0aa686da5f2b5d61de0bf"
+ },
+ {
+  "path": "supabase/functions/_shared/required-provider-validation.mjs",
+  "mode": "100644",
+  "before_sha256": "bdc25704006e5830d602496ba1c4f82c59ce7b1d521e86a08d456cdfd2c4895d",
+  "after_sha256": "778585553b9a847e4e8e10d0744dedc9b5dbb4bdd97db7dea9f66ed744c7583c"
+ },
+ {
+  "path": "supabase/functions/_shared/provider-reliability-contract.mjs",
+  "mode": "100644",
+  "before_sha256": "5055b45ce48a2a79146adcb5001f478d467d479054bd932170028d54bf3a03b7",
+  "after_sha256": "e89df87a18f1eb5fc3cce58f2e5f80aaa432b84ad09b0922905a4eea76238695"
+ },
+ {
+  "path": "supabase/functions/_shared/production-evidence-recorder.mjs",
+  "mode": "100644",
+  "before_sha256": "77774b8d21784907698938f78516becfbeb837090055ee123361fd62dd1871f3",
+  "after_sha256": "37bae62bdaabe5800c46a315d087daffdf21623bc2bd7bf49fbdf7697de73482"
+ },
+ {
+  "path": "supabase/functions/_shared/taifex-regular-fallback.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "77cc9a58ba051bd907cbb6f8622645c15fd0593a2e244216a6e04159ce2c7aec"
+ },
+ {
+  "path": "supabase/functions/fetch-market-data-v10/index.ts",
+  "mode": "100644",
+  "before_sha256": "6f3a812cba7f747bc538df5483bb17d7db7b877ea36d427b078106a2e8301b0b",
+  "after_sha256": "74163f645671b063ef69ee94fec5553e3a34f9bd2e203bfd8a905c5568444c0e"
+ },
+ {
+  "path": "supabase/functions/market-readiness-preflight/index.ts",
+  "mode": "100644",
+  "before_sha256": "12d58db830f7ad7aece346d650b517d2b6b1e4fe1b924ada6e9469e870bcf299",
+  "after_sha256": "b7d852ea1b1772ef05fd3ebe8d53ed7b984e3e445174e58aeb95bb378b9cc673"
+ },
+ {
+  "path": "tests/taifexRegularFallback.test.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "40eefd106604c1c74d1141d8864cc2a04a346ed33bace5ea3a323b6f629e5dd7"
  }
 ].map(Object.freeze));
 export const FROZEN_SOURCE_UNION_R14='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r14.json';
@@ -1155,7 +1221,7 @@ export function runtimeIntegrityLineage(){
  assert.equal(root?.sha256,prior_root.sha256,'RUNTIME_PRIOR_ROOT_DRIFT');assert.equal(root?.mode,'100644');
  const old=JSON.parse(root.bytes);assert.equal(old.files.length,538,'RUNTIME_PRIOR_FULL_SCOPE');
  assert.deepEqual(old.source_union.r15,sourceUnionR15Lineage(),'RUNTIME_PRIOR_LINEAGE_DRIFT');
- assert.equal(RUNTIME_INTEGRITY_FILES.length,55);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,55);
+ assert.equal(RUNTIME_INTEGRITY_FILES.length,66);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,66);
  for(const row of RUNTIME_INTEGRITY_FILES){
   assert(!SOURCE_UNION_SUPPORT.includes(row.path));const before=unionBlob(RUNTIME_INTEGRITY_BASE,row.path);
   assert.equal(before?.sha256??null,row.before_sha256,'RUNTIME_BEFORE_SOURCE_DRIFT:'+row.path);
@@ -1167,7 +1233,7 @@ export function runtimeIntegrityLineage(){
   assert.notEqual(row.before_sha256,row.after_sha256);
  }
  return {schema:'CURRENT_RUNTIME_INTEGRITY_CANDIDATE_V1',base:RUNTIME_INTEGRITY_BASE,prior_root,
-  files:RUNTIME_INTEGRITY_FILES.map(r=>({...r})),scope:'OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE_AND_WHOLE_RETAINED_SOURCE_VERSIONS_BULK_DAILY_PRICES_AND_ISSUER_QUARTER_OBSERVATIONS',
+  files:RUNTIME_INTEGRITY_FILES.map(r=>({...r})),scope:'OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE_AND_WHOLE_RETAINED_SOURCE_VERSIONS_BULK_DAILY_PRICES_AND_ISSUER_QUARTER_OBSERVATIONS_AND_RETAINED_ENTRY_PRESENTATION_AND_FREE_TAIFEX_PRIOR_REGULAR_FALLBACK',
   source_admission:false,canonical_admission:false,quality_approval:false,rights_gate_changed:false,
   publication_approval:false,production_authorized:false,thresholds_changed:false,existing_release_payloads_changed:false};
 }

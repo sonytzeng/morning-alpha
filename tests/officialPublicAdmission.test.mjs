@@ -14,7 +14,7 @@ import {
  FROZEN_SOURCE_UNION_R13,SOURCE_UNION_R14_FILES,FROZEN_SOURCE_UNION_R14,
  FROZEN_SOURCE_UNION_R15,RUNTIME_INTEGRITY_FILES,
 } from './helpers/integrationAdmission.mjs';
-const runtimeAdded=RUNTIME_INTEGRITY_FILES.filter(r=>r.before_sha256===null||['src/features/vnext/researchFunnel.ts','supabase/functions/_shared/market-calendar-data.json','tests/browser/ownerCockpitSupabaseMock.ts','research/entry-official-history.ts'].includes(r.path)).map(r=>r.path);
+const runtimeAdded=RUNTIME_INTEGRITY_FILES.filter(r=>r.before_sha256===null||["src/features/vnext/researchFunnel.ts","supabase/functions/_shared/market-calendar-data.json","tests/browser/ownerCockpitSupabaseMock.ts","research/entry-official-history.ts","src/components/base/MarketDataCards.tsx","src/pages/terms/page.tsx","supabase/functions/_shared/required-provider-validation.mjs","supabase/functions/_shared/provider-reliability-contract.mjs","supabase/functions/_shared/production-evidence-recorder.mjs","supabase/functions/fetch-market-data-v10/index.ts","supabase/functions/market-readiness-preflight/index.ts"].includes(r.path)).map(r=>r.path);
 import {assemble as financial,CHANGED,CATALOG} from '../scripts/operations/financial-response-period-20261020/materialize.mjs';
 import {worker4Baseline} from '../scripts/operations/forward-cutoff-20261020/materialize.mjs';
 test('the ONE current seal is full, current and independent of either frozen parent proof',()=>{

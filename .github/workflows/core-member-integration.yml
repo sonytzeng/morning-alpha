@@ -42,6 +42,8 @@ jobs:
           path: build/cold-source-priority-historical-base
           fetch-depth: 0
           persist-credentials: false
+      - name: Free official TXF prior-regular fallback and recorder controls (offline)
+        run: node --experimental-strip-types --test tests/taifexRegularFallback.test.mjs tests/productionEvidenceRecorder.test.mjs tests/providerReliabilityClosure.test.mjs
       - name: Historical fda Producer16 delivery admission unchanged
         working-directory: build/cold-source-priority-historical-base
         env:

@@ -312,3 +312,11 @@ export async function resolveRequiredTxfQuote(request, options = {}) {
   const discoveredAlternate = await tryQuote(contract, sessions[1], 'ticker_discovery', true);
   return discoveredAlternate ? { ...discoveredAlternate, observations } : { quote: null, endpoint: null, response: null, observations };
 }
+
+/** Opt-in network fallback; the original resolver remains offline-replay safe. */
+export async function resolveTxfQuoteWithFallback(request, options, officialResolver) {
+  const primary = await resolveRequiredTxfQuote(request, options);
+  if (primary.quote || options.phase !== 'premarket') return primary;
+  const fallback = await officialResolver(options);
+  return { ...fallback, observations: [...primary.observations, ...fallback.observations] };
+}

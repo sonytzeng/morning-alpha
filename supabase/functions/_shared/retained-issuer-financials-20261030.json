@@ -1,0 +1,1030 @@
+{
+  "schema": "PRIVATE_RETAINED_ISSUER_FINANCIALS_V1",
+  "created_at": "2026-10-30T06:16:45.018001+00:00",
+  "source_study_sha256": "a27fcbd9af1292d30c3016f6d75879bdd91c0a0790592ea62a807614ffd1b477",
+  "source_admitted": false,
+  "member_publication_approved": false,
+  "methodology_promoted": false,
+  "facts": [
+    {
+      "symbol": "2317",
+      "kind": "MARGIN",
+      "period": "2025-Q3",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 6.35,
+        "unit": "PERCENT",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN",
+        "consolidation": "CONSOLIDATED"
+      },
+      "source": "https://image.honhai.com/upload/202511/law_talk/Hon_Hai_3Q25_Results_English%28%E6%8A%95%E5%BD%B1%E7%89%88%29_20251112_4344.pdf",
+      "source_sha256": "4c7a38b74de88da6b0894a3b4cd37652854389e023f37f3020cd138e30ebdb4b",
+      "source_bytes": 19167299,
+      "published_at": null,
+      "first_seen_at": "2026-10-30T01:58:15.427010+00:00",
+      "available_at": "2026-10-30T01:58:15.427010+00:00",
+      "as_of": "2025-09-30T23:59:59+08:00",
+      "source_locator": {
+        "page": 5,
+        "column": "CURRENT_YEAR_REPORTED_PERIOD",
+        "row": "Gross Profit Margin"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "id": "issuer-quarter:2317:2025-Q3:MARGIN:4c7a38b74de88da6b0894a3b4cd37652854389e023f37f3020cd138e30ebdb4b",
+      "evidence_hash": "f87bf904238d37c6e3fd4f7ef4b87ec702668d8348f1704dd8ea307c5d4d34e6"
+    },
+    {
+      "symbol": "2317",
+      "kind": "MARGIN",
+      "period": "2025-Q4",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 5.88,
+        "unit": "PERCENT",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN",
+        "consolidation": "CONSOLIDATED"
+      },
+      "source": "https://image.honhai.com/upload/202603/law_talk/Hon_Hai_4Q25_Results_English_20260316_0435.pdf",
+      "source_sha256": "b54c7e794180b837d209c5a9a49ee9d7edb26c751e7908e9b0e0135c60e3066d",
+      "source_bytes": 15095614,
+      "published_at": null,
+      "first_seen_at": "2026-10-30T01:58:10.094606+00:00",
+      "available_at": "2026-10-30T01:58:10.094606+00:00",
+      "as_of": "2025-12-31T23:59:59+08:00",
+      "source_locator": {
+        "page": 5,
+        "column": "CURRENT_YEAR_REPORTED_PERIOD",
+        "row": "Gross Profit Margin"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "id": "issuer-quarter:2317:2025-Q4:MARGIN:b54c7e794180b837d209c5a9a49ee9d7edb26c751e7908e9b0e0135c60e3066d",
+      "evidence_hash": "a0680b60986e834effcafa800d07795755748a955bdb8d92fded278c24d07319"
+    },
+    {
+      "symbol": "2317",
+      "kind": "MARGIN",
+      "period": "2026-Q1",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 6.18,
+        "unit": "PERCENT",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN",
+        "consolidation": "CONSOLIDATED"
+      },
+      "source": "https://image.honhai.com/upload/202605/law_talk/Hon_Hai_1Q26_Results_English_20260521_3596.pdf",
+      "source_sha256": "f5328e7bbe45d229330b167c3d178dc4900d165942414c3052a3ba361b1e1f68",
+      "source_bytes": 2718587,
+      "published_at": null,
+      "first_seen_at": "2026-10-30T01:58:10.004183+00:00",
+      "available_at": "2026-10-30T01:58:10.004183+00:00",
+      "as_of": "2026-03-31T23:59:59+08:00",
+      "source_locator": {
+        "page": 5,
+        "column": "CURRENT_YEAR_REPORTED_PERIOD",
+        "row": "Gross Profit Margin"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "id": "issuer-quarter:2317:2026-Q1:MARGIN:f5328e7bbe45d229330b167c3d178dc4900d165942414c3052a3ba361b1e1f68",
+      "evidence_hash": "d9ac277b4c1bd8279b4ff0fcdbab762a71d0ab39241225842850a909687cb3b5"
+    },
+    {
+      "symbol": "2317",
+      "kind": "CAPEX",
+      "period": "2026-Q1",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 35774,
+        "unit": "TWD_MILLION",
+        "measurement_basis": "ISSUER_REPORTED_CASH_OUTFLOW_MAGNITUDE",
+        "consolidation": "CONSOLIDATED"
+      },
+      "source": "https://image.honhai.com/upload/202605/law_talk/Hon_Hai_1Q26_Results_English_20260521_3596.pdf",
+      "source_sha256": "f5328e7bbe45d229330b167c3d178dc4900d165942414c3052a3ba361b1e1f68",
+      "source_bytes": 2718587,
+      "published_at": null,
+      "first_seen_at": "2026-10-30T01:58:10.004183+00:00",
+      "available_at": "2026-10-30T01:58:10.004183+00:00",
+      "as_of": "2026-03-31T23:59:59+08:00",
+      "source_locator": {
+        "page": 7,
+        "column": "CURRENT_YEAR_REPORTED_PERIOD",
+        "row": "Capital Expenditures"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "id": "issuer-quarter:2317:2026-Q1:CAPEX:f5328e7bbe45d229330b167c3d178dc4900d165942414c3052a3ba361b1e1f68",
+      "evidence_hash": "9fca34cecd99c26c097eb0fc67b2944d5943c07a99b29b93d4bb25410aaea10a"
+    },
+    {
+      "symbol": "2317",
+      "kind": "MARGIN",
+      "period": "2026-Q2",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 6.12,
+        "unit": "PERCENT",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN",
+        "consolidation": "CONSOLIDATED"
+      },
+      "source": "https://image.honhai.com/upload/202608/law_talk/Hon_Hai_2Q26_Results_English%28%E6%8A%95%E5%BD%B1%E7%89%88%29_revised%28wp%29_20260818_8282.pdf",
+      "source_sha256": "bd525e6b8d6fccb1681fa245111976d7de4ba47092b771782ac63b79a2ebe5bf",
+      "source_bytes": 14574356,
+      "published_at": null,
+      "first_seen_at": "2026-10-30T01:58:10.078208+00:00",
+      "available_at": "2026-10-30T01:58:10.078208+00:00",
+      "as_of": "2026-06-30T23:59:59+08:00",
+      "source_locator": {
+        "page": 6,
+        "column": "CURRENT_YEAR_REPORTED_PERIOD",
+        "row": "Gross Profit Margin"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "id": "issuer-quarter:2317:2026-Q2:MARGIN:bd525e6b8d6fccb1681fa245111976d7de4ba47092b771782ac63b79a2ebe5bf",
+      "evidence_hash": "83581e73b83e2cea0505403ed8b697d3e7bd04dc1d8def60477f0c2900baa744"
+    },
+    {
+      "symbol": "2317",
+      "kind": "EPS",
+      "period": "2025-Q3",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 4.15,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "BASIC",
+        "consolidation": "CONSOLIDATED"
+      },
+      "source": "https://image.honhai.com/upload/202512/financy_by_quarterly/2025Q3_consolidared_report(e)_20251218_4720.pdf",
+      "source_sha256": "cab20fb320b0cd0eea49d5fb84dac69c293a332507c6da12fb6ed6e7846f5fd0",
+      "source_bytes": 4742624,
+      "published_at": null,
+      "first_seen_at": "2026-10-30T02:04:59.538994+00:00",
+      "available_at": "2026-10-30T02:04:59.538994+00:00",
+      "as_of": "2025-09-30T23:59:59+08:00",
+      "source_locator": {
+        "page": 7,
+        "column": "CURRENT_YEAR_REPORTED_PERIOD",
+        "row": "9750 Basic earnings per share"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "id": "issuer-quarter:2317:2025-Q3:EPS:cab20fb320b0cd0eea49d5fb84dac69c293a332507c6da12fb6ed6e7846f5fd0",
+      "evidence_hash": "cc5a5d4518ca40b59479af5f8eafd8b10795194158b50db60aa19a6b8ce3d68a"
+    },
+    {
+      "symbol": "2317",
+      "kind": "EPS",
+      "period": "2026-Q1",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 3.56,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "BASIC",
+        "consolidation": "CONSOLIDATED"
+      },
+      "source": "https://image.honhai.com/upload/202608/financy_by_quarterly/2026Q1_consolidared_report(e)_20260824_6686.pdf",
+      "source_sha256": "14d29f49bfc0294a55e784a2512c255ed0b3949c35d01134581dc7fcae507288",
+      "source_bytes": 4002169,
+      "published_at": null,
+      "first_seen_at": "2026-10-30T02:04:54.329234+00:00",
+      "available_at": "2026-10-30T02:04:54.329234+00:00",
+      "as_of": "2026-03-31T23:59:59+08:00",
+      "source_locator": {
+        "page": 6,
+        "column": "CURRENT_YEAR_REPORTED_PERIOD",
+        "row": "9750 Basic earnings per share"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "id": "issuer-quarter:2317:2026-Q1:EPS:14d29f49bfc0294a55e784a2512c255ed0b3949c35d01134581dc7fcae507288",
+      "evidence_hash": "1fd9b291cad4f2a4629023e14a83ce79153301f209987875d8f536f619b9d0bf"
+    },
+    {
+      "symbol": "2317",
+      "kind": "EPS",
+      "period": "2026-Q2",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 4.27,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "BASIC",
+        "consolidation": "CONSOLIDATED"
+      },
+      "source": "https://image.honhai.com/upload/202609/financy_by_quarterly/2026Q2_consolidared_report(e)_20260922_0036.pdf",
+      "source_sha256": "bf4e184cf36e62f5112fa56a17927f47f67e29863f5074571f96382faa669709",
+      "source_bytes": 4715278,
+      "published_at": null,
+      "first_seen_at": "2026-10-30T02:04:53.642844+00:00",
+      "available_at": "2026-10-30T02:04:53.642844+00:00",
+      "as_of": "2026-06-30T23:59:59+08:00",
+      "source_locator": {
+        "page": 7,
+        "column": "CURRENT_YEAR_REPORTED_PERIOD",
+        "row": "9750 Basic earnings per share"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "id": "issuer-quarter:2317:2026-Q2:EPS:bf4e184cf36e62f5112fa56a17927f47f67e29863f5074571f96382faa669709",
+      "evidence_hash": "75afcf7f2b8c4445034627a8ce60302ceea020d2d419e91bac449a1109bba7a5"
+    },
+    {
+      "symbol": "2330",
+      "period": "2025-Q4",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-01/00fe50f72b38d74e6b9b066398f020f337cd4e9d/4Q25%20Management%20Report.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-18T04:39:50.339Z",
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "as_of": "2025-12-31T23:59:59+08:00",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_sha256": "cbd5645aed3df57a59beb942110ec251a45c6407c401f8813cff4942e4503e35",
+      "source_bytes": 4986716,
+      "source_received_at": "2026-10-18T04:39:50.339Z",
+      "consolidation": "CONSOLIDATED",
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "kind": "EPS",
+      "values": {
+        "value": 19.5,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "DILUTED",
+        "reported_decimal": "19.50"
+      },
+      "source_locator": {
+        "page": 1,
+        "table_column": "CURRENT_QUARTER",
+        "locator": "Summary current-quarter EPS (NT$ per common share); diluted weighted-average shares note"
+      },
+      "id": "retained-financial:2330:2025-Q4:EPS:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "evidence_hash": "6bb75680b4760e5d2fd31ce932dc412f3657613d5b9c1e9ee80a2123a257a728"
+    },
+    {
+      "symbol": "2330",
+      "period": "2025-Q4",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-01/00fe50f72b38d74e6b9b066398f020f337cd4e9d/4Q25%20Management%20Report.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-18T04:39:50.339Z",
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "as_of": "2025-12-31T23:59:59+08:00",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_sha256": "cbd5645aed3df57a59beb942110ec251a45c6407c401f8813cff4942e4503e35",
+      "source_bytes": 4986716,
+      "source_received_at": "2026-10-18T04:39:50.339Z",
+      "consolidation": "CONSOLIDATED",
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "kind": "MARGIN",
+      "values": {
+        "value": 62.3,
+        "unit": "PERCENT",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN",
+        "reported_decimal": "62.3"
+      },
+      "source_locator": {
+        "page": 1,
+        "table_column": "CURRENT_QUARTER",
+        "locator": "Summary current-quarter Gross Margin; not annual/YTD column"
+      },
+      "id": "retained-financial:2330:2025-Q4:MARGIN:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "evidence_hash": "c58ff75f5a3d7575e0df14cf2aafa8a7950141ce19fe9364e67e0c3a07709db6"
+    },
+    {
+      "symbol": "2330",
+      "period": "2025-Q4",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-01/00fe50f72b38d74e6b9b066398f020f337cd4e9d/4Q25%20Management%20Report.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-18T04:39:50.339Z",
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "as_of": "2025-12-31T23:59:59+08:00",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_sha256": "cbd5645aed3df57a59beb942110ec251a45c6407c401f8813cff4942e4503e35",
+      "source_bytes": 4986716,
+      "source_received_at": "2026-10-18T04:39:50.339Z",
+      "consolidation": "CONSOLIDATED",
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "kind": "CAPEX",
+      "values": {
+        "value": 356910000000,
+        "unit": "TWD",
+        "measurement_basis": "EXPENDITURE_MAGNITUDE_NOT_CASH_INFLOW",
+        "reported_decimal": "-356.91",
+        "signed_cashflow_twd": -356910000000,
+        "reported_unit": "TWD_BILLION"
+      },
+      "source_locator": {
+        "page": 5,
+        "table_column": "CURRENT_QUARTER",
+        "locator": "Quarterly Cash Flow Analysis current-quarter Capital Expenditures row; excludes annual and USD CapEx tables"
+      },
+      "id": "retained-financial:2330:2025-Q4:CAPEX:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "evidence_hash": "435a9e304883ad526467852cbfeaeec2e9dae592f16f3298a5b63a8585cc47b0"
+    },
+    {
+      "symbol": "2330",
+      "period": "2026-Q1",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-04/5508a9df8981f587c73dbfaf9f577f142e22bbb1/1Q26ManagementReport.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-18T04:40:02.208Z",
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "as_of": "2026-03-31T23:59:59+08:00",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_sha256": "4878487acab931ea06635a8bb97cbb9dcf14e2140d4c480667298ca1c43e8bdc",
+      "source_bytes": 4653875,
+      "source_received_at": "2026-10-18T04:40:02.208Z",
+      "consolidation": "CONSOLIDATED",
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "kind": "EPS",
+      "values": {
+        "value": 22.08,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "DILUTED",
+        "reported_decimal": "22.08"
+      },
+      "source_locator": {
+        "page": 1,
+        "table_column": "CURRENT_QUARTER",
+        "locator": "Summary current-quarter EPS (NT$ per common share); diluted weighted-average shares note"
+      },
+      "id": "retained-financial:2330:2026-Q1:EPS:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "evidence_hash": "0df26356d8907008d17eeea1ad9e82df35ce11641e85827bafb8f02b8b3e4be9"
+    },
+    {
+      "symbol": "2330",
+      "period": "2026-Q1",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-04/5508a9df8981f587c73dbfaf9f577f142e22bbb1/1Q26ManagementReport.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-18T04:40:02.208Z",
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "as_of": "2026-03-31T23:59:59+08:00",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_sha256": "4878487acab931ea06635a8bb97cbb9dcf14e2140d4c480667298ca1c43e8bdc",
+      "source_bytes": 4653875,
+      "source_received_at": "2026-10-18T04:40:02.208Z",
+      "consolidation": "CONSOLIDATED",
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "kind": "MARGIN",
+      "values": {
+        "value": 66.2,
+        "unit": "PERCENT",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN",
+        "reported_decimal": "66.2"
+      },
+      "source_locator": {
+        "page": 1,
+        "table_column": "CURRENT_QUARTER",
+        "locator": "Summary current-quarter Gross Margin; not annual/YTD column"
+      },
+      "id": "retained-financial:2330:2026-Q1:MARGIN:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "evidence_hash": "512ca416a4a2a9e8fccfb090a4eac5d10d484e76c66e169f87c44054d278c960"
+    },
+    {
+      "symbol": "2330",
+      "period": "2026-Q1",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-04/5508a9df8981f587c73dbfaf9f577f142e22bbb1/1Q26ManagementReport.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-18T04:40:02.208Z",
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "as_of": "2026-03-31T23:59:59+08:00",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_sha256": "4878487acab931ea06635a8bb97cbb9dcf14e2140d4c480667298ca1c43e8bdc",
+      "source_bytes": 4653875,
+      "source_received_at": "2026-10-18T04:40:02.208Z",
+      "consolidation": "CONSOLIDATED",
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "kind": "CAPEX",
+      "values": {
+        "value": 350760000000,
+        "unit": "TWD",
+        "measurement_basis": "EXPENDITURE_MAGNITUDE_NOT_CASH_INFLOW",
+        "reported_decimal": "-350.76",
+        "signed_cashflow_twd": -350760000000,
+        "reported_unit": "TWD_BILLION"
+      },
+      "source_locator": {
+        "page": 5,
+        "table_column": "CURRENT_QUARTER",
+        "locator": "Quarterly Cash Flow Analysis current-quarter Capital Expenditures row; excludes annual and USD CapEx tables"
+      },
+      "id": "retained-financial:2330:2026-Q1:CAPEX:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "evidence_hash": "92c8fa475faf3b7cb317a0cc8ad049c384c6c8da38fcc78486883acd1d5d24cc"
+    },
+    {
+      "symbol": "2330",
+      "period": "2026-Q2",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-07/6f49632674bd2d0fd48cb65aaf89ec6ab510b559/2Q26%20ManagementReport.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-18T05:34:49.723Z",
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "as_of": "2026-06-30T23:59:59+08:00",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_sha256": "fad79c6a6ec870357df9eae00e680256956e34083ec84a226959c693eccb1a5f",
+      "source_bytes": 4645787,
+      "source_received_at": "2026-10-18T05:34:49.723Z",
+      "consolidation": "CONSOLIDATED",
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "kind": "EPS",
+      "values": {
+        "value": 27.25,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "DILUTED",
+        "reported_decimal": "27.25"
+      },
+      "source_locator": {
+        "page": 1,
+        "table_column": "CURRENT_QUARTER",
+        "locator": "Summary current-quarter EPS (NT$ per common share); diluted weighted-average shares note"
+      },
+      "id": "retained-financial:2330:2026-Q2:EPS:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "evidence_hash": "ed254d65822e2febe505e410db21293c844ffb794a5d43dc7bd6a7dee3cec5f0"
+    },
+    {
+      "symbol": "2330",
+      "period": "2026-Q2",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-07/6f49632674bd2d0fd48cb65aaf89ec6ab510b559/2Q26%20ManagementReport.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-18T05:34:49.723Z",
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "as_of": "2026-06-30T23:59:59+08:00",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_sha256": "fad79c6a6ec870357df9eae00e680256956e34083ec84a226959c693eccb1a5f",
+      "source_bytes": 4645787,
+      "source_received_at": "2026-10-18T05:34:49.723Z",
+      "consolidation": "CONSOLIDATED",
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "kind": "MARGIN",
+      "values": {
+        "value": 67.7,
+        "unit": "PERCENT",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN",
+        "reported_decimal": "67.7"
+      },
+      "source_locator": {
+        "page": 1,
+        "table_column": "CURRENT_QUARTER",
+        "locator": "Summary current-quarter Gross Margin; not annual/YTD column"
+      },
+      "id": "retained-financial:2330:2026-Q2:MARGIN:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "evidence_hash": "88de41fec13598236f887ddeb3a8b8e654c676cc4c613c05b3157695d1a39b70"
+    },
+    {
+      "symbol": "2330",
+      "period": "2026-Q2",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-07/6f49632674bd2d0fd48cb65aaf89ec6ab510b559/2Q26%20ManagementReport.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-18T05:34:49.723Z",
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "as_of": "2026-06-30T23:59:59+08:00",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_sha256": "fad79c6a6ec870357df9eae00e680256956e34083ec84a226959c693eccb1a5f",
+      "source_bytes": 4645787,
+      "source_received_at": "2026-10-18T05:34:49.723Z",
+      "consolidation": "CONSOLIDATED",
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "kind": "CAPEX",
+      "values": {
+        "value": 496000000000,
+        "unit": "TWD",
+        "measurement_basis": "EXPENDITURE_MAGNITUDE_NOT_CASH_INFLOW",
+        "reported_decimal": "-496.00",
+        "signed_cashflow_twd": -496000000000,
+        "reported_unit": "TWD_BILLION"
+      },
+      "source_locator": {
+        "page": 5,
+        "table_column": "CURRENT_QUARTER",
+        "locator": "Quarterly Cash Flow Analysis current-quarter Capital Expenditures row; excludes annual and USD CapEx tables"
+      },
+      "id": "retained-financial:2330:2026-Q2:CAPEX:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "evidence_hash": "34fa9522c780248d302865a2acd43220f928dd65def3f1826ce74a3efb00cdf9"
+    },
+    {
+      "symbol": "2330",
+      "period": "2026-Q3",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-10/f83780000ddc0c3b48e57a87eab6814c4ab35058/3Q26%20ManagementReport.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-18T05:34:39.061Z",
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "as_of": "2026-09-30T23:59:59+08:00",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_sha256": "27b5b92d05207bf662756edfbe72494c5f34a007a79306ae040d957886b411d2",
+      "source_bytes": 468113,
+      "source_received_at": "2026-10-18T05:34:39.061Z",
+      "consolidation": "CONSOLIDATED",
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "kind": "EPS",
+      "values": {
+        "value": 29.43,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "DILUTED",
+        "reported_decimal": "29.43"
+      },
+      "source_locator": {
+        "page": 1,
+        "table_column": "CURRENT_QUARTER",
+        "locator": "Summary current-quarter EPS (NT$ per common share); diluted weighted-average shares note"
+      },
+      "id": "retained-financial:2330:2026-Q3:EPS:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "evidence_hash": "4201bb2239ea2251ae400a08e79053283fe172bd1b2e98a0594a019e8ac72edf"
+    },
+    {
+      "symbol": "2330",
+      "period": "2026-Q3",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-10/f83780000ddc0c3b48e57a87eab6814c4ab35058/3Q26%20ManagementReport.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-18T05:34:39.061Z",
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "as_of": "2026-09-30T23:59:59+08:00",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_sha256": "27b5b92d05207bf662756edfbe72494c5f34a007a79306ae040d957886b411d2",
+      "source_bytes": 468113,
+      "source_received_at": "2026-10-18T05:34:39.061Z",
+      "consolidation": "CONSOLIDATED",
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "kind": "MARGIN",
+      "values": {
+        "value": 66.4,
+        "unit": "PERCENT",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN",
+        "reported_decimal": "66.4"
+      },
+      "source_locator": {
+        "page": 1,
+        "table_column": "CURRENT_QUARTER",
+        "locator": "Summary current-quarter Gross Margin; not annual/YTD column"
+      },
+      "id": "retained-financial:2330:2026-Q3:MARGIN:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "evidence_hash": "0bc8beedf967b62c9a98bb71cce77c64b9ddadbbd7d86cf9a0d696b5d5665f07"
+    },
+    {
+      "symbol": "2330",
+      "period": "2026-Q3",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-10/f83780000ddc0c3b48e57a87eab6814c4ab35058/3Q26%20ManagementReport.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-18T05:34:39.061Z",
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "as_of": "2026-09-30T23:59:59+08:00",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_sha256": "27b5b92d05207bf662756edfbe72494c5f34a007a79306ae040d957886b411d2",
+      "source_bytes": 468113,
+      "source_received_at": "2026-10-18T05:34:39.061Z",
+      "consolidation": "CONSOLIDATED",
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "kind": "CAPEX",
+      "values": {
+        "value": 443210000000,
+        "unit": "TWD",
+        "measurement_basis": "EXPENDITURE_MAGNITUDE_NOT_CASH_INFLOW",
+        "reported_decimal": "-443.21",
+        "signed_cashflow_twd": -443210000000,
+        "reported_unit": "TWD_BILLION"
+      },
+      "source_locator": {
+        "page": 5,
+        "table_column": "CURRENT_QUARTER",
+        "locator": "Quarterly Cash Flow Analysis current-quarter Capital Expenditures row; excludes annual and USD CapEx tables"
+      },
+      "id": "retained-financial:2330:2026-Q3:CAPEX:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "evidence_hash": "5b3995c663affb65cf9dc35adc131352984b87d21b1a37cf5ab4b71d77d0b6b3"
+    },
+    {
+      "symbol": "2379",
+      "kind": "EPS",
+      "period": "2025-Q2",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://www.realtek.com/images/cqfs/Final_.2025.FS.AllReport.ENG.IFRS.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-29T16:26:42.916014Z",
+      "available_at": "2026-10-29T16:26:42.916014Z",
+      "as_of": "2025-06-30T23:59:59+08:00",
+      "source_sha256": "c8aa59fc6d849f6b5886279d7551039902544e9e9b58af38b549687949685933",
+      "source_bytes": 1135935,
+      "source_locator": {
+        "page": 7,
+        "column": "CURRENT_YEAR_THREE_MONTH_PERIOD",
+        "row": "9850 Diluted earnings per share"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "values": {
+        "value": 7.59,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "DILUTED",
+        "reported_decimal": "7.59",
+        "consolidation": "CONSOLIDATED"
+      },
+      "id": "issuer-quarter:2379:2025-Q2:EPS:c8aa59fc6d849f6b5886279d7551039902544e9e9b58af38b549687949685933",
+      "evidence_hash": "614616093ee7e495dc9147b308c9fe2886c760bc6ce66eb133333e47f1317b61"
+    },
+    {
+      "symbol": "2379",
+      "kind": "EPS",
+      "period": "2025-Q3",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://www.realtek.com/images/cqfs/_.2025.FS.AllReport.CHT.IFRS.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-29T16:26:37.466877Z",
+      "available_at": "2026-10-29T16:26:37.466877Z",
+      "as_of": "2025-09-30T23:59:59+08:00",
+      "source_sha256": "4f4960d5913ccde63fabc7c153483e2667ad414ed38cbd7750ef47ddfec2b2aa",
+      "source_bytes": 1531062,
+      "source_locator": {
+        "page": 7,
+        "column": "CURRENT_YEAR_THREE_MONTH_PERIOD",
+        "row": "9850 Diluted earnings per share"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "values": {
+        "value": 6.66,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "DILUTED",
+        "reported_decimal": "6.66",
+        "consolidation": "CONSOLIDATED"
+      },
+      "id": "issuer-quarter:2379:2025-Q3:EPS:4f4960d5913ccde63fabc7c153483e2667ad414ed38cbd7750ef47ddfec2b2aa",
+      "evidence_hash": "664ebd013864515c2a73340a6da79a89874da6c0901971f4c3fa1c3738548e1b"
+    },
+    {
+      "symbol": "2379",
+      "kind": "EPS",
+      "period": "2026-Q1",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://www.realtek.com/images/cqfs/_.2026.FS.AllReport.ENG.IFRS.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-29T16:26:37.021401Z",
+      "available_at": "2026-10-29T16:26:37.021401Z",
+      "as_of": "2026-03-31T23:59:59+08:00",
+      "source_sha256": "5e4c1d09f514d5c2f2583a7218b41ad9755b3608178f5f00641424112dc4f290",
+      "source_bytes": 1190340,
+      "source_locator": {
+        "page": 6,
+        "column": "CURRENT_YEAR_THREE_MONTH_PERIOD",
+        "row": "9850 Diluted earnings per share"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "values": {
+        "value": 8.3,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "DILUTED",
+        "reported_decimal": "8.30",
+        "consolidation": "CONSOLIDATED"
+      },
+      "id": "issuer-quarter:2379:2026-Q1:EPS:5e4c1d09f514d5c2f2583a7218b41ad9755b3608178f5f00641424112dc4f290",
+      "evidence_hash": "a97625a0c85c3d3607b8ba9b3b55b28277de764976e571dacd84a50168e72bb7"
+    },
+    {
+      "symbol": "2379",
+      "kind": "EPS",
+      "period": "2026-Q2",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://www.realtek.com/images/cqfs/_.2026.FS.AllReport.ENG.IFRS.20260630.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-29T16:26:37.488917Z",
+      "available_at": "2026-10-29T16:26:37.488917Z",
+      "as_of": "2026-06-30T23:59:59+08:00",
+      "source_sha256": "f2fdab872fd8c67f5220788635b5b82acf2863afde8130c400ad7aa65c32f806",
+      "source_bytes": 1233619,
+      "source_locator": {
+        "page": 7,
+        "column": "CURRENT_YEAR_THREE_MONTH_PERIOD",
+        "row": "9850 Diluted earnings per share"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "values": {
+        "value": 7.38,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "DILUTED",
+        "reported_decimal": "7.38",
+        "consolidation": "CONSOLIDATED"
+      },
+      "id": "issuer-quarter:2379:2026-Q2:EPS:f2fdab872fd8c67f5220788635b5b82acf2863afde8130c400ad7aa65c32f806",
+      "evidence_hash": "8e99bddd70b2a7db0a6526f6b4a85b91f15aea28e5bcc667b534a1c2e27da1ad"
+    },
+    {
+      "symbol": "2454",
+      "kind": "EPS",
+      "period": "2025-Q3",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://www.mediatek.com/hubfs/MediaTek%20Assets/Pdfs/Quarterly%20Earnings%20Release/2025/Quarterly%20Earnings%20Release-2025Q3/Financial%20Statements.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-29T16:25:38.927415Z",
+      "available_at": "2026-10-29T16:25:38.927415Z",
+      "as_of": "2025-09-30T23:59:59+08:00",
+      "source_sha256": "09e4f594a7c46f50aa3be5e22ee2e1a13b8dde4b4a2519532d35477e1c1b7b5a",
+      "source_bytes": 70702,
+      "source_locator": {
+        "page": 1,
+        "column": "CURRENT_YEAR_THREE_MONTH_PERIOD",
+        "row": "Basic Earnings Per Share (NTD)"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "values": {
+        "value": 15.84,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "BASIC",
+        "reported_decimal": "15.84",
+        "consolidation": "CONSOLIDATED"
+      },
+      "id": "issuer-quarter:2454:2025-Q3:EPS:09e4f594a7c46f50aa3be5e22ee2e1a13b8dde4b4a2519532d35477e1c1b7b5a",
+      "evidence_hash": "9b0020a22f0a2a1e9cf28b06fd25a8732c9efe43dbfd6a50212bf8ceaa35f50e"
+    },
+    {
+      "symbol": "2454",
+      "kind": "MARGIN",
+      "period": "2025-Q3",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://www.mediatek.com/hubfs/MediaTek%20Assets/Pdfs/Quarterly%20Earnings%20Release/2025/Quarterly%20Earnings%20Release-2025Q3/Press%20Release.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-29T16:24:19.471523Z",
+      "available_at": "2026-10-29T16:24:19.471523Z",
+      "as_of": "2025-09-30T23:59:59+08:00",
+      "source_sha256": "0e9fc06c02faae8b7c6719e9da58b648eb2b24882c08468b43b936023897b9f5",
+      "source_bytes": 356553,
+      "source_locator": {
+        "page": 4,
+        "column": "CURRENT_YEAR_THREE_MONTH_PERIOD",
+        "row": "Gross profit, Percentage of Revenue"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "values": {
+        "value": 46.5,
+        "unit": "PERCENT",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN",
+        "reported_decimal": "46.5",
+        "consolidation": "CONSOLIDATED"
+      },
+      "id": "issuer-quarter:2454:2025-Q3:MARGIN:0e9fc06c02faae8b7c6719e9da58b648eb2b24882c08468b43b936023897b9f5",
+      "evidence_hash": "cc5e83706b9381f90c4941859f87143a5d10f0acba0c95ea2dd8161a59150a28"
+    },
+    {
+      "symbol": "2454",
+      "kind": "EPS",
+      "period": "2025-Q4",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://www.mediatek.com/hubfs/MediaTek%20Assets/Pdfs/Quarterly%20Earnings%20Release/2025/Quarterly%20Earnings%20Release-2025Q4/Financial%20Statements.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-29T16:25:38.727401Z",
+      "available_at": "2026-10-29T16:25:38.727401Z",
+      "as_of": "2025-12-31T23:59:59+08:00",
+      "source_sha256": "35dd2a919d165b0786f00463dc74a2232731ad45707ed91243545db66f92516c",
+      "source_bytes": 66876,
+      "source_locator": {
+        "page": 1,
+        "column": "CURRENT_YEAR_THREE_MONTH_PERIOD",
+        "row": "Basic Earnings Per Share (NTD)"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "values": {
+        "value": 14.39,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "BASIC",
+        "reported_decimal": "14.39",
+        "consolidation": "CONSOLIDATED"
+      },
+      "id": "issuer-quarter:2454:2025-Q4:EPS:35dd2a919d165b0786f00463dc74a2232731ad45707ed91243545db66f92516c",
+      "evidence_hash": "8cb28e4b827a847d06246ad1140881e2b569414230e386c8453edb7f9a38669a"
+    },
+    {
+      "symbol": "2454",
+      "kind": "MARGIN",
+      "period": "2025-Q4",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://www.mediatek.com/hubfs/MediaTek%20Assets/Pdfs/Quarterly%20Earnings%20Release/2025/Quarterly%20Earnings%20Release-2025Q4/Press%20Release.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-29T16:24:19.415477Z",
+      "available_at": "2026-10-29T16:24:19.415477Z",
+      "as_of": "2025-12-31T23:59:59+08:00",
+      "source_sha256": "4e304aa4905139f75f1381620aff0747e96a1b3a6e0b635f8c230b48577a9b03",
+      "source_bytes": 408913,
+      "source_locator": {
+        "page": 5,
+        "column": "CURRENT_YEAR_THREE_MONTH_PERIOD",
+        "row": "Gross profit, Percentage of Revenue"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "values": {
+        "value": 46.1,
+        "unit": "PERCENT",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN",
+        "reported_decimal": "46.1",
+        "consolidation": "CONSOLIDATED"
+      },
+      "id": "issuer-quarter:2454:2025-Q4:MARGIN:4e304aa4905139f75f1381620aff0747e96a1b3a6e0b635f8c230b48577a9b03",
+      "evidence_hash": "2bf22b610b9f7596edd418c083313c909cd3d03f5b9688ac900a0cdbb8057d72"
+    },
+    {
+      "symbol": "2454",
+      "kind": "EPS",
+      "period": "2026-Q1",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://www.mediatek.com/hubfs/MediaTek%20Assets/Pdfs/Quarterly%20Earnings%20Release/2026/Quarterly%20Earnings%20Release-2026Q1/Financial%20Statements.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-29T16:25:38.647712Z",
+      "available_at": "2026-10-29T16:25:38.647712Z",
+      "as_of": "2026-03-31T23:59:59+08:00",
+      "source_sha256": "82e369d195d3e11df6445034d236e377ca1db0b7d823adbe41b85d862f170ab7",
+      "source_bytes": 58036,
+      "source_locator": {
+        "page": 1,
+        "column": "CURRENT_YEAR_THREE_MONTH_PERIOD",
+        "row": "Basic Earnings Per Share (NTD)"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "values": {
+        "value": 15.17,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "BASIC",
+        "reported_decimal": "15.17",
+        "consolidation": "CONSOLIDATED"
+      },
+      "id": "issuer-quarter:2454:2026-Q1:EPS:82e369d195d3e11df6445034d236e377ca1db0b7d823adbe41b85d862f170ab7",
+      "evidence_hash": "1f3f6f9ffee3c77e24d68125e7bb4e38a9bc402224c7845a6adf4079afe54b98"
+    },
+    {
+      "symbol": "2454",
+      "kind": "MARGIN",
+      "period": "2026-Q1",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://www.mediatek.com/hubfs/MediaTek%20Assets/Pdfs/Quarterly%20Earnings%20Release/2026/Quarterly%20Earnings%20Release-2026Q1/Press%20Release.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-29T16:24:19.448216Z",
+      "available_at": "2026-10-29T16:24:19.448216Z",
+      "as_of": "2026-03-31T23:59:59+08:00",
+      "source_sha256": "13e3cf20c68a1aad12c90cfb5f3e3734351d21923a20c69392e433f6f247b873",
+      "source_bytes": 357297,
+      "source_locator": {
+        "page": 4,
+        "column": "CURRENT_YEAR_THREE_MONTH_PERIOD",
+        "row": "Gross profit, Percentage of Revenue"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "values": {
+        "value": 46.3,
+        "unit": "PERCENT",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN",
+        "reported_decimal": "46.3",
+        "consolidation": "CONSOLIDATED"
+      },
+      "id": "issuer-quarter:2454:2026-Q1:MARGIN:13e3cf20c68a1aad12c90cfb5f3e3734351d21923a20c69392e433f6f247b873",
+      "evidence_hash": "1a0fa0ecf5886ea381702d63bedf4c67f1d75641296051324e053e123b9c2759"
+    },
+    {
+      "symbol": "2454",
+      "kind": "EPS",
+      "period": "2026-Q2",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://www.mediatek.com/hubfs/MediaTek%20Assets/Pdfs/Quarterly%20Earnings%20Release/2026/Quarterly%20Earnings%20Release-2026Q2/Financial%20Statements.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-29T16:25:38.712698Z",
+      "available_at": "2026-10-29T16:25:38.712698Z",
+      "as_of": "2026-06-30T23:59:59+08:00",
+      "source_sha256": "74a029968ed059faf6be522e53511e709438268f3abf4760b3f8b2653df13a47",
+      "source_bytes": 107166,
+      "source_locator": {
+        "page": 1,
+        "column": "CURRENT_YEAR_THREE_MONTH_PERIOD",
+        "row": "Basic Earnings Per Share (NTD)"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "values": {
+        "value": 15.28,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "BASIC",
+        "reported_decimal": "15.28",
+        "consolidation": "CONSOLIDATED"
+      },
+      "id": "issuer-quarter:2454:2026-Q2:EPS:74a029968ed059faf6be522e53511e709438268f3abf4760b3f8b2653df13a47",
+      "evidence_hash": "fa098c6a5cbcfa78560c1b77b6707a0846a342f4dc2eeb49f2fa2850a5359998"
+    },
+    {
+      "symbol": "2454",
+      "kind": "MARGIN",
+      "period": "2026-Q2",
+      "basis": "SINGLE_QUARTER",
+      "source": "https://www.mediatek.com/hubfs/MediaTek%20Assets/Pdfs/Quarterly%20Earnings%20Release/2026/Quarterly%20Earnings%20Release-2026Q2/Press%20Release.pdf",
+      "published_at": null,
+      "first_seen_at": "2026-10-29T16:24:19.583567Z",
+      "available_at": "2026-10-29T16:24:19.583567Z",
+      "as_of": "2026-06-30T23:59:59+08:00",
+      "source_sha256": "6faf5edb246a7b2acf69bf2ae05031e9d20bed26ab0f663888eafd5a8a2c9d33",
+      "source_bytes": 356990,
+      "source_locator": {
+        "page": 4,
+        "column": "CURRENT_YEAR_THREE_MONTH_PERIOD",
+        "row": "Gross profit, Percentage of Revenue"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "values": {
+        "value": 46.2,
+        "unit": "PERCENT",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN",
+        "reported_decimal": "46.2",
+        "consolidation": "CONSOLIDATED"
+      },
+      "id": "issuer-quarter:2454:2026-Q2:MARGIN:6faf5edb246a7b2acf69bf2ae05031e9d20bed26ab0f663888eafd5a8a2c9d33",
+      "evidence_hash": "1acb85408bcabb67639d6e340007cc5d00bce0f2986f3ac831f06c62119c5268"
+    },
+    {
+      "symbol": "3231",
+      "kind": "EPS",
+      "period": "2026-Q2",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 4.72,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "BASIC",
+        "consolidation": "CONSOLIDATED"
+      },
+      "source": "https://www.wistron.com/file/ac89527f-3611-4aa9-b0a7-b922d25ef08b/274415_115Q2_%E5%90%88%E4%BD%B5_%E8%8B%B1%E6%96%87%E5%AE%8C%E7%A8%BF%E8%B2%A1%E5%A0%B1_IMSv5.pdf.pdf",
+      "source_sha256": "ae526998abe77b9f18313ea455a7f0692b217fd99126deb3e5ac71993e33de95",
+      "source_bytes": 838069,
+      "published_at": null,
+      "first_seen_at": "2026-10-30T01:58:15.081886+00:00",
+      "available_at": "2026-10-30T01:58:15.081886+00:00",
+      "as_of": "2026-06-30T23:59:59+08:00",
+      "source_locator": {
+        "page": 5,
+        "column": "CURRENT_YEAR_REPORTED_PERIOD",
+        "row": "9750 Basic earnings per share"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "ISSUER_ORIGINAL_OBSERVATION_PUBLICATION_TIME_AND_RIGHTS_UNVERIFIED",
+      "id": "issuer-quarter:3231:2026-Q2:EPS:ae526998abe77b9f18313ea455a7f0692b217fd99126deb3e5ac71993e33de95",
+      "evidence_hash": "bf8160725a74ba3d04c231c9b066e0b7aabf99ebf9314b5bdce28d42bd3e4279"
+    }
+  ],
+  "known_release_deadlines": {
+    "2454": "2026-10-30T15:00:00+08:00"
+  },
+  "release_deadline_sources": {
+    "2454": "https://www.mediatek.com/investor-relations/ir-events"
+  },
+  "max_age_days": 7
+}

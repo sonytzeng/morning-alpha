@@ -30,7 +30,7 @@ jobs:
       - name: Current cold source ordering and existing recovery regressions
         env:
           NODE_OPTIONS: --experimental-strip-types
-        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextColdSourcePriority.test.mjs tests/vnextDailyRuntimeRecovery.test.mjs
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextColdSourcePriority.test.mjs tests/vnextDailyRuntimeRecovery.test.mjs tests/vnextIssuerFinancialIntake.test.mjs
       - name: Current forward-cutoff timing; parent whole-workflow assertions run in union admission
         env:
           NODE_OPTIONS: --experimental-strip-types

@@ -7,8 +7,10 @@ import {canonical} from '../../../research/entry-opportunity.ts';
 import type {DailyBar} from './researchFunnel.ts';
 import {entryInputFromV2} from '../../../research/entry-v2-adapter.ts';
 import type {V2Input} from '../../../supabase/functions/_shared/recommendation-shadow-v2-engine.ts';
+import {mergeIssuerFinancials,type IssuerFinancialPacket} from './issuerFinancialIntake.ts';
 export type Rpc=(name:string,args:Record<string,unknown>)=>Promise<unknown>;
-export type RuntimePorts={rpc:Rpc;fetcher:typeof fetch;clock:()=>string;sleep:(ms:number)=>Promise<void>};
+export type RuntimePorts={rpc:Rpc;fetcher:typeof fetch;clock:()=>string;sleep:(ms:number)=>Promise<void>;
+ issuerFinancials?:{packet:IssuerFinancialPacket;expectedHash:string}};
 type ClaimedRun={id:string;business_date:string;actionable_at:string;lease:string;lease_until?:string;fence:number;plan:SourceTask[];checkpoint:RunState|Record<string,never>;cursor:number};
 export type LeaseRecoveryPending={status:'LEASE_RECOVERY_PENDING';continue:true;reason:'FINISH_COMMIT_UNCONFIRMED';lease_until:string;not_before:string};
 const object=(v:unknown):Record<string,unknown>=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
@@ -117,6 +119,10 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   // freeze a missing market that may become available before the last minute.
   if(!market&&Date.parse(p.clock())<actionable-60000){retryAfter=30;return finish('QUEUED','CANONICAL_PUBLICATION_PENDING');}
   acquired=await assembleDaily(r.business_date,companies,sources,evaluationCutoff,market as Parameters<typeof assembleDaily>[4]);
+  // The server release may supply already-normalized issuer originals. Only
+  // a new acquisition is enriched; a retained checkpoint keeps its exact bytes.
+  // Their private/unadmitted status and unknown publication time stay intact.
+  if(p.issuerFinancials)acquired=await mergeIssuerFinancials(acquired,p.issuerFinancials.packet,p.issuerFinancials.expectedHash);
   if(!('acquired' in r.checkpoint)&&lineage.evidence&&typeof lineage.hash==='string'&&acquired.entry){
    const capsule=lineage.evidence as V2Input;
    if(capsule.identity.report_date!==r.business_date||Date.parse(capsule.identity.generated_at)>Date.parse(acquired.evidence_cutoff))throw Error('ENTRY_CUTOFF_MISMATCH');

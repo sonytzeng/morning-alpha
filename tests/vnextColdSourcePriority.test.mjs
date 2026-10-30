@@ -14,11 +14,14 @@ const baselines={
 };
 // Explicit new-calendar expectation; the original pre-exception baselines stay above.
 const correctedCalendarBaselines={'2026-11-02':[1462,'db043b47a45ded528494c6ed22a3ea357b237b3069dc0dcccb924bd645ee12fe','609098f8d533df60e252650fad565dd347ac3e848f74f139dba6b8c7250d93be']};
-test('cold ordering preserves original tasks with 40 financial contracts and one explicitly versioned current index source',async()=>{
+test('cold ordering adds exactly one daily price source and preserves every original task and financial/index contract',async()=>{
  for(const [date,[count,keys,tasks]] of Object.entries(baselines)){
   const plan=await acquisitionPlan(date,companies);
-  assert.equal(plan.length,count);assert.equal(new Set(plan.map(t=>t.key)).size,count);
-  const legacy=await Promise.all(plan.map(async t=>{
+  assert.equal(plan.length,count+1);assert.equal(new Set(plan.map(t=>t.key)).size,count+1);
+  const bulk=plan.filter(t=>t.kind==='TWSE_PRICE_DAY');assert.equal(bulk.length,1);assert.equal(plan[0],bulk[0]);
+  const through=sessionsBefore(date).at(-1),expected={kind:'TWSE_PRICE_DAY',url:`https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=${through.replaceAll('-','')}&type=ALLBUT0999&response=json`,format:'json',symbols:companies.filter(c=>c.exchange==='TWSE').map(c=>c.symbol),exchange:'TWSE',date:through,scope:'VNEXT_DAILY_OFFICIAL_1:'+date,max_age_days:1};
+  assert.deepEqual(bulk[0],{...expected,key:await snapshotHash(expected)});
+  const legacy=await Promise.all(plan.filter(t=>t.kind!=='TWSE_PRICE_DAY').map(async t=>{
    if(t.benchmark_response_contract){
     assert.equal(t.kind,'BENCHMARK');assert.equal(t.benchmark_response_contract,'TWSE_OPENAPI_INDEX_V1');
     assert.equal(t.url,'https://openapi.twse.com.tw/v1/indicesReport/MI_5MINS_HIST');
@@ -43,7 +46,7 @@ test('cold ordering preserves original tasks with 40 financial contracts and one
 test('all 72 latest20 windows and TAIEX precede MEDIUM, which precedes deep price bootstrap',async()=>{
  for(const date of Object.keys(baselines)){
   const plan=await acquisitionPlan(date,companies),dates=sessionsBefore(date).slice(-20),months=new Set(dates.map(d=>d.slice(0,7)));
-  const warm=plan.filter(t=>t.kind==='OTC_PRICE'?dates.includes(t.date):['PRICE','BENCHMARK'].includes(t.kind)&&months.has(t.month));
+  const warm=plan.filter(t=>t.kind==='TWSE_PRICE_DAY'||(t.kind==='OTC_PRICE'?dates.includes(t.date):['PRICE','BENCHMARK'].includes(t.kind)&&months.has(t.month)));
   const lastWarm=Math.max(...warm.map(t=>plan.indexOf(t)));
   assert.equal(lastWarm+1,warm.length,'no unrelated task interrupts the complete 72-stock window');
   for(const c of companies.filter(c=>c.exchange==='TWSE'))for(const month of months)assert(warm.some(t=>t.kind==='PRICE'&&t.month===month&&t.symbols.includes(c.symbol)));

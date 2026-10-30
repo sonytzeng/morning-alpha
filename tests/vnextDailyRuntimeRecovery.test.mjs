@@ -7,6 +7,7 @@ import {handleVnextDaily} from '../supabase/functions/vnext-daily-research-v1/ha
 import {runDailyIntelligence,verifyDailyLock} from '../src/features/vnext/dailyIntelligence.ts';
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
 import {RECOMMENDATION_UNIVERSE} from '../supabase/functions/_shared/recommendation-stock-evidence.ts';
+import {retainedIssuerFinancials} from '../supabase/functions/_shared/retained-issuer-financials.ts';
 
 const date='2026-10-12',before='2026-10-12T00:58:30Z';
 const companies=RECOMMENDATION_UNIVERSE.map(symbol=>({symbol,company:'合成隔離控制 '+symbol,exchange:'TWSE',industry:'24'}));
@@ -22,10 +23,10 @@ async function checkpoint(){
  assert.equal(state.locks.length,216);assert(await verifyDailyLock(state.locks[0]));return state;
 }
 async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,lockError=null,throughHandler=false,providerWaitSeconds=0,providerStatus=200,
- leaseUntil,finishError=null,onFinish=()=>{},advanceSleep=()=>{},continuationError=null,claimStatus='ACQUIRED',claimError=null,onClaim=()=>{},rpcErrorOp=null,clock=()=>at}={}){
- const dirs=await directoryPlan(date),cache=new Map(await Promise.all(dirs.map(async t=>[t.key,await receipt(t,at,{rows:t.exchange==='TWSE'?companies:[]})])));
- const calls=[],http=[],stored=[],locked=[],sources=[...cache.values()];let pending=due,checkpointState=saved,run={id:'isolated-run',business_date:date,
-  actionable_at:date+'T09:00:00+08:00',lease:'isolated-lease',...(leaseUntil===undefined?{}:{lease_until:leaseUntil}),fence:2,plan,cursor,checkpoint:checkpointState};
+ leaseUntil,finishError=null,onFinish=()=>{},advanceSleep=()=>{},continuationError=null,claimStatus='ACQUIRED',claimError=null,onClaim=()=>{},rpcErrorOp=null,clock=()=>at,businessDate=date,issuerFinancials}={}){
+ const dirs=await directoryPlan(businessDate),cache=new Map(await Promise.all(dirs.map(async t=>[t.key,await receipt(t,at,{rows:t.exchange==='TWSE'?companies:[]})])));
+ const calls=[],http=[],stored=[],locked=[],sources=[...cache.values()];let pending=due,checkpointState=saved,run={id:'isolated-run',business_date:businessDate,
+  actionable_at:businessDate+'T09:00:00+08:00',lease:'isolated-lease',...(leaseUntil===undefined?{}:{lease_until:leaseUntil}),fence:2,plan,cursor,checkpoint:checkpointState};
  const rpc=async(name,args)=>{
   if(name==='claim_vnext_daily_research_v1'){if(claimError)throw Error(claimError);onClaim();return {status:claimStatus,run};}
   const op=args.p_op,data=args.p_data;calls.push({op,data});
@@ -51,7 +52,7 @@ async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,loc
   return Response.json({stat:'OK',date:month+'01',title:' '+symbol+' 合成隔離控制',fields:symbol?
    ['日期','成交股數','成交金額','開盤價','最高價','最低價','收盤價']:['日期','開盤指數','最高指數','最低指數','收盤指數'],data:[]});
  };
- const ports={rpc,fetcher,clock,sleep:async()=>{}};
+ const ports={rpc,fetcher,clock,sleep:async()=>{},...(issuerFinancials?{issuerFinancials}:{})};
  const sleeps=[],continuations=[];let result;
  if(throughHandler){
   run.id='11111111-1111-4111-8111-111111111111';const tasks=[];
@@ -62,6 +63,17 @@ async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,loc
  }else result=await workDailyRun(run.id,ports);
  return {result,calls,http,stored,locked,run,sleeps,continuations,get checkpoint(){return checkpointState;},invoke:()=>workDailyRun(run.id,ports)};
 }
+test('SYNTHETIC future-clock worker pins eligible retained financial facts once and never revises a checkpoint on resume',async()=>{
+ const binding=structuredClone(retainedIssuerFinancials);
+ const a=await runner({at:'2026-11-02T00:59:30Z',businessDate:'2026-11-02',issuerFinancials:binding});
+ assert.equal(a.result.reason,'ACQUIRED_SNAPSHOT_CONTINUATION');
+ const pinned=structuredClone(a.checkpoint.acquired);assert.equal(pinned.inputs.flatMap(i=>i.facts).length,25);
+ assert.equal(pinned.inputs.find(i=>i.symbol==='2330').facts.length,12);
+ assert.equal(pinned.inputs.find(i=>i.symbol==='2454').facts.length,0);
+ binding.expectedHash='0'.repeat(64); // A changed release cannot rewrite prior acquisition.
+ await a.invoke();assert.deepEqual(a.checkpoint.acquired,pinned);assert.equal(a.locked.length,216);
+ assert(a.locked.every(l=>l.body.research.state==='INSUFFICIENT'));
+});
 test('cold acquisition prioritizes latest prices across all 72 before older history, without discarding tasks',async()=>{
  const plan=await acquisitionPlan(date,companies),price=plan.filter(t=>t.kind==='PRICE');
  assert.equal(price.filter(t=>t.month==='2026-10').length,72);

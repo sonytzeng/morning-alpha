@@ -51,7 +51,7 @@
     {
       "path": ".github/workflows/core-member-integration.yml",
       "before_sha256": null,
-      "after_sha256": "815ee3fa5444cf2ad46222c97793b5f015a6c5407ef9ea6217c905f6a5805ce8",
+      "after_sha256": "cceaa4a1fc3db18f3fb37e768b21fa92737e643f46c975e0fdc551ce674b22ee",
       "mode": "100644",
       "origin": "composition"
     },
@@ -1822,7 +1822,7 @@
     {
       "path": "src/features/vnext/dailyRuntime.ts",
       "before_sha256": "b2ee9bfd1618b6eb7f85494ae55a1d6dc14693f48571e007d9d6a019f861ae91",
-      "after_sha256": "4d9f6fc4c9ac33f7fe7aa012cb944c4837d8fba4ad464123507f1ec526b075a3",
+      "after_sha256": "8d592bbc3e3866882fdd79c513baff7b36e4cc3b906ef1e3452d1f3e6e3b76ff",
       "mode": "100644",
       "origin": "composition"
     },
@@ -1839,6 +1839,13 @@
       "after_sha256": "27ed43facf16954bdd41798ae22f1e90836d019209fa7dc63cbb470d0c7cd7e0",
       "mode": "100644",
       "origin": "member"
+    },
+    {
+      "path": "src/features/vnext/issuerFinancialIntake.ts",
+      "before_sha256": null,
+      "after_sha256": "95b8e3b54d6fc99d6410793b0e43096e3ddef857d9d7e1168ed44378abc89ae1",
+      "mode": "100644",
+      "origin": "composition"
     },
     {
       "path": "src/features/vnext/member.ts",
@@ -2590,6 +2597,20 @@
       "origin": "composition"
     },
     {
+      "path": "supabase/functions/_shared/retained-issuer-financials-20261030.json",
+      "before_sha256": null,
+      "after_sha256": "d75ad5c00800df8fac4a84a44a7a0cc0ada32f9b89949456b5e5f9d9c69e6b44",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "supabase/functions/_shared/retained-issuer-financials.ts",
+      "before_sha256": null,
+      "after_sha256": "d8bf0349b538e197fc70428463032116820d576e0e81ab3b3770f8a57bd428e7",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "supabase/functions/_shared/taifex-regular-fallback.mjs",
       "before_sha256": null,
       "after_sha256": "77cc9a58ba051bd907cbb6f8622645c15fd0593a2e244216a6e04159ce2c7aec",
@@ -2662,7 +2683,7 @@
     {
       "path": "supabase/functions/vnext-daily-research-v1/index.ts",
       "before_sha256": "4fcada158ef706c7a08b665ad1d7e3d2da9faa58aba9887ef5c6bb9d198ea939",
-      "after_sha256": "d83b6ea041b31bbe55f605aa695b7bdb1ed1a5ec52caa9ffdba80a7a85c7b7d5",
+      "after_sha256": "3f5ae500a60287a6e3a652520a2688cd31753eda50ce6992eb20135536cdc833",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3047,7 +3068,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "445e7f03d7cd9b4a82410e53924dc663b1573fc56e8baebdb2eecea097cf0b3c",
+      "after_sha256": "74e5bd823d483670fc8a87ee58900dfa8fd83b7a5a529b1f3a95064f509d187c",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3222,7 +3243,7 @@
     {
       "path": "tests/originalIngressAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "a916ae43ea11b1a44343bb9f3e140744e1d5746b24ffd26409cf4ffe29ee0a70",
+      "after_sha256": "b7bf68e75fadad35971ec2242cdc7525f3c3a6733b02a87d451f2a124ae9daae",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3698,7 +3719,7 @@
     {
       "path": "tests/vnextColdSourcePriority.test.mjs",
       "before_sha256": null,
-      "after_sha256": "5f1ddc2e5ccf7c626cc545743f0e1a660185032482e3871fe30ec3a961187289",
+      "after_sha256": "6b6202231d5abdd81486c63dac58cdecc50b23e371d2988b2265f91be6d8c635",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3754,7 +3775,7 @@
     {
       "path": "tests/vnextDailyRuntimeRecovery.test.mjs",
       "before_sha256": "465bf2c8124a8febd4249c62db91a987d5797ad69a3d051d27780a08cc85f5fa",
-      "after_sha256": "b9686aefcd2950f10c5911a8a200642aac4f08fbb0e218dac1bdc4e8c1c19f9f",
+      "after_sha256": "d8f044db023c889ff81ba2645f508ab1506e8ac708c4fa503e7aa49ffe74d7ff",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3797,6 +3818,13 @@
       "path": "tests/vnextIntegrity.test.mjs",
       "before_sha256": null,
       "after_sha256": "cd3efd52bffccf3315d659674ed017fa15f3be642860389c4c8bbdc543c9b68c",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "tests/vnextIssuerFinancialIntake.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "5811498edb2be92e014d1f2cf12791ff8a3f5304091e7efa57a7258b1fdda723",
       "mode": "100644",
       "origin": "composition"
     },
@@ -4873,7 +4901,7 @@
           "path": "src/features/vnext/dailyRuntime.ts",
           "mode": "100644",
           "before_sha256": "01fe2480681368465530cb2feeb039161931051ac55e6f4ea1284a95fe47a2bf",
-          "after_sha256": "4d9f6fc4c9ac33f7fe7aa012cb944c4837d8fba4ad464123507f1ec526b075a3"
+          "after_sha256": "8d592bbc3e3866882fdd79c513baff7b36e4cc3b906ef1e3452d1f3e6e3b76ff"
         },
         {
           "path": "tests/vnextSharedPreimage.test.mjs",
@@ -4891,7 +4919,7 @@
           "path": "tests/vnextDailyRuntimeRecovery.test.mjs",
           "mode": "100644",
           "before_sha256": "b4bdf66db5679868dbc77898b9e2138d9a33388ec58c4d4492a2a6f501fa326c",
-          "after_sha256": "b9686aefcd2950f10c5911a8a200642aac4f08fbb0e218dac1bdc4e8c1c19f9f"
+          "after_sha256": "d8f044db023c889ff81ba2645f508ab1506e8ac708c4fa503e7aa49ffe74d7ff"
         },
         {
           "path": "tests/vnextForwardCutoffRuntime.test.mjs",
@@ -4993,7 +5021,7 @@
           "path": "supabase/functions/vnext-daily-research-v1/index.ts",
           "mode": "100644",
           "before_sha256": "fbc591c736dbc15913feeec381c14433b96004c4f03cce38ae21673af4c6c89d",
-          "after_sha256": "d83b6ea041b31bbe55f605aa695b7bdb1ed1a5ec52caa9ffdba80a7a85c7b7d5"
+          "after_sha256": "3f5ae500a60287a6e3a652520a2688cd31753eda50ce6992eb20135536cdc833"
         },
         {
           "path": "tests/cWorkerRpcFailureDiagnostics.integration.mjs",
@@ -5023,7 +5051,7 @@
           "path": "tests/vnextColdSourcePriority.test.mjs",
           "mode": "100644",
           "before_sha256": "c21e115e0b2e8cb0cda0b36bddff58c4d403e6dba2ae29ec9bff8ab9e547e02f",
-          "after_sha256": "5f1ddc2e5ccf7c626cc545743f0e1a660185032482e3871fe30ec3a961187289"
+          "after_sha256": "6b6202231d5abdd81486c63dac58cdecc50b23e371d2988b2265f91be6d8c635"
         },
         {
           "path": "supabase/functions/_shared/recommendation-company-events.ts",
@@ -5192,9 +5220,33 @@
           "mode": "100644",
           "before_sha256": null,
           "after_sha256": "40eefd106604c1c74d1141d8864cc2a04a346ed33bace5ea3a323b6f629e5dd7"
+        },
+        {
+          "path": "src/features/vnext/issuerFinancialIntake.ts",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "95b8e3b54d6fc99d6410793b0e43096e3ddef857d9d7e1168ed44378abc89ae1"
+        },
+        {
+          "path": "supabase/functions/_shared/retained-issuer-financials.ts",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "d8bf0349b538e197fc70428463032116820d576e0e81ab3b3770f8a57bd428e7"
+        },
+        {
+          "path": "supabase/functions/_shared/retained-issuer-financials-20261030.json",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "d75ad5c00800df8fac4a84a44a7a0cc0ada32f9b89949456b5e5f9d9c69e6b44"
+        },
+        {
+          "path": "tests/vnextIssuerFinancialIntake.test.mjs",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "5811498edb2be92e014d1f2cf12791ff8a3f5304091e7efa57a7258b1fdda723"
         }
       ],
-      "scope": "OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE_AND_WHOLE_RETAINED_SOURCE_VERSIONS_BULK_DAILY_PRICES_AND_ISSUER_QUARTER_OBSERVATIONS_AND_RETAINED_ENTRY_PRESENTATION_AND_FREE_TAIFEX_PRIOR_REGULAR_FALLBACK",
+      "scope": "OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE_AND_WHOLE_RETAINED_SOURCE_VERSIONS_BULK_DAILY_PRICES_AND_ISSUER_QUARTER_OBSERVATIONS_AND_RETAINED_ENTRY_PRESENTATION_AND_FREE_TAIFEX_PRIOR_REGULAR_FALLBACK_AND_PRIVATE_ISSUER_FINANCIAL_INTAKE",
       "source_admission": false,
       "canonical_admission": false,
       "quality_approval": false,

@@ -127,7 +127,11 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
    const capsule=lineage.evidence as V2Input;
    if(capsule.identity.report_date!==r.business_date||Date.parse(capsule.identity.generated_at)>Date.parse(acquired.evidence_cutoff))throw Error('ENTRY_CUTOFF_MISMATCH');
    const entry=await entryInputFromV2(capsule,lineage.hash,market as Parameters<typeof entryInputFromV2>[2],'FORWARD','REAL_RETAINED');
-   acquired.entry.market=entry.market;
+   // A V2 capsule with no TAIEX observations must not erase the independently
+   // validated Canonical + official-index fallback. If V2 supplied any TAIEX
+   // observations, retain its original decision, including a null refusal for
+   // stale, conflicting or invalid quotes. Missing is not rejected evidence.
+   if(entry.market||capsule.data.quotes.some(q=>q.symbol==='TAIEX'))acquired.entry.market=entry.market;
    for(const stock of acquired.entry.stocks){const prior=entry.stocks.find(s=>s.symbol===stock.symbol);if(prior){stock.relative_strength=prior.relative_strength;stock.sector_return=prior.sector_return;stock.events_reviewed=prior.events_reviewed;stock.v2_status=prior.v2_status;}}
    const {snapshot_hash,...body}=acquired;void snapshot_hash;acquired.snapshot_hash=await snapshotHash(body);
   }

@@ -93,7 +93,7 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "path": "src/features/vnext/dailyRuntime.ts",
   "mode": "100644",
   "before_sha256": "01fe2480681368465530cb2feeb039161931051ac55e6f4ea1284a95fe47a2bf",
-  "after_sha256": "8d592bbc3e3866882fdd79c513baff7b36e4cc3b906ef1e3452d1f3e6e3b76ff"
+  "after_sha256": "cf3e42417458db25a8dc9d8c05abced79aa422fa034ff9c2f269f3fec219d68a"
  },
  {
   "path": "tests/vnextSharedPreimage.test.mjs",
@@ -111,7 +111,7 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "path": "tests/vnextDailyRuntimeRecovery.test.mjs",
   "mode": "100644",
   "before_sha256": "b4bdf66db5679868dbc77898b9e2138d9a33388ec58c4d4492a2a6f501fa326c",
-  "after_sha256": "480802f87054d9772268179059229cbb3e6ad13f37540f84c9dd6da8e1f23d19"
+  "after_sha256": "20609e2a892926e04c38f797754c2615e016e5e70aba9417e28f7164d3f032d5"
  },
  {
   "path": "tests/vnextForwardCutoffRuntime.test.mjs",

@@ -8,6 +8,9 @@ import {runDailyIntelligence,verifyDailyLock} from '../src/features/vnext/dailyI
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
 import {RECOMMENDATION_UNIVERSE} from '../supabase/functions/_shared/recommendation-stock-evidence.ts';
 import {retainedIssuerFinancials} from '../supabase/functions/_shared/retained-issuer-financials.ts';
+import {v2Fixture} from './helpers/recommendationV2Fixtures.mjs';
+import {v2Hash} from '../supabase/functions/_shared/recommendation-shadow-v2-engine.ts';
+import {entryInputFromV2} from '../research/entry-v2-adapter.ts';
 
 const date='2026-10-12',before='2026-10-12T00:58:30Z';
 const companies=RECOMMENDATION_UNIVERSE.map(symbol=>({symbol,company:'合成隔離控制 '+symbol,exchange:'TWSE',industry:'24'}));
@@ -23,9 +26,9 @@ async function checkpoint(){
  assert.equal(state.locks.length,216);assert(await verifyDailyLock(state.locks[0]));return state;
 }
 async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,lockError=null,throughHandler=false,providerWaitSeconds=0,providerStatus=200,
- leaseUntil,finishError=null,onFinish=()=>{},advanceSleep=()=>{},continuationError=null,claimStatus='ACQUIRED',claimError=null,onClaim=()=>{},rpcErrorOp=null,clock=()=>at,businessDate=date,issuerFinancials}={}){
+ leaseUntil,finishError=null,onFinish=()=>{},advanceSleep=()=>{},continuationError=null,claimStatus='ACQUIRED',claimError=null,onClaim=()=>{},rpcErrorOp=null,clock=()=>at,businessDate=date,issuerFinancials,additionalSources=[],entryLineage={}}={}){
  const dirs=await directoryPlan(businessDate),cache=new Map(await Promise.all(dirs.map(async t=>[t.key,await receipt(t,at,{rows:t.exchange==='TWSE'?companies:[]})])));
- const calls=[],http=[],stored=[],locked=[],sources=[...cache.values()];let pending=due,checkpointState=saved,run={id:'isolated-run',business_date:businessDate,
+ const calls=[],http=[],stored=[],locked=[],sources=[...cache.values(),...additionalSources];let pending=due,checkpointState=saved,run={id:'isolated-run',business_date:businessDate,
   actionable_at:businessDate+'T09:00:00+08:00',lease:'isolated-lease',...(leaseUntil===undefined?{}:{lease_until:leaseUntil}),fence:2,plan,cursor,checkpoint:checkpointState};
  const rpc=async(name,args)=>{
   if(name==='claim_vnext_daily_research_v1'){if(claimError)throw Error(claimError);onClaim();return {status:claimStatus,run};}
@@ -38,7 +41,7 @@ async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,loc
   if(op==='CURSOR'){run.cursor=data.cursor;return {};}
   if(op==='DUE_OUTCOMES')return pending;
   if(op==='SOURCES')return sources;
-  if(op==='ENTRY_SOURCE')return {};
+  if(op==='ENTRY_SOURCE')return entryLineage;
   if(op==='CHECKPOINT'){checkpointState=structuredClone(data);run.checkpoint=checkpointState;return {};}
   if(op==='PREDICTIONS'){if(lockError)throw Error(lockError);locked.push(...data);return {};}
   if(op==='OUTCOME')return {};
@@ -413,4 +416,62 @@ test('official index availability honors PostgreSQL microseconds and never uses 
  assert.deepEqual((await assembleDaily(f.business,companies,[r],cutoff,f.market)).entry.market,f.market);
  const m={...f.market,observed_at:later,available_at:later};
  assert.deepEqual((await assembleDaily(f.business,companies,[f.saved],cutoff,m)).entry.market,m);
+});
+
+test('worker preserves verified official market evidence when an optional V2 capsule lacks its quote',async()=>{
+ const f=await indexFixture(),evidence=v2Fixture(f.at);evidence.data.quotes=[];
+ const hash=await v2Hash(evidence);
+ const before=structuredClone(evidence),lineage={market:f.market,evidence,hash};
+ const prior=await entryInputFromV2(evidence,hash,f.market,'FORWARD','REAL_RETAINED');
+ assert.equal(prior.market,null,'control must exercise the missing eligible V2 market quote');
+ const a=await runner({at:f.at,businessDate:f.business,additionalSources:[f.saved],entryLineage:lineage});
+ assert.equal(a.result.reason,'ACQUIRED_SNAPSHOT_CONTINUATION');
+ const acquired=a.checkpoint.acquired;
+ assert(Math.abs(acquired.entry.market?.value.change_percent-2)<1e-10);
+ assert.equal(acquired.entry.market.value.direction,f.market.value.direction);
+ assert.equal(acquired.entry.market.value.regime,f.market.value.regime);
+ assert(acquired.entry.market.source_ref.includes('benchmark-2026-10-28:'));
+ assert.deepEqual(acquired.entry.stocks.map(s=>s.events_reviewed),prior.stocks.map(s=>s.events_reviewed));
+ const {snapshot_hash,...body}=acquired;assert.equal(snapshot_hash,await snapshotHash(body));
+ assert.deepEqual(evidence,before);assert.equal(a.http.length,0);assert.equal(a.locked.length,0);
+ const pinned=structuredClone(acquired);lineage.hash='0'.repeat(64);
+ await a.invoke();assert.deepEqual(a.checkpoint.acquired,pinned,'resume must retain the exact original snapshot');
+});
+
+test('worker keeps a validated V2 market quote authoritative over the previous-session index fallback',async()=>{
+ const f=await indexFixture(),evidence=v2Fixture(f.at);
+ evidence.data.quotes.at(-1).change_percent=3;
+ const hash=await v2Hash(evidence),expected=await entryInputFromV2(evidence,hash,f.market,'FORWARD','REAL_RETAINED');
+ assert.equal(expected.market?.value.change_percent,3);
+ const a=await runner({at:f.at,businessDate:f.business,additionalSources:[f.saved],entryLineage:{market:f.market,evidence,hash}});
+ assert.equal(a.result.reason,'ACQUIRED_SNAPSHOT_CONTINUATION');
+ assert.deepEqual(a.checkpoint.acquired.entry.market,expected.market);
+});
+
+test('worker fallback cannot repair missing official sessions, skip V2 hash validation, or invent Canonical',async()=>{
+ const f=await indexFixture(),evidence=v2Fixture(f.at);evidence.data.quotes=[];
+ const hash=await v2Hash(evidence);
+ const absent=await runner({at:f.at,businessDate:f.business,entryLineage:{market:f.market,evidence,hash}});
+ assert.deepEqual(absent.checkpoint.acquired.entry.market,f.market);
+ assert.equal(absent.checkpoint.acquired.entry.market.value.change_percent,undefined);
+ const bad=await runner({at:f.at,businessDate:f.business,additionalSources:[f.saved],entryLineage:{market:f.market,evidence,hash:'0'.repeat(64)}});
+ assert.equal(bad.result.reason,'ENTRY_SOURCE_HASH_MISMATCH');assert.deepEqual(bad.checkpoint,{});assert.equal(bad.locked.length,0);
+ const noCanonical=await runner({at:f.at,businessDate:f.business,additionalSources:[f.saved],entryLineage:{evidence,hash}});
+ assert.equal(noCanonical.result.reason,'CANONICAL_PUBLICATION_PENDING');assert.deepEqual(noCanonical.checkpoint,{});
+});
+
+test('worker never hides invalid, conflicting or future V2 quotes behind the official index fallback',async()=>{
+ const f=await indexFixture();
+ for(const mutate of [
+  i=>i.data.quotes.at(-1).change_percent=null,
+  i=>i.data.quotes.push({...i.data.quotes.at(-1),id:'SYNTHETIC:CONFLICT',value:21000}),
+  i=>i.data.quotes=[{...i.data.quotes.at(-1),captured_at:'2999-01-01T00:00:00Z',ingested_at:'2999-01-01T00:00:00Z'}],
+ ]){
+  const evidence=v2Fixture(f.at);mutate(evidence);const hash=await v2Hash(evidence);
+  const rejected=await entryInputFromV2(evidence,hash,f.market,'FORWARD','REAL_RETAINED');
+  assert.equal(rejected.market,null);
+  const a=await runner({at:f.at,businessDate:f.business,additionalSources:[f.saved],entryLineage:{market:f.market,evidence,hash}});
+  assert.equal(a.result.reason,'ACQUIRED_SNAPSHOT_CONTINUATION');assert.equal(a.checkpoint.acquired.entry.market,null);
+  assert.equal(a.locked.length,0);
+ }
 });

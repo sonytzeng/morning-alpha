@@ -6,6 +6,8 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 import * as member from '../src/features/vnext/member.ts';
+import {parseCompletedResearch} from '../src/features/vnext/completedResearch.ts';
+import {completedResponse} from './helpers/completedResearchFixture.mjs';
 import {buildPublicMarketReadModel} from '../src/lib/publicMarketReadModel.ts';
 import {publicMarketInput} from '../supabase/functions/_shared/public-market-projection.ts';
 
@@ -28,7 +30,7 @@ const publicPayload={...retained.public_response,payload:{...retained.public_res
 
 function harness({now=BEFORE,initialAccess=access()}={}){
  let clock=now,currentAccess=initialAccess,cursor=0,tree,dirty=false,unmounted=false,timerId=0,retries=0;
- const slots=[],effects=[],queued=[],timers=new Map(),listeners=new Map(),rpc=[],publicCalls=[];
+ const slots=[],effects=[],queued=[],parses=[],timers=new Map(),listeners=new Map(),rpc=[],publicCalls=[];
  const listen=(type,name,fn)=>{const key=type+':'+name;if(!listeners.has(key))listeners.set(key,new Set());listeners.get(key).add(fn);};
  const remove=(type,name,fn)=>listeners.get(type+':'+name)?.delete(fn);
  const hooks={
@@ -57,9 +59,11 @@ function harness({now=BEFORE,initialAccess=access()}={}){
    if(name==='@/lib/supabase')return {supabase:transport};
    if(name==='@/pages/academy/useAcademyAccess')return {useAcademyAccess:()=>({access:currentAccess,retry})};
    if(name==='@/features/vnext/member')return {...member,memberTaipeiDate:now=>member.memberTaipeiDate(now??clock)};
+   if(name==='@/features/vnext/completedResearch')return {parseCompletedResearch:value=>{const pending=parseCompletedResearch(value,clock);parses.push(pending);return pending;}};
    if(name==='./MemberNavigation')return {default:'MemberNavigation',MemberObservationEntry:'MemberObservationEntry'};
    if(name==='./MemberExperience')return {default:'MemberExperience'};
    if(name==='./PublicExperience')return {default:'PublicExperience'};
+   if(name==='./CompletedResearch')return {default:'CompletedResearch'};
    if(name.endsWith('.css'))return {};
    throw Error('UNAPPROVED_MEMBER_COMPONENT_IMPORT:'+name);
   }},{filename:file});
@@ -67,13 +71,14 @@ function harness({now=BEFORE,initialAccess=access()}={}){
  render();
  return {rpc,publicCalls,render,
   get member(){return find(render(),'MemberExperience')[0]?.props;},
+  get completed(){return find(render(),'CompletedResearch')[0]?.props;},
   get public(){return find(render(),'PublicExperience')[0]?.props;},
   get retries(){return retries;},
   setAccess(value){currentAccess=value;render();},
   setClock(value){clock=value;},
   focus(){for(const f of [...listeners.get('window:focus')??[]])f();render();},
   visibility(value){document.visibilityState=value;for(const f of [...listeners.get('document:visibilitychange')??[]])f();render();},
-  async resolve(call,data,error=null){call.resolve(data,error);await settle();render();},
+  async resolve(call,data,error=null){call.resolve(data,error);await settle();await Promise.allSettled(parses);await settle();render();},
   async reject(call){call.reject(Error('SYNTHETIC_TRANSPORT_FAILURE'));await settle();render();},
   strictEffectReplay(){for(const effect of effects.filter(Boolean))effect.cleanup?.();for(const effect of effects.filter(Boolean))effect.cleanup=effect.fn();render();},
   advance(ms){const target=clock+ms;for(;;){const next=[...timers].filter(([,x])=>x.due<=target).sort((a,b)=>a[1].due-b[1].due)[0];if(!next)break;
@@ -151,4 +156,27 @@ test('StrictMode setup-cleanup-setup accepts only the second public and private 
  await h.resolve(oldPrivate,research());await h.resolve(oldPublic,publicPayload);assert.equal(h.member,undefined);
  await h.resolve(h.rpc[1],research());assert.equal(h.member.data.business_date,TODAY);assert.equal(h.member.market,null);
  await h.resolve(h.publicCalls[1],publicPayload);assert.equal(h.member.market.date,'2026-10-02');h.unmount();assert.equal(h.timers,0);
+});
+test('only Owner dispatches the completed-session RPC and renders its validated 72-stock result',async()=>{
+ for(const tier of ['premium','free','owner']){
+  const h=harness({now:Date.parse('2026-10-30T14:00:00Z'),initialAccess:access('A',1,tier)});
+  await h.resolve(h.rpc[0],research('2026-10-30',tier));
+  if(tier==='owner'){
+   assert.equal(h.rpc[1].name,'get_owner_completed_research_v1');assert.equal(h.rpc[1].signal,h.rpc[0].signal);
+   await h.resolve(h.rpc[1],await completedResponse());assert.equal(h.completed.data.rows.length,216);assert.equal(h.member,undefined);
+  }else assert(!h.rpc.some(r=>r.name==='get_owner_completed_research_v1'));
+  h.unmount();
+ }
+});
+test('Owner private result cannot return after hidden invalidation or entitlement loss',async()=>{
+ for(const invalidate of [h=>h.visibility('hidden'),h=>h.setAccess(access('A',2,'free'))]){
+  const h=harness({now:Date.parse('2026-10-30T14:00:00Z'),initialAccess:access('A',1,'owner')});
+  await h.resolve(h.rpc[0],research('2026-10-30','owner'));const pending=h.rpc[1];invalidate(h);
+  await h.resolve(pending,await completedResponse());assert(pending.signal.aborted);assert.equal(h.completed,undefined);h.unmount();
+ }
+});
+test('failed Owner document retains the approved member experience and does not invent an analysis',async()=>{
+ const h=harness({now:Date.parse('2026-10-30T14:00:00Z'),initialAccess:access('A',1,'owner')});
+ await h.resolve(h.rpc[0],research('2026-10-30','owner'));await h.resolve(h.rpc[1],{},Error('SYNTHETIC_UNAVAILABLE'));
+ assert.equal(h.completed,undefined);assert.equal(h.member.data.tier,'owner');assert.equal(h.member.data.observations.length,0);h.unmount();
 });

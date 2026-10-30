@@ -128,7 +128,7 @@ jobs:
         working-directory: build/owner-regime-historical-base
         env:
           NODE_OPTIONS: --experimental-strip-types
-        run: node --experimental-strip-types --test tests/ownerStatusCopyAdmission.test.mjs tests/frontendTypeClosureAdmission.test.mjs tests/researchSourceContracts.test.mjs tests/ownerReleaseReviewPackage.test.mjs tests/r9FunctionalSourceClosure.test.mjs
+        run: node --experimental-strip-types --test tests/ownerLegacyPublication.test.mjs tests/completedResearch.test.mjs tests/entryCompletedSession.test.mjs
       - name: Check out the immutable Worker packaging baseline only
         uses: actions/checkout@v4
         with:

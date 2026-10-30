@@ -24,7 +24,7 @@ import {
  integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHash,
  createSourceUnionComposition,verifyIntegrationCandidate,sourceUnionLineage,sourceUnionParentRead,reuseSourceUnionPinnedProof,
 } from './helpers/integrationAdmission.mjs';
-const runtimeAdded=RUNTIME_INTEGRITY_FILES.filter(r=>r.before_sha256===null||["src/features/vnext/researchFunnel.ts","supabase/functions/_shared/market-calendar-data.json","tests/browser/ownerCockpitSupabaseMock.ts","research/entry-official-history.ts","tests/entryOpportunityOfficialHistory.test.mjs","src/components/base/MarketDataCards.tsx","src/pages/terms/page.tsx","supabase/functions/_shared/required-provider-validation.mjs","supabase/functions/_shared/provider-reliability-contract.mjs","supabase/functions/_shared/production-evidence-recorder.mjs","supabase/functions/fetch-market-data-v10/index.ts","supabase/functions/market-readiness-preflight/index.ts"].includes(r.path)).map(r=>r.path);
+const runtimeAdded=RUNTIME_INTEGRITY_FILES.filter(r=>r.before_sha256===null||["research/entry-opportunity.ts","src/features/vnext/researchFunnel.ts","supabase/functions/_shared/market-calendar-data.json","tests/browser/ownerCockpitSupabaseMock.ts","research/entry-official-history.ts","tests/entryOpportunityOfficialHistory.test.mjs","src/components/base/MarketDataCards.tsx","src/pages/terms/page.tsx","supabase/functions/_shared/required-provider-validation.mjs","supabase/functions/_shared/provider-reliability-contract.mjs","supabase/functions/_shared/production-evidence-recorder.mjs","supabase/functions/fetch-market-data-v10/index.ts","supabase/functions/market-readiness-preflight/index.ts"].includes(r.path)).map(r=>r.path);
 const flags=['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'];
 test('R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',()=>{
  const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);
@@ -32,7 +32,7 @@ test('R8 complete physical current union preserves R4/R5/R6/R7 assertions at the
  assert.equal(FROZEN_SOURCE_UNION_R7,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r7.json');
  assert.equal(FROZEN_SOURCE_UNION,'docs/operations/evidence/core-member-integration-20261020-v1-source-union.json');
  assert.equal(FROZEN_SOURCE_UNION_NORMALIZER,'docs/operations/evidence/core-member-integration-20261020-v1-source-union-normalizer.json');
- assert.equal(m.files.length,575);assert.equal(integrationInventory().length,576);
+ assert.equal(m.files.length,586);assert.equal(integrationInventory().length,587);
  const r11=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R11));assert.equal(r11.files.length,533);
  const r11Inventory=execFileSync('git',['--no-replace-objects','diff','--no-renames','--name-only','-z',INTEGRATION_BASE,SOURCE_UNION_R12_BASE,'--'],{cwd:new URL('../',import.meta.url),encoding:'utf8'}).split('\0').filter(Boolean).sort();
  assert.equal(r11Inventory.length,534);assert.deepEqual(r11Inventory,[...r11.files.map(r=>r.path),FROZEN_SOURCE_UNION_R11].sort());
@@ -581,7 +581,7 @@ test('R8 pins seven independent exact before/after deltas and preserves the full
  const r10Added=SOURCE_UNION_R10_FILES.filter(f=>!old.files.some(r=>r.path===f.path)).map(f=>f.path);
  const r12Added=SOURCE_UNION_R12_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);
  assert.equal(added.length,3);assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R7,...added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded].sort());
- assert.equal(m.files.length,575);assert.deepEqual(integrationInventory(),[...m.files.map(f=>f.path),INTEGRATION_MANIFEST].sort());
+ assert.equal(m.files.length,586);assert.deepEqual(integrationInventory(),[...m.files.map(f=>f.path),INTEGRATION_MANIFEST].sort());
  for(const row of r.files){
   const replacement=RUNTIME_INTEGRITY_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R12_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R11_FILES.find(f=>f.path===row.path)??SOURCE_UNION_R9_FILES.find(f=>f.path===row.path);
   const immutable=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R9_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
@@ -920,7 +920,7 @@ test('R13 pins the exact R12 nine-file commit, both immutable roots and the full
  }
  const added=SOURCE_UNION_R12_FILES.filter(f=>f.before_sha256===null).map(f=>f.path);assert.equal(added.length,2);
  assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R11,...added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded].sort());
- assert.equal(m.schema,'CORE_MEMBER_COMPOSITION_V1');assert.equal(m.files.length,575);assert.equal(integrationInventory().length,576);
+ assert.equal(m.schema,'CORE_MEMBER_COMPOSITION_V1');assert.equal(m.files.length,586);assert.equal(integrationInventory().length,587);
  assert.deepEqual(integrationInventory(),[...m.files.map(f=>f.path),INTEGRATION_MANIFEST].sort());
  for(const flag of flags)assert.equal(m[flag],false);
  for(const flag of ['source_admission','canonical_admission','quality_approval','rights_gate_changed','publication_approval','production_authorized','thresholds_changed','existing_release_payloads_changed'])assert.equal(r[flag],false);
@@ -1039,7 +1039,7 @@ test('R14 admits only the three exact evaluator JSONB/reread sources while prese
  assert.deepEqual(r,sourceUnionR14Lineage());assert.equal(r.base,SOURCE_UNION_R14_BASE);
  assert.equal(r.prior_root.revision,'9dcd21603d6f32dad57cfc2f8dfc14f56852ce35');
  assert.equal(integrationHash(integrationPhysicalRead(FROZEN_SOURCE_UNION_R13)),'5b1bb18cbd821dd3ebb7d11974492f19942b422922a92058e369a6fc8fa105a8');
- assert.equal(old.files.length,536);assert.equal(m.files.length,575);assert.equal(integrationInventory().length,576);
+ assert.equal(old.files.length,536);assert.equal(m.files.length,586);assert.equal(integrationInventory().length,587);
  for(const [key,value]of Object.entries(old.source_union))assert.deepEqual(m.source_union[key],value);
  assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded].sort());
  assert.deepEqual(r.files.map(f=>f.path),['supabase/functions/_shared/decision-v1-evidence.ts','tests/v1FundamentalRevisionSelection.test.mjs','tests/v1FundamentalRevisionDatabase.integration.mjs']);
@@ -1108,7 +1108,7 @@ test('R15 pins only private market JSONB and snapshot deltas over the unchanged 
  const m=verifyIntegrationCandidate(),r=m.source_union.r15,old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R14));
  assert.deepEqual(r,sourceUnionR15Lineage());assert.equal(r.base,SOURCE_UNION_R15_BASE);
  assert.equal(integrationHash(integrationPhysicalRead(FROZEN_SOURCE_UNION_R14)),'7e3357b8ab1b9f0cf8b5fed2f58a046d8c010b0e9e76cb15eee3502d85a56264');
- assert.equal(old.files.length,537);assert.equal(m.files.length,575);assert.equal(integrationInventory().length,576);
+ assert.equal(old.files.length,537);assert.equal(m.files.length,586);assert.equal(integrationInventory().length,587);
  for(const [key,value]of Object.entries(old.source_union))assert.deepEqual(m.source_union[key],value);
  assert.deepEqual(m.files.map(f=>f.path),[...old.files.map(f=>f.path),FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded].sort());
  assert.deepEqual(r.files.map(f=>f.path),['supabase/functions/_shared/recommendation-market-institutional-candidate.ts',
@@ -1185,8 +1185,8 @@ test('runtime candidate binds the complete prior root, exact CPU/RPC changes and
  const m=verifyIntegrationCandidate(),r=m.source_union.runtime_integrity;
  const prior=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R15));
  assert.equal(integrationHash(integrationPhysicalRead(FROZEN_SOURCE_UNION_R15)),'6c28e2c50a7ba444ba3b9b2f7386b2779eaed5166eb8adabc90f1ea0d41cf458');
- assert.equal(prior.files.length,538);assert.equal(runtimeAdded.length,36);
- assert.equal(m.files.length,538+1+36);assert.equal(integrationInventory().length,m.files.length+1);
+ assert.equal(prior.files.length,538);assert.equal(runtimeAdded.length,47);
+ assert.equal(m.files.length,538+1+47);assert.equal(integrationInventory().length,m.files.length+1);
  assert.deepEqual(m.files.map(f=>f.path),[...prior.files.map(f=>f.path),FROZEN_SOURCE_UNION_R15,...runtimeAdded].sort());
  assert.deepEqual(r,runtimeIntegrityLineage());assert.equal(r.base,RUNTIME_INTEGRITY_BASE);
  for(const [key,value]of Object.entries(prior.source_union))assert.deepEqual(m.source_union[key],value);

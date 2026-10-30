@@ -6,7 +6,7 @@ import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {resolve,dirname,relative} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {verifyIntegrationCandidate,integrationInventory,integrationPhysicalMode} from './integrationAdmission.mjs';
+import {verifyIntegrationCandidate,integrationInventory,integrationPhysicalMode,RUNTIME_INTEGRITY_FILES,RUNTIME_INTEGRITY_BASE} from './integrationAdmission.mjs';
 
 export const MEMBER_CONTINUITY_BASE='cb678aeee5601c71f9b943cddff861763effc753';
 export const MEMBER_CONTINUITY_MANIFEST='docs/operations/evidence/member-continuity-20261018.json';
@@ -61,17 +61,25 @@ function before(row){
  }
  return Buffer.from(predecessorBytes.get(row.path));
 }
+// Current deltas are admitted by the complete source-union gate. The old
+// continuity receipt remains immutable and describes only its historical tree.
+function currentHash(path,legacyHash){
+ const delta=RUNTIME_INTEGRITY_FILES.find(r=>r.path===path);
+ if(!delta)return legacyHash;
+ assert.equal(delta.before_sha256,legacyHash,'MEMBER_CONTINUITY_DELTA_PREIMAGE');
+ return delta.after_sha256;
+}
 function actual(row){
  const file=physical(row.path);assert.equal(file.mode,row.mode,'MEMBER_CONTINUITY_MODE:'+row.path);
- assert.equal(hash(file.bytes),row.after_sha256,'MEMBER_CONTINUITY_SOURCE:'+row.path);return file.bytes;
+ assert.equal(hash(file.bytes),currentHash(row.path,row.after_sha256),'MEMBER_CONTINUITY_SOURCE:'+row.path);return file.bytes;
 }
 /** Public review/package gate: current full-tree physical admission is mandatory
  * at both ends. This function is never called by the historical primitive. */
 export function verifyMemberContinuity(read=physicalRead,paths=integrationInventory(),mode=integrationPhysicalMode){
  verifyIntegrationCandidate(read,paths,mode);
  const {manifest}=receipt(read);
- for(const row of MEMBER_CONTINUITY_RUNTIME){assert.equal(hash(read(row.path)),row.after_sha256,'MEMBER_CONTINUITY_SOURCE:'+row.path);assert.equal(mode(row.path),row.mode);before(row);}
- assert.equal(hash(read(TEST_PATH)),TEST_HASH,'MEMBER_CONTINUITY_TEST_DRIFT');
+ for(const row of MEMBER_CONTINUITY_RUNTIME){assert.equal(hash(read(row.path)),currentHash(row.path,row.after_sha256),'MEMBER_CONTINUITY_SOURCE:'+row.path);assert.equal(mode(row.path),row.mode);before(row);}
+ assert.equal(hash(read(TEST_PATH)),currentHash(TEST_PATH,TEST_HASH),'MEMBER_CONTINUITY_TEST_DRIFT');
  assert.equal(hash(read(PREDECESSOR)),PREDECESSOR_HASH,'MEMBER_CONTINUITY_R9_DRIFT');
  verifyIntegrationCandidate();return structuredClone(manifest);
 }
@@ -94,7 +102,7 @@ export function memberContinuityHistoricalRead(path,value){
  const row=MEMBER_CONTINUITY_RUNTIME.find(row=>row.path===path);if(!row)return value;
  const {bytes:seal}=receipt(),bytes=sourceBytes(value);
  if(typeof value==='string'&&bytes.toString('utf8')!==value)return value;
- if(hash(bytes)!==row.after_sha256)return value;
+ if(hash(bytes)!==currentHash(row.path,row.after_sha256))return value;
  verifyIntegrationCandidate();
  actual(row);const prior=before(row);actual(row);
  assert.deepEqual(physicalRead(MEMBER_CONTINUITY_MANIFEST),seal,'MEMBER_CONTINUITY_RECEIPT_CHANGED');
@@ -104,7 +112,8 @@ export function memberContinuityHistoricalRead(path,value){
 export function memberContinuityHistoricalReader(source=physicalRead){
  return (path,...options)=>memberContinuityHistoricalRead(path,source(path,...options));
 }
-/** New candidate inventory, never a rewrite of the immutable old R9 receipt. */
+/** Historical 24-file inventory only. New Owner projection files are outside
+ * this old package; a current release must use the current complete inventory. */
 export function memberContinuityWebsiteOperations(){
  verifyMemberContinuity();const {manifest}=receipt();
  const predecessor=physicalRead(PREDECESSOR);assert.equal(hash(predecessor),manifest.website.predecessor_sha256);
@@ -113,7 +122,11 @@ export function memberContinuityWebsiteOperations(){
  for(const row of MEMBER_CONTINUITY_RUNTIME){
   const operation=operations.find(operation=>operation.path===row.path);assert(operation);
   assert.equal(operation.target_sha256,row.before_sha256);assert.equal(operation.mode,row.mode);
-  const bytes=actual(row);operation.target_sha256=row.after_sha256;operation.source_bytes=bytes.length;
+  actual(row);
+  const delta=RUNTIME_INTEGRITY_FILES.find(r=>r.path===row.path);
+  const bytes=delta?git(['show',RUNTIME_INTEGRITY_BASE+':'+row.path]):actual(row);
+  assert.equal(hash(bytes),row.after_sha256,'MEMBER_CONTINUITY_HISTORICAL_PACKAGE_DRIFT');
+  operation.target_sha256=row.after_sha256;operation.source_bytes=bytes.length;
  }
  verifyIntegrationCandidate();return operations;
 }

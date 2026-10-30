@@ -442,6 +442,96 @@ export const RUNTIME_INTEGRITY_FILES=Object.freeze([
   "mode": "100644",
   "before_sha256": "3ceddfd45e35488dab202c00abf3634a80f4c39cd0ee9b8376425af0e039ed3d",
   "after_sha256": "be8b5ba69e51eb229880c82fc3cb154db0e3167c469e9d06de900d4777d2d3be"
+ },
+ {
+  "path": "research/entry-opportunity.ts",
+  "mode": "100644",
+  "before_sha256": "c52ed2ce4f2d31010e295765eecea765a03856183e9a3db66854bacc47fde95a",
+  "after_sha256": "30da9e781482ab1d9222a679e2e2413b47650cf5f95efc609e0a443c0dbb3031"
+ },
+ {
+  "path": "tests/entryCompletedSession.test.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "59092ef46c3b7b52a32b107d5b95404060810f7cd784f305059e70f2b9ced847"
+ },
+ {
+  "path": "scripts/operations/build-completed-research.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "869d913dfa66fabe93c16f500e4fe7dd08c0f09f0ab824d468130db0606d64b2"
+ },
+ {
+  "path": "src/features/vnext/completedResearch.ts",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "fcb6bd50110e9b4227dabd46aa745e0d204304347d1b480fc33761ed94570582"
+ },
+ {
+  "path": "src/pages/vnext/CompletedResearch.tsx",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "82e435e319ae190a7538b0b65461ed1c874d2e9cc2959e8fa531d810163c1835"
+ },
+ {
+  "path": "src/pages/vnext/completed-research.css",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "84e8decefd824d75ed647819a846db2589c98725f1fa139b7bc277d45f5e0fa6"
+ },
+ {
+  "path": "src/pages/vnext/MemberPage.tsx",
+  "mode": "100644",
+  "before_sha256": "217f7cde888206908f8f0dca6a7266e3c48f725dd2ba8a4ecd7d703828f5b28b",
+  "after_sha256": "88f7b88a0808aa265a5b8313785150cd31080519e9ffb178ab1d92ceae4b6700"
+ },
+ {
+  "path": "supabase/migrations/20261030163000_completed_research_owner_projection.sql",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "b8beea99f345d3c47bd011698d770c1eabda2df5101e693fb7e2d8ac60880414"
+ },
+ {
+  "path": "tests/completedResearch.test.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "5a100e0cc6fcf893b5793240d73eef786252efe93b0a8a3b0c60f7d078bcd8f5"
+ },
+ {
+  "path": "tests/completedResearchDatabase.integration.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "e0089940a17ca91dbb58082087725a57ec19bb55fdf74d041d4385c432c790b4"
+ },
+ {
+  "path": "tests/helpers/completedResearchFixture.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "8840862127681d66d48d9037071fbbbd83b7071bef0daa8abdf5930f87b607e4"
+ },
+ {
+  "path": "tests/vnextMemberContinuity.test.mjs",
+  "mode": "100644",
+  "before_sha256": "b1308678a760b10a64a60db7b5347d3857fbd5810b164b2b5301e40837117de6",
+  "after_sha256": "6894d9be9a9f4b45594062305c4e4cc727f457456d4649efc02f130d1e3ed2d5"
+ },
+ {
+  "path": "tests/helpers/memberContinuityAdmission.mjs",
+  "mode": "100644",
+  "before_sha256": "9ccc2639f285868adfc1f607956dd0f964fc6b7230f1a3b0dbd2a5b2c949f383",
+  "after_sha256": "df9100b4de222c84ab78f59d7877e24576f3865ad6158dedad9cdc9546d17ec5"
+ },
+ {
+  "path": "tests/memberContinuityAdmission.test.mjs",
+  "mode": "100644",
+  "before_sha256": "1b796d7138caa959c9156778e83dd7288bce2d8219603b4ace6aae5398e673ca",
+  "after_sha256": "198a5978ee73b8db353d8c8a56a86dddbd37fb9be29349381fd43d679589b90b"
+ },
+ {
+  "path": "tests/ownerLegacyPublication.test.mjs",
+  "mode": "100644",
+  "before_sha256": null,
+  "after_sha256": "24142adbffd94b38494ad43edd6618cef4c0c1efd60937fa7f637fe191b246f3"
  }
 ].map(Object.freeze));
 export const FROZEN_SOURCE_UNION_R14='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r14.json';
@@ -1251,7 +1341,7 @@ export function runtimeIntegrityLineage(){
  assert.equal(root?.sha256,prior_root.sha256,'RUNTIME_PRIOR_ROOT_DRIFT');assert.equal(root?.mode,'100644');
  const old=JSON.parse(root.bytes);assert.equal(old.files.length,538,'RUNTIME_PRIOR_FULL_SCOPE');
  assert.deepEqual(old.source_union.r15,sourceUnionR15Lineage(),'RUNTIME_PRIOR_LINEAGE_DRIFT');
- assert.equal(RUNTIME_INTEGRITY_FILES.length,71);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,71);
+ assert.equal(RUNTIME_INTEGRITY_FILES.length,86);assert.equal(new Set(RUNTIME_INTEGRITY_FILES.map(r=>r.path)).size,86);
  for(const row of RUNTIME_INTEGRITY_FILES){
   assert(!SOURCE_UNION_SUPPORT.includes(row.path));const before=unionBlob(RUNTIME_INTEGRITY_BASE,row.path);
   assert.equal(before?.sha256??null,row.before_sha256,'RUNTIME_BEFORE_SOURCE_DRIFT:'+row.path);
@@ -1263,7 +1353,7 @@ export function runtimeIntegrityLineage(){
   assert.notEqual(row.before_sha256,row.after_sha256);
  }
  return {schema:'CURRENT_RUNTIME_INTEGRITY_CANDIDATE_V1',base:RUNTIME_INTEGRITY_BASE,prior_root,
-  files:RUNTIME_INTEGRITY_FILES.map(r=>({...r})),scope:'OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE_AND_WHOLE_RETAINED_SOURCE_VERSIONS_BULK_DAILY_PRICES_AND_ISSUER_QUARTER_OBSERVATIONS_AND_RETAINED_ENTRY_PRESENTATION_AND_FREE_TAIFEX_PRIOR_REGULAR_FALLBACK_AND_PRIVATE_ISSUER_FINANCIAL_INTAKE',
+  files:RUNTIME_INTEGRITY_FILES.map(r=>({...r})),scope:'OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE_AND_WHOLE_RETAINED_SOURCE_VERSIONS_BULK_DAILY_PRICES_AND_ISSUER_QUARTER_OBSERVATIONS_AND_RETAINED_ENTRY_PRESENTATION_AND_FREE_TAIFEX_PRIOR_REGULAR_FALLBACK_AND_PRIVATE_ISSUER_FINANCIAL_INTAKE_AND_COMPLETED_SESSION_AS_OF_ENTRY_AND_PRIVATE_OWNER_RESEARCH_PROJECTION',
   source_admission:false,canonical_admission:false,quality_approval:false,rights_gate_changed:false,
   publication_approval:false,production_authorized:false,thresholds_changed:false,existing_release_payloads_changed:false};
 }
@@ -1609,6 +1699,7 @@ export function createSourceUnionComposition(read=integrationPhysicalRead,paths=
 export const createOriginalIngressComposition=createSourceUnionComposition;
 export const createOfficialPublicComposition=createSourceUnionComposition;
 const pinnedProofs=Object.freeze({
+ owner_copy:{revision:PRIOR_OWNER_STATUS_COPY,tests:['tests/ownerStatusCopyAdmission.test.mjs','tests/frontendTypeClosureAdmission.test.mjs','tests/researchSourceContracts.test.mjs','tests/ownerReleaseReviewPackage.test.mjs','tests/r9FunctionalSourceClosure.test.mjs']},
  actual:{revision:SOURCE_UNION_PARENTS.actual,tests:['tests/officialPublicAdmission.test.mjs','tests/forwardCutoffAdmission.test.mjs']},
  registry:{revision:SOURCE_UNION_PARENTS.registry,tests:['tests/originalIngressAdmission.test.mjs']},
  historical:{revision:'965263fe15dc672cac6c61af06bfd14d69044dd3',tests:['tests/integrationAdmission.test.mjs']},
@@ -1620,7 +1711,7 @@ const pinnedProofs=Object.freeze({
 export function verifySourceUnionPinnedProof(view){
  assert(Object.hasOwn(pinnedProofs,view),'UNION_UNKNOWN_PARENT');
  verifyIntegrationCandidate();
- const proof=pinnedProofs[view];
+ const proof=pinnedProofs[view];let executedCount=null;
  const folder=mkdtempSync(join(tmpdir(),'ma-union-parent-')),checkout=join(folder,'source');
  const env={PATH:process.env.PATH,LC_ALL:'C',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',
   GIT_NO_LAZY_FETCH:'1',GIT_TERMINAL_PROMPT:'0',GIT_OPTIONAL_LOCKS:'0'};
@@ -1634,20 +1725,25 @@ export function verifySourceUnionPinnedProof(view){
    for(const name of readdirSync(modules))symlinkSync(join(fileURLToPath(modules),name),join(target,name));
   }
   const output=execFileSync(process.execPath,['--experimental-strip-types','--test','--test-reporter=tap','--test-concurrency=1',...proof.tests],{
-   cwd:checkout,env:{...env,NODE_OPTIONS:'--experimental-strip-types'},encoding:'utf8',maxBuffer:8e6,timeout:view==='r4'?840000:view==='r3'?420000:view==='r2'?180000:120000,
+   cwd:checkout,env:{...env,NODE_OPTIONS:'--experimental-strip-types'},encoding:'utf8',maxBuffer:8e6,timeout:view==='owner_copy'?420000:view==='r4'?840000:view==='r3'?420000:view==='r2'?180000:120000,
   });
+  if(view==='owner_copy'){
+   executedCount=Number(output.match(/^# tests (\d+)$/m)?.[1]);assert(executedCount>0,'OWNER_PRIOR_TESTS_REQUIRED');
+   for(const [name,n]of [['pass',executedCount],['fail',0],['cancelled',0],['skipped',0]])assert.match(output,new RegExp('^# '+name+' '+n+'$','m'),'OWNER_PRIOR_ALL_ASSERTIONS');
+  }
   const count=view==='r4'?35:view==='r3'?28:view==='union'?13:view==='r2'?21:null;
   if(count!==null)for(const [name,n]of [['tests',count],['pass',count],['fail',0],['cancelled',0],['skipped',0]])assert.match(output,new RegExp('^# '+name+' '+n+'$','m'),'UNION_PRIOR_ALL_ASSERTIONS');
  }finally{rmSync(folder,{recursive:true,force:true});assert(!existsSync(folder),'UNION_PINNED_CLEANUP_FAILED');}
  verifyIntegrationCandidate();
  const count=view==='r4'?35:view==='r3'?28:view==='union'?13:view==='r2'?21:null;
- return {revision:proof.revision,tests:[...proof.tests],cleanup:'VERIFIED_REMOVED',...(count===null?{}:{tests_run:count,tests_passed:count})};
+ return {revision:proof.revision,tests:[...proof.tests],cleanup:'VERIFIED_REMOVED',...(executedCount===null?count===null?{}:{tests_run:count,tests_passed:count}:{tests_run:executedCount,tests_passed:executedCount})};
 }
 /** Reuse only historical proof bodies already executed by the exact R4 CI.
  * Current code/admission still executes. This does not call the optional
  * historical reproducer above, spawn a child, create a clone, or fabricate TAP.
  * No caller-provided result/hash/status can certify a different proof. */
 export function reuseSourceUnionPinnedProof(view){
+ assert.notEqual(view,'owner_copy','OWNER_COPY_REQUIRES_ACTUAL_REPLAY');
  assert(Object.hasOwn(pinnedProofs,view),'UNION_UNKNOWN_PARENT');
  verifyIntegrationCandidate();
  const lineage=sourceUnionR6Lineage(),proof=pinnedProofs[view];

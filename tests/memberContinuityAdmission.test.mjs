@@ -8,7 +8,7 @@ import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
 import {MEMBER_CONTINUITY_BASE,MEMBER_CONTINUITY_MANIFEST,MEMBER_CONTINUITY_RUNTIME,
  verifyMemberContinuity,memberContinuityHistoricalRead,memberContinuityHistoricalReader,memberContinuityWebsiteOperations} from './helpers/memberContinuityAdmission.mjs';
-import {integrationInventory,integrationPhysicalRead,integrationPhysicalMode} from './helpers/integrationAdmission.mjs';
+import {integrationInventory,integrationPhysicalRead,integrationPhysicalMode,RUNTIME_INTEGRITY_FILES,RUNTIME_INTEGRITY_BASE} from './helpers/integrationAdmission.mjs';
 
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const git=args=>execFileSync('git',['--no-replace-objects',...args],{maxBuffer:2e6});
@@ -20,7 +20,9 @@ test('continuity is a separately admitted exact two-source candidate with origin
  const m=verifyMemberContinuity();assert.equal(m.base,MEMBER_CONTINUITY_BASE);assert.equal(m.production_authorized,false);
  assert.deepEqual(m.files,MEMBER_CONTINUITY_RUNTIME);
  for(const path of [predecessor,'docs/operations/evidence/r10-functional-source-closure-20261017.json','docs/operations/evidence/core-member-integration-20261017-r10.json'])assert.deepEqual(readFileSync(path),prior(path));
- for(const row of m.files){assert.equal(hash(readFileSync(row.path)),row.after_sha256);assert.equal(hash(prior(row.path)),row.before_sha256);}
+ for(const row of m.files){const delta=RUNTIME_INTEGRITY_FILES.find(r=>r.path===row.path);
+  if(delta)assert.equal(delta.before_sha256,row.after_sha256);
+  assert.equal(hash(readFileSync(row.path)),delta?.after_sha256??row.after_sha256);assert.equal(hash(prior(row.path)),row.before_sha256);}
  m.files[0].after_sha256='0'.repeat(64);assert.notEqual(verifyMemberContinuity().files[0].after_sha256,m.files[0].after_sha256);
 });
 test('historical translation is limited to exact current bytes of only two paths and returns copies',()=>{
@@ -51,14 +53,15 @@ test('complete live admission still rejects missing, unknown, altered-source, mo
  const forged=JSON.parse(readFileSync(MEMBER_CONTINUITY_MANIFEST));forged.production_authorized=true;
  assert.throws(()=>verifyMemberContinuity(path=>path===MEMBER_CONTINUITY_MANIFEST?Buffer.from(JSON.stringify(forged)):integrationPhysicalRead(path),paths));
 });
-test('new website candidate overlays exactly two targets and byte counts while preserving all other R9 facts',()=>{
+test('historical website candidate preserves its two targets and excludes newer Owner projection bytes',()=>{
  const old=JSON.parse(readFileSync(predecessor)).release.B.operations,current=memberContinuityWebsiteOperations();
  assert.equal(current.length,24);assert.deepEqual(current.map(row=>row.path),old.map(row=>row.path));
  let changed=0;for(let i=0;i<old.length;i++){
   const runtime=MEMBER_CONTINUITY_RUNTIME.find(row=>row.path===old[i].path);
   if(!runtime){assert.deepEqual(current[i],old[i]);continue;}
   changed++;assert.deepEqual(Object.keys(current[i]).filter(key=>JSON.stringify(current[i][key])!==JSON.stringify(old[i][key])).sort(),['source_bytes','target_sha256']);
-  assert.equal(current[i].target_sha256,runtime.after_sha256);assert.equal(current[i].source_bytes,readFileSync(runtime.path).length);
+  const original=RUNTIME_INTEGRITY_FILES.some(r=>r.path===runtime.path)?git(['show',RUNTIME_INTEGRITY_BASE+':'+runtime.path]):readFileSync(runtime.path);
+  assert.equal(hash(original),runtime.after_sha256);assert.equal(current[i].target_sha256,runtime.after_sha256);assert.equal(current[i].source_bytes,original.length);
  }
  assert.equal(changed,2);assert.deepEqual(readFileSync(predecessor),prior(predecessor));
 });
@@ -71,7 +74,8 @@ async function fixture(){
  // The ordinary tests above execute the real complete composition verifier.
  // The substitute records every boundary and can reject a newly invalid live
  // tree, independently of this fixture's actual source/mode/receipt checks.
- put(integration,Buffer.from("export let checks=0;let blocked=false;export const integrationInventory=()=>[];export const integrationPhysicalMode=()=> '100644';export function verifyIntegrationCandidate(){checks++;if(blocked)throw Error('FIXTURE_LIVE_ADMISSION_REJECTED');}export const blockFixtureAdmission=value=>{blocked=value;};\n"));
+ put(integration,Buffer.from("export let checks=0;let blocked=false;export const integrationInventory=()=>[];export const integrationPhysicalMode=()=> '100644';export function verifyIntegrationCandidate(){checks++;if(blocked)throw Error('FIXTURE_LIVE_ADMISSION_REJECTED');}export const blockFixtureAdmission=value=>{blocked=value;};\n"+
+  'export const RUNTIME_INTEGRITY_FILES='+JSON.stringify(RUNTIME_INTEGRITY_FILES)+';export const RUNTIME_INTEGRITY_BASE='+JSON.stringify(RUNTIME_INTEGRITY_BASE)+';\n'));
  return {dir,put,live:await import(pathToFileURL(join(dir,helper)).href),gate:await import(pathToFileURL(join(dir,integration)).href),close:()=>rmSync(dir,{recursive:true,force:true})};
 }
 test('warm historical readers recheck physical bytes, modes, deletions, symlinks and current receipt on each invocation',async()=>{

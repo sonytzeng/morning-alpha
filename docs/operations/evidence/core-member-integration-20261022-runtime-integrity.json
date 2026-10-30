@@ -51,7 +51,7 @@
     {
       "path": ".github/workflows/core-member-integration.yml",
       "before_sha256": null,
-      "after_sha256": "cceaa4a1fc3db18f3fb37e768b21fa92737e643f46c975e0fdc551ce674b22ee",
+      "after_sha256": "425d603335d644a34b8cef28ada0a175422cbf876cffbeca8bf29b131eebae36",
       "mode": "100644",
       "origin": "composition"
     },
@@ -1155,6 +1155,13 @@
       "origin": "composition"
     },
     {
+      "path": "research/entry-opportunity.ts",
+      "before_sha256": "c52ed2ce4f2d31010e295765eecea765a03856183e9a3db66854bacc47fde95a",
+      "after_sha256": "30da9e781482ab1d9222a679e2e2413b47650cf5f95efc609e0a443c0dbb3031",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "research/issuer-actual-canonical-intake.ts",
       "before_sha256": null,
       "after_sha256": "d969282264342e6609221ed27fdf772c339d8cad8d3805756ef0b5861c3b796a",
@@ -1263,6 +1270,13 @@
       "path": "scripts/official-actuals/issuer-pdf-descriptor.py",
       "before_sha256": null,
       "after_sha256": "8faf1f8cc623b8c9924bea9de8a11cd5aef467094fb6d219b3b072e8fb2ef877",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "scripts/operations/build-completed-research.mjs",
+      "before_sha256": null,
+      "after_sha256": "869d913dfa66fabe93c16f500e4fe7dd08c0f09f0ab824d468130db0606d64b2",
       "mode": "100644",
       "origin": "composition"
     },
@@ -1778,6 +1792,13 @@
       "origin": "composition"
     },
     {
+      "path": "src/features/vnext/completedResearch.ts",
+      "before_sha256": null,
+      "after_sha256": "fcb6bd50110e9b4227dabd46aa745e0d204304347d1b480fc33761ed94570582",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "src/features/vnext/contracts.ts",
       "before_sha256": "0a89f96f209c9c235416a4b060c85b38bb6d6799ad3234ef16156537fd50d579",
       "after_sha256": "32195b3a1cd1b060324a403c9adf2109399f0d30cdbe829d5a0493f4af8a8068",
@@ -2009,6 +2030,13 @@
       "origin": "composition"
     },
     {
+      "path": "src/pages/vnext/CompletedResearch.tsx",
+      "before_sha256": null,
+      "after_sha256": "82e435e319ae190a7538b0b65461ed1c874d2e9cc2959e8fa531d810163c1835",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "src/pages/vnext/DailyIntelligence.tsx",
       "before_sha256": null,
       "after_sha256": "c10b24c2aeb20ac2fac6d740b957b09e2e442bdf684041128291d14be7ef5bc0",
@@ -2039,7 +2067,7 @@
     {
       "path": "src/pages/vnext/MemberPage.tsx",
       "before_sha256": null,
-      "after_sha256": "217f7cde888206908f8f0dca6a7266e3c48f725dd2ba8a4ecd7d703828f5b28b",
+      "after_sha256": "88f7b88a0808aa265a5b8313785150cd31080519e9ffb178ab1d92ceae4b6700",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2091,6 +2119,13 @@
       "after_sha256": "930b882c29ad47a5259a3bea68cb9c5c3d8ad5b078c010dc4866d65bf7931049",
       "mode": "100644",
       "origin": "member"
+    },
+    {
+      "path": "src/pages/vnext/completed-research.css",
+      "before_sha256": null,
+      "after_sha256": "84e8decefd824d75ed647819a846db2589c98725f1fa139b7bc277d45f5e0fa6",
+      "mode": "100644",
+      "origin": "composition"
     },
     {
       "path": "src/pages/vnext/member.css",
@@ -2737,6 +2772,13 @@
       "origin": "composition"
     },
     {
+      "path": "supabase/migrations/20261030163000_completed_research_owner_projection.sql",
+      "before_sha256": null,
+      "after_sha256": "b8beea99f345d3c47bd011698d770c1eabda2df5101e693fb7e2d8ac60880414",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "tests/academyNavigation.test.mjs",
       "before_sha256": "aba5b1ac2b8eaaae3b535ae4a3bb8f5eb34329d2bf29d3697effd622384848ba",
       "after_sha256": "cc0ea62bfe3103719983969116f62857e363b7ad8d27ff6f3b35bfa61309834b",
@@ -2933,6 +2975,20 @@
       "origin": "composition"
     },
     {
+      "path": "tests/completedResearch.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "5a100e0cc6fcf893b5793240d73eef786252efe93b0a8a3b0c60f7d078bcd8f5",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "tests/completedResearchDatabase.integration.mjs",
+      "before_sha256": null,
+      "after_sha256": "e0089940a17ca91dbb58082087725a57ec19bb55fdf74d041d4385c432c790b4",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "tests/continuousLearningRelease.test.mjs",
       "before_sha256": null,
       "after_sha256": "b2cfc1789eb3a5c3a6d3ca295fc571f215f30ff31965699843e04cae83058604",
@@ -2964,6 +3020,13 @@
       "path": "tests/decisionPricedInCoverage.test.mjs",
       "before_sha256": null,
       "after_sha256": "aacf3c80da040ce9c096ee2afa3e224043c08dc9cd03f01984e00023c93cc2bc",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "tests/entryCompletedSession.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "59092ef46c3b7b52a32b107d5b95404060810f7cd784f305059e70f2b9ced847",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3052,6 +3115,13 @@
       "origin": "composition"
     },
     {
+      "path": "tests/helpers/completedResearchFixture.mjs",
+      "before_sha256": null,
+      "after_sha256": "8840862127681d66d48d9037071fbbbd83b7071bef0daa8abdf5930f87b607e4",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "tests/helpers/coreContentOsCapturedReplay.mjs",
       "before_sha256": "c8df176c67d37e73057ba3d4c8e66b7d82e6307fb6215818ea0c14bdf9754a4b",
       "after_sha256": "f34a7b85ee21d7b5a7239ec46f63e7b6ce447ce0a72d225ee2ff5ac2d91326fe",
@@ -3075,7 +3145,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "53d7c370925132da4fb8a5db36ee77e669096de87cc8a7cbdf1a14464523bb43",
+      "after_sha256": "cf03c0bc54e58d10749acd6b6490c90c403994bf5ca9bb9d6d56ecf35136a240",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3089,7 +3159,7 @@
     {
       "path": "tests/helpers/memberContinuityAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "9ccc2639f285868adfc1f607956dd0f964fc6b7230f1a3b0dbd2a5b2c949f383",
+      "after_sha256": "df9100b4de222c84ab78f59d7877e24576f3865ad6158dedad9cdc9546d17ec5",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3180,7 +3250,7 @@
     {
       "path": "tests/memberContinuityAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "1b796d7138caa959c9156778e83dd7288bce2d8219603b4ace6aae5398e673ca",
+      "after_sha256": "198a5978ee73b8db353d8c8a56a86dddbd37fb9be29349381fd43d679589b90b",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3222,7 +3292,7 @@
     {
       "path": "tests/officialPublicAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "93ad3f401614808b224f62d2e830f8f34c79b52c3680ee4ef5cc9f08611b61a4",
+      "after_sha256": "c70d1ae15d1c88547f61454fdbb3069775e43d3cebadf1aceb01d4d7e9e1815e",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3250,7 +3320,7 @@
     {
       "path": "tests/originalIngressAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "285885b46c88a4510793a891b6da2b5a5def23a264a427860e09a90db6c377fb",
+      "after_sha256": "1d85f9c599b4482cafb86934a7f67e9b22079c1968a65450c260e1f72108bc65",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3265,6 +3335,13 @@
       "path": "tests/ownerCockpit.test.mjs",
       "before_sha256": "b1367752d55f9a88af86a637b0272ec0cae9c5cc53252df8467d6482b470438f",
       "after_sha256": "f36f853fdcbd555e46fd8d5d472d714081b27285efc6d22bf025af197e1564c5",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "tests/ownerLegacyPublication.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "24142adbffd94b38494ad43edd6618cef4c0c1efd60937fa7f637fe191b246f3",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3852,7 +3929,7 @@
     {
       "path": "tests/vnextMemberContinuity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "b1308678a760b10a64a60db7b5347d3857fbd5810b164b2b5301e40837117de6",
+      "after_sha256": "6894d9be9a9f4b45594062305c4e4cc727f457456d4649efc02f130d1e3ed2d5",
       "mode": "100644",
       "origin": "composition"
     },
@@ -5257,9 +5334,99 @@
           "mode": "100644",
           "before_sha256": "3ceddfd45e35488dab202c00abf3634a80f4c39cd0ee9b8376425af0e039ed3d",
           "after_sha256": "be8b5ba69e51eb229880c82fc3cb154db0e3167c469e9d06de900d4777d2d3be"
+        },
+        {
+          "path": "research/entry-opportunity.ts",
+          "mode": "100644",
+          "before_sha256": "c52ed2ce4f2d31010e295765eecea765a03856183e9a3db66854bacc47fde95a",
+          "after_sha256": "30da9e781482ab1d9222a679e2e2413b47650cf5f95efc609e0a443c0dbb3031"
+        },
+        {
+          "path": "tests/entryCompletedSession.test.mjs",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "59092ef46c3b7b52a32b107d5b95404060810f7cd784f305059e70f2b9ced847"
+        },
+        {
+          "path": "scripts/operations/build-completed-research.mjs",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "869d913dfa66fabe93c16f500e4fe7dd08c0f09f0ab824d468130db0606d64b2"
+        },
+        {
+          "path": "src/features/vnext/completedResearch.ts",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "fcb6bd50110e9b4227dabd46aa745e0d204304347d1b480fc33761ed94570582"
+        },
+        {
+          "path": "src/pages/vnext/CompletedResearch.tsx",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "82e435e319ae190a7538b0b65461ed1c874d2e9cc2959e8fa531d810163c1835"
+        },
+        {
+          "path": "src/pages/vnext/completed-research.css",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "84e8decefd824d75ed647819a846db2589c98725f1fa139b7bc277d45f5e0fa6"
+        },
+        {
+          "path": "src/pages/vnext/MemberPage.tsx",
+          "mode": "100644",
+          "before_sha256": "217f7cde888206908f8f0dca6a7266e3c48f725dd2ba8a4ecd7d703828f5b28b",
+          "after_sha256": "88f7b88a0808aa265a5b8313785150cd31080519e9ffb178ab1d92ceae4b6700"
+        },
+        {
+          "path": "supabase/migrations/20261030163000_completed_research_owner_projection.sql",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "b8beea99f345d3c47bd011698d770c1eabda2df5101e693fb7e2d8ac60880414"
+        },
+        {
+          "path": "tests/completedResearch.test.mjs",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "5a100e0cc6fcf893b5793240d73eef786252efe93b0a8a3b0c60f7d078bcd8f5"
+        },
+        {
+          "path": "tests/completedResearchDatabase.integration.mjs",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "e0089940a17ca91dbb58082087725a57ec19bb55fdf74d041d4385c432c790b4"
+        },
+        {
+          "path": "tests/helpers/completedResearchFixture.mjs",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "8840862127681d66d48d9037071fbbbd83b7071bef0daa8abdf5930f87b607e4"
+        },
+        {
+          "path": "tests/vnextMemberContinuity.test.mjs",
+          "mode": "100644",
+          "before_sha256": "b1308678a760b10a64a60db7b5347d3857fbd5810b164b2b5301e40837117de6",
+          "after_sha256": "6894d9be9a9f4b45594062305c4e4cc727f457456d4649efc02f130d1e3ed2d5"
+        },
+        {
+          "path": "tests/helpers/memberContinuityAdmission.mjs",
+          "mode": "100644",
+          "before_sha256": "9ccc2639f285868adfc1f607956dd0f964fc6b7230f1a3b0dbd2a5b2c949f383",
+          "after_sha256": "df9100b4de222c84ab78f59d7877e24576f3865ad6158dedad9cdc9546d17ec5"
+        },
+        {
+          "path": "tests/memberContinuityAdmission.test.mjs",
+          "mode": "100644",
+          "before_sha256": "1b796d7138caa959c9156778e83dd7288bce2d8219603b4ace6aae5398e673ca",
+          "after_sha256": "198a5978ee73b8db353d8c8a56a86dddbd37fb9be29349381fd43d679589b90b"
+        },
+        {
+          "path": "tests/ownerLegacyPublication.test.mjs",
+          "mode": "100644",
+          "before_sha256": null,
+          "after_sha256": "24142adbffd94b38494ad43edd6618cef4c0c1efd60937fa7f637fe191b246f3"
         }
       ],
-      "scope": "OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE_AND_WHOLE_RETAINED_SOURCE_VERSIONS_BULK_DAILY_PRICES_AND_ISSUER_QUARTER_OBSERVATIONS_AND_RETAINED_ENTRY_PRESENTATION_AND_FREE_TAIFEX_PRIOR_REGULAR_FALLBACK_AND_PRIVATE_ISSUER_FINANCIAL_INTAKE",
+      "scope": "OWNED_FULL_PREIMAGE_SHARED_SERIALIZATION_ACQUISITION_HANDOFF_STRICT_RPC_CI_RAW_FINANCIAL_COLUMNS_AND_PERMITTED_NATIVE_SPLIT_BASIC_NOTE_AND_WHOLE_RETAINED_SOURCE_VERSIONS_BULK_DAILY_PRICES_AND_ISSUER_QUARTER_OBSERVATIONS_AND_RETAINED_ENTRY_PRESENTATION_AND_FREE_TAIFEX_PRIOR_REGULAR_FALLBACK_AND_PRIVATE_ISSUER_FINANCIAL_INTAKE_AND_COMPLETED_SESSION_AS_OF_ENTRY_AND_PRIVATE_OWNER_RESEARCH_PROJECTION",
       "source_admission": false,
       "canonical_admission": false,
       "quality_approval": false,

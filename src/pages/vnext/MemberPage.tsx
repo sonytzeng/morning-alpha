@@ -5,11 +5,13 @@ import {parseMemberResearch,memberMarketSummary,memberTaipeiDate,type MemberRese
 import MemberNavigation,{MemberObservationEntry} from './MemberNavigation';
 import MemberExperience from './MemberExperience';
 import PublicExperience from './PublicExperience';
+import CompletedResearch from './CompletedResearch';
+import {parseCompletedResearch,type CompletedResearch as CompletedData} from '@/features/vnext/completedResearch';
 import './vnext.css';
 import './member.css';
 export default function MemberPage({account=false}:{account?:boolean}){
  const {access,retry}=useAcademyAccess(),[revision,setRevision]=useState(0),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
- const [state,setState]=useState<{identity:string;generation:number;readEpoch:number;requestDate:string;data?:MemberResearch;error?:boolean}|null>(null);
+ const [state,setState]=useState<{identity:string;generation:number;readEpoch:number;requestDate:string;data?:MemberResearch;completed?:CompletedData|null;completedError?:boolean;error?:boolean}|null>(null);
  const current=useRef(access);current.current=access;
  const retryRef=useRef(retry);retryRef.current=retry;
  const mounted=useRef(false),readEpoch=useRef(0),publicEpoch=useRef(0);
@@ -78,10 +80,16 @@ export default function MemberPage({account=false}:{account?:boolean}){
     if(history.error||history.data?.schema!=='VNEXT_FREE_HISTORY_V1')throw Error('HISTORY_UNAVAILABLE');
     data=parseMemberResearch({...response.data,history:history.data.history},requestDate);
    }
-   if(valid())setState({identity:access.id,generation:access.generation,readEpoch:epoch,requestDate,data});clearTimeout(timer);
+   let completed:CompletedData|null=null,completedError=false;
+   if(data.tier==='owner'&&!account){
+    try{const r=await supabase.rpc('get_owner_completed_research_v1').abortSignal(controller.signal);
+     if(!valid())return;if(r.error)throw Error('COMPLETED_READ');completed=await parseCompletedResearch(r.data);
+    }catch{completedError=true;}
+   }
+   if(valid())setState({identity:access.id,generation:access.generation,readEpoch:epoch,requestDate,data,completed,completedError});clearTimeout(timer);
   }catch{if(valid())setState({identity:access.id,generation:access.generation,readEpoch:epoch,requestDate,error:true});}finally{clearTimeout(timer);}})();
   return()=>{live=false;clearTimeout(timer);controller.abort();if(readController.current===controller)readController.current=null;access.signal.removeEventListener('abort',abort);};
- },[access,revision,businessDate,invalidate]);
+ },[access,revision,businessDate,invalidate,account]);
  const today=memberTaipeiDate();
  const matchingState=access.kind==='member'&&!access.signal.aborted&&state?.identity===access.id&&state.generation===access.generation
   &&state.readEpoch===readEpoch.current&&state.requestDate===today&&today===dateRef.current;
@@ -105,7 +113,7 @@ export default function MemberPage({account=false}:{account?:boolean}){
  };
  const denied=access.kind==='denied',failed=access.kind==='unavailable'||(matchingState&&state.error);
  return <div className="vnext vm"><a className="vnext-skip" href="#stock-observations">跳到股票觀察</a><MemberNavigation/>
- {denied?<PublicExperience market={publicMarket} loading={marketLoading}/>:data?account?<main className="vnext-content"><h1>會員中心</h1><MemberObservationEntry/><p>既有會員權益與股票學院不變。</p><a href="/academy">前往股票學院</a></main>:<MemberExperience key={access.kind==='member'?access.id:''} data={data} market={publicMarket} onWatch={watch} busy={busy} notice={notice}/>
+ {denied?<PublicExperience market={publicMarket} loading={marketLoading}/>:data?account?<main className="vnext-content"><h1>會員中心</h1><MemberObservationEntry/><p>既有會員權益與股票學院不變。</p><a href="/academy">前往股票學院</a></main>:data.tier==='owner'&&state?.completed?<CompletedResearch key={access.kind==='member'?access.id:''} data={state.completed}/>:<>{data.tier==='owner'&&state?.completedError&&<p className="vnext-content" role="alert">本人收盤研究暫時無法讀取；下方是會員已核准內容，不代表本次分析沒有結果。</p>}<MemberExperience key={access.kind==='member'?access.id:''} data={data} market={publicMarket} onWatch={watch} busy={busy} notice={notice}/></>
  :<main className="vnext-content vnext-empty" role="status"><h1>{denied?'登入後，閱讀股票觀察':failed?'目前無法讀取股票觀察':'正在確認可閱讀的內容'}</h1><p>{denied?'免費會員可閱讀每日精選摘要；Premium 可查看完整已核准研究。研究不是正式推薦。':failed?'尚未取得資料，不代表今天沒有候選。請稍後再試。':'請稍候。'}</p>{denied?<a href="/login?next=%2Fstocks" className="vnext-primary">登入帳號</a>:failed?<button className="vnext-primary" onClick={()=>{invalidate();retry();setRevision(r=>r+1);}}>重新讀取</button>:null}</main>}
  </div>;
 }

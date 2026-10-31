@@ -9,6 +9,7 @@ import {prepareDailyStockAiSource} from './source.ts';
 import {collectDailyAiOfficialNews} from '../../../research/daily-ai-official-news.ts';
 import {collectDailyAiGlobalMarket} from '../../../research/daily-ai-global-market.ts';
 import {refreshDailyAiFinancials} from '../../../research/daily-ai-financial-refresh.ts';
+import {withRetainedSecDailyFinancials} from '../../../research/sec-daily-financial-replay.candidate.ts';
 import {handleDailyStockCitationRepair} from './repair-handler.ts';
 
 const url=Deno.env.get('SUPABASE_URL')??'',service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')??'';
@@ -16,7 +17,7 @@ const internalSecret=Deno.env.get('CRON_SECRET')??'',model='gpt-6-astra';
 // Actual V5 two-pilot quality and time review passed before bounded continuation.
 const autoContinue=true;
 const modelRevision=stockAiModelRevision(model);
-export function dailyStockAiRpcTimeoutMs(u:Parameters<typeof fetch>[0],i?:Parameters<typeof fetch>[1]){
+export function dailyStockAiRpcTimeoutMs(u:Parameters<typeof fetch>[0],i?:RequestInit){
  try{
   const target=u instanceof Request?u.url:String(u);
   if(new URL(target).pathname!=='/rest/v1/rpc/daily_stock_ai_intake_v1'||i?.method!=='POST'||typeof i.body!=='string')return 8000;
@@ -26,7 +27,7 @@ export function dailyStockAiRpcTimeoutMs(u:Parameters<typeof fetch>[0],i?:Parame
  }catch{return 8000;}
 }
 const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false},global:{
- fetch:(u:Parameters<typeof fetch>[0],i?:Parameters<typeof fetch>[1])=>{
+ fetch:(u:Parameters<typeof fetch>[0],i?:RequestInit)=>{
   // SOURCE verifies raw observations and returns the immutable 72-stock view.
   // Its larger response has a bounded allowance; other RPC deadlines stay put.
   const timeout=AbortSignal.timeout(dailyStockAiRpcTimeoutMs(u,i));
@@ -74,7 +75,7 @@ Deno.serve(async request=>{
    rpc,fetcher:fetch,clock:()=>new Date().toISOString(),
    collectNews:({inputs,businessDate,signal:newsSignal})=>collectDailyAiOfficialNews({inputs,businessDate,fetcher:fetch,clock:()=>new Date().toISOString(),signal:newsSignal}),
    collectMarket:({businessDate,signal:marketSignal})=>collectDailyAiGlobalMarket({businessDate,signal:marketSignal,fetcher:fetch,clock:()=>new Date().toISOString()}),
-   refreshFinancials:refreshDailyAiFinancials,
+   refreshFinancials:withRetainedSecDailyFinancials(refreshDailyAiFinancials,(args,registrySignal)=>rpc('load_daily_stock_ai_sec_replay_v1',args,registrySignal)),
   },signal)});
  }
  let loaded:StoredStockAnalysisBatch|null=null;

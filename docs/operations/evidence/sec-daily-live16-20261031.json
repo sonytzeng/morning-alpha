@@ -1,0 +1,60 @@
+{
+  "schema": "SEC_DAILY_SOURCE_LIVE_RECEIPT_V1",
+  "project_id": "cttfzgvhiewfckydcrci",
+  "function": "daily-stock-analysis-v1",
+  "before": {
+    "version": 15,
+    "bundle_sha256": "32cbe55a0c6512ed4a695fddbce1f0cd324f6dba8eb2b54b47c723c80a9aa8c1",
+    "files": 41
+  },
+  "after": {
+    "version": 16,
+    "status": "ACTIVE",
+    "bundle_sha256": "6e51f2d2b4ef2917ef7b7f5eb567e54aa6b39b7bec752cced5689b527abd9fd9",
+    "files": 48,
+    "exact_readback_matches": 48,
+    "unexpected_files": 0
+  },
+  "scope": {
+    "unchanged_original_files": 40,
+    "index_changes": [
+      "Two SEC daily SOURCE wiring changes",
+      "Two type annotations with verified identical emitted JavaScript"
+    ],
+    "new_dependency_files": 7,
+    "cron_changed": false,
+    "secrets_changed": false,
+    "member_publication_approved": false
+  },
+  "migration": {
+    "name": "retained_sec_daily_financials_v1",
+    "sql_sha256": "fe1dfccc97e92e45da60c2f87f1675baf15119818370037c772c1e50eaf8a1ff",
+    "applied": true,
+    "registry_facts": 12,
+    "registry_source_documents": 8,
+    "anon_table_read": false,
+    "authenticated_table_read": false,
+    "service_table_read": false,
+    "anon_rpc": false,
+    "authenticated_rpc": false,
+    "service_rpc": true,
+    "source_function_sha256": "d3c67c1395bda7414f2b070c5599542f44eb49777b95b5b2eb3f65501b679484"
+  },
+  "package": {
+    "deploy_args_sha256": "af9cf7c81df170ea9fa2dbb0a33c26b9041b768d423ddbcd9419a9cbdad516ea",
+    "file_catalog_sha256": "85b60c6bd028b30eae6effc7b6fa28e7985179311c4f2276d34455f526804ea7"
+  },
+  "validation": {
+    "deno_full_48_file_check": "PASS",
+    "isolated_postgres_checks": 56,
+    "adapter_and_patch_tests": 6,
+    "natural_next_day_production_execution_verified": false,
+    "source_release_and_IASB_annual_reconciliation": "NOT_PERFORMED"
+  },
+  "edition": {
+    "id": "91b6c703afd70f01c37ccf8da640ed63c6dd1afb61013ed6cba24c9c0ad9ab81",
+    "staged": true,
+    "member_published": false,
+    "quality_review_sha256": "4cc3431ee2afee83fa8db1ea5fdb849c43ac645c3fe73896205f9bec35fd8bea"
+  }
+}

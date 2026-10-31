@@ -1,0 +1,37 @@
+{
+  "schema": "SEC_DAILY_SOURCE_INTEGRATION_CANDIDATE_V1",
+  "prepared_at": "2026-10-31T09:58:25.978Z",
+  "live_function": "daily-stock-analysis-v1",
+  "live_version": 15,
+  "live_bundle_sha256": "32cbe55a0c6512ed4a695fddbce1f0cd324f6dba8eb2b54b47c723c80a9aa8c1",
+  "live_index_sha256": "807a4692a08b6d31b04d094c14788370bfe4c4964d9e8dcb567c27e23b811df2",
+  "candidate_index_sha256": "7d2f3105136411fa480d64bbf0f9155e93553610fdc9666d1e9f0d88a7170e75",
+  "candidate_files": {
+    "research/sec-daily-financial-replay.candidate.ts": "594648561c1dec020b6e34ece24f0bf3cbee2c504fcb4039eb2c64db17486048",
+    "research/sec-quarter-financials.ts": "f170d6ee2c1ced84f0c77db9079cd8cabdd0d76e0f3bc07737b077d07bd78ac0",
+    "scripts/operations/sec-daily-integration/retained-sec-daily-v1.candidate.sql": "fe1dfccc97e92e45da60c2f87f1675baf15119818370037c772c1e50eaf8a1ff"
+  },
+  "worker_changes": [
+    "One new SOURCE financial adapter import",
+    "Wrap existing refreshFinancials with service-only retained SEC loader",
+    "Two erased parameter type annotations use the standard Web RequestInit"
+  ],
+  "database_changes": [
+    "Fixed-seal private immutable 12-fact registry",
+    "Service-only read RPC",
+    "New SEC wrapper delegates unchanged V5 non-SEC checks",
+    "Fingerprint-guarded single SOURCE validator call-site substitution"
+  ],
+  "deployment_rule": "Re-read live version and hashes first; abort on drift. Preserve all other V15 bundle files and dependencies.",
+  "validation_limit": "No production migration or deployment executed; authorization and a fresh live-fingerprint check remain required.",
+  "source_admitted": false,
+  "member_publication_approved": false,
+  "model_calls": 0,
+  "production_writes": 0,
+  "commit": false,
+  "push": false,
+  "deploy": false,
+  "migration_executed": false,
+  "cron_changed": false,
+  "member_published": false
+}

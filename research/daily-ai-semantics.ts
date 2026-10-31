@@ -40,20 +40,20 @@ const financialWords=/營收|收入|EPS|每股(?:盈餘|獲利|淨利)|毛利|�
 const valuationWords=/本益比|股價淨值比|股價盈餘比|殖利率|估值|\b(?:P\/?E(?:R)?|P\/?B(?:R)?)(?![A-Za-z])|\bdividend yield\b|\bvaluation\b/i;
 const forecastWords=/預測|預估|預計|預期|將達|將為|可望達|\bforecast(?:ed|s)?\b|\bproject(?:ed|s)?\b|\bexpected\b/i;
 function statedPeriods(sentence:string){
- const found:{value:string;raw:string}[]=[];
+ const found:{value:string;raw:string;index:number}[]=[];
  for(const m of sentence.matchAll(/\b(\d{4}-(?:Q[1-4]|\d{2}(?:-\d{2})?))\b/gi)){
-  const value=m[1].replace(/q/,'Q');if(period(value))found.push({value,raw:m[0]});
+  const value=m[1].replace(/q/,'Q');if(period(value))found.push({value,raw:m[0],index:m.index??0});
  }
  for(const m of sentence.matchAll(/(\d{4})年\s*(\d{1,2})月(?:\s*(\d{1,2})日)?/g)){
-  const value=m[1]+'-'+m[2].padStart(2,'0')+(m[3]?'-'+m[3].padStart(2,'0'):'');if(period(value))found.push({value,raw:m[0]});
+  const value=m[1]+'-'+m[2].padStart(2,'0')+(m[3]?'-'+m[3].padStart(2,'0'):'');if(period(value))found.push({value,raw:m[0],index:m.index??0});
  }
- for(const m of sentence.matchAll(/(\d{4})年\s*(?:第\s*([1-4])季|Q([1-4]))/gi))found.push({value:m[1]+'-Q'+(m[2]??m[3]),raw:m[0]});
+ for(const m of sentence.matchAll(/(\d{4})年\s*(?:第\s*([1-4])季|Q([1-4]))/gi))found.push({value:m[1]+'-Q'+(m[2]??m[3]),raw:m[0],index:m.index??0});
  return found;
 }
 /** Only an issuer's cited, verified MOPS financial-report headline can add an
  * actual quarter. An excerpt can also contain guidance; its dates are not an
  * actual-period registry and must never be scanned into this set. */
-function officialNewsActualPeriods(packet:AnalysisPacket,ids:Set<string>){
+function officialNewsActualPeriods(packet:AnalysisPacket,ids:Set<string>,onReport?:(content:Record<string,unknown>)=>void){
  const result=new Set<string>();
  for(const e of packet.evidence){
   if(e.kind!=='NEWS'||e.symbol!==packet.symbol||!ids.has(e.id))continue;
@@ -72,23 +72,64 @@ function officialNewsActualPeriods(packet:AnalysisPacket,ids:Set<string>){
   for(const match of c.title.matchAll(/(?<!\d)(?:民國)?(\d{2,3})年\s*第\s*([1-4])季/g)){
    if(Number(match[1])>=80&&Number(match[1])<=300)quarters.push(String(Number(match[1])+1911)+'-Q'+match[2]);
   }
+  let admitted=false;
   for(const value of quarters){
    const [year,quarter]=value.split('-Q').map(Number),closedAt=Date.UTC(year,quarter*3,1)-8*3600000;
-   if(Number.isFinite(Date.parse(e.available_at))&&closedAt<=Date.parse(e.available_at)&&closedAt<=Date.parse(packet.cutoff))result.add(value);
+   if(Number.isFinite(Date.parse(e.available_at))&&closedAt<=Date.parse(e.available_at)&&closedAt<=Date.parse(packet.cutoff)){result.add(value);admitted=true;}
   }
+  if(admitted)onReport?.(c);
  }
  return result;
+}
+/** Guidance never enters the actual-period registry. Admit it only where the
+ * claim explicitly labels that same clause as guidance and the cited issuer's
+ * verified report has an explicit guidance heading for that exact quarter.
+ * Cumulative endpoints likewise require the source's labelled reporting range,
+ * not arbitrary dates mentioned elsewhere in an announcement. */
+function officialReportScopedPeriod(packet:AnalysisPacket,reports:Record<string,unknown>[],sentence:string,stated:{value:string;raw:string}):boolean{
+ const clauses=sentence.split(/[,，；;]/u),clause=clauses.find(c=>c.includes(stated.raw))??'';
+ for(const report of reports){
+  if(typeof report.excerpt!=='string')continue;
+  if(/^\d{4}-Q[1-4]$/.test(stated.value)&&/(?:(?:公司|並提供).*(?:展望|指引)|(?:展望|指引).*公司)/u.test(clause)
+   &&!/(?:已報|實績|已實現|已達成|已公布結果)/u.test(clause)){
+   for(const m of report.excerpt.matchAll(/(?:^|\n)\s*(\d{4})年\s*第\s*([一二三四1-4])季\s*(?:營運)?(?:展望|指引)\s*(?=\n|$)/gu)){
+    const q='一二三四'.indexOf(m[2])+1||Number(m[2]);
+    if(m[1]+'-Q'+q===stated.value)return true;
+   }
+  }
+  if(!/累計/u.test(clause))continue;
+  const range=report.excerpt.match(/起訖日期[^\n]*:\s*(\d{3})\/(\d{2})\/(\d{2})\s*~\s*(\d{3})\/(\d{2})\/(\d{2})/u);
+  if(!range)continue;
+  const start=String(Number(range[1])+1911)+'-'+range[2]+'-'+range[3];
+  const end=String(Number(range[4])+1911)+'-'+range[5]+'-'+range[6];
+  if(!period(start)||!period(end)||start>end||Date.parse(end+'T16:00:00Z')>Date.parse(packet.cutoff)
+   ||typeof report.source_received_at!=='string'||Date.parse(end+'T16:00:00Z')>Date.parse(report.source_received_at))continue;
+  // Both endpoints must be stated as one explicit cumulative range. Merely
+  // citing a report cannot authorize an unrelated month in another clause.
+  const explicit=clause.includes(start.slice(0,7)+'至'+end.slice(0,7))
+   ||clause.includes(start+'至'+end);
+  if(explicit&&[start,end,start.slice(0,7),end.slice(0,7)].includes(stated.value))return true;
+ }
+ return false;
 }
 /** This is an evidence-period guard, not an accuracy score or a substitute for
  * the separate semantic review. Unknown citations remain the caller's error. */
 export function validateStockAnalysisClaim(packet:AnalysisPacket,claim:CitedClaim):void{
  const ids=new Set(claim.evidence_ids),records=financialRecords(packet).filter(r=>ids.has(r.evidence_id));
- const newsActual=officialNewsActualPeriods(packet,ids),known=new Set([...records.flatMap(r=>r.period?[r.period]:[]),...newsActual]);
+ const reports:Record<string,unknown>[]=[];
+ const newsActual=officialNewsActualPeriods(packet,ids,c=>reports.push(c)),known=new Set([...records.flatMap(r=>r.period?[r.period]:[]),...newsActual]);
  const citedDailyValuation=records.some(r=>r.kind==='VALUATION_AS_REPORTED');
  for(const sentence of claim.text.split(/[。！？!?；;\n]+/u)){
   if(!financialWords.test(sentence)&&!(citedDailyValuation&&valuationWords.test(sentence)))continue;
   const stated=statedPeriods(sentence);
-  if(known.size&&stated.some(p=>!known.has(p.value)))throw Error('AI_ANALYSIS_FINANCIAL_PERIOD');
+  const datedValuationMonths=new Set(records.filter(r=>r.kind==='VALUATION_AS_REPORTED'&&r.period&&/^\d{4}-\d\d-\d\d$/.test(r.period)
+   &&stated.some(p=>p.value===r.period)).map(r=>r.period!.slice(0,7)));
+  for(const p of stated){
+   // Preserve the deployed exact-day valuation calendar-label guard.
+   const calendarLabel=citedDailyValuation&&month(p.value)&&/^\s*(?:的\s*)?估值(?:觀測日|觀察日|資料|快照)/u.test(sentence.slice(p.index+p.raw.length));
+   if(calendarLabel){if(!datedValuationMonths.has(p.value))throw Error('AI_ANALYSIS_FINANCIAL_PERIOD');continue;}
+   if(known.size&&!known.has(p.value)&&!officialReportScopedPeriod(packet,reports,sentence,p))throw Error('AI_ANALYSIS_FINANCIAL_PERIOD');
+  }
   let withoutPeriods=sentence;for(const p of stated)withoutPeriods=withoutPeriods.replaceAll(p.raw,'');
   const metricNumber=/[-+＋－]?\d[\d,.，．]*(?:\s*)(?:%|％|元|圓|塊|億|萬|千|百萬|倍)/u.test(withoutPeriods)
    ||/百分之[負正零〇一二三四五六七八九十百千萬億兩點点]+|[負正零〇一二三四五六七八九十百千萬億兩點点]+\s*(?:元|圓|塊|億|萬|倍)/u.test(withoutPeriods)

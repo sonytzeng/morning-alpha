@@ -110,3 +110,47 @@ test('quarter admission requires cited issuer identity, fixed source, actual rep
  c.excerpt='3.財務報告或年度自結財務資訊報導期間\n起訖日期(XXX/XX/XX~XXX/XX/XX):115/01/01~115/09/30\n10.1月1日累計至本期止基本每股盈餘(損失) (元):47.94';p.evidence[0].content=JSON.stringify(c);
  assert.doesNotThrow(()=>validateStockAnalysisClaim(p,{text:'2026年第3季累計每股盈餘為47.94元。',evidence_ids:p.evidence.map(e=>e.id)}));
 });
+
+test('official guidance quarter is admitted only as company guidance in its own clause',()=>{
+ const p=mediatekOfficialReport(),ids=p.evidence.map(e=>e.id);
+ assert.doesNotThrow(()=>validateStockAnalysisClaim(p,{text:'2026-Q3每股盈餘為17.50元。2026-Q4公司營收展望為2101至2218億元。',evidence_ids:ids}));
+ assert.doesNotThrow(()=>validateStockAnalysisClaim(p,{text:'公司公告2026-Q3每股盈餘17.50元，並提供營收擴張的2026-Q4展望。',evidence_ids:ids}));
+ for(const text of ['2026-Q4營收為2101億元。','2026-Q4公司已報營收展望為2101億元。',
+  '2027-Q1公司營收展望為2101億元。','2026-Q4營收為2101億元，公司展望仍待核對。']){
+  assert.throws(()=>validateStockAnalysisClaim(p,{text,evidence_ids:ids}),/AI_ANALYSIS_FINANCIAL_PERIOD/);
+ }
+ assert.throws(()=>validateStockAnalysisClaim(p,{text:'2026-Q4公司營收展望為2101億元。',evidence_ids:[ids[1]]}),/AI_ANALYSIS_FINANCIAL_PERIOD/);
+ const c=JSON.parse(p.evidence[0].content);c.excerpt=c.excerpt.replace('2026年第四季營運展望','媒體預期第四季');p.evidence[0].content=JSON.stringify(c);
+ assert.throws(()=>validateStockAnalysisClaim(p,{text:'2026-Q4公司營收展望為2101億元。',evidence_ids:ids}),/AI_ANALYSIS_FINANCIAL_PERIOD/);
+});
+
+test('cumulative source endpoints require an explicit range and cumulative label without becoming monthly actuals',()=>{
+ const p=mediatekOfficialReport(),c=JSON.parse(p.evidence[0].content);
+ c.excerpt='3.財務報告或年度自結財務資訊報導期間\n起訖日期(XXX/XX/XX~XXX/XX/XX):115/01/01~115/09/30\n10.1月1日累計至本期止基本每股盈餘(損失) (元):47.94';p.evidence[0].content=JSON.stringify(c);
+ const ids=[p.evidence[0].id];
+ assert.doesNotThrow(()=>validateStockAnalysisClaim(p,{text:'2026-Q3公告列示2026-01至2026-09累計每股盈餘47.94元。',evidence_ids:ids}));
+ for(const text of ['2026-01每股盈餘47.94元。','2026-01至2026-09每股盈餘47.94元。',
+  '2026-02至2026-09累計每股盈餘47.94元。','2026-01累計每股盈餘47.94元。']){
+  assert.throws(()=>validateStockAnalysisClaim(p,{text,evidence_ids:ids}),/AI_ANALYSIS_FINANCIAL_PERIOD/);
+ }
+ c.excerpt=c.excerpt.replace('115/09/30','115/12/31');p.evidence[0].content=JSON.stringify(c);
+ assert.throws(()=>validateStockAnalysisClaim(p,{text:'2026-01至2026-12累計每股盈餘47.94元。',evidence_ids:ids}),/AI_ANALYSIS_FINANCIAL_PERIOD/);
+});
+
+test('deployed valuation month label still requires its exact observed day in the same sentence',()=>{
+ const p=packet();p.evidence.push(evidence('v','VALUATION_AS_REPORTED','2026-10-30',{pe:25.53},'AS_REPORTED'));
+ assert.doesNotThrow(()=>validateStockAnalysisClaim(p,{text:'2026-10估值資料於2026-10-30列本益比25.53倍。',evidence_ids:['v']}));
+ for(const text of ['2026-10估值快照列本益比25.53倍。','2026-10營收年增25.53%。2026-10-30本益比25.53倍。',
+  '2026-09估值資料於2026-10-30列本益比25.53倍。']){
+  assert.throws(()=>validateStockAnalysisClaim(p,{text,evidence_ids:['v']}),/AI_ANALYSIS_FINANCIAL_PERIOD/);
+ }
+});
+
+test('guidance and cumulative admission cannot bypass official report identity and receipt checks',()=>{
+ for(const mutate of [p=>{p.evidence[0].symbol='2330';},p=>{p.evidence[0].source='https://example.test';},
+  p=>{p.evidence[0].first_seen_at='2026-10-30T03:00:00Z';},
+  p=>{const c=JSON.parse(p.evidence[0].content);c.source_metadata.company_code='2330';p.evidence[0].content=JSON.stringify(c);}]){
+  const p=mediatekOfficialReport();mutate(p);
+  assert.throws(()=>validateStockAnalysisClaim(p,{text:'2026-Q4公司營收展望為2101億元。',evidence_ids:p.evidence.map(e=>e.id)}),/AI_ANALYSIS_FINANCIAL_PERIOD/);
+ }
+});

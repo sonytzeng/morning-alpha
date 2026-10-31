@@ -5,7 +5,7 @@ type Analysis=Awaited<ReturnType<typeof analyseStock>>;
 /** Durable implementation owns atomic leases. Returning a cached result must
  * never authorize publication; per-stock failures remain visible to operators. */
 export interface AnalysisJobs{
- claim(key:string):Promise<{state:'BUSY'}|{state:'CACHED';result:Analysis}|{state:'ACQUIRED';lease:string}>;
+ claim(key:string,context:{input_hash:string;model_revision:string;symbol:string;cutoff:string}):Promise<{state:'BUSY'}|{state:'EXHAUSTED'}|{state:'CACHED';result:Analysis}|{state:'ACQUIRED';lease:string}>;
  complete(key:string,lease:string,result:Analysis):Promise<void>;
  fail(key:string,lease:string,code:string):Promise<void>;
 }
@@ -22,7 +22,8 @@ export async function analyseDailyBatch(input:{packets:AnalysisPacket[];modelRev
   if(executed>=input.maxStocks){rows.push({symbol:packet.symbol,state:'DEFERRED'});continue;}
   const inputHash=await snapshotHash(packet);
   const key=await snapshotHash({version:'DAILY_AI_BATCH_1',input_hash:inputHash,model_revision:input.modelRevision});
-  const claim=await jobs.claim(key);
+  const claim=await jobs.claim(key,{input_hash:inputHash,model_revision:input.modelRevision,symbol:packet.symbol,cutoff:packet.cutoff});
+  if(claim.state==='EXHAUSTED'){rows.push({symbol:packet.symbol,state:'FAILED',code:'AI_BATCH_ATTEMPTS_EXHAUSTED'});continue;}
   if(claim.state==='BUSY'){rows.push({symbol:packet.symbol,state:'BUSY'});continue;}
   const validate=(r:Analysis)=>{if(r.symbol!==packet.symbol||r.cutoff!==packet.cutoff||r.input_hash!==inputHash
     ||r.member_published!==false||r.schema!=='DAILY_AI_STOCK_ANALYSIS_V1'

@@ -123,7 +123,7 @@ const routes: RouteObject[] = [
   },
   {
     path: "/auth/callback",
-    element: <AuthCallbackPage />,
+    element: <DeferredRoute><AuthCallbackPage /></DeferredRoute>,
   },
   {
     path: "/account",

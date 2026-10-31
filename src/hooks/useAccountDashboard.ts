@@ -5,6 +5,7 @@ import { isDateTaipeiToday, isTaipeiToday } from '@/services/marketSourceHealthS
 import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
 import { resolveMarketStatus } from '@/lib/market-status';
 import { supabase } from '@/lib/supabase';
+import { invalidateReportRequestCache } from '@/services/entitlementService';
 
 export interface AccountDashboardData {
   // Selected server-trimmed report; may be an explicitly historical fallback.
@@ -300,6 +301,7 @@ export function useAccountDashboard() {
       if (!active.current) return;
       if (!['SIGNED_OUT', 'SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event)) return;
       generation.current++;
+      invalidateReportRequestCache();
       setData(initialAccountDashboard());
       // Defer SDK reads until the Auth callback has released its session lock.
       queueMicrotask(() => { if (active.current) void load(); });

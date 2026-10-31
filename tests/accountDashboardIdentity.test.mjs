@@ -9,6 +9,7 @@ function runtime(){
  let state,callback,cleanup,visibleCallback,date='2026-10-16';const pending=[],microtasks=[],timers=new Map();let unsubscribed=false,timerId=0;
  const use=isolatedFunction(source,'useAccountDashboard',{
   exports:{},initialAccountDashboard:initial,
+  invalidateReportRequestCache:()=>{},
   useState:init=>{state=init();return [state,value=>{state=value;}];},
   useRef:value=>({current:value}),useCallback:fn=>fn,
   useEffect:fn=>{cleanup=fn();},

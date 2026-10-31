@@ -44,6 +44,26 @@ test('company-news coverage describes the retained packet after the headline cap
  assert.equal(p.evidence.filter(e=>e.kind==='NEWS').length,12);assert(!p.evidence.some(e=>e.id==='older-company'));
  assert(p.data_gaps.includes('COMPANY_NEWS_NOT_CAPTURED'));assert(p.data_gaps.includes('SUPPLEMENT_LIMIT_OLDER_ITEMS_NOT_INCLUDED'));
 });
+test('full company budgets retain official as-reported financial and daily valuation evidence before older legacy facts',()=>{
+ const originals=inputs(),stock=originals[0];stock.facts=[];
+ for(const [kind,count] of Object.entries({REVENUE:36,INSTITUTIONAL:10,EPS:4,MARGIN:4,CAPEX:4,DEMAND:1,MOAT:1,VALUATION:1,
+  EPS_AS_REPORTED:2,FINANCIAL_AS_REPORTED:2,VALUATION_AS_REPORTED:1})){
+  for(let i=0;i<count;i++)stock.facts.push({...trace(kind+'-'+i),kind,
+   period:kind==='VALUATION_AS_REPORTED'?'2026-10-30':kind==='REVENUE'?`2023-${String(i%12+1).padStart(2,'0')}`:'2026-Q3',
+   basis:kind.endsWith('_AS_REPORTED')?'AS_REPORTED':'SOURCE_REPORTED',values:{value:i+1}});
+ }
+ const before=JSON.stringify(originals),result=buildDailyAiPackets({inputs:originals,cutoff,news:[],market:[]}),packet=result.packets[0];
+ assert.equal(packet.evidence.filter(e=>['PRICE','FINANCIAL'].includes(e.kind)).length,84);
+ assert(packet.data_gaps.includes('COMPANY_EVIDENCE_LIMIT_OLDER_ITEMS_NOT_INCLUDED'));
+ for(const kind of ['EPS_AS_REPORTED','FINANCIAL_AS_REPORTED','VALUATION_AS_REPORTED']){
+  const expected=stock.facts.filter(f=>f.kind===kind),retained=packet.evidence.filter(e=>e.kind==='FINANCIAL'&&JSON.parse(e.content).kind===kind);
+  assert.equal(retained.length,expected.length,kind);
+  for(const e of retained){const fact=expected.find(f=>f.id===JSON.parse(e.content).original_id);assert(fact);assert.equal(e.evidence_hash,fact.evidence_hash);assert.equal(e.available_at,fact.available_at);}
+ }
+ assert.equal(packet.evidence.filter(e=>e.kind==='FINANCIAL'&&JSON.parse(e.content).kind==='REVENUE').length,36);
+ assert.equal(packet.evidence.filter(e=>e.kind==='FINANCIAL'&&JSON.parse(e.content).kind==='INSTITUTIONAL').length,10);
+ assert.equal(JSON.stringify(originals),before,'selection cannot rewrite retained observations');
+});
 test('persisted outputs must match exact packet, horizon states, citations, text and retained metadata',async()=>{
  const packet=buildDailyAiPackets({inputs:inputs(),cutoff,news:[news('1000')],market:[]}).packets[0];
  const answer={symbol:packet.symbol,horizons:['SHORT','MEDIUM','LONG'].map(horizon=>({horizon,status:'WAIT',reason:{text:'測試判讀',evidence_ids:[packet.evidence[0].id]},counter_evidence:[],confirmation:'等待新資料',invalidation:'新證據否定原判斷',gaps:[]}))};

@@ -54,3 +54,59 @@ test('numeric trading conditions are blocked in both digit forms and Chinese pri
  }
  for(const text of ['等待下一次官方公告確認營運改善','若新公告否定獲利假設就重新評估','觀察成交參與是否持續'])assert.doesNotThrow(()=>validateStockAnalysisCondition(text));
 });
+test('daily AS_REPORTED valuation keeps its observation date without changing revenue periods',()=>{
+ const p=packet();p.evidence.push(evidence('valuation','VALUATION_AS_REPORTED','2026-10-30',{pe_ratio:27,pb_ratio:3.1,dividend_yield_percent:2,
+  financial_year_quarter_as_reported:'2026Q2',dividend_year_as_reported:'114'},'AS_REPORTED'));
+ const c=buildStockAnalysisContext(p);assert.equal(c.latest_revenue_period,'2023-10');assert.deepEqual(c.recent_revenue.map(r=>r.period),['2023-10','2023-09','2023-08']);
+ assert.equal(c.financial_evidence_periods.find(r=>r.evidence_id==='valuation').period,'2026-10-30');
+ for(const text of ['2026-10-30本益比為27倍，股價淨值比為3.1倍，殖利率為2%。','2026年10月30日本益比為27倍。','2026-10-30 PB為3.1，屬原始觀察。']){
+  assert.doesNotThrow(()=>validateStockAnalysisClaim(p,{text,evidence_ids:['valuation']}));
+ }
+ for(const text of ['2026-10-31本益比為27倍。','2026年10月31日殖利率為2%。','2026-Q2股價淨值比為3.1倍。',
+  '2026-10-31 PB為3.1。','本益比為27倍。','PB為3.1。','殖利率為2%。']){
+  assert.throws(()=>validateStockAnalysisClaim(p,{text,evidence_ids:['valuation']}),/AI_ANALYSIS_FINANCIAL_PERIOD/);
+ }
+ assert.doesNotThrow(()=>validateStockAnalysisClaim(p,{text:'美債殖利率為4.94%，僅作市場背景。',evidence_ids:['macro']}));
+});
+function mediatekOfficialReport(){
+ // Exact title and bounded passages from the retained official 2454 MOPS row;
+ // this semantic fixture is not a new acquisition or a publication proof.
+ const receipt='2026-10-31T03:00:00Z',provider='TWSE_MOPS_OPEN_DATA';
+ const report={schema:'DAILY_AI_OFFICIAL_NEWS_FACT_V1',provider,coverage:'OFFICIAL_ANNOUNCEMENT_EXCERPT',title:'本公司2026年第3季合併財務報告',
+  excerpt:'聯發科技公佈2026年第三季合併財務報告\n本季合併本期淨利為新台幣281億9仟9佰萬元，較前季增加14.6%，較去年同期\n增加10.8%；每股盈餘為新台幣17.50元\n2026年第四季營運展望\n合併營收: 約新台幣 2,101億 ~ 2,218 億元',
+  source_received_at:receipt,source_metadata:{company_code:'2454',company_name:'聯發科',publication_timezone:'NOT_DECLARED_BY_SOURCE',window_basis:'SOURCE_DECLARED_DAY_COORDINATE_NOT_EXACT_PUBLICATION_TIME'}};
+ const news={id:'official-news:'+provider+':bc7ef105538f4fd14f10ede5299bc3c7a9b359997563e8734eea7d9a5caa8b94',symbol:'2454',kind:'NEWS',
+  source:'https://openapi.twse.com.tw/v1/opendata/t187ap04_L',published_at:null,available_at:receipt,first_seen_at:receipt,as_of:receipt,time_basis:'OBSERVED_AFTER_RECEIPT',content:JSON.stringify(report)};
+ const revenue={...evidence('mediatek-r09','REVENUE','2026-09',{yoy_percent:1.9684131750496783}),symbol:'2454'};
+ return {symbol:'2454',company:'聯發科',cutoff:'2026-10-31T04:00:00Z',evidence:[news,revenue]};
+}
+test('cited official MOPS report actual quarters coexist with monthly financial periods without promoting excerpt guidance',()=>{
+ const p=mediatekOfficialReport(),ids=p.evidence.map(e=>e.id),before=JSON.stringify(p);
+ const actual='2026年第3季每股盈餘為17.50元，2026年9月營收年增約1.97%。';
+ assert.doesNotThrow(()=>validateStockAnalysisClaim(p,{text:actual,evidence_ids:ids}));
+ assert.doesNotThrow(()=>validateStockAnalysisClaim(p,{text:'2026-Q3每股盈餘為17.50元。',evidence_ids:[ids[0]]}));
+ assert.throws(()=>validateStockAnalysisClaim(p,{text:actual,evidence_ids:[ids[1]]}),/AI_ANALYSIS_FINANCIAL_PERIOD/);
+ assert.throws(()=>validateStockAnalysisClaim(p,{text:'2026年第4季營收為2101億元。',evidence_ids:ids}),/AI_ANALYSIS_FINANCIAL_PERIOD/);
+ assert.throws(()=>validateStockAnalysisClaim(p,{text:'預估2026年第3季每股盈餘為17.50元。',evidence_ids:[ids[0]]}),/AI_ANALYSIS_REPORTED_FACT_AS_FORECAST/);
+ assert.equal(JSON.stringify(p),before);
+});
+test('quarter admission requires cited issuer identity, fixed source, actual report title and a completed quarter',()=>{
+ for(const change of [
+  p=>{p.evidence[0].symbol='2330';},
+  p=>{p.evidence[0].source='https://example.test/mops';},
+  p=>{const c=JSON.parse(p.evidence[0].content);c.source_metadata.company_code='2330';p.evidence[0].content=JSON.stringify(c);},
+  p=>{const c=JSON.parse(p.evidence[0].content);c.provider='GNEWS';p.evidence[0].content=JSON.stringify(c);},
+  p=>{const c=JSON.parse(p.evidence[0].content);c.schema='UNVERIFIED_NEWS';p.evidence[0].content=JSON.stringify(c);},
+  p=>{const c=JSON.parse(p.evidence[0].content);c.title='2026年第3季營運展望';p.evidence[0].content=JSON.stringify(c);},
+  p=>{const c=JSON.parse(p.evidence[0].content);c.title='子公司2026年第3季合併財務報告';p.evidence[0].content=JSON.stringify(c);},
+  p=>{const c=JSON.parse(p.evidence[0].content);c.title='本公司2026年第4季合併財務報告';p.evidence[0].content=JSON.stringify(c);},
+  p=>{const c=JSON.parse(p.evidence[0].content);c.title='本公司2115年第3季合併財務報告';p.evidence[0].content=JSON.stringify(c);},
+ ]){
+  const p=mediatekOfficialReport();change(p);assert.throws(()=>validateStockAnalysisClaim(p,{text:'2026年第3季每股盈餘為17.50元。',evidence_ids:p.evidence.map(e=>e.id)}),/AI_ANALYSIS_FINANCIAL_PERIOD/);
+ }
+ const future=mediatekOfficialReport(),futureContent=JSON.parse(future.evidence[0].content);futureContent.title='本公司2026年第4季合併財務報告';future.evidence[0].content=JSON.stringify(futureContent);
+ assert.throws(()=>validateStockAnalysisClaim(future,{text:'2026年第4季每股盈餘為17.50元。',evidence_ids:future.evidence.map(e=>e.id)}),/AI_ANALYSIS_FINANCIAL_PERIOD/);
+ const p=mediatekOfficialReport(),c=JSON.parse(p.evidence[0].content);c.title='公告本公司115年第3季合併財務報告業經董事會決議通過';
+ c.excerpt='3.財務報告或年度自結財務資訊報導期間\n起訖日期(XXX/XX/XX~XXX/XX/XX):115/01/01~115/09/30\n10.1月1日累計至本期止基本每股盈餘(損失) (元):47.94';p.evidence[0].content=JSON.stringify(c);
+ assert.doesNotThrow(()=>validateStockAnalysisClaim(p,{text:'2026年第3季累計每股盈餘為47.94元。',evidence_ids:p.evidence.map(e=>e.id)}));
+});

@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
 import {stockAiModelRevision} from '../supabase/functions/_shared/daily-stock-ai-runner.ts';
 
-test('production continuation runs at most one model per call, reuses completed pilots and never loops on cache or busy work',async()=>{
+test('reviewed source correction continues one model per call and never loops on cache, busy, exhausted or database-rejected work',async()=>{
  const symbols=Array.from({length:72},(_,i)=>String(1000+i));symbols[20]='1504';symbols[50]='2330';
  const cutoff='2026-10-30T12:00:00Z',batch={id:'a'.repeat(64),cutoff,packets:symbols.map(symbol=>({symbol,company:'測試公司',cutoff,
   evidence:[{id:'E',symbol,kind:'NEWS',source:'https://www.twse.com.tw/',published_at:'2026-10-30T10:00:00Z',available_at:'2026-10-30T11:00:00Z',content:'測試來源'}]}))};
  const before=await snapshotHash(batch),saved={},claimed=[],models=[],candidates=[],dispatches=[],secret='test-only-internal-secret-0123456789';
- let busy=false,staged=0;
+ let busy=false,exhausted=false,loadFailure=false,staged=0;
  const oldFetch=globalThis.fetch,oldDeno=globalThis.Deno;let worker;
  try{
   globalThis.Deno={env:{get:name=>({SUPABASE_URL:'https://database.example.invalid',SUPABASE_SERVICE_ROLE_KEY:'test-only-service-role',CRON_SECRET:secret,OPENAI_API_KEY:'test-only-provider-key'})[name]},serve:handler=>{worker=handler;}};
@@ -20,13 +20,13 @@ test('production continuation runs at most one model per call, reuses completed 
     return Response.json({id:'test-receipt-'+p.symbol,model:'gpt-6-astra',usage:{prompt_tokens:100,completion_tokens:100},choices:[{finish_reason:'stop',message:{content:JSON.stringify({symbol:p.symbol,
      horizons:['SHORT','MEDIUM','LONG'].map(horizon=>({horizon,status:'WAIT',reason:{text:'等待資料確認',evidence_ids:['E']},counter_evidence:[],confirmation:'等待下一次官方公告',invalidation:'新證據否定時重新評估',gaps:[]}))})}}]});
    }
-   if(name==='load_daily_stock_ai_batch_v1')return Response.json(batch);
+   if(name==='load_daily_stock_ai_batch_v1')return loadFailure?Response.json({message:'private database failure'},{status:503}):Response.json(batch);
    if(name==='load_daily_stock_ai_progress_v1'){
     assert.equal(args.p_model_revision,stockAiModelRevision('gpt-6-astra'));assert(args.p_model_revision.endsWith(':prompt-7:reasoning-low'));
     return Response.json({schema:'DAILY_AI_PROGRESS_V1',batch_id:batch.id,model_revision:args.p_model_revision,completed:saved});
    }
    if(name==='daily_stock_ai_job_v1'){
-    if(args.p_op==='CLAIM'){claimed.push(args.p_context.symbol);return Response.json(busy?{state:'BUSY'}:{state:'ACQUIRED',lease:'test-lease'});}
+    if(args.p_op==='CLAIM'){claimed.push(args.p_context.symbol);return Response.json(exhausted?{state:'EXHAUSTED'}:busy?{state:'BUSY'}:{state:'ACQUIRED',lease:'test-lease'});}
     assert.equal(args.p_op,'COMPLETE');saved[args.p_key]=args.p_result;return Response.json({state:'STORED'});
    }
    if(name==='retain_daily_ai_model_candidate_v1'){
@@ -53,6 +53,10 @@ test('production continuation runs at most one model per call, reuses completed 
   assert.deepEqual(dispatches.map(d=>d.model_count),[1,2]);
   busy=true;r=await invoke();summary=await r.json();assert.equal(r.status,202);assert.equal(summary.model_calls,0);assert.equal(summary.counts.CACHED,2);assert.equal(summary.counts.BUSY,70);
   assert.equal(models.length,2);assert.equal(candidates.length,2);assert.equal(dispatches.length,2);assert.equal(staged,0);
+  busy=false;exhausted=true;r=await invoke();summary=await r.json();assert.equal(r.status,207);assert.equal(summary.model_calls,0);assert.equal(summary.counts.CACHED,2);assert.equal(summary.counts.FAILED,70);
+  assert.equal(models.length,2);assert.equal(candidates.length,2);assert.equal(dispatches.length,2);assert.equal(staged,0);
+  exhausted=false;loadFailure=true;r=await invoke();summary=await r.json();assert.equal(r.status,409);assert.equal(summary.error,'STOCK_ANALYSIS_REJECTED');
+  assert.equal(models.length,2);assert.equal(candidates.length,2);assert.equal(dispatches.length,2);assert.equal(staged,0);loadFailure=false;
   for(const p of batch.packets){
    const input_hash=await snapshotHash(p),key=await snapshotHash({version:'DAILY_AI_BATCH_1',input_hash,model_revision:stockAiModelRevision('gpt-6-astra')});
    if(saved[key])continue;

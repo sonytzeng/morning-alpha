@@ -1,4 +1,4 @@
-import {buildDailyAiSeed} from '../../../research/daily-ai-seed.ts';
+import {buildDailyAiSeed,canonical} from '../../../research/daily-ai-seed.ts';
 import {compareTime,hashValid,sourceSafe,validObservationTime} from '../../../src/features/vnext/contracts.ts';
 import type {AnalysisEvidence} from '../../../research/daily-ai-analysis.ts';
 import type {FunnelInput} from '../../../src/features/vnext/researchFunnel.ts';
@@ -21,8 +21,76 @@ const inNewYork=(time:string)=>{
  const parts=nyCalendar.formatToParts(new Date(time)),part=(type:string)=>parts.find(p=>p.type===type)?.value??'';
  return part('year')+'-'+part('month')+'-'+part('day');
 };
+function officialNewsContent(c:Record<string,unknown>,n:Record<string,unknown>,cutoff:string,oldest:string){
+ const keys=['schema','provider','coverage','title','excerpt','excerpt_truncated','source_response_sha256','source_response_bytes','source_received_at','source_metadata'];
+ if(Object.keys(c).sort().join('|')!==keys.sort().join('|')||typeof c.title!=='string'||!c.title.trim()||c.title.length>1500
+  ||typeof c.excerpt!=='string'||!c.excerpt.trim()||Array.from(c.excerpt).length>2000||typeof c.excerpt_truncated!=='boolean'
+  ||typeof c.source_response_sha256!=='string'||!hashValid(c.source_response_sha256)||!Number.isSafeInteger(c.source_response_bytes)
+  ||Number(c.source_response_bytes)<1||Number(c.source_response_bytes)>2000000||c.source_received_at!==n.available_at
+  ||n.first_seen_at!==n.available_at||n.as_of!==n.available_at)throw Error('AI_INTAKE_NEWS_CONTENT');
+ const m=object(c.source_metadata),provider=c.provider;
+ if(provider==='FEDERAL_RESERVE_RSS'){
+  if(c.coverage!=='OFFICIAL_RSS_TITLE_AND_DESCRIPTION'||n.symbol!==null||typeof n.source!=='string'
+   ||!/^https:\/\/www\.federalreserve\.gov\/newsevents\/pressreleases\/[a-z0-9]+\.htm$/.test(n.source)
+   ||Object.keys(m).sort().join('|')!==['rss_pub_date_raw','window_basis'].sort().join('|')
+   ||m.window_basis!=='EXPLICIT_RSS_GMT_PUBLICATION_TIME'||typeof m.rss_pub_date_raw!=='string'||!m.rss_pub_date_raw.endsWith(' GMT')
+   ||typeof n.published_at!=='string'||Date.parse(m.rss_pub_date_raw)!==Date.parse(n.published_at))throw Error('AI_INTAKE_NEWS_CONTENT');
+ }else{
+  const twse=provider==='TWSE_MOPS_OPEN_DATA',tpex=provider==='TPEX_MOPS_OPEN_DATA';
+  const expected=['company_code','company_name','source_export_date_raw','spoken_date_raw','spoken_time_raw','spoken_date_coordinate','spoken_time_coordinate','fact_event_date_raw','publication_timezone','window_basis'];
+  if(!twse&&!tpex||n.source!==(twse?'https://openapi.twse.com.tw/v1/opendata/t187ap04_L':'https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap04_O')
+   ||c.coverage!=='OFFICIAL_ANNOUNCEMENT_EXCERPT'||n.symbol===null||m.company_code!==n.symbol||n.published_at!==null
+   ||Object.keys(m).sort().join('|')!==expected.sort().join('|')||typeof m.company_name!=='string'||!m.company_name.trim()||m.company_name.length>200
+   ||typeof m.source_export_date_raw!=='string'||!/^\d{7}$/.test(m.source_export_date_raw)||typeof m.spoken_date_raw!=='string'||!/^\d{7}$/.test(m.spoken_date_raw)
+   ||typeof m.spoken_time_raw!=='string'||!/^\d{5,6}$/.test(m.spoken_time_raw)||!day(m.spoken_date_coordinate)
+   ||m.spoken_date_coordinate>inTaipei(cutoff)||m.spoken_date_coordinate<inTaipei(oldest)
+   ||typeof m.spoken_time_coordinate!=='string'||!/^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(m.spoken_time_coordinate)
+   ||m.spoken_time_coordinate!==m.spoken_time_raw.padStart(6,'0').replace(/^(\d\d)(\d\d)(\d\d)$/,'$1:$2:$3')
+   ||typeof m.fact_event_date_raw!=='string'||m.fact_event_date_raw.length>100
+   ||m.publication_timezone!=='NOT_DECLARED_BY_SOURCE'||m.window_basis!=='SOURCE_DECLARED_DAY_COORDINATE_NOT_EXACT_PUBLICATION_TIME')throw Error('AI_INTAKE_NEWS_CONTENT');
+  const coordinate=String(Number(m.spoken_date_raw.slice(0,3))+1911)+'-'+m.spoken_date_raw.slice(3,5)+'-'+m.spoken_date_raw.slice(5,7);
+  const exported=String(Number(m.source_export_date_raw.slice(0,3))+1911)+'-'+m.source_export_date_raw.slice(3,5)+'-'+m.source_export_date_raw.slice(5,7);
+  if(coordinate!==m.spoken_date_coordinate||!day(exported)||exported<coordinate||exported>inTaipei(cutoff))throw Error('AI_INTAKE_NEWS_CONTENT');
+ }
+ if(typeof n.id!=='string'||typeof provider!=='string'||!n.id.startsWith('official-news:'+provider+':')
+  ||!hashValid(n.id.slice(('official-news:'+provider+':').length)))throw Error('AI_INTAKE_NEWS_CONTENT');
+}
+async function retainedOwnNewsContent(c:Record<string,unknown>,n:Record<string,unknown>,cutoff:string){
+ const sources=['https://ec.ltn.com.tw/article/breakingnews/5624480','https://www.cna.com.tw/news/afe/202610290197.aspx','https://www.esmt.com.tw/en/press-room/2026102703'];
+ const keys=['schema','classification','scope','capture_method','original_evidence_id','original_evidence_hash','original_content_hash',
+  'original_content_text','original_content','original_published_at','original_available_at','original_first_seen_at','verification_document_hash',
+  'reviewer_ref','reviewed_at','source_document_sha256','provenance_document_sha256','verification_method','verification_limits','verification_urls'];
+ const fraction=/\.(\d{1,6})(?:Z|[+-]\d\d:\d\d)$/.exec(cutoff)?.[1]??'';
+ const oldest=new Date(Date.parse(cutoff)-7*86400000).toISOString().replace(/\.\d{3}Z$/,'.'+fraction.padEnd(6,'0')+'Z');
+ if(Object.keys(c).sort().join('|')!==keys.sort().join('|')||typeof n.source!=='string'||!sources.includes(n.source)||c.classification!=='REPORTED_CLAIM'
+  ||c.scope!=='RETAINED_BACKGROUND_NOT_FRESH_SOURCE_CAPTURE'||!['INDEPENDENT_WEB_TOOL_FACT_VERIFICATION','RAW_HTTP_VERIFIED_FACT_CAPTURE'].includes(String(c.capture_method))
+  ||typeof c.original_evidence_id!=='string'||!c.original_evidence_id||c.original_evidence_id.length>200
+  ||typeof c.original_evidence_hash!=='string'||!hashValid(c.original_evidence_hash)||typeof c.original_content_hash!=='string'||!hashValid(c.original_content_hash)
+  ||!c.original_content||typeof c.original_content!=='object'||Array.isArray(c.original_content)
+  ||typeof c.original_content_text!=='string'||!c.original_content_text||c.original_content_text.length>12000
+  ||typeof c.verification_document_hash!=='string'||!hashValid(c.verification_document_hash)
+  ||typeof c.reviewer_ref!=='string'||!c.reviewer_ref.trim()||c.reviewer_ref.length>300
+  ||typeof c.verification_method!=='string'||!c.verification_method.trim()||c.verification_method.length>500
+  ||!Array.isArray(c.verification_limits)||c.verification_limits.length>30||c.verification_limits.some(v=>typeof v!=='string'||!v.trim()||v.length>1500)
+  ||!Array.isArray(c.verification_urls)||c.verification_urls.length>30||c.verification_urls.some(v=>typeof v!=='string'||!sourceSafe(v)||v.length>1000)
+  ||typeof c.reviewed_at!=='string'||!validObservationTime(c.reviewed_at)||compareTime(c.reviewed_at,cutoff)>0
+  ||typeof c.original_published_at!=='string'||typeof c.original_available_at!=='string'||typeof c.original_first_seen_at!=='string'
+  ||c.original_published_at!==n.published_at||c.original_available_at!==n.available_at||c.original_first_seen_at!==n.first_seen_at||n.as_of!==n.available_at
+  ||compareTime(n.available_at as string,oldest)<0)throw Error('AI_INTAKE_NEWS_CONTENT');
+ const original=object(JSON.parse(c.original_content_text as string));
+ const actualHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(c.original_content_text as string))),b=>b.toString(16).padStart(2,'0')).join('');
+ if(actualHash!==c.original_content_hash||canonical(original)!==canonical(c.original_content))throw Error('AI_INTAKE_NEWS_CONTENT');
+ for(const key of ['source_document_sha256','provenance_document_sha256']){
+  if(c[key]!==null&&(typeof c[key]!=='string'||!hashValid(c[key] as string)))throw Error('AI_INTAKE_NEWS_CONTENT');
+ }
+ if(n.id!=='retained-own-news:'+n.evidence_hash)throw Error('AI_INTAKE_NEWS_CONTENT');
+}
 export async function parseDailyAiSourceSnapshot(value:unknown,cutoff:string,signal:AbortSignal,kind:'HANDOFF'|'INTAKE'='HANDOFF'){
  const h=object(value);
+ const correctedNewsPolicy=kind==='INTAKE'&&Array.isArray(h.intake_gaps)&&h.intake_gaps.includes('NEWS_SOURCE_POLICY_GNEWS_EXCLUDED');
+ const requiredNewsGaps=correctedNewsPolicy?['NEWS_SOURCE_POLICY_GNEWS_EXCLUDED','OFFICIAL_NEWS_FIXED_FEEDS_NOT_ALL_COMPANY_OR_MARKET_NEWS',
+  'MOPS_PUBLICATION_TIMEZONE_UNDECLARED_RECEIPT_BASIS_ONLY','OFFICIAL_NEWS_EXCERPT_NOT_FULL_DISCLOSURE','FED_RSS_NOT_EQUITY_CLOSE_OR_COMPLETE_MACRO_COVERAGE',
+  'OFFICIAL_NEWS_SNAPSHOT_COMPANY_LIMIT_12_GLOBAL_LIMIT_4']:['NEWS_PROVIDER_EXCERPTS_ONLY_NOT_FULL_ARTICLE','NEWS_CANONICAL_POOL_LIMIT_500_NOT_ALL_NEWS'];
  if(kind==='HANDOFF'?(h.schema!=='DAILY_AI_SOURCE_HANDOFF_V1'||typeof h.handoff_id!=='string'||!hashValid(h.handoff_id)||!intakeUuid(h.source_run_id)):
   (h.schema!=='DAILY_AI_INTAKE_SOURCE_V1'||h.state!=='SOURCED'||!intakeUuid(h.intake_id)||!intakeUuid(h.lease)
    ||typeof h.snapshot_hash!=='string'||!hashValid(h.snapshot_hash)
@@ -37,11 +105,12 @@ export async function parseDailyAiSourceSnapshot(value:unknown,cutoff:string,sig
   ||!Array.isArray(h.source_issues)||h.source_issues.length>1600||!Array.isArray(h.intake_gaps)
   ||h.intake_gaps.length>64||h.intake_gaps.some(g=>!code(g))||new Set(h.intake_gaps).size!==h.intake_gaps.length
   ||!h.intake_gaps.includes('RETAINED_INPUT_OLDER_OBSERVATIONS_OMITTED')||!h.intake_gaps.includes('NEWS_SNAPSHOT_TOTAL_LIMIT_1500000_BYTES')
-  ||!h.intake_gaps.includes('NEWS_PROVIDER_EXCERPTS_ONLY_NOT_FULL_ARTICLE')||!h.intake_gaps.includes('NEWS_CANONICAL_POOL_LIMIT_500_NOT_ALL_NEWS')
+  ||requiredNewsGaps.some(g=>!(h.intake_gaps as unknown[]).includes(g))
   ||!h.market.length&&!h.intake_gaps.includes('MARKET_IMMUTABLE_AS_OF_SNAPSHOT_UNAVAILABLE')
   ||!h.news.length&&!h.intake_gaps.includes('NEWS_NONE_AVAILABLE_WITHIN_48H'))throw Error('AI_INTAKE_HANDOFF_INVALID');
- if(kind==='INTAKE'&&['FINANCIAL_DATA_RETAINED_NOT_REFRESHED','INSTITUTIONAL_FLOW_NOT_REFRESHED','CORPORATE_ACTIONS_NOT_REFRESHED_RAW_PRICES_ONLY']
-  .some(g=>!(h.intake_gaps as unknown[]).includes(g)))throw Error('AI_INTAKE_LIMITATIONS_MISSING');
+ if(kind==='INTAKE'&&(['INSTITUTIONAL_FLOW_NOT_REFRESHED','CORPORATE_ACTIONS_NOT_REFRESHED_RAW_PRICES_ONLY']
+  .some(g=>!(h.intake_gaps as unknown[]).includes(g))||!['FINANCIAL_DATA_RETAINED_NOT_REFRESHED','FINANCIAL_RETAINED_OBSERVATIONS_MAY_BE_STALE']
+  .some(g=>(h.intake_gaps as unknown[]).includes(g))))throw Error('AI_INTAKE_LIMITATIONS_MISSING');
  let inputBytes=2;
  const inputs=h.inputs.map(value=>{
   const i=object(value);
@@ -62,21 +131,32 @@ export async function parseDailyAiSourceSnapshot(value:unknown,cutoff:string,sig
   stopped(signal);const n=object(value);
   if(typeof n.id!=='string'||!n.id||n.id.length>200||n.kind!=='NEWS'
    ||n.symbol!==null&&(typeof n.symbol!=='string'||!universe.has(n.symbol))||typeof n.source!=='string'||!sourceSafe(n.source)
-   ||typeof n.published_at!=='string'||!validObservationTime(n.published_at)||compareTime(n.published_at,cutoff)>0||compareTime(n.published_at,oldest)<0
-   ||n.available_at!==cutoff||n.first_seen_at!==cutoff||n.as_of!==cutoff||n.time_basis!=='PUBLISHED'
+   ||typeof n.available_at!=='string'||!validObservationTime(n.available_at)||compareTime(n.available_at,cutoff)>0
+   ||typeof n.first_seen_at!=='string'||!validObservationTime(n.first_seen_at)||compareTime(n.first_seen_at,n.available_at)>0
+   ||typeof n.as_of!=='string'||!validObservationTime(n.as_of)||compareTime(n.as_of,n.available_at)>0
+   ||n.published_at!==null&&(typeof n.published_at!=='string'||!validObservationTime(n.published_at)||compareTime(n.published_at,n.available_at)>0)
+   ||n.time_basis!==(n.published_at===null?'OBSERVED_AFTER_RECEIPT':'PUBLISHED')
+   ||kind==='HANDOFF'&&(n.published_at===null||n.available_at!==cutoff||n.first_seen_at!==cutoff||n.as_of!==cutoff)
    ||typeof n.evidence_hash!=='string'||!hashValid(n.evidence_hash)||typeof n.content!=='string'||n.content.length>12000)throw Error('AI_INTAKE_NEWS_INVALID');
   const symbol=n.symbol as string|null,key=(symbol??'GLOBAL')+':'+n.id,count=(perSymbol.get(symbol)??0)+1;
   if(seen.has(key)||count>(symbol===null?4:12))throw Error('AI_INTAKE_NEWS_SCOPE');seen.add(key);perSymbol.set(symbol,count);
   const c=object(JSON.parse(n.content));
-  if(Object.keys(c).sort().join('|')!==['coverage','title','provider_excerpt','source_name','provider','first_ingested_at','original_fingerprint'].sort().join('|')
+  if(restrictedNewsSource(n.source,c))throw Error('AI_INTAKE_RESTRICTED_NEWS_SOURCE');
+  if(c.schema==='DAILY_AI_RETAINED_OWN_NEWS_FACT_V1'){
+   if(!correctedNewsPolicy||!h.intake_gaps.includes('OWN_FACTS_RETAINED_BACKGROUND_NOT_FRESH_NEWS'))throw Error('AI_INTAKE_NEWS_CONTENT');
+   await retainedOwnNewsContent(c,n,cutoff);stopped(signal);
+  }else if(compareTime((n.published_at??n.available_at) as string,oldest)<0)throw Error('AI_INTAKE_NEWS_INVALID');
+  if(c.schema==='DAILY_AI_OFFICIAL_NEWS_FACT_V1')officialNewsContent(c,n,cutoff,oldest);
+  else if(c.schema==='DAILY_AI_RETAINED_OWN_NEWS_FACT_V1'){/* Validated as explicitly retained background above. */}
+  else if(Object.keys(c).sort().join('|')!==['coverage','title','provider_excerpt','source_name','provider','first_ingested_at','original_fingerprint'].sort().join('|')
    ||c.coverage!=='HEADLINE_AND_PROVIDER_EXCERPT'||typeof c.title!=='string'||!c.title.trim()||c.title.length>1000
    ||typeof c.provider_excerpt!=='string'||c.provider_excerpt.length>6000||typeof c.source_name!=='string'||!c.source_name.trim()||c.source_name.length>300
    ||typeof c.provider!=='string'||!c.provider.trim()||c.provider.length>100||typeof c.original_fingerprint!=='string'||!hashValid(c.original_fingerprint)
    ||typeof c.first_ingested_at!=='string'||!validObservationTime(c.first_ingested_at)||compareTime(c.first_ingested_at,cutoff)>0)throw Error('AI_INTAKE_NEWS_CONTENT');
   const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(n.content))),b=>b.toString(16).padStart(2,'0')).join('');
   if(digest!==n.evidence_hash)throw Error('AI_INTAKE_NEWS_HASH');
-  news.push({id:n.id,symbol,kind:'NEWS',source:n.source,published_at:n.published_at,available_at:cutoff,
-   first_seen_at:cutoff,as_of:cutoff,time_basis:'PUBLISHED',evidence_hash:n.evidence_hash,content:n.content});
+  news.push({id:n.id,symbol,kind:'NEWS',source:n.source,published_at:n.published_at as string|null,available_at:n.available_at,
+   first_seen_at:n.first_seen_at,as_of:n.as_of,time_basis:n.time_basis as 'PUBLISHED'|'OBSERVED_AFTER_RECEIPT',evidence_hash:n.evidence_hash,content:n.content});
  }
  const issueGaps=h.source_issues.map(value=>{
   const i=object(value);
@@ -204,11 +284,20 @@ function restrictedFinancialSource(source:string){
  try{const host=new URL(source).hostname;return ['tsmc.com','mediatek.com','honhai.com'].some(domain=>host===domain||host.endsWith('.'+domain));}
  catch{return false;}
 }
+function restrictedNewsSource(source:string,content:Record<string,unknown>){
+ let host='';try{host=new URL(source).hostname;}catch{/* Source validity is checked separately. */}
+ return host==='udn.com'||host.endsWith('.udn.com')||typeof content.provider==='string'&&content.provider.toUpperCase()==='GNEWS';
+}
 function rejectRestrictedAnalysisSources(value:unknown){
  const batch=object(value);if(!Array.isArray(batch.packets))return;
  for(const value of batch.packets){const packet=object(value);if(!Array.isArray(packet.evidence))continue;
   for(const value of packet.evidence){const e=object(value);if(typeof e.source!=='string')continue;
    if(e.kind==='FINANCIAL'&&restrictedFinancialSource(e.source))throw Error('AI_INTAKE_RESTRICTED_FINANCIAL_SOURCE');
+   if(e.kind==='NEWS'){
+    let content:Record<string,unknown>={};
+    try{const parsed=JSON.parse(String(e.content));if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))content=parsed as Record<string,unknown>;}catch{/* Older plain-text evidence has no provider field. */}
+    if(restrictedNewsSource(e.source,content))throw Error('AI_INTAKE_RESTRICTED_NEWS_SOURCE');
+   }
    if(e.kind!=='MARKET')continue;
    let hostname='';try{hostname=new URL(e.source).hostname;}catch{continue;}
    if(hostname==='yahoo.com'||hostname.endsWith('.yahoo.com'))throw Error('AI_INTAKE_RESTRICTED_MARKET_SOURCE');

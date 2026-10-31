@@ -14,7 +14,7 @@ function retainedEvidence(trace:Trace,symbol:string,kind:'PRICE'|'FINANCIAL',con
   first_seen_at:trace.first_seen_at,as_of:trace.as_of,evidence_hash:trace.evidence_hash,
   time_basis:trace.published_at===null?'OBSERVED_AFTER_RECEIPT':'PUBLISHED',content:JSON.stringify(content)};
 }
-const factOrder=['REVENUE','INSTITUTIONAL','EPS','MARGIN','CAPEX','DEMAND','MOAT','VALUATION'];
+const factOrder=['REVENUE','INSTITUTIONAL','EPS_AS_REPORTED','FINANCIAL_AS_REPORTED','VALUATION_AS_REPORTED','EPS','MARGIN','CAPEX','DEMAND','MOAT','VALUATION'];
 const perKind:Record<string,number>={REVENUE:36,INSTITUTIONAL:10,EPS:4,MARGIN:4,CAPEX:4,DEMAND:1,MOAT:1,VALUATION:1};
 function factsFor(input:FunnelInput){
  const groups=new Map<string,ResearchFact[]>();

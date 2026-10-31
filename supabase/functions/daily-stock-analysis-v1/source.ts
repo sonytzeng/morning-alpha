@@ -1,4 +1,4 @@
-import {buildDailyAiSeed} from '../../../research/daily-ai-seed.ts';
+import {buildDailyAiSeed,canonical} from '../../../research/daily-ai-seed.ts';
 import {refreshDailyAiPrices} from '../../../research/daily-ai-refresh.ts';
 import {refreshDailyAiFinancials,dailyAiFinancialRefreshUnavailable,type DailyAiFinancialRefreshResult} from '../../../research/daily-ai-financial-refresh.ts';
 import {compareTime,hashValid,validObservationTime} from '../../../src/features/vnext/contracts.ts';
@@ -10,15 +10,38 @@ import type {DailyStockSourceResult} from './source-handler.ts';
 type Rpc=(name:string,args:Record<string,unknown>,signal:AbortSignal)=>Promise<unknown>;
 type Refresh=typeof refreshDailyAiPrices;
 type FinancialRefresh=typeof refreshDailyAiFinancials;
+type OfficialNewsCapture={complete:boolean;additionalGaps:string[];proof:unknown};
 export type DailyStockSourcePorts={rpc:Rpc;fetcher:typeof fetch;clock:()=>string;refresh?:Refresh;
  refreshFinancials?:FinancialRefresh;
- collectNews?:(signal:AbortSignal)=>Promise<{complete:boolean}>;
+ collectNews?:(input:{inputs:FunnelInput[];businessDate:string;signal:AbortSignal})=>Promise<OfficialNewsCapture>;
  collectMarket?:(input:{businessDate:string;signal:AbortSignal})=>Promise<{market:AnalysisEvidence[];additionalGaps:string[];receipts:unknown[]}>};
 const object=(value:unknown):Record<string,unknown>=>{
  if(!value||typeof value!=='object'||Array.isArray(value))throw Error('AI_INTAKE_RESPONSE');return value as Record<string,unknown>;
 };
 const stopped=(signal:AbortSignal)=>{if(signal.aborted)throw Error('AI_INTAKE_ABORTED');};
 const code=(value:unknown):value is string=>typeof value==='string'&&/^[A-Z][A-Z0-9_]{0,99}$/.test(value);
+/** A missing display name can be repaired only by the same official EPS row
+ * that the private SOURCE transaction verifies against its retained response. */
+function financialCompanies(financial:DailyAiFinancialRefreshResult,baseline:FunnelInput[]){
+ const proof=object(financial.proof),names=proof.company_names??[],allowed=new Map<string,string>();
+ if(!Array.isArray(names)||names.length>72)throw Error('AI_INTAKE_FINANCIAL_COMPANIES');
+ for(const value of names){
+  const n=object(value),base=baseline.find(s=>s.symbol===n.symbol);
+  if(Object.keys(n).sort().join('|')!==['symbol','previous_company','company','source','row_text'].sort().join('|')
+   ||!base||base.company!==base.symbol||n.previous_company!==base.company||allowed.has(base.symbol)
+   ||typeof n.company!=='string'||n.company!==n.company.trim()||!n.company||n.company.length>100||n.company===base.symbol||/[\u0000-\u001f\u007f]/.test(n.company)
+   ||n.source!=='https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap14_O'||typeof n.row_text!=='string'||n.row_text.length>20000)throw Error('AI_INTAKE_FINANCIAL_COMPANIES');
+  const row=object(JSON.parse(n.row_text));
+  if(canonical(row)!==n.row_text||String(row.SecuritiesCompanyCode??row['公司代號']??'')!==base.symbol
+   ||typeof row.CompanyName!=='string'||row.CompanyName.trim()!==n.company)throw Error('AI_INTAKE_FINANCIAL_COMPANIES');
+  allowed.set(base.symbol,n.company);
+ }
+ for(const s of financial.inputs){
+  const base=baseline.find(b=>b.symbol===s.symbol);
+  if(!base||s.company!==(allowed.get(s.symbol)??base.company))throw Error('AI_INTAKE_FINANCIAL_COMPANIES');
+ }
+ return allowed;
+}
 function acquired(h:Record<string,unknown>,intakeId:string,now:string){
  if(h.schema!=='DAILY_AI_INTAKE_SOURCE_V1'||h.intake_id!==intakeId||h.member_published!==false||!intakeUuid(h.lease)
   ||h.projection!=='DAILY_AI_RETAINED_INPUT_PROJECTION_V1'||!['VNEXT_ACQUIRED','ASOF_INTAKE'].includes(String(h.source_kind))
@@ -32,8 +55,9 @@ function acquired(h:Record<string,unknown>,intakeId:string,now:string){
   ||!Array.isArray(h.companies)||h.companies.length!==72||!Array.isArray(h.intake_gaps)||h.intake_gaps.length>64
   ||h.intake_gaps.some(g=>!code(g))||!Array.isArray(h.source_issues)||h.source_issues.length>1600
   ||h.source_issues.some(value=>{const i=object(value);return !code(i.kind)||!code(i.reason)||typeof i.key!=='string'||!/^[A-Za-z0-9_:.-]{1,200}$/.test(i.key);}))throw Error('AI_INTAKE_CLAIM_INVALID');
- if(['RETAINED_INPUT_OLDER_OBSERVATIONS_OMITTED','FINANCIAL_DATA_RETAINED_NOT_REFRESHED','INSTITUTIONAL_FLOW_NOT_REFRESHED','CORPORATE_ACTIONS_NOT_REFRESHED_RAW_PRICES_ONLY']
-  .some(g=>!(h.intake_gaps as unknown[]).includes(g)))throw Error('AI_INTAKE_CLAIM_LIMITATIONS');
+ if(['RETAINED_INPUT_OLDER_OBSERVATIONS_OMITTED','INSTITUTIONAL_FLOW_NOT_REFRESHED','CORPORATE_ACTIONS_NOT_REFRESHED_RAW_PRICES_ONLY']
+  .some(g=>!(h.intake_gaps as unknown[]).includes(g))||!['FINANCIAL_DATA_RETAINED_NOT_REFRESHED','FINANCIAL_RETAINED_OBSERVATIONS_MAY_BE_STALE']
+  .some(g=>(h.intake_gaps as unknown[]).includes(g)))throw Error('AI_INTAKE_CLAIM_LIMITATIONS');
  const inputs=h.inputs.map(value=>{
   const i=object(value);
   if(typeof i.symbol!=='string'||!/^\d{4,6}$/.test(i.symbol)||typeof i.company!=='string'||!i.company.trim()||i.company.length>100
@@ -73,14 +97,15 @@ export async function prepareDailyStockAiSource(intakeId:string,ports:DailyStock
  if(current.state==='ACQUIRED'){
   const now=ports.clock();if(!validObservationTime(now))throw Error('AI_INTAKE_CLOCK');
   const claim=acquired(current,intakeId,now);
-  let refreshed:Awaited<ReturnType<Refresh>>,newsComplete=false;
+  let refreshed:Awaited<ReturnType<Refresh>>,news:OfficialNewsCapture;
   let globalMarket:{market:AnalysisEvidence[];additionalGaps:string[];receipts:unknown[]};
   let financial:DailyAiFinancialRefreshResult;
   const missingMarket=()=>({market:[],additionalGaps:['MARKET_REFRESH_UNAVAILABLE','US_TREASURY_YIELD_CURVE_UNAVAILABLE','US_EQUITY_CLOSE_NOT_COLLECTED_US_NEWS_CONTEXT_ONLY','TAIWAN_NIGHT_SESSION_UNVERIFIED'],receipts:[]});
+  const missingNews=():OfficialNewsCapture=>({complete:false,additionalGaps:['NEWS_OFFICIAL_CAPTURE_UNAVAILABLE'],proof:null});
   try{
-   [refreshed,newsComplete,globalMarket,financial]=await Promise.all([
+   [refreshed,news,globalMarket,financial]=await Promise.all([
     (ports.refresh??refreshDailyAiPrices)({inputs:claim.inputs,businessDate:claim.businessDate,fetcher:ports.fetcher,clock:ports.clock,signal}),
-    ports.collectNews?ports.collectNews(signal).then(r=>r.complete===true).catch(()=>false):Promise.resolve(false),
+    ports.collectNews?ports.collectNews({inputs:claim.inputs,businessDate:claim.businessDate,signal}).catch(missingNews):Promise.resolve(missingNews()),
     ports.collectMarket?ports.collectMarket({businessDate:claim.businessDate,signal}).catch(missingMarket):Promise.resolve(missingMarket()),
     ports.refreshFinancials?ports.refreshFinancials({inputs:claim.inputs,businessDate:claim.businessDate,fetcher:ports.fetcher,clock:ports.clock,signal}).catch(error=>{
      if(signal.aborted)throw error;return dailyAiFinancialRefreshUnavailable(claim.inputs,ports.clock());
@@ -93,20 +118,36 @@ export async function prepareDailyStockAiSource(intakeId:string,ports:DailyStock
   if(!Array.isArray(globalMarket.market)||globalMarket.market.length>4||!Array.isArray(globalMarket.additionalGaps)
    ||globalMarket.additionalGaps.length>20||globalMarket.additionalGaps.some(g=>!code(g)))throw Error('AI_INTAKE_MARKET_PORT_INVALID');
   const market=await parseDailyAiMarketEvidence(globalMarket.market,ports.clock(),signal);stopped(signal);
+  if(typeof news.complete!=='boolean'||!Array.isArray(news.additionalGaps)||news.additionalGaps.length>20
+   ||news.additionalGaps.some(g=>!code(g)))throw Error('AI_INTAKE_NEWS_PORT_INVALID');
+  let newsImported=false;
+  if(news.proof!==null){
+   const proof=object(news.proof);
+   if(proof.schema!=='DAILY_AI_OFFICIAL_NEWS_PROOF_V1'||new TextEncoder().encode(JSON.stringify(proof)).byteLength>8000000)throw Error('AI_INTAKE_NEWS_PORT_INVALID');
+   try{
+    const imported=object(await ports.rpc('import_daily_stock_ai_official_news_v1',{p_proof:proof},signal));stopped(signal);
+    if(imported.state!=='STORED'||typeof imported.capture_id!=='string'||!hashValid(imported.capture_id)
+     ||!Number.isSafeInteger(imported.records)||Number(imported.records)<0||Number(imported.records)>1000||imported.member_published!==false)throw Error('AI_INTAKE_NEWS_IMPORT_UNCONFIRMED');
+    newsImported=true;
+   }catch{stopped(signal);}
+  }
   if(!Array.isArray(financial.inputs)||financial.inputs.length!==72||new Set(financial.inputs.map(s=>s.symbol)).size!==72
-   ||financial.inputs.some(s=>!Array.isArray(s.facts)||s.facts.length>1000||!claim.inputs.some(base=>base.symbol===s.symbol&&base.company===s.company))
+   ||financial.inputs.some(s=>!Array.isArray(s.facts)||s.facts.length>1000||!claim.inputs.some(base=>base.symbol===s.symbol))
    ||!Array.isArray(financial.additionalGaps)||financial.additionalGaps.some(g=>!code(g))
    ||financial.proof?.schema!=='DAILY_AI_FINANCIAL_REFRESH_V1')throw Error('AI_INTAKE_FINANCIAL_PORT_INVALID');
+  financialCompanies(financial,claim.inputs);
   const finalLocalCutoff=ports.clock();if(!validObservationTime(finalLocalCutoff)||!validObservationTime(financial.cutoff)
    ||compareTime(financial.cutoff,finalLocalCutoff)>0)throw Error('AI_INTAKE_FINANCIAL_PORT_INVALID');
   // Each acquisition receives the same immutable baseline. Merge only the
   // financial facts; price bars and their receipts come solely from price refresh.
-  const financialBySymbol=new Map(financial.inputs.map(s=>[s.symbol,s.facts]));
-  const sourceInputs=refreshed.inputs.map(s=>({...s,facts:financialBySymbol.get(s.symbol)!,cutoff:finalLocalCutoff}));
+  const financialBySymbol=new Map(financial.inputs.map(s=>[s.symbol,s]));
+  const sourceInputs=refreshed.inputs.map(s=>({...s,company:financialBySymbol.get(s.symbol)!.company,facts:financialBySymbol.get(s.symbol)!.facts,cutoff:finalLocalCutoff}));
   const symbolGaps=Object.fromEntries(sourceInputs.map(s=>[s.symbol,[...new Set([
    ...(refreshed.gapsBySymbol[s.symbol]??[]),...(financial.gapsBySymbol[s.symbol]??[]),
   ])]]));
-  const gaps=[...new Set([...refreshed.additionalGaps,...globalMarket.additionalGaps,...financial.additionalGaps,...(newsComplete?[]:['NEWS_REFRESH_UNAVAILABLE'])])];
+  const gaps=[...new Set([...refreshed.additionalGaps,...globalMarket.additionalGaps,...financial.additionalGaps,...news.additionalGaps,
+   ...(newsImported?[]:['NEWS_OFFICIAL_CAPTURE_IMPORT_UNAVAILABLE']),...(news.complete&&newsImported?[]:['NEWS_REFRESH_UNAVAILABLE'])]
+   .map(g=>g==='FINANCIAL_DATA_RETAINED_NOT_REFRESHED'?'FINANCIAL_RETAINED_OBSERVATIONS_MAY_BE_STALE':g))];
   // SOURCE samples its final DB receipt only after all acquisition ports settle.
   // An unknown SOURCE commit is never followed by a competing FAIL transition.
   current=object(await call('SOURCE',{p_lease:claim.lease,p_inputs:sourceInputs,p_gaps:gaps,p_symbol_gaps:symbolGaps,p_market:market,p_financial_refresh:financial.proof}));stopped(signal);

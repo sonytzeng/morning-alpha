@@ -2,21 +2,24 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
 import {twseDailyUrl} from '../research/entry-official-history.ts';
+import {DAILY_AI_FINANCIAL_URLS} from '../research/daily-ai-financial-refresh.ts';
 
 test('real intake route refreshes prices/financials/news/markets in parallel, freezes truthful gaps, and resumes without reacquiring',async()=>{
  const NativeDate=globalThis.Date,oldFetch=globalThis.fetch,oldDeno=globalThis.Deno;
+ const oldTimeout=AbortSignal.timeout,oldAny=AbortSignal.any,timeoutSignals=new WeakMap(),combinedSignals=new WeakMap(),rpcDeadlines=[];
  const now='2026-10-31T03:00:01Z',cutoff='2026-10-31T03:00:01.000000Z',old='2026-10-29T12:00:00Z';
  const intakeId='11111111-1111-4111-8111-111111111111',lease='22222222-2222-4222-8222-222222222222',sourceId='33333333-3333-4333-8333-333333333333';
  const internal='test-only-source-worker-secret-0123456789',providerKey='test-only-provider-key';
  const treasuryUrl='https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value_month=202610';
  const nightReportUrl='https://www.taifex.com.tw/cht/3/futDailyMarketReport?queryType=2&marketCode=1&queryDate=2026%2F11%2F02&commodity_id=TX';
  const equityGap='US_EQUITY_CLOSE_NOT_COLLECTED_US_NEWS_CONTEXT_ONLY';
- const financialUrls=new Set(['https://openapi.twse.com.tw/v1/opendata/t187ap14_L','https://openapi.twse.com.tw/v1/opendata/t187ap06_L_ci','https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap14_O']);
+ const financialUrls=new Set(Object.values(DAILY_AI_FINANCIAL_URLS));
+ const officialNewsUrls=new Set(['https://openapi.twse.com.tw/v1/opendata/t187ap04_L','https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap04_O','https://www.federalreserve.gov/feeds/press_all.xml']);
  const restrictedDomains=['tsmc.com','mediatek.com','honhai.com'];
  const treasuryXml=`<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xmlns:d="http://schemas.microsoft.com/ado/2007/08/dataservices" xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"><title type="text">DailyTreasuryYieldCurveRateData</title>${[
   ['2026-10-29','4.61','4.98','5.32'],['2026-10-30','4.56','4.94','5.31'],
  ].map(([date,two,ten,thirty])=>`<entry><content type="application/xml"><m:properties><d:NEW_DATE m:type="Edm.DateTime">${date}T00:00:00</d:NEW_DATE><d:BC_2YEAR m:type="Edm.Double">${two}</d:BC_2YEAR><d:BC_10YEAR m:type="Edm.Double">${ten}</d:BC_10YEAR><d:BC_30YEAR m:type="Edm.Double">${thirty}</d:BC_30YEAR></m:properties></content></entry>`).join('')}</feed>`;
- const baseGaps=['RETAINED_INPUT_OLDER_OBSERVATIONS_OMITTED','FINANCIAL_DATA_RETAINED_NOT_REFRESHED',
+ const baseGaps=['RETAINED_INPUT_OLDER_OBSERVATIONS_OMITTED','FINANCIAL_RETAINED_OBSERVATIONS_MAY_BE_STALE',
   'INSTITUTIONAL_FLOW_NOT_REFRESHED','CORPORATE_ACTIONS_NOT_REFRESHED_RAW_PRICES_ONLY'];
  const newsGaps=['NEWS_PROVIDER_EXCERPTS_ONLY_NOT_FULL_ARTICLE','NEWS_CANONICAL_POOL_LIMIT_500_NOT_ALL_NEWS',
   'NEWS_SNAPSHOT_TOTAL_LIMIT_1500000_BYTES','MARKET_IMMUTABLE_AS_OF_SNAPSHOT_UNAVAILABLE','NEWS_NONE_AVAILABLE_WITHIN_48H'];
@@ -34,12 +37,15 @@ test('real intake route refreshes prices/financials/news/markets in parallel, fr
   projection:'DAILY_AI_RETAINED_INPUT_PROJECTION_V1',inputs,companies:inputs.map(i=>({symbol:i.symbol,company:i.company,exchange:'TWSE'})),
   source_kind:'VNEXT_ACQUIRED',source_id:sourceId,source_revision:'c'.repeat(64),source_cutoff:old,source_business_date:'2026-10-29',source_issues:[],
   intake_gaps:baseGaps,news:[],market:[],member_published:false};
- let current=structuredClone(acquired),snapshot,batchId,batch,worker,newsCalls=0,priceCalls=0,financialCalls=0,marketCalls=0,nightFallbackCalls=0,yahooCalls=0,restrictedCalls=0,modelCalls=0,dispatches=0,sourceCalls=0,storeCalls=0,claimFailure=false;
+ let current=structuredClone(acquired),snapshot,batchId,batch,worker,newsCalls=0,legacyNewsCalls=0,newsImports=0,priceCalls=0,financialCalls=0,marketCalls=0,nightFallbackCalls=0,yahooCalls=0,restrictedCalls=0,modelCalls=0,dispatches=0,sourceCalls=0,storeCalls=0,claimFailure=false;
+ let sourceRequestSignal;
  let releaseSources;const sourcesMaySettle=new Promise(resolve=>{releaseSources=resolve;});
  const sourceGateTimeout=setTimeout(()=>releaseSources(),3000);
  const releaseWhenParallel=()=>{if(newsCalls&&marketCalls&&financialCalls)releaseSources();};
  const calls=[],publicUrls=new Set(),marketUrls=new Set(),requestedFinancialUrls=new Set();
  try{
+  AbortSignal.timeout=ms=>{const signal=oldTimeout.call(AbortSignal,ms);timeoutSignals.set(signal,ms);return signal;};
+  AbortSignal.any=signals=>{const inputs=Array.from(signals),signal=oldAny.call(AbortSignal,inputs);combinedSignals.set(signal,inputs);return signal;};
   globalThis.Date=class extends NativeDate{
    constructor(...args){super(...(args.length?args:[now]));}
    static now(){return NativeDate.parse(now);}
@@ -51,6 +57,11 @@ test('real intake route refreshes prices/financials/news/markets in parallel, fr
    if(parsed.hostname==='api.openai.com'){modelCalls++;assert.fail('source preparation must never invoke a model');}
    if(parsed.hostname.endsWith('yahoo.com')){yahooCalls++;return new Response('disallowed market source',{status:503});}
    if(restrictedDomains.some(domain=>parsed.hostname===domain||parsed.hostname.endsWith('.'+domain))){restrictedCalls++;return new Response('disallowed issuer source',{status:503});}
+   if(officialNewsUrls.has(value)){
+    newsCalls++;calls.push('NEWS_BEGIN');assert(calls.includes('PRICE_BEGIN'),'official news must overlap price acquisition');
+    if(newsCalls===1)assert(!calls.includes('PRICE_END'),'the source ports must start in parallel');assert.equal(init.method,'GET');assert.equal(init.redirect,'error');assert(init.signal instanceof AbortSignal);
+    releaseWhenParallel();await sourcesMaySettle;calls.push('NEWS_END');return new Response('private official news endpoint outage',{status:503});
+   }
    if(financialUrls.has(value)){
     financialCalls++;requestedFinancialUrls.add(value);calls.push('FINANCIAL_BEGIN');assert.equal(init.method,'GET');assert(init.signal instanceof AbortSignal);
     if(financialCalls===1)assert(!calls.includes('PRICE_END'),'financial refresh must overlap the price port');releaseWhenParallel();
@@ -77,23 +88,28 @@ test('real intake route refreshes prices/financials/news/markets in parallel, fr
     return Response.json([{Date:'20261030',Contract:'TX','ContractMonth(Week)':'202611',Last:'45926',Change:'-643','%':'-1.38%',TradingSession:'盤後'}]);
    }
    assert.equal(parsed.hostname,'database.example.invalid');
-   if(name==='fetch-global-market-news'){
-    newsCalls++;calls.push('NEWS_BEGIN');assert(calls.includes('PRICE_BEGIN'),'news collection must overlap price acquisition');
-    assert(!calls.includes('PRICE_END'),'the source ports must start in parallel');
-    assert.equal(init.method,'POST');assert.equal(init.body,'{}');assert.equal(init.headers['x-cron-secret'],internal);assert(init.signal instanceof AbortSignal);
-    releaseWhenParallel();await sourcesMaySettle;calls.push('NEWS_END');return new Response('private collector provider body',{status:503});
-   }
+   if(name==='fetch-global-market-news'){legacyNewsCalls++;assert.fail('new runtime must not call the GNews collector');}
    assert(init.signal instanceof AbortSignal,'RPC requests keep their bounded cancellation');
    const args=JSON.parse(init.body),op=name==='daily_stock_ai_intake_v1'?args.p_op:name;calls.push(op);
+   const combined=combinedSignals.get(init.signal);assert.equal(combined?.length,2,'RPC deadline combines with the existing parent cancellation');
+   assert.equal(timeoutSignals.get(combined[0]),undefined,'the caller signal remains part of the request');
+   const deadline=timeoutSignals.get(combined[1]);assert.equal(deadline,op==='SOURCE'?16000:8000);rpcDeadlines.push({op,deadline});
    if(op==='CLAIM'){
     assert.equal(args.p_intake_id,intakeId);
     if(claimFailure)return Response.json({message:'private database body '+internal},{status:503});
     return Response.json(current);
    }
+   if(op==='import_daily_stock_ai_official_news_v1'){
+    newsImports++;assert.equal(newsCalls,3);assert.equal(args.p_proof.schema,'DAILY_AI_OFFICIAL_NEWS_PROOF_V1');
+    assert.equal(args.p_proof.responses.length,3);assert(args.p_proof.responses.every(r=>r.state==='UNAVAILABLE'&&r.response_text===null));
+    assert.deepEqual(args.p_proof.additions,[]);assert(!JSON.stringify(args).includes('private'));
+    return Response.json({state:'STORED',capture_id:'e'.repeat(64),records:0,member_published:false});
+   }
    if(op==='SOURCE'){
+    sourceRequestSignal=init.signal;
     sourceCalls++;assert.equal(args.p_intake_id,intakeId);assert.equal(args.p_lease,lease);
-    assert.equal(newsCalls,1);assert.equal(priceCalls,4);assert.equal(financialCalls,3);assert.equal(marketCalls,3);assert.equal(nightFallbackCalls,1);assert.equal(yahooCalls,0);assert.equal(restrictedCalls,0);
-    assert.equal(calls.filter(x=>x==='PRICE_END').length,4);assert.equal(calls.filter(x=>x==='FINANCIAL_END').length,3);assert.equal(calls.filter(x=>x==='MARKET_END').length,3);assert(calls.includes('NEWS_END'));
+    assert.equal(newsCalls,3);assert.equal(priceCalls,4);assert.equal(financialCalls,financialUrls.size);assert.equal(marketCalls,3);assert.equal(nightFallbackCalls,1);assert.equal(yahooCalls,0);assert.equal(restrictedCalls,0);
+    assert.equal(calls.filter(x=>x==='PRICE_END').length,4);assert.equal(calls.filter(x=>x==='FINANCIAL_END').length,financialUrls.size);assert.equal(calls.filter(x=>x==='MARKET_END').length,3);assert.equal(calls.filter(x=>x==='NEWS_END').length,3);assert.equal(newsImports,1);assert.equal(legacyNewsCalls,0);
     assert.equal(args.p_inputs.length,72);assert.equal(new Set(args.p_inputs.map(i=>i.symbol)).size,72);
     for(const stock of args.p_inputs){
      assert.equal(stock.through,'2026-10-30');assert.equal(stock.expected_sessions.length,20);assert.equal(stock.expected_sessions.at(-1),'2026-10-30');
@@ -104,9 +120,9 @@ test('real intake route refreshes prices/financials/news/markets in parallel, fr
      if(stock.symbol==='1003')assert.deepEqual(stock.facts,[retainedOfficialFact]);else assert.deepEqual(stock.facts,[]);
     }
     const financialProof=args.p_financial_refresh;assert.equal(financialProof.schema,'DAILY_AI_FINANCIAL_REFRESH_V1');
-    assert.deepEqual(Object.keys(financialProof).sort(),['schema','observed_at','responses','additions','removals'].sort());
-    assert.equal(financialProof.observed_at,'2026-10-31T03:00:01.000Z');assert.equal(financialProof.responses.length,3);assert.equal(financialProof.additions.length,0);assert.equal(financialProof.removals.length,3);
-    assert(args.p_gaps.includes('FINANCIAL_DATA_RETAINED_NOT_REFRESHED'));assert(args.p_gaps.includes('INSTITUTIONAL_DATA_RETAINED_NOT_REFRESHED'));
+    assert.deepEqual(Object.keys(financialProof).sort(),['schema','observed_at','responses','additions','removals','company_names'].sort());
+    assert.equal(financialProof.observed_at,'2026-10-31T03:00:01.000Z');assert.equal(financialProof.responses.length,financialUrls.size);assert.deepEqual(financialProof.company_names,[]);assert.equal(financialProof.additions.length,0);assert.equal(financialProof.removals.length,3);
+    assert(args.p_gaps.includes('FINANCIAL_RETAINED_OBSERVATIONS_MAY_BE_STALE'));assert(!args.p_gaps.includes('FINANCIAL_DATA_RETAINED_NOT_REFRESHED'));assert(args.p_gaps.includes('INSTITUTIONAL_DATA_RETAINED_NOT_REFRESHED'));
     assert(args.p_gaps.includes('NEWS_REFRESH_UNAVAILABLE'));assert(args.p_gaps.includes('TAIWAN_NIGHT_SESSION_UNVERIFIED'));assert(args.p_gaps.includes(equityGap));
     assert(!args.p_gaps.includes('US_TREASURY_YIELD_CURVE_UNAVAILABLE'));assert.equal(args.p_market.length,1);
     for(const e of args.p_market){
@@ -145,20 +161,35 @@ test('real intake route refreshes prices/financials/news/markets in parallel, fr
    }
    assert.fail('unexpected database, publication or model operation: '+op);
   };
-  await import('../supabase/functions/daily-stock-analysis-v1/index.ts');assert.equal(typeof worker,'function');
+  const {dailyStockAiRpcTimeoutMs}=await import('../supabase/functions/daily-stock-analysis-v1/index.ts');assert.equal(typeof worker,'function');
+  const sourceUrl='https://database.example.invalid/rest/v1/rpc/daily_stock_ai_intake_v1';
+  assert.equal(dailyStockAiRpcTimeoutMs(sourceUrl,{method:'POST',body:JSON.stringify({p_op:'SOURCE'})}),16000);
+  for(const [target,init] of [
+   [sourceUrl,{method:'POST',body:JSON.stringify({p_op:'CLAIM'})}],
+   [sourceUrl,{method:'POST',body:JSON.stringify({p_op:'COMPLETE'})}],
+   [sourceUrl,{method:'GET',body:JSON.stringify({p_op:'SOURCE'})}],
+   [sourceUrl,{method:'POST',body:'{"p_op":'}],
+   [sourceUrl,{method:'POST',body:'["SOURCE"]'}],
+   [sourceUrl+'/extra',{method:'POST',body:JSON.stringify({p_op:'SOURCE'})}],
+   ['https://database.example.invalid/rest/v1/rpc/store_daily_stock_ai_batch_v1',{method:'POST',body:JSON.stringify({p_op:'SOURCE'})}],
+  ])assert.equal(dailyStockAiRpcTimeoutMs(target,init),8000);
   const invoke=()=>worker(new Request('https://worker.example.invalid',{method:'POST',headers:{'x-vnext-internal':internal},body:JSON.stringify({intake_id:intakeId})}));
   let response=await invoke(),body=await response.json();
-  assert.equal(response.status,202);assert.deepEqual(body,{state:'SOURCE_PREPARED',intake_id:intakeId,batch_id:batchId,analysis_dispatched:true,model_calls:0,member_published:false});
-  assert.equal(modelCalls,0);assert.equal(newsCalls,1);assert.equal(priceCalls,4);assert.equal(financialCalls,3);assert.equal(marketCalls,3);assert.equal(nightFallbackCalls,1);assert.equal(yahooCalls,0);assert.equal(restrictedCalls,0);
-  assert.equal(publicUrls.size,4);assert.equal(requestedFinancialUrls.size,3);assert.equal(marketUrls.size,3);assert.equal(dispatches,1);assert.equal(sourceCalls,1);assert.equal(storeCalls,1);
+  assert.equal(response.status,202,JSON.stringify({body,calls,newsCalls,newsImports,financialCalls}));assert.deepEqual(body,{state:'SOURCE_PREPARED',intake_id:intakeId,batch_id:batchId,analysis_dispatched:true,model_calls:0,member_published:false});
+  assert.equal(modelCalls,0);assert.equal(legacyNewsCalls,0);assert.equal(newsImports,1);assert.equal(newsCalls,3);assert.equal(priceCalls,4);assert.equal(financialCalls,financialUrls.size);assert.equal(marketCalls,3);assert.equal(nightFallbackCalls,1);assert.equal(yahooCalls,0);assert.equal(restrictedCalls,0);
+  assert.equal(publicUrls.size,4);assert.equal(requestedFinancialUrls.size,financialUrls.size);assert.equal(marketUrls.size,3);assert.equal(dispatches,1);assert.equal(sourceCalls,1);assert.equal(storeCalls,1);
+  assert.deepEqual(rpcDeadlines.filter(r=>r.op==='SOURCE'),[{op:'SOURCE',deadline:16000}]);
+  assert.equal(sourceRequestSignal.aborted,true,'the handler parent cancellation still reaches the longer SOURCE request');
+  assert.equal(combinedSignals.get(sourceRequestSignal)[1].aborted,false,'parent cancellation does not depend on waiting for the 16-second timer');
+  for(const op of ['CLAIM','import_daily_stock_ai_official_news_v1','store_daily_stock_ai_batch_v1','COMPLETE','dispatch_daily_stock_ai_batch_v1'])assert(rpcDeadlines.some(r=>r.op===op&&r.deadline===8000),op);
   assert(calls.indexOf('SOURCE')>calls.lastIndexOf('PRICE_END'));assert(calls.indexOf('COMPLETE')>calls.indexOf('store_daily_stock_ai_batch_v1'));
   assert.equal(calls.at(-1),'dispatch_daily_stock_ai_batch_v1');assert(!JSON.stringify(body).includes('private'));assert(!JSON.stringify(body).includes(internal));assert(!JSON.stringify(body).includes(providerKey));
   const originalBatch=batchId;calls.length=0;current=structuredClone(snapshot);
   response=await invoke();body=await response.json();assert.equal(response.status,202);assert.equal(body.batch_id,originalBatch);assert.equal(body.analysis_dispatched,true);
-  assert.deepEqual(calls.filter(op=>op!=='load_daily_stock_ai_batch_v1'),['CLAIM','store_daily_stock_ai_batch_v1','COMPLETE','dispatch_daily_stock_ai_batch_v1']);assert.equal(newsCalls,1);assert.equal(priceCalls,4);assert.equal(financialCalls,3);assert.equal(marketCalls,3);assert.equal(nightFallbackCalls,1);assert.equal(yahooCalls,0);assert.equal(restrictedCalls,0);assert.equal(sourceCalls,1);assert.equal(dispatches,2);
+  assert.deepEqual(calls.filter(op=>op!=='load_daily_stock_ai_batch_v1'),['CLAIM','store_daily_stock_ai_batch_v1','COMPLETE','dispatch_daily_stock_ai_batch_v1']);assert.equal(newsCalls,3);assert.equal(priceCalls,4);assert.equal(financialCalls,financialUrls.size);assert.equal(marketCalls,3);assert.equal(nightFallbackCalls,1);assert.equal(yahooCalls,0);assert.equal(restrictedCalls,0);assert.equal(sourceCalls,1);assert.equal(dispatches,2);
   calls.length=0;response=await invoke();body=await response.json();assert.equal(response.status,202);assert.equal(body.batch_id,originalBatch);
-  assert.deepEqual(calls.filter(op=>op!=='load_daily_stock_ai_batch_v1'),['CLAIM','dispatch_daily_stock_ai_batch_v1']);assert.equal(newsCalls,1);assert.equal(priceCalls,4);assert.equal(financialCalls,3);assert.equal(marketCalls,3);assert.equal(nightFallbackCalls,1);assert.equal(yahooCalls,0);assert.equal(restrictedCalls,0);assert.equal(sourceCalls,1);assert.equal(storeCalls,2);assert.equal(dispatches,3);assert.equal(modelCalls,0);
+  assert.deepEqual(calls.filter(op=>op!=='load_daily_stock_ai_batch_v1'),['CLAIM','dispatch_daily_stock_ai_batch_v1']);assert.equal(newsCalls,3);assert.equal(priceCalls,4);assert.equal(financialCalls,financialUrls.size);assert.equal(marketCalls,3);assert.equal(nightFallbackCalls,1);assert.equal(yahooCalls,0);assert.equal(restrictedCalls,0);assert.equal(sourceCalls,1);assert.equal(storeCalls,2);assert.equal(dispatches,3);assert.equal(modelCalls,0);
   calls.length=0;claimFailure=true;response=await invoke();body=await response.json();assert.equal(response.status,409);assert.equal(body.error,'STOCK_SOURCE_REJECTED');
   assert.equal(body.model_calls,0);assert.equal(body.member_published,false);assert.deepEqual(calls,['CLAIM']);assert(!JSON.stringify(body).includes('private'));assert(!JSON.stringify(body).includes(internal));
- }finally{clearTimeout(sourceGateTimeout);releaseSources();globalThis.Date=NativeDate;globalThis.fetch=oldFetch;if(oldDeno===undefined)delete globalThis.Deno;else globalThis.Deno=oldDeno;}
+ }finally{clearTimeout(sourceGateTimeout);releaseSources();AbortSignal.timeout=oldTimeout;AbortSignal.any=oldAny;globalThis.Date=NativeDate;globalThis.fetch=oldFetch;if(oldDeno===undefined)delete globalThis.Deno;else globalThis.Deno=oldDeno;}
 });

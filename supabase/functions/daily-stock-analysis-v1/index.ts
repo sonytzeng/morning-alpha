@@ -6,18 +6,29 @@ import {stageCompletedStockAiBatch} from './checkpoint.ts';
 import {loadOrIntakeDailyStockAiBatch} from './intake.ts';
 import {handleDailyStockSource} from './source-handler.ts';
 import {prepareDailyStockAiSource} from './source.ts';
-import {collectDailyStockAiNews} from '../_shared/daily-stock-ai-news.ts';
+import {collectDailyAiOfficialNews} from '../../../research/daily-ai-official-news.ts';
 import {collectDailyAiGlobalMarket} from '../../../research/daily-ai-global-market.ts';
 import {refreshDailyAiFinancials} from '../../../research/daily-ai-financial-refresh.ts';
 
 const url=Deno.env.get('SUPABASE_URL')??'',service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')??'';
 const internalSecret=Deno.env.get('CRON_SECRET')??'',model='gpt-6-astra';
-// Independent semantic review passed before enabling bounded continuation.
+// Actual V5 two-pilot quality and time review passed before bounded continuation.
 const autoContinue=true;
 const modelRevision=stockAiModelRevision(model);
+export function dailyStockAiRpcTimeoutMs(u:Parameters<typeof fetch>[0],i?:Parameters<typeof fetch>[1]){
+ try{
+  const target=u instanceof Request?u.url:String(u);
+  if(new URL(target).pathname!=='/rest/v1/rpc/daily_stock_ai_intake_v1'||i?.method!=='POST'||typeof i.body!=='string')return 8000;
+  const body:unknown=JSON.parse(i.body);
+  return body&&typeof body==='object'&&!Array.isArray(body)&&Object.hasOwn(body,'p_op')
+   &&(body as {p_op:unknown}).p_op==='SOURCE'?16000:8000;
+ }catch{return 8000;}
+}
 const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false},global:{
  fetch:(u:Parameters<typeof fetch>[0],i?:Parameters<typeof fetch>[1])=>{
-  const timeout=AbortSignal.timeout(8000);
+  // SOURCE verifies raw observations and returns the immutable 72-stock view.
+  // Its larger response has a bounded allowance; other RPC deadlines stay put.
+  const timeout=AbortSignal.timeout(dailyStockAiRpcTimeoutMs(u,i));
   // Preserve caller cancellation instead of replacing it with a fresh timeout.
   return fetch(u,{...i,signal:i?.signal?AbortSignal.any([i.signal,timeout]):timeout});
  },
@@ -44,7 +55,7 @@ Deno.serve(async request=>{
  if(input&&typeof input==='object'&&!Array.isArray(input)&&Object.hasOwn(input,'intake_id')){
   return handleDailyStockSource(req,{internalSecret,runSource:(intakeId,signal)=>prepareDailyStockAiSource(intakeId,{
    rpc,fetcher:fetch,clock:()=>new Date().toISOString(),
-   collectNews:newsSignal=>collectDailyStockAiNews({baseUrl:url,internalSecret,fetcher:fetch,signal:newsSignal}),
+   collectNews:({inputs,businessDate,signal:newsSignal})=>collectDailyAiOfficialNews({inputs,businessDate,fetcher:fetch,clock:()=>new Date().toISOString(),signal:newsSignal}),
    collectMarket:({businessDate,signal:marketSignal})=>collectDailyAiGlobalMarket({businessDate,signal:marketSignal,fetcher:fetch,clock:()=>new Date().toISOString()}),
    refreshFinancials:refreshDailyAiFinancials,
   },signal)});

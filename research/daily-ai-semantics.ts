@@ -37,6 +37,7 @@ export function buildStockAnalysisContext(packet:AnalysisPacket){
 }
 
 const financialWords=/營收|收入|EPS|每股(?:盈餘|獲利|淨利)|毛利|淨利|營業(?:利益|利潤|損失)|獲利|資本支出|資本投資|股利|盈餘|年增|月增|季增|財務|財報|財測|(?:\brevenue\b|\bmargin\b|\bcapex\b|\bprofit\b|\bincome\b)/i;
+const valuationWords=/本益比|股價淨值比|股價盈餘比|殖利率|估值|\b(?:P\/?E(?:R)?|P\/?B(?:R)?)(?![A-Za-z])|\bdividend yield\b|\bvaluation\b/i;
 const forecastWords=/預測|預估|預計|預期|將達|將為|可望達|\bforecast(?:ed|s)?\b|\bproject(?:ed|s)?\b|\bexpected\b/i;
 function statedPeriods(sentence:string){
  const found:{value:string;raw:string}[]=[];
@@ -49,22 +50,53 @@ function statedPeriods(sentence:string){
  for(const m of sentence.matchAll(/(\d{4})年\s*(?:第\s*([1-4])季|Q([1-4]))/gi))found.push({value:m[1]+'-Q'+(m[2]??m[3]),raw:m[0]});
  return found;
 }
+/** Only an issuer's cited, verified MOPS financial-report headline can add an
+ * actual quarter. An excerpt can also contain guidance; its dates are not an
+ * actual-period registry and must never be scanned into this set. */
+function officialNewsActualPeriods(packet:AnalysisPacket,ids:Set<string>){
+ const result=new Set<string>();
+ for(const e of packet.evidence){
+  if(e.kind!=='NEWS'||e.symbol!==packet.symbol||!ids.has(e.id))continue;
+  let c:unknown;try{c=JSON.parse(e.content);}catch{continue;}
+  if(!object(c)||c.schema!=='DAILY_AI_OFFICIAL_NEWS_FACT_V1'||c.coverage!=='OFFICIAL_ANNOUNCEMENT_EXCERPT'
+   ||!object(c.source_metadata)||c.source_metadata.company_code!==packet.symbol
+   ||c.source_metadata.publication_timezone!=='NOT_DECLARED_BY_SOURCE'
+   ||c.source_metadata.window_basis!=='SOURCE_DECLARED_DAY_COORDINATE_NOT_EXACT_PUBLICATION_TIME'
+   ||c.source_received_at!==e.available_at||e.first_seen_at!==e.available_at||e.as_of!==e.available_at
+   ||e.published_at!==null||e.time_basis!=='OBSERVED_AFTER_RECEIPT'||typeof c.title!=='string'
+   ||!c.title.includes('財務報告')||forecastWords.test(c.title)||/展望|子公司/.test(c.title))continue;
+  const source=c.provider==='TWSE_MOPS_OPEN_DATA'?'https://openapi.twse.com.tw/v1/opendata/t187ap04_L':
+   c.provider==='TPEX_MOPS_OPEN_DATA'?'https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap04_O':null;
+  if(!source||e.source!==source||!new RegExp('^official-news:'+c.provider+':[a-f0-9]{64}$').test(e.id))continue;
+  const quarters=statedPeriods(c.title).filter(p=>/^\d{4}-Q[1-4]$/.test(p.value)).map(p=>p.value);
+  for(const match of c.title.matchAll(/(?<!\d)(?:民國)?(\d{2,3})年\s*第\s*([1-4])季/g)){
+   if(Number(match[1])>=80&&Number(match[1])<=300)quarters.push(String(Number(match[1])+1911)+'-Q'+match[2]);
+  }
+  for(const value of quarters){
+   const [year,quarter]=value.split('-Q').map(Number),closedAt=Date.UTC(year,quarter*3,1)-8*3600000;
+   if(Number.isFinite(Date.parse(e.available_at))&&closedAt<=Date.parse(e.available_at)&&closedAt<=Date.parse(packet.cutoff))result.add(value);
+  }
+ }
+ return result;
+}
 /** This is an evidence-period guard, not an accuracy score or a substitute for
  * the separate semantic review. Unknown citations remain the caller's error. */
 export function validateStockAnalysisClaim(packet:AnalysisPacket,claim:CitedClaim):void{
  const ids=new Set(claim.evidence_ids),records=financialRecords(packet).filter(r=>ids.has(r.evidence_id));
- const known=new Set(records.flatMap(r=>r.period?[r.period]:[]));
+ const newsActual=officialNewsActualPeriods(packet,ids),known=new Set([...records.flatMap(r=>r.period?[r.period]:[]),...newsActual]);
+ const citedDailyValuation=records.some(r=>r.kind==='VALUATION_AS_REPORTED');
  for(const sentence of claim.text.split(/[。！？!?；;\n]+/u)){
-  if(!financialWords.test(sentence))continue;
+  if(!financialWords.test(sentence)&&!(citedDailyValuation&&valuationWords.test(sentence)))continue;
   const stated=statedPeriods(sentence);
   if(known.size&&stated.some(p=>!known.has(p.value)))throw Error('AI_ANALYSIS_FINANCIAL_PERIOD');
   let withoutPeriods=sentence;for(const p of stated)withoutPeriods=withoutPeriods.replaceAll(p.raw,'');
   const metricNumber=/[-+＋－]?\d[\d,.，．]*(?:\s*)(?:%|％|元|圓|塊|億|萬|千|百萬|倍)/u.test(withoutPeriods)
    ||/百分之[負正零〇一二三四五六七八九十百千萬億兩點点]+|[負正零〇一二三四五六七八九十百千萬億兩點点]+\s*(?:元|圓|塊|億|萬|倍)/u.test(withoutPeriods)
+   ||citedDailyValuation&&/(?:本益比|股價淨值比|股價盈餘比|殖利率|估值|\bP\/?E(?:R)?|\bP\/?B(?:R)?|\bdividend yield\b|\bvaluation\b)[^。！？!?；;\n\d]{0,16}[-+＋－]?\d/i.test(withoutPeriods)
    ||/(?:營收|收入|EPS|每股(?:盈餘|獲利|淨利)|毛利率?|淨利率?|獲利|年增|月增|季增|\brevenue\b|\bmargin\b|\bcapex\b|\bprofit\b|\bincome\b)[^。！？!?；;\n\d]{0,16}[-+＋－]?\d/i.test(withoutPeriods);
   if(metricNumber&&(!stated.length||records.length>0&&!known.size))throw Error('AI_ANALYSIS_FINANCIAL_PERIOD');
   const forecastText=sentence.replace(/(?:並非|不是|不代表|不得視為|不可視為|不能視為|不應視為|不屬於|非)(?:未來|任何|新的|對未來的)?(?:預測|預估|預計|預期)/g,'');
-  if(records.length&&stated.length&&forecastWords.test(forecastText))throw Error('AI_ANALYSIS_REPORTED_FACT_AS_FORECAST');
+  if((records.length||newsActual.size)&&stated.length&&forecastWords.test(forecastText))throw Error('AI_ANALYSIS_REPORTED_FACT_AS_FORECAST');
  }
 }
 

@@ -28,12 +28,13 @@ function harness(){
  const ports={clock:()=>now,fetcher:async()=>assert.fail('no model fetch'),
   refresh:async()=>{refreshes++;calls.push('PRICE');await Promise.resolve();assert(calls.includes('FINANCE')&&calls.includes('NEWS')&&calls.includes('MARKET'));return {inputs:structuredClone(state.inputs),cutoff:'2026-10-31T03:00:00Z',through:'2026-10-30',additionalGaps:['TEST_REFRESH_GAP'],gapsBySymbol:Object.fromEntries(state.inputs.map((i,n)=>[i.symbol,n===0?['PRICE_SESSION_OBSERVATION_UNAVAILABLE']:[]])),receipts:[]};},
   refreshFinancials:async input=>{financialRefreshes++;calls.push('FINANCE');const result=await refreshDailyAiFinancials({...input,fetcher:async()=>new Response('private official endpoint outage',{status:503})});financialProof=result.proof;return result;},
-  collectNews:async()=>{newsCalls++;calls.push('NEWS');return {complete:true};},
+  collectNews:async input=>{newsCalls++;calls.push('NEWS');assert.equal(input.businessDate,'2026-10-31');assert.equal(input.inputs.length,72);assert(input.signal instanceof AbortSignal);return {complete:true,additionalGaps:[],proof:{schema:'DAILY_AI_OFFICIAL_NEWS_PROOF_V1',responses:[],additions:[]}};},
   collectMarket:async()=>{marketCalls++;calls.push('MARKET');return {market:[],additionalGaps:unavailableMarketGaps.slice(),receipts:[]};},
   rpc:async(name,args)=>{
    const op=name==='daily_stock_ai_intake_v1'?args.p_op:name;calls.push(op);
    if(failure===op)throw Error('private server body');
    if(op==='CLAIM')return structuredClone(state);
+   if(op==='import_daily_stock_ai_official_news_v1'){assert.equal(args.p_proof.schema,'DAILY_AI_OFFICIAL_NEWS_PROOF_V1');return {state:'STORED',capture_id:'e'.repeat(64),records:0,member_published:false};}
    if(op==='SOURCE'){
     assert.equal(args.p_lease,lease);assert(calls.includes('PRICE')&&calls.includes('FINANCE')&&calls.includes('NEWS')&&calls.includes('MARKET'));
     assert(Array.isArray(args.p_market));
@@ -61,13 +62,42 @@ test('SOURCE runs prices/financials/news/market in parallel once, freezes final 
  const h=harness(),r=await prepareDailyStockAiSource(intakeId,h.ports,new AbortController().signal);
  assert.deepEqual(r,{state:'SOURCE_PREPARED',intake_id:intakeId,batch_id:h.batchId,analysis_dispatched:true});
  assert.deepEqual(h.calls.slice(1,5).sort(),['PRICE','FINANCE','NEWS','MARKET'].sort());
- assert.deepEqual(h.calls.filter(c=>!['PRICE','FINANCE','NEWS','MARKET','load_daily_stock_ai_batch_v1'].includes(c)),['CLAIM','SOURCE','store_daily_stock_ai_batch_v1','COMPLETE','dispatch_daily_stock_ai_batch_v1']);
+ assert.deepEqual(h.calls.filter(c=>!['PRICE','FINANCE','NEWS','MARKET','load_daily_stock_ai_batch_v1'].includes(c)),['CLAIM','import_daily_stock_ai_official_news_v1','SOURCE','store_daily_stock_ai_batch_v1','COMPLETE','dispatch_daily_stock_ai_batch_v1']);
  const cached=await prepareDailyStockAiSource(intakeId,h.ports,new AbortController().signal);assert.equal(cached.analysis_dispatched,true);assert.equal(h.refreshes,1);assert.equal(h.financialRefreshes,1);assert.equal(h.newsCalls,1);assert.equal(h.marketCalls,1);
 });
 test('news refresh failure remains an explicit gap while frozen currently available observations continue',async()=>{
  const h=harness();h.ports.collectNews=async()=>{h.calls.push('NEWS');throw Error('private provider URL');};
  const rpc=h.ports.rpc;h.ports.rpc=async(name,args,signal)=>{if(args.p_op==='SOURCE')assert(args.p_gaps.includes('NEWS_REFRESH_UNAVAILABLE'));return rpc(name,args,signal);};
  const r=await prepareDailyStockAiSource(intakeId,h.ports,new AbortController().signal);assert.equal(r.state,'SOURCE_PREPARED');assert.equal(r.analysis_dispatched,true);
+});
+test('official-news import failure remains explicit and never substitutes unverified collector output for frozen evidence',async()=>{
+ const h=harness();h.failure='import_daily_stock_ai_official_news_v1';
+ h.ports.collectNews=async()=>{h.calls.push('NEWS');return {complete:true,additionalGaps:['OFFICIAL_NEWS_FIXED_FEEDS_NOT_ALL_COMPANY_OR_MARKET_NEWS'],
+  proof:{schema:'DAILY_AI_OFFICIAL_NEWS_PROOF_V1',responses:[],additions:[]},news:[{content:'unverified collector output'}]};};
+ const rpc=h.ports.rpc;h.ports.rpc=async(name,args,signal)=>{
+  if(args.p_op==='SOURCE'){
+   assert(args.p_gaps.includes('NEWS_OFFICIAL_CAPTURE_IMPORT_UNAVAILABLE'));assert(args.p_gaps.includes('NEWS_REFRESH_UNAVAILABLE'));
+   assert(!Object.hasOwn(args,'p_news'),'only the verified registry can supply frozen news');
+  }
+  if(name==='store_daily_stock_ai_batch_v1')assert(!args.p_text.includes('unverified collector output'));
+  return rpc(name,args,signal);
+ };
+ const r=await prepareDailyStockAiSource(intakeId,h.ports,new AbortController().signal);assert.equal(r.state,'SOURCE_PREPARED');
+ assert(h.calls.indexOf('import_daily_stock_ai_official_news_v1')<h.calls.indexOf('SOURCE'));
+});
+test('invalid official-news port metadata is rejected and abort during import prevents SOURCE',async()=>{
+ for(const value of [{complete:true,additionalGaps:['private provider prose'],proof:null},
+  {complete:true,additionalGaps:[],proof:{schema:'OTHER'}}]){
+  const h=harness();h.ports.collectNews=async()=>{h.calls.push('NEWS');return value;};
+  await assert.rejects(()=>prepareDailyStockAiSource(intakeId,h.ports,new AbortController().signal),/AI_INTAKE_NEWS_PORT_INVALID/);assert(!h.calls.includes('SOURCE'));
+ }
+ const h=harness(),controller=new AbortController(),rpc=h.ports.rpc;
+ h.ports.rpc=async(name,args,signal)=>{
+  if(name==='import_daily_stock_ai_official_news_v1'){controller.abort();throw Error('private import error');}
+  return rpc(name,args,signal);
+ };
+ await assert.rejects(()=>prepareDailyStockAiSource(intakeId,h.ports,controller.signal),/AI_INTAKE_ABORTED/);
+ assert(!h.calls.includes('SOURCE'));assert(!h.calls.includes('store_daily_stock_ai_batch_v1'));
 });
 test('facts-only financial merge keeps newly refreshed price bars and exact official financial receipt traces',async()=>{
  const h=harness(),stock=h.state.inputs[0];
@@ -85,7 +115,7 @@ test('facts-only financial merge keeps newly refreshed price bars and exact offi
    const value=String(url),row={'公司代號':'1000','年度':'115','季別':'2','出表日期':'1151031'};
    if(value.endsWith('/t187ap14_L'))return Response.json([{...row,'基本每股盈餘(元)':'49.33'}]);
    if(value.endsWith('/t187ap06_L_ci'))return Response.json([{...row,'營業收入':'100','營業毛利（毛損）淨額':'40','營業利益（損失）':'30','本期淨利（淨損）':'20'}]);
-   assert.equal(value,'https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap14_O');return Response.json([]);
+   assert(['https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap14_O','https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_d'].includes(value));return Response.json([]);
   }});
   // The independent finance projection still owns the old price snapshot.
   // Its bars must never replace the price port's more recent observation.
@@ -124,6 +154,36 @@ test('financial acquisition exceptions remove restricted facts before SOURCE ins
   return rpc(name,args,signal);
  };
  const r=await prepareDailyStockAiSource(intakeId,h.ports,new AbortController().signal);assert.equal(r.state,'SOURCE_PREPARED');
+});
+test('only an official TPEX EPS proof may replace a missing company display name while preserving price observations',async()=>{
+ const h=harness();h.state.inputs[0].company='1000';h.state.companies[0].company='1000';
+ let proof;
+ h.ports.refreshFinancials=async input=>{h.calls.push('FINANCE');const result=await refreshDailyAiFinancials({...input,fetcher:async url=>{
+  if(String(url)==='https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap14_O')return Response.json([{SecuritiesCompanyCode:'1000',CompanyName:'官方核實公司',Year:'115','季別':'2',Date:'1151031','基本每股盈餘':'1.63'}]);
+  return Response.json([]);
+ }});proof=result.proof;return result;};
+ const rpc=h.ports.rpc;h.ports.rpc=async(name,args,signal)=>{
+  if(args.p_op==='SOURCE'){
+   assert.equal(args.p_inputs[0].company,'官方核實公司');assert.equal(args.p_inputs[1].company,'測試公司1');
+   assert.deepEqual(args.p_inputs[0].bars,h.state.inputs[0].bars);assert.deepEqual(args.p_financial_refresh.company_names,proof.company_names);
+   assert.equal(proof.company_names.length,1);assert.equal(proof.company_names[0].previous_company,'1000');
+  }
+  if(name==='store_daily_stock_ai_batch_v1')assert.equal(JSON.parse(JSON.parse(args.p_text).packet_texts['1000']).company,'官方核實公司');
+  return rpc(name,args,signal);
+ };
+ assert.equal((await prepareDailyStockAiSource(intakeId,h.ports,new AbortController().signal)).state,'SOURCE_PREPARED');
+});
+test('unproven name changes, known-name rewrites, cross-company rows and nonofficial naming sources remain rejected',async()=>{
+ for(const change of [
+  (result)=>{result.inputs[0].company='未經核實名稱';},
+  (result,base)=>{result.inputs[0].company='改寫既有名稱';result.proof.company_names=[{symbol:'1000',previous_company:base[0].company,company:'改寫既有名稱',source:'https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap14_O',row_text:'{}'}];},
+  (result,base)=>{base[0].company='1000';result.inputs[0].company='甲公司';result.proof.company_names=[{symbol:'1000',previous_company:'1000',company:'甲公司',source:'https://example.invalid',row_text:'{}'}];},
+  (result,base)=>{base[0].company='1000';result.inputs[0].company='甲公司';result.proof.company_names=[{symbol:'1000',previous_company:'1000',company:'甲公司',source:'https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap14_O',row_text:'{"CompanyName":"甲公司","SecuritiesCompanyCode":"1001"}'}];},
+ ]){
+  const h=harness();h.ports.refreshFinancials=async input=>{h.calls.push('FINANCE');const result=await refreshDailyAiFinancials({...input,fetcher:async()=>Response.json([])});change(result,input.inputs);return result;};
+  await assert.rejects(()=>prepareDailyStockAiSource(intakeId,h.ports,new AbortController().signal),/AI_INTAKE_FINANCIAL_COMPANIES/);
+  assert(!h.calls.includes('SOURCE'));assert(!h.calls.includes('store_daily_stock_ai_batch_v1'));
+ }
 });
 test('market acquisition failure preserves separate US/night gaps without claiming the news collector failed',async()=>{
  const h=harness();h.ports.collectMarket=async()=>{h.calls.push('MARKET');throw Error('private market provider body');};

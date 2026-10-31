@@ -24,7 +24,15 @@ function financialFetcher({eps='49.33',exported='1151031',fail=false}={}){
   return Response.json([{'SecuritiesCompanyCode':'1001','Year':'115','季別':'2','Date':exported,'基本每股盈餘':'1.23'}]);
  };
 }
-const capture=async(inputs,{clock=()=>new Date().toISOString(),...options}={})=>refreshDailyAiFinancials({inputs,businessDate:businessDate(clock()),clock,fetcher:financialFetcher(options),signal:new AbortController().signal});
+// Keep this applied V3 contract regression on its original three endpoints.
+// V5's five-source valuation/name audit is exercised by its separate database
+// integration, rather than silently widening the historical V3 validator.
+const legacySources=new Set([DAILY_AI_FINANCIAL_URLS.TWSE_EPS,DAILY_AI_FINANCIAL_URLS.TWSE_INCOME,DAILY_AI_FINANCIAL_URLS.TPEX_EPS]);
+const capture=async(inputs,{clock=()=>new Date().toISOString(),...options}={})=>{
+ const result=await refreshDailyAiFinancials({inputs,businessDate:businessDate(clock()),clock,fetcher:financialFetcher(options),signal:new AbortController().signal});
+ const {company_names,...proof}=result.proof;void company_names;
+ return {...result,proof:{...proof,responses:proof.responses.filter(r=>legacySources.has(r.source))}};
+};
 try{
  await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;
  create schema vnext_runtime;create function vnext_runtime.immutable() returns trigger language plpgsql as $$begin raise exception 'IMMUTABLE';end$$;

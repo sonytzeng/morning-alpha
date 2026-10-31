@@ -1,0 +1,72 @@
+{
+  "schema": "DAILY_AI_OFFICIAL_PERIOD_SCOPE_TEST_FIXTURE_V1",
+  "purpose": "Bounded retained official MOPS observations for deterministic period/basis validation tests; not new acquisition, model output, review approval or publication.",
+  "packets": {
+    "2454": {
+      "symbol": "2454",
+      "company": "聯發科",
+      "cutoff": "2026-10-31T07:17:02.217051Z",
+      "evidence": [
+        {
+          "as_of": "2026-10-31T07:16:55.224Z",
+          "available_at": "2026-10-31T07:16:55.224Z",
+          "content": "{\"coverage\":\"OFFICIAL_ANNOUNCEMENT_EXCERPT\",\"excerpt\":\"1.提報董事會或經董事會決議日期:115/10/30\\n2.審計委員會通過日期:115/10/29\\n3.財務報告或年度自結財務資訊報導期間\\n起訖日期(XXX/XX/XX~XXX/XX/XX):115/01/01~115/09/30\\n4.1月1日累計至本期止營業收入(仟元):469,390,909\\n5.1月1日累計至本期止營業毛利(毛損) (仟元):217,211,357\\n6.1月1日累計至本期止營業利益(損失) (仟元):72,860,839\\n7.1月1日累計至本期止稅前淨利(淨損) (仟元):88,554,079\\n8.1月1日累計至本期止本期淨利(淨損) (仟元):77,180,219\\n9.1月1日累計至本期止歸屬於母公司業主淨利(損) (仟元):76,371,063\\n10.1月1日累計至本期止基本每股盈餘(損失) (元):47.94\\n11.期末總資產(仟元):966,504,916\\n12.期末總負債(仟元):492,293,319\\n13.期末歸屬於母公司業主之權益(仟元):465,426,806\\n14.其他應敘明事項:無\",\"excerpt_truncated\":false,\"provider\":\"TWSE_MOPS_OPEN_DATA\",\"schema\":\"DAILY_AI_OFFICIAL_NEWS_FACT_V1\",\"source_metadata\":{\"company_code\":\"2454\",\"company_name\":\"聯發科\",\"fact_event_date_raw\":\"1151030\",\"publication_timezone\":\"NOT_DECLARED_BY_SOURCE\",\"source_export_date_raw\":\"1151031\",\"spoken_date_coordinate\":\"2026-10-30\",\"spoken_date_raw\":\"1151030\",\"spoken_time_coordinate\":\"17:02:29\",\"spoken_time_raw\":\"170229\",\"window_basis\":\"SOURCE_DECLARED_DAY_COORDINATE_NOT_EXACT_PUBLICATION_TIME\"},\"source_received_at\":\"2026-10-31T07:16:55.224Z\",\"source_response_bytes\":313747,\"source_response_sha256\":\"4027be30c7844e01177453fff75a249474ca67851e189f2271188682e510c3e7\",\"title\":\"公告本公司115年第3季合併財務報告業經董事會決議通過\"}",
+          "evidence_hash": "86cb9bac7f943f139482f5ce7a6f4b5f9ecb7cab4d94d765c3cef06bb5a05fa3",
+          "first_seen_at": "2026-10-31T07:16:55.224Z",
+          "id": "official-news:TWSE_MOPS_OPEN_DATA:b606e5c60f8282b664f6da95489099569774b2cc19fa962f645edbaa2c73b0ad",
+          "kind": "NEWS",
+          "published_at": null,
+          "source": "https://openapi.twse.com.tw/v1/opendata/t187ap04_L",
+          "symbol": "2454",
+          "time_basis": "OBSERVED_AFTER_RECEIPT"
+        },
+        {
+          "as_of": "2026-10-31T07:16:55.224Z",
+          "available_at": "2026-10-31T07:16:55.224Z",
+          "content": "{\"coverage\":\"OFFICIAL_ANNOUNCEMENT_EXCERPT\",\"excerpt\":\"1.事實發生日:115/10/30\\n2.公司名稱:聯發科技股份有限公司\\n3.與公司關係(請輸入本公司或子公司):本公司\\n4.相互持股比例:不適用\\n5.發生緣由:\\n聯發科技公佈2026年第三季合併財務報告\\n本季合併營收為新台幣1,680億5仟8佰萬元，較前季增加10.4%，較去年同期增加18.3%\\n本季合併毛利率為46.3%，較前季增加0.1個百分點，較去年同期減少0.2個百分點\\n本季合併營業利益為新台幣271億2佰萬元，較前季增加18.5%，較去年同期增加22.2%\\n本季合併本期淨利為新台幣281億9仟9佰萬元，較前季增加14.6%，較去年同期\\n增加10.8%；每股盈餘為新台幣17.50元\\n\\n合併營業收入\\n本公司2026年9月30日結算之第三季營業收入淨額為新台幣1,680億5仟8佰萬元，較前季\\n增加10.4%，較去年同期增加18.3%。本季營業收入較前季及去年同期增加，主要因數項\\n智慧裝置平台的新專案進入量產，以及反映TV SoC中較高的DRAM價格。\\n\\n合併營業毛利與毛利率\\n本季營業毛利為新台幣778億4仟8佰萬元，較前季增加10.7%，較去年同期增加17.8%。\\n毛利率為46.3%，較前季增加0.1個百分點，較去年同期減少0.2個百分點，毛利率保\\n持平穩。\\n\\n合併本期淨利、合併本期淨利率與每股盈餘\\n本季本期淨利為新台幣281億9仟9佰萬元，較前一季增加14.6%，較去年同期增加10.8%。\\n本季本期淨利率為16.8%，高於前一季之16.2%，低於去年同期之17.9%。每股盈餘為新\\n台幣17.50元，高於前一季之新台幣15.28元，及去年同期之新台幣15.84元。本季本期\\n淨利、本期淨利率與每股盈餘較前季增加，主要因本季營業收入較高。本季本期淨利\\n與每股盈餘較去年同期增加，主要因本季營業收入較高。\\n\\n2026年第四季營運展望\\n合併營收: 約新台幣 2,101億 ~ 2,218 億元\\n(假設2026-Q4美元兌台幣平均匯率為1：31.7)\\n合併毛利率: 45%  ±  1.5%\\n合併營業費用率: 26%  ±  2%\\n\\n6.因應措施:不適用\\n7.其他應敘明事項(若事件發生或決議之主體係屬公開發行以上公司，本則重大訊息同時\\n  符合證券交易法施行細則第7條第9款所定對股東權益或證券價格有重大影響之事項):無\",\"excerpt_truncated\":false,\"provider\":\"TWSE_MOPS_OPEN_DATA\",\"schema\":\"DAILY_AI_OFFICIAL_NEWS_FACT_V1\",\"source_metadata\":{\"company_code\":\"2454\",\"company_name\":\"聯發科\",\"fact_event_date_raw\":\"1151030\",\"publication_timezone\":\"NOT_DECLARED_BY_SOURCE\",\"source_export_date_raw\":\"1151031\",\"spoken_date_coordinate\":\"2026-10-30\",\"spoken_date_raw\":\"1151030\",\"spoken_time_coordinate\":\"17:04:17\",\"spoken_time_raw\":\"170417\",\"window_basis\":\"SOURCE_DECLARED_DAY_COORDINATE_NOT_EXACT_PUBLICATION_TIME\"},\"source_received_at\":\"2026-10-31T07:16:55.224Z\",\"source_response_bytes\":313747,\"source_response_sha256\":\"4027be30c7844e01177453fff75a249474ca67851e189f2271188682e510c3e7\",\"title\":\"本公司2026年第3季合併財務報告\"}",
+          "evidence_hash": "02d211830f164dc30dc53cc0f2d0076499045d7ed2d5c9fea7b9e8376b744be0",
+          "first_seen_at": "2026-10-31T07:16:55.224Z",
+          "id": "official-news:TWSE_MOPS_OPEN_DATA:bc7ef105538f4fd14f10ede5299bc3c7a9b359997563e8734eea7d9a5caa8b94",
+          "kind": "NEWS",
+          "published_at": null,
+          "source": "https://openapi.twse.com.tw/v1/opendata/t187ap04_L",
+          "symbol": "2454",
+          "time_basis": "OBSERVED_AFTER_RECEIPT"
+        }
+      ]
+    },
+    "3189": {
+      "symbol": "3189",
+      "company": "景碩",
+      "cutoff": "2026-10-31T07:17:02.217051Z",
+      "evidence": [
+        {
+          "as_of": "2026-10-31T07:16:54.345Z",
+          "available_at": "2026-10-31T07:16:54.345Z",
+          "content": "{\"kind\":\"EPS_AS_REPORTED\",\"period\":\"2026-Q2\",\"basis\":\"AS_REPORTED\",\"values\":{\"unit\":\"SOURCE_REPORTED_YUAN_PER_SHARE\",\"value\":3.74,\"period_basis\":\"AS_REPORTED_SINGLE_VS_CUMULATIVE_NOT_INFERRED\",\"period_scope\":\"YEAR_115_QUARTER_2_AS_REPORTED_SINGLE_VS_CUMULATIVE_NOT_EXPLICIT\",\"reported_decimal\":\"3.74\",\"reported_quarter\":\"2\",\"measurement_basis\":\"BASIC_AS_REPORTED\",\"reported_year_roc\":\"115\",\"no_single_quarter_or_ttm_inference\":\"TRUE\"},\"original_id\":\"official-open-api:3189:EPS_AS_REPORTED:2026-Q2:38af134c3c1fb5a645b6db7923ac287230c0839bb5158498a8e2f288db866a40\"}",
+          "evidence_hash": "38af134c3c1fb5a645b6db7923ac287230c0839bb5158498a8e2f288db866a40",
+          "first_seen_at": "2026-10-31T07:16:54.345Z",
+          "id": "3189:FINANCIAL:official-open-api:3189:EPS_AS_REPORTED:2026-Q2:38af134c3c1fb5a645b6db7923ac287230c0839bb5158498a8e2f288db866a40",
+          "kind": "FINANCIAL",
+          "published_at": null,
+          "source": "https://openapi.twse.com.tw/v1/opendata/t187ap14_L",
+          "symbol": "3189",
+          "time_basis": "OBSERVED_AFTER_RECEIPT"
+        },
+        {
+          "as_of": "2026-10-31T07:16:55.224Z",
+          "available_at": "2026-10-31T07:16:55.224Z",
+          "content": "{\"coverage\":\"OFFICIAL_ANNOUNCEMENT_EXCERPT\",\"excerpt\":\"1.提報董事會或經董事會決議日期:115/10/30\\n2.審計委員會通過日期:115/10/30\\n3.財務報告或年度自結財務資訊報導期間\\n起訖日期(XXX/XX/XX~XXX/XX/XX):115/01/01~115/09/30\\n4.1月1日累計至本期止營業收入(仟元):38,140,960\\n5.1月1日累計至本期止營業毛利(毛損) (仟元):10,545,555\\n6.1月1日累計至本期止營業利益(損失) (仟元):5,785,216\\n7.1月1日累計至本期止稅前淨利(淨損) (仟元):6,000,459\\n8.1月1日累計至本期止本期淨利(淨損) (仟元):5,320,689\\n9.1月1日累計至本期止歸屬於母公司業主淨利(損) (仟元):4,247,778\\n10.1月1日累計至本期止基本每股盈餘(損失) (元):8.38\\n11.期末總資產(仟元):93,006,790\\n12.期末總負債(仟元):36,794,490\\n13.期末歸屬於母公司業主之權益(仟元):46,937,831\\n14.其他應敘明事項:無\",\"excerpt_truncated\":false,\"provider\":\"TWSE_MOPS_OPEN_DATA\",\"schema\":\"DAILY_AI_OFFICIAL_NEWS_FACT_V1\",\"source_metadata\":{\"company_code\":\"3189\",\"company_name\":\"景碩\",\"fact_event_date_raw\":\"1151030\",\"publication_timezone\":\"NOT_DECLARED_BY_SOURCE\",\"source_export_date_raw\":\"1151031\",\"spoken_date_coordinate\":\"2026-10-30\",\"spoken_date_raw\":\"1151030\",\"spoken_time_coordinate\":\"19:09:24\",\"spoken_time_raw\":\"190924\",\"window_basis\":\"SOURCE_DECLARED_DAY_COORDINATE_NOT_EXACT_PUBLICATION_TIME\"},\"source_received_at\":\"2026-10-31T07:16:55.224Z\",\"source_response_bytes\":313747,\"source_response_sha256\":\"4027be30c7844e01177453fff75a249474ca67851e189f2271188682e510c3e7\",\"title\":\"公告本公司董事會通過115年第3季合併財務報告\"}",
+          "evidence_hash": "cdb853e07b9d4a3a7cc24181ff15a169e5919abb49d5d9483ede3fb2a2831872",
+          "first_seen_at": "2026-10-31T07:16:55.224Z",
+          "id": "official-news:TWSE_MOPS_OPEN_DATA:5760d903f703e3f2e620e3679f9cfb2310a547a23c50d93c907ab5a69c768061",
+          "kind": "NEWS",
+          "published_at": null,
+          "source": "https://openapi.twse.com.tw/v1/opendata/t187ap04_L",
+          "symbol": "3189",
+          "time_basis": "OBSERVED_AFTER_RECEIPT"
+        }
+      ]
+    }
+  }
+}

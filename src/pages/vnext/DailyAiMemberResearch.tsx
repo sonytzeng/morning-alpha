@@ -6,6 +6,7 @@ import './daily-ai-member.css';
 
 const periods={SHORT:'先看近期事件與量價，確認條件成立後再評估。',MEDIUM:'追蹤未來數週的營收、營運與事件變化。',LONG:'檢查長期需求、獲利與估值能否支持布局。'};
 const states=Object.keys(DAILY_AI_MEMBER_STATES) as DailyAiMemberState[];
+export type DailyAiMemberViewState={filter:DailyAiMemberState|'ALL';query:string;limit:number};
 const order:Record<DailyAiMemberState,number>={WATCH:0,WAIT:1,AVOID:2,INSUFFICIENT:3};
 const date=(value:string)=>new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value));
 function Gaps({gaps}:{gaps:string[]}){
@@ -33,16 +34,19 @@ function Evidence({card,year}:{card:DailyAiMemberCard;year:string}){
   <span>{s.published_at?`原發布：${date(s.published_at)}`:'原發布時間未確認；依收到後的資料研究。'} · 本次可用：{date(s.available_at)}</span>
  </li>)}</ul>{openFinancial&&<p>本卡引用臺灣證券交易所／櫃買中心 {year} 年 EPS、財報、每日估值或重大訊息等公開資料，依<a href="https://data.gov.tw/license" target="_blank" rel="noopener noreferrer">政府資料開放授權條款第 1 版</a>使用；各資料集顯名見上方共用來源說明。</p>}{treasury&&<p>美國公債殖利率：U.S. Treasury，資料集標示 <a href="https://catalog.data.gov/dataset/interest-rate-statistics-daily-treasury-yield-curve-rates" target="_blank" rel="noopener noreferrer">CC0</a>；利率資料不代表美股指數收盤。</p>}</details>;
 }
-export default function DailyAiMemberResearch({data,selectedHorizon,onHorizonChange}:{data:Research;selectedHorizon?:Horizon;onHorizonChange?:(horizon:Horizon)=>void}){
- const [localHorizon,setHorizon]=useState<Horizon>('SHORT'),[filter,setFilter]=useState<DailyAiMemberState|'ALL'>('ALL'),[query,setQuery]=useState(''),[limit,setLimit]=useState(9),[now,setNow]=useState(Date.now);
+export default function DailyAiMemberResearch({data,selectedHorizon,onHorizonChange,viewState,onViewChange}:{data:Research;selectedHorizon?:Horizon;onHorizonChange?:(horizon:Horizon)=>void;
+ viewState?:DailyAiMemberViewState;onViewChange?:(change:(previous:DailyAiMemberViewState)=>DailyAiMemberViewState)=>void}){
+ const [localHorizon,setHorizon]=useState<Horizon>('SHORT'),[localView,setLocalView]=useState<DailyAiMemberViewState>({filter:'ALL',query:'',limit:9}),[now,setNow]=useState(Date.now);
  const horizon=selectedHorizon??localHorizon;
+ const {filter,query,limit}=viewState??localView;
+ const changeView=(change:(previous:DailyAiMemberViewState)=>DailyAiMemberViewState)=>{if(viewState===undefined)setLocalView(change);onViewChange?.(change);};
  useEffect(()=>{const update=()=>setNow(Date.now()),timer=setInterval(update,15000);document.addEventListener('visibilitychange',update);return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',update);};},[]);
  const edition=data.edition;
  if(!edition||Date.parse(edition.expires_at)<=now)return <main className="vnext-content dam" id="stock-observations"><h1>每日股票研究</h1><section role="status" className="vnext-empty"><h2>{edition?'這個研究版本已到期':'目前尚無已發布的研究版本'}</h2><p>等待完成資料核對與發布的最新研究。</p></section></main>;
  const sourceYear=data.business_date.slice(0,4),all=data.cards.filter(c=>c.horizon===horizon),rows=all.filter(c=>(filter==='ALL'||c.status===filter)&&(!query.trim()||`${c.symbol} ${c.company}`.includes(query.trim())))
   .sort((a,b)=>order[a.status]-order[b.status]||a.symbol.localeCompare(b.symbol));
  const commonGaps=[...new Set(data.cards[0]?.gaps??[])].filter(gap=>data.cards.every(card=>card.gaps.includes(gap))),commonGapSet=new Set(commonGaps);
- const change=(next:Horizon)=>{setHorizon(next);onHorizonChange?.(next);setFilter('ALL');setQuery('');setLimit(9);};
+ const change=(next:Horizon)=>{setHorizon(next);onHorizonChange?.(next);changeView(()=>({filter:'ALL',query:'',limit:9}));};
  return <main className="vnext-content dam" id="stock-observations">
   <header className="vnext-intro"><p className="vnext-eyebrow">每日股票研究 · AI 證據分析</p><h1>今天先看懂，再決定</h1>
    <p>研究版本 <strong>{edition.edition_date}</strong> · 台股收盤資料截至 <strong>{edition.data_through}</strong></p>
@@ -54,8 +58,8 @@ export default function DailyAiMemberResearch({data,selectedHorizon,onHorizonCha
   <div className="vnext-horizons dam-periods" aria-label="研究期間">{(Object.keys(HORIZONS) as Horizon[]).map(h=><button key={h} aria-pressed={horizon===h} onClick={()=>change(h)}><strong>{HORIZONS[h].label}</strong><span>{HORIZONS[h].duration}</span><small>值得追蹤 {data.cards.filter(c=>c.horizon===h&&c.status==='WATCH').length} 檔</small></button>)}</div>
   <section className="dam-period-intro" aria-live="polite"><h2>目前查看：{HORIZONS[horizon].label}</h2><p>{HORIZONS[horizon].duration} · {periods[horizon]}</p><p>每張卡片只呈現這個期間的判斷、確認條件與失效條件。</p></section>
   <section aria-label="本期間股票分析"><div className="vnext-summary"><h2>{HORIZONS[horizon].label}清單</h2><span>{all.length} 檔</span></div>
-   <div className="dam-filters" aria-label="研究結果篩選"><button aria-pressed={filter==='ALL'} onClick={()=>{setFilter('ALL');setLimit(9);}}>全部 {all.length}</button>{states.map(s=><button key={s} aria-pressed={filter===s} onClick={()=>{setFilter(s);setLimit(9);}}>{DAILY_AI_MEMBER_STATES[s]} {all.filter(c=>c.status===s).length}</button>)}</div>
-   <label className="dam-search">搜尋本期間股票<input value={query} placeholder="股票名稱或代號" onChange={e=>{setQuery(e.target.value);setFilter('ALL');setLimit(9);}}/></label>
+   <div className="dam-filters" aria-label="研究結果篩選"><button aria-pressed={filter==='ALL'} onClick={()=>changeView(previous=>({...previous,filter:'ALL',limit:9}))}>全部 {all.length}</button>{states.map(s=><button key={s} aria-pressed={filter===s} onClick={()=>changeView(previous=>({...previous,filter:s,limit:9}))}>{DAILY_AI_MEMBER_STATES[s]} {all.filter(c=>c.status===s).length}</button>)}</div>
+   <label className="dam-search">搜尋本期間股票<input value={query} placeholder="股票名稱或代號" onChange={e=>{const query=e.target.value;changeView(()=>({filter:'ALL',query,limit:9}));}}/></label>
    <p role="status">{HORIZONS[horizon].label} · 符合目前篩選 {rows.length} 檔 · 先列值得追蹤，再列等待與風險；同類按代號排列。</p>
    {!all.some(c=>c.status==='WATCH')&&<p className="dam-wait">本期間目前沒有「值得追蹤」的股票，請先看等待原因與資料缺口。</p>}
    <div className="vnext-grid">{rows.slice(0,limit).map(card=><article className="vnext-card dam-card" key={card.symbol}>
@@ -67,7 +71,7 @@ export default function DailyAiMemberResearch({data,selectedHorizon,onHorizonCha
     <Gaps gaps={card.gaps.filter(gap=>!commonGapSet.has(gap))}/>
     <p className="dam-price-note">價格條件：本版未提供已驗證的買進區間，先依確認條件追蹤。</p><Evidence card={card} year={sourceYear}/>
    </article>)}</div>
-   {!rows.length?<p className="vnext-empty">這個分類沒有股票，可切換其他結果查看原因。</p>:rows.length>limit?<button className="vnext-primary" onClick={()=>setLimit(value=>value+9)}>再看 9 檔</button>:null}
+   {!rows.length?<p className="vnext-empty">這個分類沒有股票，可切換其他結果查看原因。</p>:rows.length>limit?<button className="vnext-primary" onClick={()=>changeView(previous=>({...previous,limit:previous.limit+9}))}>再看 9 檔</button>:null}
   </section>
  </main>;
 }

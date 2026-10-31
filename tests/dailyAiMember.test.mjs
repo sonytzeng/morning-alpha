@@ -67,6 +67,13 @@ test('actual component starts in a single horizon, shows gaps and source dates, 
   assert(html.includes('目前查看：短期觀察'));assert(html.includes('SHORT期間測試判斷'));assert(!html.includes('MEDIUM期間測試判斷'));assert(!html.includes('LONG期間測試判斷'));
   assert(html.includes('2026-10-30'));assert(html.includes('還缺哪些資料'));assert(html.includes('本版未提供已驗證的買進區間'));
   assert(html.includes('https://www.twse.com.tw/test'));assert(!html.includes('目標價'));
+  assert.equal((html.match(/class="vnext-card dam-card"/g)||[]).length,9);
+  const expanded=renderToStaticMarkup(React.createElement(Page,{data,viewState:{filter:'ALL',query:'',limit:72}}));
+  assert.equal((expanded.match(/class="vnext-card dam-card"/g)||[]).length,72);assert(!expanded.includes('再看9檔'));
+  const searched=renderToStaticMarkup(React.createElement(Page,{data,viewState:{filter:'ALL',query:'1000',limit:72}}));
+  assert.equal((searched.match(/class="vnext-card dam-card"/g)||[]).length,1);assert(searched.includes('value="1000"'));
+  const filtered=renderToStaticMarkup(React.createElement(Page,{data,viewState:{filter:'WATCH',query:'',limit:72}}));
+  assert.equal((filtered.match(/class="vnext-card dam-card"/g)||[]).length,0);
   const medium=renderToStaticMarkup(React.createElement(Page,{data,selectedHorizon:'MEDIUM'}));
   assert(medium.includes('MEDIUM期間測試判斷'));assert(!medium.includes('SHORT期間測試判斷'));assert(!medium.includes('LONG期間測試判斷'));
   Date.now=()=>Date.parse(data.edition.expires_at);const expired=renderToStaticMarkup(React.createElement(Page,{data}));

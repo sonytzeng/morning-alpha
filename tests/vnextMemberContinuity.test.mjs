@@ -231,3 +231,98 @@ test('period selection survives a membership refresh while all private research 
   assert.equal((tier==='owner'?h.completed:h.dailyAi).selectedHorizon,'LONG');h.unmount();
  }
 });
+
+test('AI view controls are controlled metadata and functional updates compose without losing other fields',async()=>{
+ const h=harness({now:Date.parse('2026-10-30T14:00:00Z')});await h.resolve(h.call('get_daily_ai_member_research_v1'),aiEdition());
+ const controls=h.dailyAi;assert.deepEqual(JSON.parse(JSON.stringify(controls.viewState)),{filter:'ALL',query:'',limit:9});assert.equal(typeof controls.onViewChange,'function');
+ controls.onViewChange(previous=>({...previous,filter:'WAIT',limit:18}));
+ controls.onViewChange(previous=>({...previous,query:'測試公司',limit:previous.limit+9}));
+ assert.deepEqual(JSON.parse(JSON.stringify(h.dailyAi.viewState)),{filter:'WAIT',query:'測試公司',limit:27});
+ assert.deepEqual(Object.keys(h.dailyAi.viewState).sort(),['filter','limit','query']);
+ controls.onHorizonChange('LONG');h.dailyAi.onViewChange(previous=>({...previous,query:'1000',limit:72}));
+ h.setAccess(access('A',2));assert.equal(h.dailyAi,undefined);
+ await h.resolve(h.call('get_daily_ai_member_research_v1'),aiEdition());
+ assert.equal(h.dailyAi.selectedHorizon,'LONG');assert.deepEqual(JSON.parse(JSON.stringify(h.dailyAi.viewState)),{filter:'WAIT',query:'1000',limit:72});h.unmount();
+});
+
+test('focus, thirty-second refresh and visibility clear raw AI data but restore same-edition controls only after revalidation',async()=>{
+ for(const invalidate of [h=>h.focus(),h=>h.advance(30000),h=>{h.visibility('hidden');h.visibility('visible');}]){
+  const h=harness({now:Date.parse('2026-10-30T14:00:00Z')});await h.resolve(h.call('get_daily_ai_member_research_v1'),aiEdition());
+  h.dailyAi.onHorizonChange('LONG');h.dailyAi.onViewChange(previous=>({...previous,filter:'WAIT',query:'1000',limit:72}));
+  const old=h.dailyAi,oldRequest=h.call('get_daily_ai_member_research_v1');invalidate(h);
+  assert.equal(h.dailyAi,undefined);assert.equal(oldRequest.signal.aborted,true);
+  old.onViewChange(previous=>({...previous,query:'STALE_DURING_INVALIDATION',limit:9}));old.onHorizonChange('SHORT');
+  assert.equal(h.dailyAi,undefined);h.setAccess(access('A',2));const fresh=h.call('get_daily_ai_member_research_v1');assert.notEqual(fresh,oldRequest);
+  assert.equal(h.dailyAi,undefined);await h.resolve(fresh,aiEdition());
+  assert.equal(h.dailyAi.selectedHorizon,'LONG');assert.deepEqual(JSON.parse(JSON.stringify(h.dailyAi.viewState)),{filter:'WAIT',query:'1000',limit:72});
+  old.onViewChange(previous=>({...previous,query:'STALE_AFTER_REVALIDATION'}));old.onHorizonChange('SHORT');
+  assert.equal(h.dailyAi.selectedHorizon,'LONG');assert.equal(h.dailyAi.viewState.query,'1000');h.unmount();
+ }
+});
+
+test('identity A to unresolved B to A never restores the first A controls or accepts either obsolete callback',async()=>{
+ const h=harness({now:Date.parse('2026-10-30T14:00:00Z')});await h.resolve(h.call('get_daily_ai_member_research_v1'),aiEdition());
+ h.dailyAi.onHorizonChange('LONG');h.dailyAi.onViewChange(previous=>({...previous,filter:'AVOID',query:'OLD_A',limit:72}));const oldA=h.dailyAi;
+ h.setAccess(access('B',2));const pendingB=h.call('get_daily_ai_member_research_v1');assert.equal(h.dailyAi,undefined);
+ oldA.onViewChange(previous=>({...previous,query:'FORGED_A_RESTORE'}));oldA.onHorizonChange('LONG');
+ h.setAccess(access('A',3));await h.resolve(h.call('get_daily_ai_member_research_v1'),aiEdition());
+ assert.equal(h.dailyAi.selectedHorizon,'SHORT');assert.deepEqual(JSON.parse(JSON.stringify(h.dailyAi.viewState)),{filter:'ALL',query:'',limit:9});
+ h.dailyAi.onViewChange(previous=>({...previous,query:'CURRENT_A'}));
+ oldA.onViewChange(previous=>({...previous,query:'STALE_FIRST_A'}));oldA.onHorizonChange('LONG');
+ await h.resolve(pendingB,aiEdition());assert.equal(h.dailyAi.viewState.query,'CURRENT_A');assert.equal(h.dailyAi.selectedHorizon,'SHORT');h.unmount();
+});
+
+test('new identity, tier or edition starts fresh and old edition callbacks cannot alter the new scope',async()=>{
+ for(const boundary of ['identity','tier','edition']){
+  const h=harness({now:Date.parse('2026-10-30T14:00:00Z')});await h.resolve(h.call('get_daily_ai_member_research_v1'),aiEdition());
+  h.dailyAi.onHorizonChange('LONG');h.dailyAi.onViewChange(previous=>({...previous,filter:'WAIT',query:'OLD_SCOPE',limit:72}));const old=h.dailyAi;
+  const tier=boundary==='tier'?'free':'premium';h.setAccess(access(boundary==='identity'?'B':'A',2,tier));assert.equal(h.dailyAi,undefined);
+  const next=aiEdition(tier);if(boundary==='edition')next.edition.id='b'.repeat(64);
+  await h.resolve(h.call('get_daily_ai_member_research_v1'),next);
+  assert.equal(h.dailyAi.selectedHorizon,'SHORT');assert.deepEqual(JSON.parse(JSON.stringify(h.dailyAi.viewState)),{filter:'ALL',query:'',limit:9});
+  old.onViewChange(previous=>({...previous,filter:'AVOID',query:'STALE_SCOPE',limit:72}));old.onHorizonChange('LONG');
+  assert.equal(h.dailyAi.selectedHorizon,'SHORT');assert.deepEqual(JSON.parse(JSON.stringify(h.dailyAi.viewState)),{filter:'ALL',query:'',limit:9});h.unmount();
+ }
+});
+
+test('denied, RPC access-denied, null edition and wrong-tier projection clear controls before any later same-user edition',async()=>{
+ for(const boundary of ['denied','rpc-denied','null-edition','wrong-tier']){
+  const h=harness({now:Date.parse('2026-10-30T14:00:00Z')});await h.resolve(h.call('get_daily_ai_member_research_v1'),aiEdition());
+  h.dailyAi.onHorizonChange('LONG');h.dailyAi.onViewChange(previous=>({...previous,filter:'WAIT',query:'OLD_PRIVATE_CONTEXT',limit:72}));const old=h.dailyAi;
+  if(boundary==='denied')h.setAccess({kind:'denied'});
+  else{
+   h.setAccess(access('A',2));const pending=h.call('get_daily_ai_member_research_v1');
+   if(boundary==='rpc-denied')await h.resolve(pending,null,{code:'42501',message:'SYNTHETIC_PERMISSION_DENIED'});
+   if(boundary==='null-edition')await h.resolve(pending,{...aiEdition(),edition:null,cards:[]});
+   if(boundary==='wrong-tier')await h.resolve(pending,aiEdition('owner'));
+  }
+  assert.equal(h.dailyAi,undefined);old.onViewChange(previous=>({...previous,query:'OLD_CALLBACK_AFTER_DENIAL'}));old.onHorizonChange('LONG');
+  h.setAccess(access('A',3));await h.resolve(h.call('get_daily_ai_member_research_v1'),aiEdition());
+  assert.equal(h.dailyAi.selectedHorizon,'SHORT');assert.deepEqual(JSON.parse(JSON.stringify(h.dailyAi.viewState)),{filter:'ALL',query:'',limit:9});h.unmount();
+ }
+});
+
+test('transient failure keeps only UI preferences and cannot revive private data or accept invalidated callbacks',async()=>{
+ for(const failure of ['network','access-unavailable']){
+  const h=harness({now:Date.parse('2026-10-30T14:00:00Z')});await h.resolve(h.call('get_daily_ai_member_research_v1'),aiEdition());
+  h.dailyAi.onHorizonChange('LONG');h.dailyAi.onViewChange(previous=>({...previous,filter:'WAIT',query:'RETAIN_UI_ONLY',limit:72}));const old=h.dailyAi;
+  if(failure==='access-unavailable')h.setAccess({kind:'unavailable'});
+  else{h.focus();h.setAccess(access('A',2));await h.reject(h.call('get_daily_ai_member_research_v1'));}
+  assert.equal(h.dailyAi,undefined);old.onViewChange(previous=>({...previous,query:'FAILURE_CALLBACK'}));old.onHorizonChange('SHORT');assert.equal(h.dailyAi,undefined);
+  h.setAccess(access('A',3));assert.equal(h.dailyAi,undefined);await h.resolve(h.call('get_daily_ai_member_research_v1'),aiEdition());
+  assert.equal(h.dailyAi.selectedHorizon,'LONG');assert.deepEqual(JSON.parse(JSON.stringify(h.dailyAi.viewState)),{filter:'WAIT',query:'RETAIN_UI_ONLY',limit:72});h.unmount();
+ }
+});
+
+test('Taipei request-date change clears controls even when the returned edition ID remains the same',async()=>{
+ const h=harness({now:Date.parse('2026-10-30T15:59:50Z')});await h.resolve(h.call('get_daily_ai_member_research_v1'),aiEdition());
+ h.dailyAi.onHorizonChange('LONG');h.dailyAi.onViewChange(previous=>({...previous,filter:'WAIT',query:'PREVIOUS_DAY',limit:72}));const old=h.dailyAi;
+ h.advance(10020);assert.equal(h.dailyAi,undefined);old.onViewChange(previous=>({...previous,query:'STALE_DAY'}));old.onHorizonChange('LONG');
+ const tomorrow={...aiEdition(),business_date:'2026-10-31',edition:{...aiEdition().edition,expires_at:'2026-11-01T00:00:00Z'}};
+ await h.resolve(h.call('get_daily_ai_member_research_v1'),tomorrow);
+ assert.equal(h.dailyAi.data.business_date,'2026-10-31');assert.equal(h.dailyAi.data.edition.id,'a'.repeat(64));assert.equal(h.dailyAi.selectedHorizon,'SHORT');
+ assert.deepEqual(JSON.parse(JSON.stringify(h.dailyAi.viewState)),{filter:'ALL',query:'',limit:9});h.unmount();
+ const source=['MemberPage','DailyAiMemberResearch'].map(name=>ts.transpileModule(readFileSync(new URL('../src/pages/vnext/'+name+'.tsx',import.meta.url),'utf8'),
+  {compilerOptions:{target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,removeComments:true}}).outputText).join('\n');
+ assert(!/\b(?:localStorage|sessionStorage)\b/.test(source),'private continuity preferences must remain in memory');
+});

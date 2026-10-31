@@ -1,6 +1,6 @@
 import {createClient} from '../_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs';
 import {handleDailyStockAnalysis,stockAnalysisRequestRejection,readStockAnalysisRequestText,type StoredStockAnalysisBatch} from './handler.ts';
-import {runStoredStockAiBatch,parseStockAiProgress,stockAiModelRevision} from '../_shared/daily-stock-ai-runner.ts';
+import {runStoredStockAiBatch,runStoredStockAiCitationRepair,parseStockAiProgress,stockAiModelRevision} from '../_shared/daily-stock-ai-runner.ts';
 import {authorizeDailyStockAnalysisRequest} from '../_shared/daily-stock-ai-auth.ts';
 import {stageCompletedStockAiBatch} from './checkpoint.ts';
 import {loadOrIntakeDailyStockAiBatch} from './intake.ts';
@@ -9,6 +9,7 @@ import {prepareDailyStockAiSource} from './source.ts';
 import {collectDailyAiOfficialNews} from '../../../research/daily-ai-official-news.ts';
 import {collectDailyAiGlobalMarket} from '../../../research/daily-ai-global-market.ts';
 import {refreshDailyAiFinancials} from '../../../research/daily-ai-financial-refresh.ts';
+import {handleDailyStockCitationRepair} from './repair-handler.ts';
 
 const url=Deno.env.get('SUPABASE_URL')??'',service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')??'';
 const internalSecret=Deno.env.get('CRON_SECRET')??'',model='gpt-6-astra';
@@ -52,6 +53,22 @@ Deno.serve(async request=>{
   return Response.json({error:limited?'INPUT_LIMIT':'SCOPE_INVALID',model_calls:0,member_published:false},{status:limited?413:422,headers:{'Cache-Control':'no-store'}});
  }
  const req=new Request(authorized,{body:text});
+ if(input&&typeof input==='object'&&!Array.isArray(input)&&(Object.hasOwn(input,'repair_symbol')||Object.hasOwn(input,'review_document_hash'))){
+  return handleDailyStockCitationRepair(req,{
+   internalSecret,clock:()=>new Date().toISOString(),
+   loadBatch:(batchId,signal)=>loadOrIntakeDailyStockAiBatch({batch_id:batchId},rpc,signal),
+   loadFence:(selector,signal)=>rpc('load_daily_stock_ai_citation_repair_v1',{p_batch_id:selector.batch_id,p_symbol:selector.repair_symbol,p_review_document_hash:selector.review_document_hash},signal),
+   runRepair:(packets,symbol,signal,revision)=>runStoredStockAiCitationRepair(packets,symbol,{
+    rpc:(name,args)=>rpc(name,args,args.p_op==='COMPLETE'?undefined:signal),
+    apiKey:Deno.env.get('OPENAI_API_KEY')??'',fetcher:fetch,signal,
+    onCandidate:async(candidate,receipt,inputHash,packet)=>{
+     const retained=await rpc('retain_daily_ai_model_candidate_v1',{p_input_hash:inputHash,p_model_revision:revision,
+      p_symbol:packet.symbol,p_cutoff:packet.cutoff,p_candidate:candidate,p_receipt:receipt},signal);
+     if(!retained||retained.state!=='RETAINED'||retained.member_published!==false)throw Error('STOCK_AI_CANDIDATE_RETAIN_UNCONFIRMED');
+    },
+   },revision),
+  });
+ }
  if(input&&typeof input==='object'&&!Array.isArray(input)&&Object.hasOwn(input,'intake_id')){
   return handleDailyStockSource(req,{internalSecret,runSource:(intakeId,signal)=>prepareDailyStockAiSource(intakeId,{
    rpc,fetcher:fetch,clock:()=>new Date().toISOString(),

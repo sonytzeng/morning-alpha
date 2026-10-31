@@ -8,13 +8,19 @@ import PublicExperience from './PublicExperience';
 import CompletedResearch from './CompletedResearch';
 import {parseCompletedResearch,type CompletedResearch as CompletedData} from '@/features/vnext/completedResearch';
 import {parseDailyAiMember,type DailyAiMemberResearch as DailyAiData} from '@/features/vnext/dailyAiMember';
-import DailyAiMemberResearch from './DailyAiMemberResearch';
+import DailyAiMemberResearch,{type DailyAiMemberViewState} from './DailyAiMemberResearch';
 import type {Horizon} from '@/features/vnext/contracts';
 import './vnext.css';
 import './member.css';
+type DailyViewScope={identity:string;tier:DailyAiData['tier'];editionId:string;requestDate:string};
+type DailyViewMemory=DailyViewScope&{view:DailyAiMemberViewState};
+const emptyDailyView=():DailyAiMemberViewState=>({filter:'ALL',query:'',limit:9});
+const sameDailyScope=(a:DailyViewScope|null,b:DailyViewScope|null)=>!!a&&!!b&&a.identity===b.identity&&a.tier===b.tier&&a.editionId===b.editionId&&a.requestDate===b.requestDate;
 export default function MemberPage({account=false}:{account?:boolean}){
  const {access,retry}=useAcademyAccess(),[revision,setRevision]=useState(0),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
  const [selectedHorizon,setSelectedHorizon]=useState<Horizon>('SHORT');
+ // UI preferences only: never keep cards, source data or an entitlement here.
+ const [dailyView,setDailyView]=useState<DailyViewMemory|null>(null),dailyScope=useRef<DailyViewScope|null>(null);
  const [state,setState]=useState<{identity:string;generation:number;readEpoch:number;requestDate:string;data?:MemberResearch;completed?:CompletedData|null;completedError?:boolean;dailyAi?:DailyAiData;dailyAiError?:boolean;error?:boolean}|null>(null);
  const current=useRef(access);current.current=access;
  const retryRef=useRef(retry);retryRef.current=retry;
@@ -23,6 +29,7 @@ export default function MemberPage({account=false}:{account?:boolean}){
  const aiReadController=useRef<AbortController|null>(null);
  const [businessDate,setBusinessDate]=useState(memberTaipeiDate),dateRef=useRef(businessDate);
  const [publicState,setPublicState]=useState<{requestDate:string;market:ReturnType<typeof memberMarketSummary>;loading:boolean}|null>(null);
+ const clearDailyView=useCallback(()=>{dailyScope.current=null;setDailyView(null);setSelectedHorizon('SHORT');},[]);
  // Invalidation is synchronous: an older closure cannot revive data while the
  // entitlement hook is still waiting to render its next generation.
  const invalidate=useCallback(()=>{
@@ -33,7 +40,7 @@ export default function MemberPage({account=false}:{account?:boolean}){
   mounted.current=true;let midnight:ReturnType<typeof setTimeout>;
   const checkDate=()=>{
    const next=memberTaipeiDate();
-   if(next!==dateRef.current){dateRef.current=next;publicEpoch.current++;invalidate();setPublicState(null);setBusinessDate(next);}
+   if(next!==dateRef.current){dateRef.current=next;publicEpoch.current++;invalidate();clearDailyView();setPublicState(null);setBusinessDate(next);}
   };
   const scheduleMidnight=()=>{
    clearTimeout(midnight);const now=Date.now(),date=memberTaipeiDate(now);
@@ -49,7 +56,14 @@ export default function MemberPage({account=false}:{account?:boolean}){
   const timer=setInterval(refresh,30000);
   window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',visibility);
   return()=>{mounted.current=false;invalidate();clearTimeout(midnight);clearInterval(timer);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',visibility);};
- },[invalidate]);
+ },[invalidate,clearDailyView]);
+ useEffect(()=>{
+  const scope=dailyScope.current;
+  if(account||access.kind==='denied'||scope&&(scope.requestDate!==businessDate
+   ||access.kind==='member'&&(scope.identity!==access.id||scope.tier!==access.catalog.tier)))clearDailyView();
+  // A loading/unavailable recheck may retain these scalars, but renders no old
+  // private data. A different user/tier clears them before any fresh read.
+ },[access,businessDate,account,clearDailyView]);
  useEffect(()=>{
   const requestDate=businessDate,epoch=++publicEpoch.current;let live=true,timer:ReturnType<typeof setTimeout>;
   const valid=()=>live&&mounted.current&&epoch===publicEpoch.current&&!!requestDate&&dateRef.current===requestDate&&memberTaipeiDate()===requestDate;
@@ -111,17 +125,38 @@ export default function MemberPage({account=false}:{account?:boolean}){
   const timer=setTimeout(()=>{failed();controller.abort();},8000);
   void(async()=>{try{
    const r=await supabase.rpc('get_daily_ai_member_research_v1').abortSignal(controller.signal);
-   if(!valid())return;if(r.error)throw Error('DAILY_AI_READ');
+   if(!valid())return;if(r.error){if(r.error.code==='42501')clearDailyView();throw Error('DAILY_AI_READ');}
    const dailyAi=parseDailyAiMember(r.data,requestDate);
-   if(dailyAi.tier!==access.catalog.tier)throw Error('ENTITLEMENT_CHANGED');
-   if(valid())setState(s=>({...(s?.readEpoch===epoch?s:{}),...bind,dailyAi,dailyAiError:false}));
+   if(dailyAi.tier!==access.catalog.tier){clearDailyView();throw Error('ENTITLEMENT_CHANGED');}
+   if(valid()){
+    if(!dailyAi.edition)clearDailyView();
+    else{
+     const scope:DailyViewScope={identity:access.id,tier:dailyAi.tier,editionId:dailyAi.edition.id,requestDate};
+     if(!sameDailyScope(dailyScope.current,scope)){dailyScope.current=scope;setDailyView({...scope,view:emptyDailyView()});setSelectedHorizon('SHORT');}
+    }
+    setState(s=>({...(s?.readEpoch===epoch?s:{}),...bind,dailyAi,dailyAiError:false}));
+   }
   }catch{failed();}finally{clearTimeout(timer);}})();
   return()=>{live=false;clearTimeout(timer);controller.abort();if(aiReadController.current===controller)aiReadController.current=null;access.signal.removeEventListener('abort',abort);};
- },[access,revision,businessDate,account]);
+ },[access,revision,businessDate,account,clearDailyView]);
  const today=memberTaipeiDate();
  const matchingState=access.kind==='member'&&!access.signal.aborted&&state?.identity===access.id&&state.generation===access.generation
   &&state.readEpoch===readEpoch.current&&state.requestDate===today&&today===dateRef.current;
  const data=matchingState?state.data:null;
+ const dailyAi=matchingState?state?.dailyAi:undefined;
+ const visibleDailyScope:DailyViewScope|null=access.kind==='member'&&dailyAi?.edition?
+  {identity:access.id,tier:dailyAi.tier,editionId:dailyAi.edition.id,requestDate:state!.requestDate}:null;
+ const canChangeDailyView=()=>!!visibleDailyScope&&access.kind==='member'&&current.current.kind==='member'&&mounted.current
+  &&current.current.id===visibleDailyScope.identity&&current.current.catalog.tier===visibleDailyScope.tier
+  &&current.current.generation===state?.generation&&current.current.signal===access.signal&&!access.signal.aborted
+  &&readEpoch.current===state?.readEpoch&&dateRef.current===visibleDailyScope.requestDate&&memberTaipeiDate()===visibleDailyScope.requestDate
+  &&sameDailyScope(dailyScope.current,visibleDailyScope)&&document.visibilityState!=='hidden'&&!!dailyAi?.edition&&Date.parse(dailyAi.edition.expires_at)>Date.now();
+ const changeDailyView=(change:(previous:DailyAiMemberViewState)=>DailyAiMemberViewState)=>{
+  const scope=visibleDailyScope;if(!scope||!canChangeDailyView())return;
+  setDailyView(previous=>{if(!canChangeDailyView())return previous;const next=change(sameDailyScope(previous,scope)?previous!.view:emptyDailyView());
+   return {...scope,view:{filter:next.filter,query:next.query,limit:next.limit}};});
+ };
+ const changeDailyHorizon=(next:Horizon)=>{if(canChangeDailyView())setSelectedHorizon(next);};
  const publicMarket=publicState?.requestDate===today?publicState.market:null,marketLoading=!!today&&(!publicState||publicState.requestDate!==today||publicState.loading);
  const watch=async(id:string,watching:boolean)=>{
   if(!data||busy||watchController.current||access.kind!=='member'||access.signal.aborted)return;
@@ -141,7 +176,8 @@ export default function MemberPage({account=false}:{account?:boolean}){
  };
  const denied=access.kind==='denied',failed=access.kind==='unavailable'||(matchingState&&state.error);
  return <div className="vnext vm"><a className="vnext-skip" href="#stock-observations">跳到股票觀察</a><MemberNavigation/>
- {denied?<PublicExperience market={publicMarket} loading={marketLoading}/>:!account&&matchingState&&state?.dailyAi?.edition?<DailyAiMemberResearch key={access.kind==='member'?access.id:''} data={state.dailyAi} selectedHorizon={selectedHorizon} onHorizonChange={setSelectedHorizon}/>:data?account?<main className="vnext-content"><h1>會員中心</h1><MemberObservationEntry/><p>既有會員權益與股票學院不變。</p><a href="/academy">前往股票學院</a></main>:data.tier==='owner'&&state?.completed?<CompletedResearch key={access.kind==='member'?access.id:''} data={state.completed} selectedHorizon={selectedHorizon} onHorizonChange={setSelectedHorizon}/>:<>{state?.dailyAiError&&<p className="vnext-content" role="alert">每日 AI 研究暫時無法讀取；下方顯示既有已核准內容。</p>}{data.tier==='owner'&&state?.completedError&&<p className="vnext-content" role="alert">本人收盤研究暫時無法讀取；下方是會員已核准內容，不代表本次分析沒有結果。</p>}<MemberExperience key={access.kind==='member'?access.id:''} data={data} market={publicMarket} onWatch={watch} busy={busy} notice={notice}/></>
+ {denied?<PublicExperience market={publicMarket} loading={marketLoading}/>:!account&&matchingState&&dailyAi?.edition?<DailyAiMemberResearch key={access.kind==='member'?access.id:''} data={dailyAi} selectedHorizon={selectedHorizon} onHorizonChange={changeDailyHorizon}
+  viewState={sameDailyScope(dailyView,visibleDailyScope)?dailyView!.view:emptyDailyView()} onViewChange={changeDailyView}/>:data?account?<main className="vnext-content"><h1>會員中心</h1><MemberObservationEntry/><p>既有會員權益與股票學院不變。</p><a href="/academy">前往股票學院</a></main>:data.tier==='owner'&&state?.completed?<CompletedResearch key={access.kind==='member'?access.id:''} data={state.completed} selectedHorizon={selectedHorizon} onHorizonChange={setSelectedHorizon}/>:<>{state?.dailyAiError&&<p className="vnext-content" role="alert">每日 AI 研究暫時無法讀取；下方顯示既有已核准內容。</p>}{data.tier==='owner'&&state?.completedError&&<p className="vnext-content" role="alert">本人收盤研究暫時無法讀取；下方是會員已核准內容，不代表本次分析沒有結果。</p>}<MemberExperience key={access.kind==='member'?access.id:''} data={data} market={publicMarket} onWatch={watch} busy={busy} notice={notice}/></>
  :<main className="vnext-content vnext-empty" role="status"><h1>{denied?'登入後，閱讀股票觀察':failed?'目前無法讀取股票觀察':'正在確認可閱讀的內容'}</h1><p>{denied?'免費會員可閱讀每日精選摘要；Premium 可查看完整已核准研究。研究不是正式推薦。':failed?'尚未取得資料，不代表今天沒有候選。請稍後再試。':'請稍候。'}</p>{denied?<a href="/login?next=%2Fstocks" className="vnext-primary">登入帳號</a>:failed?<button className="vnext-primary" onClick={()=>{invalidate();retry();setRevision(r=>r+1);}}>重新讀取</button>:null}</main>}
  </div>;
 }

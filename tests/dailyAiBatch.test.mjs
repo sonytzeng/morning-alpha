@@ -41,3 +41,42 @@ test('valid paid output is saved when the deadline elapses just before storage',
  await assert.rejects(()=>analyseDailyBatch({packets:packets(),modelRevision:'test-v1',maxStocks:1,signal:controller.signal},jobs,async p=>{const output=await result(p);controller.abort();return output;}),/AI_ANALYSIS_ABORTED/);
  assert.equal(saved,1);
 });
+test('an exact retained target is the only claimed and executed stock at every array position',async()=>{
+ for(const position of [0,35,71]){
+  const p=packets(),target=p[position].symbol,claimed=[],called=[],saved=[];
+  const jobs={claim:async(key,context)=>{claimed.push(context.symbol);assert.equal(context.symbol,target);return {state:'ACQUIRED',lease:'target-lease'};},
+   complete:async(key,lease,analysis)=>{assert.equal(lease,'target-lease');saved.push(analysis.symbol);},fail:async()=>assert.fail('unexpected failure')};
+  const r=await analyseDailyBatch({packets:p,modelRevision:'target-test-v1',maxStocks:1,onlySymbol:target},jobs,async packet=>{called.push(packet.symbol);return result(packet);});
+  assert.deepEqual(claimed,[target]);assert.deepEqual(called,[target]);assert.deepEqual(saved,[target]);assert.equal(r.model_calls,1);assert.equal(r.rows.length,72);
+  assert.deepEqual(r.rows[position],{symbol:target,state:'COMPLETE'});assert.equal(r.rows.filter(row=>row.state==='DEFERRED').length,71);
+  assert(r.rows.every(row=>row.symbol===target||row.state==='DEFERRED'));assert.equal(r.complete,false);assert.equal(r.member_published,false);
+ }
+});
+test('cached, busy or exhausted targets do not fall through to another stock',async()=>{
+ for(const position of [0,71])for(const state of ['CACHED','BUSY','EXHAUSTED']){
+  const p=packets(),target=p[position].symbol;let claims=0;
+  const jobs={claim:async(key,context)=>{claims++;assert.equal(context.symbol,target);return state==='CACHED'?{state,result:await result(p[position])}:{state};},
+   complete:async()=>assert.fail('non-acquired target cannot complete'),fail:async()=>assert.fail('non-acquired target cannot fail')};
+  const r=await analyseDailyBatch({packets:p,modelRevision:'target-test-v1',maxStocks:8,onlySymbol:target},jobs,async()=>assert.fail('cannot run another stock'));
+  assert.equal(claims,1);assert.equal(r.model_calls,0);assert.equal(r.rows.filter(row=>row.state==='DEFERRED').length,71);
+  assert.equal(r.rows[position].state,state==='EXHAUSTED'?'FAILED':state);
+  if(state==='EXHAUSTED')assert.equal(r.rows[position].code,'AI_BATCH_ATTEMPTS_EXHAUSTED');
+ }
+});
+test('invalid or unknown target stops before claims and all 72 packets still validate for a valid target',async()=>{
+ for(const onlySymbol of ['',null,1000,'abc',' 1000','1000000','9999']){
+  await assert.rejects(()=>analyseDailyBatch({packets:packets(),modelRevision:'target-test-v1',maxStocks:1,onlySymbol},
+   {claim:async()=>assert.fail('invalid scope cannot claim')},async()=>assert.fail('invalid scope cannot run')),/AI_BATCH_SCOPE/);
+ }
+ const p=packets();p[71].evidence[0].available_at='2026-10-31T12:00:00Z';
+ await assert.rejects(()=>analyseDailyBatch({packets:p,modelRevision:'target-test-v1',maxStocks:1,onlySymbol:p[0].symbol},
+  {claim:async()=>assert.fail('non-target packet must validate too')},async()=>assert.fail('non-target packet must validate too')),/AI_ANALYSIS_EVIDENCE/);
+});
+test('a targeted cached result remains bound to the exact stock and target scope is owned across awaits',async()=>{
+ const p=packets(),input={packets:p,modelRevision:'target-test-v1',maxStocks:8,onlySymbol:p[0].symbol};let claims=0,calls=0;
+ const jobs={claim:async(key,context)=>{claims++;assert.equal(context.symbol,p[0].symbol);input.onlySymbol=p[71].symbol;return {state:'ACQUIRED',lease:'test'};},complete:async()=>{},fail:async()=>assert.fail()};
+ const r=await analyseDailyBatch(input,jobs,async packet=>{calls++;return result(packet);});
+ assert.equal(claims,1);assert.equal(calls,1);assert.equal(r.rows[71].state,'DEFERRED');
+ await assert.rejects(()=>analyseDailyBatch({packets:p,modelRevision:'target-test-v1',maxStocks:1,onlySymbol:p[71].symbol},
+  {claim:async()=>({state:'CACHED',result:await result(p[0])})},async()=>assert.fail('bad cache cannot rerun')),/AI_ANALYSIS_RESULT_IDENTITY/);
+});

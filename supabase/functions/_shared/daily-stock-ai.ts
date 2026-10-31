@@ -4,6 +4,8 @@ import {HORIZONS,snapshotHash} from '../../../src/features/vnext/contracts.ts';
 
 export type StockAiProviderReceipt={response_id:string;model:string;input_tokens:number;output_tokens:number};
 export type StockAiCandidateObserver=(candidate:unknown,receipt:StockAiProviderReceipt,inputHash:string)=>Promise<void>;
+const citationRepairInstructions=' 本次為跨日引用修復。每一條 reason 或 counter_evidence 若包含跨日比較（包括低開、開高、跳空、較前日或減輕），該條 claim.evidence_ids 必須同時引用所比較的兩個交易日 PRICE 證據，不能借用其他理由或反面證據的引用。若該條無法自帶兩天來源，就省略該跨日比較。';
+const allFactsCitationRepairInstructions=' 本次另為每條主張完整引用的第二次修復。每條 reason 或 counter_evidence 的所有事實前提（包括EPS正負、跨月轉折及反證）都必須由該條 claim.evidence_ids 自己完整支持，且引用的資料類型必須精確；例如EPS正負必須引用EPS原報資料，不能用營業利益率或其他比率代替。不能借用別段引文；沒有該事實的證據就不作該事實判斷。';
 
 /** Shared references keep each packet's long evidence identifiers in one enum.
  * The original citation/text validators still run after provider decoding. */
@@ -31,8 +33,10 @@ export function dailyStockAnalysisResponseFormat(packet:AnalysisPacket){
 
 /** Server-only port. Reuses a server supplied credential; never accepts member
  * request options, changes secrets, publishes content or logs provider bodies. */
-export async function analyseStockWithProvider(packet:AnalysisPacket,config:{apiKey:string;model:string;fetcher:typeof fetch;signal?:AbortSignal;onCandidate?:StockAiCandidateObserver}){
+export async function analyseStockWithProvider(packet:AnalysisPacket,config:{apiKey:string;model:string;fetcher:typeof fetch;signal?:AbortSignal;onCandidate?:StockAiCandidateObserver;citationRepair?:true;allFactsCitationRepair?:true}){
  if(!config.apiKey||!config.model||config.model.length>100)throw Error('STOCK_AI_CONFIGURATION_REQUIRED');
+ if(config.citationRepair!==undefined&&config.citationRepair!==true)throw Error('STOCK_AI_REPAIR_CONFIGURATION');
+ if(config.allFactsCitationRepair!==undefined&&(config.allFactsCitationRepair!==true||config.citationRepair!==true))throw Error('STOCK_AI_REPAIR_CONFIGURATION');
  let receipt:StockAiProviderReceipt|null=null;
  const analysis=await analyseStock(packet,async request=>{
   // Build the enum from analyseStock's owned snapshot, never a mutable caller.
@@ -47,7 +51,7 @@ export async function analyseStockWithProvider(packet:AnalysisPacket,config:{api
   const completion=config.model==='gpt-6-astra'?{max_completion_tokens:6000,reasoning_effort:'low'}:{max_tokens:6000};
   const response=await config.fetcher('https://api.openai.com/v1/chat/completions',{
    method:'POST',signal:request.signal,headers:{'Content-Type':'application/json',Authorization:'Bearer '+config.apiKey},
-   body:JSON.stringify({model:config.model,messages:[{role:'system',content:request.system+' 引用必須逐字使用 JSON Schema 列舉中的完整 evidence_ids，不得改寫或縮短，且同一主張不得重複引用同一 ID。期間定義必須與 analysis_context.horizon_definitions 一致：SHORT為1～10個交易日，MEDIUM為2～12週，LONG為3～18個月，不得自行改持有期間。analysis_context.latest_revenue_period 與 recent_revenue 是來源實際已報期間，不是研究月份；即使研究日已過數年，也不得把年份換成今年。每句包含任何公司財務數字（營收、EPS、毛利率等）都必須同句標示對應來源的完整 YYYY-MM 或 YYYY-Qn；不可以只寫十月或第二季。AS_REPORTED只代表來源原報值與期間標籤，未證明單季或累計；不得把AS_REPORTED稱為單季、累計、年初至今、YTD或TTM，也不得自行差分或換算。已報歷史營收與財報都是實績，不得寫成未來預測、預估或將公布數值。缺口只能描述本次輸入未包含或無法確認，不能因此宣稱公司尚未公布、營收未揭露或市場沒有資料；先檢查 revenue_periods_present_in_packet 全部實際月份，不能因缺少季度標籤就忽略已有的該季各月營收。不得宣稱無來源的連續季數、連續年數或成長期數，除非逐期證據足夠。確認與失效條件只寫無數字的事件／資料條件，不得包含阿拉伯或全形數字，也不得用中文數字提供任何價格、價位、買價或停損；日期移到理由或缺口。請精簡：每段理由以240字內、反面證據0到3段且每段160字內、確認與失效條件各120字內、每項缺口80字內為原則。所有文字不得為空白；INSUFFICIENT 至少列一項真實缺口。每個期間各輸出一次。'},{role:'user',content:JSON.stringify(providerInput)}],
+   body:JSON.stringify({model:config.model,messages:[{role:'system',content:request.system+' 引用必須逐字使用 JSON Schema 列舉中的完整 evidence_ids，不得改寫或縮短，且同一主張不得重複引用同一 ID。期間定義必須與 analysis_context.horizon_definitions 一致：SHORT為1～10個交易日，MEDIUM為2～12週，LONG為3～18個月，不得自行改持有期間。analysis_context.latest_revenue_period 與 recent_revenue 是來源實際已報期間，不是研究月份；即使研究日已過數年，也不得把年份換成今年。每句包含任何公司財務數字（營收、EPS、毛利率等）都必須同句標示對應來源的完整 YYYY-MM 或 YYYY-Qn；不可以只寫十月或第二季。AS_REPORTED只代表來源原報值與期間標籤，未證明單季或累計；不得把AS_REPORTED稱為單季、累計、年初至今、YTD或TTM，也不得自行差分或換算。已報歷史營收與財報都是實績，不得寫成未來預測、預估或將公布數值。缺口只能描述本次輸入未包含或無法確認，不能因此宣稱公司尚未公布、營收未揭露或市場沒有資料；先檢查 revenue_periods_present_in_packet 全部實際月份，不能因缺少季度標籤就忽略已有的該季各月營收。不得宣稱無來源的連續季數、連續年數或成長期數，除非逐期證據足夠。確認與失效條件只寫無數字的事件／資料條件，不得包含阿拉伯或全形數字，也不得用中文數字提供任何價格、價位、買價或停損；日期移到理由或缺口。請精簡：每段理由以240字內、反面證據0到3段且每段160字內、確認與失效條件各120字內、每項缺口80字內為原則。所有文字不得為空白；INSUFFICIENT 至少列一項真實缺口。每個期間各輸出一次。'+(config.citationRepair?citationRepairInstructions:'')+(config.allFactsCitationRepair?allFactsCitationRepairInstructions:'')},{role:'user',content:JSON.stringify(providerInput)}],
     response_format:responseFormat,...completion}),
   });
   if(!response.ok)throw Error('STOCK_AI_PROVIDER_HTTP_'+response.status);

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {analyseStockWithProvider,dailyStockAnalysisResponseFormat} from '../supabase/functions/_shared/daily-stock-ai.ts';
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
 import {stockAiModelRevision} from '../supabase/functions/_shared/daily-stock-ai-runner.ts';
@@ -14,6 +15,27 @@ test('server adapter sends evidence once and retains usage without leaking crede
   assert.equal(body.response_format.type,'json_schema');assert.equal(body.response_format.json_schema.strict,true);
   assert.deepEqual(body.response_format.json_schema.schema.$defs.evidence_id.enum,['E1']);return Response.json(result());}});
  assert.equal(r.receipt.response_id,'test-provider-receipt');assert.equal(r.publication_ready,false);assert(!JSON.stringify(r).includes('test-only-key'));
+});
+test('citation repair appends only its fixed cross-day rule while retaining the original system, input and strict schema',async()=>{
+ const requests=[];
+ for(const options of [{},{citationRepair:true},{citationRepair:true,allFactsCitationRepair:true}])await analyseStockWithProvider(packet,{apiKey:'test-only-key',model:'gpt-6-astra',...options,fetcher:async(url,init)=>{
+  requests.push(JSON.parse(init.body));return Response.json({...result(),model:'gpt-6-astra'});
+ }});
+ const [normal,repair,full]=requests,base=normal.messages[0].content,sha=s=>createHash('sha256').update(s).digest('hex');
+ assert.equal(sha(base),'e80a1a378ba20b2da963a431c1f85fedd3a87921a469e8e2f82c5626cc022b0b');
+ assert.equal(sha(repair.messages[0].content),'4743f9b80d8b1e1fbf65bc5da259b934c04d8d4b4b3d8e54d285692f0110f535','historical prompt8 system bytes remain unchanged');
+ assert(!base.includes('本次為跨日引用修復'));assert(repair.messages[0].content.startsWith(base));
+ assert(repair.messages[0].content.slice(base.length).includes('包括低開、開高、跳空、較前日或減輕'));
+ assert(repair.messages[0].content.slice(base.length).includes('若該條無法自帶兩天來源，就省略該跨日比較'));
+ assert.equal(repair.messages[1].content,normal.messages[1].content);assert.deepEqual(repair.response_format,normal.response_format);
+ assert(full.messages[0].content.startsWith(repair.messages[0].content));assert(full.messages[0].content.includes('所有事實前提（包括EPS正負、跨月轉折及反證）'));
+ assert(full.messages[0].content.includes('不能用營業利益率或其他比率代替'));assert(full.messages[0].content.includes('不能借用別段引文'));
+ assert.equal(sha(full.messages[0].content),'92f30e12657b7f84207a4c5e5b51a12c796c299fb9cdf51d7193fec1856d456e');
+ assert.equal(full.messages[1].content,repair.messages[1].content);assert.deepEqual(full.response_format,repair.response_format);
+ for(const citationRepair of [false,'caller instruction'])await assert.rejects(()=>analyseStockWithProvider(packet,{apiKey:'test-only-key',model:'gpt-6-astra',citationRepair,
+  fetcher:async()=>assert.fail('invalid repair configuration cannot spend')}),/STOCK_AI_REPAIR_CONFIGURATION/);
+ for(const options of [{allFactsCitationRepair:true},{citationRepair:true,allFactsCitationRepair:'caller instruction'}])await assert.rejects(()=>analyseStockWithProvider(packet,{apiKey:'test-only-key',model:'gpt-6-astra',...options,
+  fetcher:async()=>assert.fail('arbitrary second repair instructions cannot spend')}),/STOCK_AI_REPAIR_CONFIGURATION/);
 });
 test('provider outage, truncated output, missing usage and oversized output cannot become analysis',async()=>{
  for(const fetcher of [async()=>new Response('',{status:429}),async()=>{const r=result();r.choices[0].finish_reason='length';return Response.json(r);},async()=>{const r=result();delete r.usage;return Response.json(r);},async()=>new Response('x'.repeat(512001))]){

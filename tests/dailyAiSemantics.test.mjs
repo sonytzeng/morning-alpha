@@ -68,11 +68,36 @@ test('daily AS_REPORTED valuation keeps its observation date without changing re
  }
  assert.doesNotThrow(()=>validateStockAnalysisClaim(p,{text:'美債殖利率為4.94%，僅作市場背景。',evidence_ids:['macro']}));
 });
+test('a valuation calendar month requires its cited exact day in the same sentence and never authorizes a revenue month or quarter',()=>{
+ const p=packet();p.evidence.push(evidence('valuation','VALUATION_AS_REPORTED','2026-10-30',{pe_ratio:25.53,pb_ratio:4.01},'AS_REPORTED'));
+ for(const text of [
+  '2026-10估值觀測日為2026-10-30，官方本益比25.53倍、股價淨值比4.01倍。',
+  '2026-10估值觀察日2026-10-30官方本益比25.53倍。',
+  '2026-10估值資料於2026-10-30列本益比25.53倍、股價淨值比4.01倍。',
+  '2026-10估值快照（報價日2026-10-30）本益比25.53倍、股價淨值比4.01倍。',
+ ])assert.doesNotThrow(()=>validateStockAnalysisClaim(p,{text,evidence_ids:['valuation']}));
+ for(const text of [
+  '2026-09估值資料於2026-10-30列本益比25.53倍。',
+  '2026-10估值資料於2026-10-31列本益比25.53倍。',
+  '2026-10估值資料本益比25.53倍。',
+  '2026-10估值資料本益比25.53倍。實際觀測日為2026-10-30。',
+  '2026-09估值快照（報價日2026-10-30）本益比25.53倍。',
+  '2026-10估值快照（報價日2026-10-31）本益比25.53倍。',
+  '2026-10估值快照僅提供當時官方比率，缺乏比較基準。',
+  '2026-10估值快照本益比25.53倍。報價日為2026-10-30。',
+  '2026-10營收年增5%，估值資料日為2026-10-30且本益比25.53倍。',
+  '2026-10估值資料於2026-10-30列本益比25.53倍，2026-10營收年增5%。',
+  '2026-10估值資料於2026-10-30列本益比25.53倍，2026-Q3每股盈餘為1.65元。',
+ ])assert.throws(()=>validateStockAnalysisClaim(p,{text,evidence_ids:['valuation','eps','r10']}),/AI_ANALYSIS_FINANCIAL_PERIOD/);
+ p.evidence.push(evidence('current-revenue','REVENUE','2026-10',{yoy_percent:5}));
+ assert.doesNotThrow(()=>validateStockAnalysisClaim(p,{text:'2026-10營收年增5%，2026-10估值資料於2026-10-30列本益比25.53倍。',evidence_ids:['valuation','current-revenue']}));
+ assert.throws(()=>validateStockAnalysisClaim(p,{text:'2026-10估值資料本益比25.53倍。',evidence_ids:['valuation','current-revenue']}),/AI_ANALYSIS_FINANCIAL_PERIOD/);
+});
 function mediatekOfficialReport(){
  // Exact title and bounded passages from the retained official 2454 MOPS row;
  // this semantic fixture is not a new acquisition or a publication proof.
  const receipt='2026-10-31T03:00:00Z',provider='TWSE_MOPS_OPEN_DATA';
- const report={schema:'DAILY_AI_OFFICIAL_NEWS_FACT_V1',provider,coverage:'OFFICIAL_ANNOUNCEMENT_EXCERPT',title:'本公司2026年第3季合併財務報告',
+ const report={schema:'DAILY_AI_OFFICIAL_NEWS_FACT_V1',provider,coverage:'OFFICIAL_ANNOUNCEMENT_EXCERPT',excerpt_truncated:false,title:'本公司2026年第3季合併財務報告',
   excerpt:'聯發科技公佈2026年第三季合併財務報告\n本季合併本期淨利為新台幣281億9仟9佰萬元，較前季增加14.6%，較去年同期\n增加10.8%；每股盈餘為新台幣17.50元\n2026年第四季營運展望\n合併營收: 約新台幣 2,101億 ~ 2,218 億元',
   source_received_at:receipt,source_metadata:{company_code:'2454',company_name:'聯發科',publication_timezone:'NOT_DECLARED_BY_SOURCE',window_basis:'SOURCE_DECLARED_DAY_COORDINATE_NOT_EXACT_PUBLICATION_TIME'}};
  const news={id:'official-news:'+provider+':bc7ef105538f4fd14f10ede5299bc3c7a9b359997563e8734eea7d9a5caa8b94',symbol:'2454',kind:'NEWS',

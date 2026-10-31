@@ -19,3 +19,9 @@ test('market-only evidence cannot become a company WATCH thesis',async()=>{
 test('a stalled model expires and receives cancellation',async()=>{
  let signal;await assert.rejects(()=>analyseStock(packet(),req=>{signal=req.signal;return new Promise(()=>{});},10),/AI_ANALYSIS_TIMEOUT/);assert.equal(signal.aborted,true);
 });
+test('worker cancellation reaches the model and prevents work after a prior abort',async()=>{
+ const controller=new AbortController();let providerSignal;
+ await assert.rejects(()=>analyseStock(packet(),req=>{providerSignal=req.signal;controller.abort();return new Promise(()=>{});},30000,controller.signal),/AI_ANALYSIS_ABORTED/);
+ assert.equal(providerSignal.aborted,true);
+ await assert.rejects(()=>analyseStock(packet(),async()=>assert.fail('aborted request must not call a model'),30000,controller.signal),/AI_ANALYSIS_ABORTED/);
+});

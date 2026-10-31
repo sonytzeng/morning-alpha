@@ -16,11 +16,12 @@ function Plan({focus,now}:{focus:CompletedFocus;now:number}){
   <details><summary>查看價格依據</summary><p>區間幅度情境 {money(p.scenario)} 元；計入成本假設後風險報酬約 {p.reward_risk.toFixed(2)}：1。這是條件計畫，不是公司合理價或獲利保證。</p></details>
  </section>;
 }
-export default function CompletedResearch({data}:{data:Research}){
- const [horizon,setHorizon]=useState<Horizon>('SHORT'),[filter,setFilter]=useState('QUALIFIED'),[query,setQuery]=useState(''),[limit,setLimit]=useState(9),[now,setNow]=useState(Date.now);
+export default function CompletedResearch({data,selectedHorizon,onHorizonChange}:{data:Research;selectedHorizon?:Horizon;onHorizonChange?:(horizon:Horizon)=>void}){
+ const [localHorizon,setHorizon]=useState<Horizon>('SHORT'),[filter,setFilter]=useState('QUALIFIED'),[query,setQuery]=useState(''),[limit,setLimit]=useState(9),[now,setNow]=useState(Date.now);
+ const horizon=selectedHorizon??localHorizon;
  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),15000);return()=>clearInterval(timer);},[]);
  const all=data.rows.filter(r=>r.horizon===horizon),rows=all.filter(r=>(filter==='ALL'||r.state===filter)&&(!query||`${r.symbol} ${r.company}`.includes(query.trim())));
- const focus=data.focus.filter(f=>f.horizons.includes(horizon)),change=(h:Horizon)=>{setHorizon(h);setFilter('QUALIFIED');setLimit(9);setQuery('');};
+ const focus=data.focus.filter(f=>f.horizons.includes(horizon)),change=(h:Horizon)=>{setHorizon(h);onHorizonChange?.(h);setFilter('QUALIFIED');setLimit(9);setQuery('');};
  return <main className="vnext-content cr" id="stock-observations">
   <header className="vnext-intro"><p className="vnext-eyebrow">本人股票研究 · 真實收盤資料</p><h1>看懂股票，再決定價格</h1>
    <p>行情截至 <strong>{data.data_through}</strong>；分析完成於 {date(data.evaluated_at)}（台北）。已分析 72 檔，短、中、長期分別判斷。</p>

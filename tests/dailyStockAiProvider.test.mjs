@@ -15,3 +15,9 @@ test('provider outage, truncated output, missing usage and oversized output cann
   await assert.rejects(()=>analyseStockWithProvider(packet,{apiKey:'test-only-key',model:'test-model',fetcher}),/STOCK_AI_/);
  }
 });
+test('worker cancellation aborts the actual provider fetch without returning an analysis',async()=>{
+ const controller=new AbortController();let providerSignal;
+ await assert.rejects(()=>analyseStockWithProvider(packet,{apiKey:'test-only-key',model:'test-model',signal:controller.signal,
+  fetcher:async(url,request)=>{providerSignal=request.signal;controller.abort();return new Promise(()=>{});}}),/AI_ANALYSIS_ABORTED/);
+ assert.equal(providerSignal.aborted,true);
+});

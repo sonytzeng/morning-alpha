@@ -7,6 +7,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import * as member from '../src/features/vnext/member.ts';
 import {parseCompletedResearch} from '../src/features/vnext/completedResearch.ts';
+import {parseDailyAiMember} from '../src/features/vnext/dailyAiMember.ts';
 import {completedResponse} from './helpers/completedResearchFixture.mjs';
 import {buildPublicMarketReadModel} from '../src/lib/publicMarketReadModel.ts';
 import {publicMarketInput} from '../supabase/functions/_shared/public-market-projection.ts';
@@ -60,18 +61,22 @@ function harness({now=BEFORE,initialAccess=access()}={}){
    if(name==='@/pages/academy/useAcademyAccess')return {useAcademyAccess:()=>({access:currentAccess,retry})};
    if(name==='@/features/vnext/member')return {...member,memberTaipeiDate:now=>member.memberTaipeiDate(now??clock)};
    if(name==='@/features/vnext/completedResearch')return {parseCompletedResearch:value=>{const pending=parseCompletedResearch(value,clock);parses.push(pending);return pending;}};
+   if(name==='@/features/vnext/dailyAiMember')return {parseDailyAiMember:(value,date)=>parseDailyAiMember(value,date,clock)};
    if(name==='./MemberNavigation')return {default:'MemberNavigation',MemberObservationEntry:'MemberObservationEntry'};
    if(name==='./MemberExperience')return {default:'MemberExperience'};
    if(name==='./PublicExperience')return {default:'PublicExperience'};
    if(name==='./CompletedResearch')return {default:'CompletedResearch'};
+   if(name==='./DailyAiMemberResearch')return {default:'DailyAiMemberResearch'};
    if(name.endsWith('.css'))return {};
    throw Error('UNAPPROVED_MEMBER_COMPONENT_IMPORT:'+name);
   }},{filename:file});
  function render(){let count=0;do{assert(++count<30,'bounded React lifecycle');dirty=false;cursor=0;tree=exports.default({});while(queued.length)queued.shift()();}while(dirty);return tree;}
  render();
  return {rpc,publicCalls,render,
+  call(name){return rpc.findLast(r=>r.name===name);},
   get member(){return find(render(),'MemberExperience')[0]?.props;},
   get completed(){return find(render(),'CompletedResearch')[0]?.props;},
+  get dailyAi(){return find(render(),'DailyAiMemberResearch')[0]?.props;},
   get public(){return find(render(),'PublicExperience')[0]?.props;},
   get retries(){return retries;},
   setAccess(value){currentAccess=value;render();},
@@ -112,7 +117,7 @@ test('hidden clear rejects a stale watch handler without dispatching another RPC
 });
 test('same identity new generation cannot receive a late watch error from the old generation',async()=>{
  const h=harness();await h.resolve(h.rpc[0],research());const pending=h.member.onWatch('SYNTHETIC',true),old=h.rpc.at(-1);
- h.setAccess(access('A',2));await h.resolve(h.rpc.at(-1),research());assert.equal(h.member.notice,'');
+ h.setAccess(access('A',2));await h.resolve(h.call('get_vnext_member_v1'),research());assert.equal(h.member.notice,'');
  old.reject(Error('SYNTHETIC_OLD_GENERATION'));await pending;await settle();assert.equal(h.member.notice,'');assert.equal(h.member.busy,false);h.unmount();
 });
 test('a private response crossing Taipei midnight cannot restore yesterday even before its timer runs',async()=>{
@@ -123,8 +128,8 @@ test('wrong-day member payload is unavailable instead of successful empty resear
 });
 test('free history completion crossing midnight cannot combine two business days',async()=>{
  const h=harness({initialAccess:access('F',1,'free')});await h.resolve(h.rpc[0],research(TODAY,'free'));
- assert.equal(h.rpc[1].name,'get_vnext_free_history_v1');h.setClock(AFTER);
- await h.resolve(h.rpc[1],{schema:'VNEXT_FREE_HISTORY_V1',history:[]});assert.equal(h.member,undefined);h.unmount();
+ assert.equal(h.call('get_vnext_free_history_v1').name,'get_vnext_free_history_v1');h.setClock(AFTER);
+ await h.resolve(h.call('get_vnext_free_history_v1'),{schema:'VNEXT_FREE_HISTORY_V1',history:[]});assert.equal(h.member,undefined);h.unmount();
 });
 test('Taipei midnight clears public summary and starts only one new-day public read',async()=>{
  const h=harness({initialAccess:{kind:'denied'}});await settle();await h.resolve(h.publicCalls[0],publicPayload);assert.equal(h.public.market.date,'2026-10-02');
@@ -152,9 +157,9 @@ test('deadline and unmount keep late private responses from setting state; timer
 });
 test('StrictMode setup-cleanup-setup accepts only the second public and private continuations',async()=>{
  const h=harness();await settle();const oldPrivate=h.rpc[0],oldPublic=h.publicCalls[0];h.strictEffectReplay();await settle();
- assert.equal(h.rpc.length,2);assert.equal(h.publicCalls.length,2);
+ assert.equal(h.rpc.filter(r=>r.name==='get_vnext_member_v1').length,2);assert.equal(h.rpc.filter(r=>r.name==='get_daily_ai_member_research_v1').length,2);assert.equal(h.publicCalls.length,2);
  await h.resolve(oldPrivate,research());await h.resolve(oldPublic,publicPayload);assert.equal(h.member,undefined);
- await h.resolve(h.rpc[1],research());assert.equal(h.member.data.business_date,TODAY);assert.equal(h.member.market,null);
+ await h.resolve(h.call('get_vnext_member_v1'),research());assert.equal(h.member.data.business_date,TODAY);assert.equal(h.member.market,null);
  await h.resolve(h.publicCalls[1],publicPayload);assert.equal(h.member.market.date,'2026-10-02');h.unmount();assert.equal(h.timers,0);
 });
 test('only Owner dispatches the completed-session RPC and renders its validated 72-stock result',async()=>{
@@ -162,8 +167,8 @@ test('only Owner dispatches the completed-session RPC and renders its validated 
   const h=harness({now:Date.parse('2026-10-30T14:00:00Z'),initialAccess:access('A',1,tier)});
   await h.resolve(h.rpc[0],research('2026-10-30',tier));
   if(tier==='owner'){
-   assert.equal(h.rpc[1].name,'get_owner_completed_research_v1');assert.equal(h.rpc[1].signal,h.rpc[0].signal);
-   await h.resolve(h.rpc[1],await completedResponse());assert.equal(h.completed.data.rows.length,216);assert.equal(h.member,undefined);
+   assert.equal(h.call('get_owner_completed_research_v1').name,'get_owner_completed_research_v1');assert.equal(h.call('get_owner_completed_research_v1').signal,h.rpc[0].signal);
+   await h.resolve(h.call('get_owner_completed_research_v1'),await completedResponse());assert.equal(h.completed.data.rows.length,216);assert.equal(h.member,undefined);
   }else assert(!h.rpc.some(r=>r.name==='get_owner_completed_research_v1'));
   h.unmount();
  }
@@ -171,12 +176,58 @@ test('only Owner dispatches the completed-session RPC and renders its validated 
 test('Owner private result cannot return after hidden invalidation or entitlement loss',async()=>{
  for(const invalidate of [h=>h.visibility('hidden'),h=>h.setAccess(access('A',2,'free'))]){
   const h=harness({now:Date.parse('2026-10-30T14:00:00Z'),initialAccess:access('A',1,'owner')});
-  await h.resolve(h.rpc[0],research('2026-10-30','owner'));const pending=h.rpc[1];invalidate(h);
+  await h.resolve(h.rpc[0],research('2026-10-30','owner'));const pending=h.call('get_owner_completed_research_v1');invalidate(h);
   await h.resolve(pending,await completedResponse());assert(pending.signal.aborted);assert.equal(h.completed,undefined);h.unmount();
  }
 });
 test('failed Owner document retains the approved member experience and does not invent an analysis',async()=>{
  const h=harness({now:Date.parse('2026-10-30T14:00:00Z'),initialAccess:access('A',1,'owner')});
- await h.resolve(h.rpc[0],research('2026-10-30','owner'));await h.resolve(h.rpc[1],{},Error('SYNTHETIC_UNAVAILABLE'));
+ await h.resolve(h.rpc[0],research('2026-10-30','owner'));await h.resolve(h.call('get_owner_completed_research_v1'),{},Error('SYNTHETIC_UNAVAILABLE'));
  assert.equal(h.completed,undefined);assert.equal(h.member.data.tier,'owner');assert.equal(h.member.data.observations.length,0);h.unmount();
+});
+const aiEdition=(tier='premium')=>({schema:'VNEXT_AI_MEMBER_EDITION_V1',tier,business_date:'2026-10-30',research_only:true,
+ edition:{id:'a'.repeat(64),edition_date:'2026-10-30',data_through:'2026-10-30',evidence_cutoff:'2026-10-30T06:00:00Z',prepared_at:'2026-10-30T06:05:00Z',expires_at:'2026-10-31T00:00:00Z',mode:'AS_OF_RESEARCH',forecast:false,performance_available:false},
+ cards:Array.from({length:tier==='free'?3:72},(_,i)=>['SHORT','MEDIUM','LONG'].map(horizon=>({symbol:String(1000+i),company:'測試公司',horizon,status:'WAIT',reason:{text:'測試判斷',evidence_ids:['E1']},confirmation:'測試確認',invalidation:'測試失效',gaps:[],classification:'INFERENCE',...(tier==='free'?{}:{counter_evidence:[],sources:[{id:'E1',source:'https://www.twse.com.tw/test',kind:'NEWS',published_at:'2026-10-30T05:00:00Z',available_at:'2026-10-30T05:00:00Z',time_basis:'PUBLISHED',first_seen_at:null,as_of:null,evidence_hash:null}]})}))).flat()});
+test('all member tiers receive only their approved AI projection without delaying existing research',async()=>{
+ for(const tier of ['free','premium','owner']){
+  const h=harness({now:Date.parse('2026-10-30T14:00:00Z'),initialAccess:access('A',1,tier)});
+  await h.resolve(h.rpc[0],research('2026-10-30',tier));
+  if(tier==='free')await h.resolve(h.call('get_vnext_free_history_v1'),{schema:'VNEXT_FREE_HISTORY_V1',history:[]});
+  if(tier==='owner')await h.resolve(h.call('get_owner_completed_research_v1'),await completedResponse());
+  assert(h.member||h.completed);const pending=h.call('get_daily_ai_member_research_v1');assert.equal(pending.name,'get_daily_ai_member_research_v1');assert.equal(pending.args,undefined);
+  await h.resolve(pending,aiEdition(tier));assert.equal(h.dailyAi.data.tier,tier);assert.equal(h.dailyAi.data.cards.length,tier==='free'?9:216);assert.equal(h.member,undefined);h.unmount();
+ }
+});
+test('AI result cannot revive after entitlement change, focus, expiry timeout or wrong-tier payload',async()=>{
+ for(const invalidate of [h=>h.setAccess(access('B',2)),h=>h.focus(),h=>h.advance(8000)]){
+  const h=harness({now:Date.parse('2026-10-30T14:00:00Z')});await h.resolve(h.rpc[0],research('2026-10-30'));const pending=h.rpc.at(-1);invalidate(h);
+  await h.resolve(pending,aiEdition());assert.equal(h.dailyAi,undefined);h.unmount();assert.equal(h.timers,0);
+ }
+ const h=harness({now:Date.parse('2026-10-30T14:00:00Z')});await h.resolve(h.rpc[0],research('2026-10-30'));await h.resolve(h.rpc.at(-1),aiEdition('owner'));assert.equal(h.dailyAi,undefined);assert.equal(h.member.data.tier,'premium');h.unmount();
+});
+test('approved AI edition remains independently readable when legacy research fails or its history stalls',async()=>{
+ for(const tier of ['premium','free','owner']){
+  const h=harness({now:Date.parse('2026-10-30T14:00:00Z'),initialAccess:access('A',1,tier)});
+  await h.resolve(h.call('get_daily_ai_member_research_v1'),aiEdition(tier));assert.equal(h.dailyAi.data.tier,tier);
+  if(tier==='free'){
+   await h.resolve(h.call('get_vnext_member_v1'),research('2026-10-30','free'));
+   assert.equal(h.dailyAi.data.cards.length,9);h.advance(20000);assert.equal(h.dailyAi.data.tier,'free');
+  }else{
+   await h.resolve(h.call('get_vnext_member_v1'),null,Error('LEGACY_UNAVAILABLE'));assert.equal(h.dailyAi.data.cards.length,216);
+  }
+  h.setAccess({kind:'denied'});assert.equal(h.dailyAi,undefined);h.unmount();assert.equal(h.timers,0);
+ }
+});
+test('period selection survives a membership refresh while all private research is cleared and reread',async()=>{
+ for(const tier of ['premium','owner']){
+  const h=harness({now:Date.parse('2026-10-30T14:00:00Z'),initialAccess:access('A',1,tier)});
+  if(tier==='owner'){await h.resolve(h.call('get_vnext_member_v1'),research('2026-10-30',tier));await h.resolve(h.call('get_owner_completed_research_v1'),await completedResponse());}
+  else await h.resolve(h.call('get_daily_ai_member_research_v1'),aiEdition(tier));
+  const view=tier==='owner'?h.completed:h.dailyAi;assert.equal(view.selectedHorizon,'SHORT');view.onHorizonChange('LONG');
+  assert.equal((tier==='owner'?h.completed:h.dailyAi).selectedHorizon,'LONG');
+  h.focus();assert.equal(h.completed,undefined);assert.equal(h.dailyAi,undefined);h.setAccess(access('A',2,tier));
+  if(tier==='owner'){await h.resolve(h.call('get_vnext_member_v1'),research('2026-10-30',tier));await h.resolve(h.call('get_owner_completed_research_v1'),await completedResponse());}
+  else await h.resolve(h.call('get_daily_ai_member_research_v1'),aiEdition(tier));
+  assert.equal((tier==='owner'?h.completed:h.dailyAi).selectedHorizon,'LONG');h.unmount();
+ }
 });

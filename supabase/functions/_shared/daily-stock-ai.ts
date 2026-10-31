@@ -2,7 +2,7 @@ import {analyseStock,type AnalysisPacket} from '../../../research/daily-ai-analy
 
 /** Server-only port. Reuses a server supplied credential; never accepts member
  * request options, changes secrets, publishes content or logs provider bodies. */
-export async function analyseStockWithProvider(packet:AnalysisPacket,config:{apiKey:string;model:string;fetcher:typeof fetch}){
+export async function analyseStockWithProvider(packet:AnalysisPacket,config:{apiKey:string;model:string;fetcher:typeof fetch;signal?:AbortSignal}){
  if(!config.apiKey||!config.model||config.model.length>100)throw Error('STOCK_AI_CONFIGURATION_REQUIRED');
  let receipt:{response_id:string;model:string;input_tokens:number;output_tokens:number}|null=null;
  const analysis=await analyseStock(packet,async request=>{
@@ -28,7 +28,7 @@ export async function analyseStockWithProvider(packet:AnalysisPacket,config:{api
    ||!Number.isSafeInteger(usage?.completion_tokens)||usage.completion_tokens<0)throw Error('STOCK_AI_RECEIPT_INVALID');
   receipt={response_id:body.id,model:body.model,input_tokens:usage.prompt_tokens,output_tokens:usage.completion_tokens};
   return JSON.parse(content);
- });
+ },30000,config.signal);
  if(!receipt)throw Error('STOCK_AI_RECEIPT_MISSING');
  return {...analysis,receipt,publication_ready:false as const};
 }

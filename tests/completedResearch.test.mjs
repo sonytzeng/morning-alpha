@@ -39,7 +39,8 @@ test('older data stays readable but price plans expire and cannot be revived by 
 test('Owner-only read shares existing abort, identity, date and entitlement invalidation',()=>{
  const s=readFileSync(new URL('../src/pages/vnext/MemberPage.tsx',import.meta.url),'utf8');
  assert.match(s,/if\(data\.tier==='owner'&&!account\)/);assert.match(s,/rpc\('get_owner_completed_research_v1'\)\.abortSignal\(controller\.signal\)/);
- assert.match(s,/if\(valid\(\)\)setState\(\{identity:access\.id,generation:access\.generation,readEpoch:epoch,requestDate,data,completed,completedError\}\)/);
+ assert.match(s,/const bind=\{identity:access\.id,generation:access\.generation,readEpoch:epoch,requestDate\}/);
+ assert.match(s,/if\(valid\(\)\)setState\(s=>\(\{\.\.\.\(s\?\.readEpoch===epoch\?s:\{\}\),\.\.\.bind,data,completed,completedError,error:false\}\)\)/);
  assert.match(s,/data\.tier==='owner'&&state\?\.completed\?/);assert.match(s,/setState\(null\)/);
  assert(!s.includes('localStorage'));assert(!s.includes('sessionStorage'));
 });

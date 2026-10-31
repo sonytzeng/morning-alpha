@@ -1,0 +1,40 @@
+{
+  "schema": "BOUNDED_RESEARCH_INCIDENT_RECOVERY_REVIEW_V1",
+  "recorded_at": "2026-10-31T11:17:35.696553+00:00",
+  "batch_id": "0524783a79af043a70be593d2e019c435bc067f168a5b2567a831e32d78b4ddc",
+  "operation_scope": "Complete the already requested72-stock research batch using existing configured provider access; the user approved necessary work and asked not to repeat confirmation.",
+  "observed_original_jobs": {
+    "complete": 18,
+    "failed_exact_http429_attempt3": 54,
+    "running": 0
+  },
+  "permitted_recovery": {
+    "revision": "gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low:recovery-1",
+    "provider_model_and_prompt_unchanged": true,
+    "unique_targets_max": 54,
+    "claims_per_target_max": 1,
+    "concurrent_targets_max": 1,
+    "first_target": "2357",
+    "next_target_requires_prior_success": true,
+    "stop_on_failure_or_unknown": true,
+    "expires_at": "2026-11-02T05:30:00Z"
+  },
+  "verified_artifacts": {
+    "sql_sha256": "eabfd2e637f095fbfc5ea3ec2ce10bb80303a23b47ff967813a4e581232efb3c",
+    "source_policy_sql_sha256": "ec3df9d09e5ed1fb55c85eab4e28774096cdefc51929bd3d55ab7ab30fb43b26",
+    "edge_version": 17,
+    "edge_archive_sha256": "ab4914ea2a398411c4ad7b4c39759075c3cd731a36b3ca80d74c003b97086e95",
+    "edge_files_read_back_exact": 52,
+    "deploy_args_sha256": "32341f02927c4b29555083f3c86a9851ce2969b3da845860628a26df1adfa838"
+  },
+  "safeguards": [
+    "Keep original18 successful jobs, receipts and all54 exhausted failures immutable.",
+    "No new purchase, top-up, account budget, secret, Auth, Cron, pricing or checkout changes.",
+    "The original normal216 transport cap remains unchanged.",
+    "No automatic chain in recovery; any failure stops subsequent targets.",
+    "New outputs still require independent content and source-use review before private stage and Owner publication."
+  ],
+  "source_admission_granted": false,
+  "quality_review_granted": false,
+  "member_publication_granted": false
+}

@@ -1,0 +1,48 @@
+{
+  "schema": "MORNING_ALPHA_SITE_WALKTHROUGH_V1",
+  "recorded_at": "2026-10-31T11:24:02.621386+00:00",
+  "routes_inspected": [
+    "/",
+    "/report/today",
+    "/war-room",
+    "/verification",
+    "/performance",
+    "/academy",
+    "/learn",
+    "/pricing",
+    "/faq",
+    "/contact",
+    "/terms",
+    "/privacy",
+    "/stocks",
+    "/account",
+    "/member-note",
+    "/reports",
+    "/reports/2026-10-29",
+    "/vnext/publication"
+  ],
+  "scope": "Main public/member/Owner publication paths inspected across live719 and723; this is not an exhaustive test of every possible URL or data permutation.",
+  "fresh_live723_checks": {
+    "home": "Weekend2026-10-31, next trading day2026-11-02, new stocks CTA reaches live member route.",
+    "pricing": "New stocks entry and short/mid/long plan row visible; existing NT199 planned price, payment disabled, no trial activation.",
+    "stocks": "Real existing Owner Auth read216 approved cards, all horizons reachable; source limitations now precise Chinese.",
+    "continuity": "After repeated visible refresh periods, MEDIUM+2330 query and one matching card remain mounted.",
+    "long_current_publication": "72 INSUFFICIENT; the new bound2330 WAIT review has not replaced this edition."
+  },
+  "live_edition_id": "91b6c703afd70f01c37ccf8da640ed63c6dd1afb61013ed6cba24c9c0ad9ab81",
+  "live_short": {
+    "WATCH": 4,
+    "WAIT": 58,
+    "AVOID": 10
+  },
+  "live_medium": {
+    "WATCH": 52,
+    "WAIT": 20
+  },
+  "live_long": {
+    "INSUFFICIENT": 72
+  },
+  "new_free_and_paid_real_auth_end_to_end": "NOT_PERFORMED; existing Owner browser and isolated role/lifecycle tests only.",
+  "real_payment_or_checkout_test": "NOT_PERFORMED; disabled.",
+  "ten_thousand_production_capacity": "NOT_PROVEN"
+}

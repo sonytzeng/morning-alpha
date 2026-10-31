@@ -1,0 +1,35 @@
+{
+  "schema": "DAILY_STOCK_AI_LIVE17_RECEIPT_V1",
+  "recorded_at": "2026-10-31T11:24:02.621386+00:00",
+  "function": "daily-stock-analysis-v1",
+  "version": 17,
+  "status": "ACTIVE",
+  "archive_sha256": "ab4914ea2a398411c4ad7b4c39759075c3cd731a36b3ca80d74c003b97086e95",
+  "deploy_args_sha256": "32341f02927c4b29555083f3c86a9851ce2969b3da845860628a26df1adfa838",
+  "read_back_files": 52,
+  "exact_file_matches": 52,
+  "unchanged_previous_live_files": 45,
+  "type_only_assertion_files": [
+    "research/daily-ai-global-market.ts",
+    "research/daily-ai-refresh.ts"
+  ],
+  "type_assertion_emitted_js_identical": true,
+  "runtime_source_changes": [
+    "V2 receipt-bound review replay and final SOURCE price/expiry activation",
+    "Dedicated fixed-batch single-stock incident recovery, no continuation",
+    "Normal chain continues only after a COMPLETE result"
+  ],
+  "verify_jwt_setting_unchanged": true,
+  "internal_delivery_auth_unchanged": true,
+  "new_model_or_account_budget": false,
+  "secrets_auth_settings_cron_changed": false,
+  "validation": {
+    "postgres_v2_checks": 52,
+    "postgres_recovery_checks": 418,
+    "postgres_pause_checks": 215,
+    "adapter_tests": 5,
+    "recovery_handler_runner_tests": 15,
+    "full_52_file_deno": "PASS: Deno2.9.2",
+    "independent_review_sha256": "4768d7d02c134ec4a03a44bbfe8c91aceda8e09e778eb6ece6279588d4d674cd"
+  }
+}

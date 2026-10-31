@@ -11,4 +11,6 @@ test('actual pricing UI discloses disabled payment, preserves planned price and 
  const html=renderToStaticMarkup(React.createElement(MemoryRouter,{initialEntries:['/pricing']},React.createElement(exports.default)));
  assert.match(html,/目前為公開測試，尚未開放付款/);assert.match(html,/NT\$199/);assert.match(html,/不會開始計算正式付費試用/);assert.match(html,/既有會員權益保持不變/);
  assert.match(html,/登入查看目前內容/);assert.doesNotMatch(html,/>開始.{0,8}試用<|checkout|lemonsqueezy/);
+ assert.match(html,/href="\/stocks"/);assert.match(html,/href="\/login\?next=\/stocks"/);
+ assert.match(html,/短、中、長期精選摘要/);assert.match(html,/完整已核准個股研究、反面證據與資料來源/);
 });

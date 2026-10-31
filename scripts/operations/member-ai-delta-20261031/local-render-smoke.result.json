@@ -1,0 +1,51 @@
+{
+  "schema": "MEMBER_AI_DELTA_LOCAL_RENDER_DIAGNOSTIC_V1",
+  "result": "PASS",
+  "synthetic_data": true,
+  "node_version": "v24.22.1",
+  "measurement_scope": "Single local process; JSON parsing, strict client projection and server-side rendering only. No browser paint, network, Auth, DB or concurrency capacity measurement.",
+  "full_json_bytes": 1013738,
+  "unchanged_json_bytes": 497,
+  "cards_in_model": 216,
+  "rendered_cards": {
+    "initial": 9,
+    "expanded": 72,
+    "searched": 1,
+    "expired": 0
+  },
+  "timings": {
+    "full_json_and_projection": {
+      "iterations": 30,
+      "p50_ms": 2.717,
+      "p95_ms": 4.337,
+      "max_ms": 5.065
+    },
+    "unchanged_json_and_cache_binding": {
+      "iterations": 100,
+      "p50_ms": 0.004,
+      "p95_ms": 0.008,
+      "max_ms": 0.037
+    },
+    "initial_nine_cards_ssr": {
+      "iterations": 10,
+      "p50_ms": 6.186,
+      "p95_ms": 7.492,
+      "max_ms": 7.492
+    },
+    "expanded_72_cards_ssr": {
+      "iterations": 5,
+      "p50_ms": 14.828,
+      "p95_ms": 16.005,
+      "max_ms": 16.005
+    },
+    "search_one_card_ssr": {
+      "iterations": 10,
+      "p50_ms": 0.725,
+      "p95_ms": 0.959,
+      "max_ms": 0.959
+    }
+  },
+  "production_used": false,
+  "production_load_test": false,
+  "ten_thousand_member_capacity_proven": false
+}

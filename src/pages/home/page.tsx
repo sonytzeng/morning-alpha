@@ -667,8 +667,8 @@ function HomePageContent() {
           body: 'Morning Alpha 今日不建立交易劇本。今日沒有盤中驗證，AI 已切換休市模式。',
           primary: '查看昨日收盤驗證',
           primaryTo: '/war-room',
-          secondary: '查看完整研究筆記',
-          secondaryTo: '/member-note',
+          secondary: '查看短中長期股票研究',
+          secondaryTo: '/stocks',
           chips: ['今晚國際市場', '下一交易日前瞻'],
         };
       case 'WEEKEND':
@@ -678,8 +678,8 @@ function HomePageContent() {
           body: 'Morning Alpha 今日不建立交易劇本，也不啟動盤中驗證。',
           primary: '查看本週總結',
           primaryTo: '/performance',
-          secondary: '查看完整研究筆記',
-          secondaryTo: '/member-note',
+          secondary: '查看短中長期股票研究',
+          secondaryTo: '/stocks',
           chips: ['本週總結', '下一交易日前瞻'],
         };
       case 'HOLIDAY':
@@ -689,8 +689,8 @@ function HomePageContent() {
           body: 'Morning Alpha 今日不建立交易劇本，也不啟動盤中驗證。',
           primary: '查看昨日收盤驗證',
           primaryTo: '/war-room',
-          secondary: '查看完整研究筆記',
-          secondaryTo: '/member-note',
+          secondary: '查看短中長期股票研究',
+          secondaryTo: '/stocks',
           chips: ['今晚國際市場', '下一交易日前瞻'],
         };
       default:
@@ -700,8 +700,8 @@ function HomePageContent() {
           body: 'Morning Alpha 今日不建立交易劇本，也不啟動盤中驗證。',
           primary: '查看昨日收盤驗證',
           primaryTo: '/war-room',
-          secondary: '查看完整研究筆記',
-          secondaryTo: '/member-note',
+          secondary: '查看短中長期股票研究',
+          secondaryTo: '/stocks',
           chips: ['今晚國際市場', '下一交易日前瞻'],
         };
     }

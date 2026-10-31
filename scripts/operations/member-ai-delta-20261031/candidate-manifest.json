@@ -1,0 +1,76 @@
+{
+  "schema": "MEMBER_AI_DELTA_CANDIDATE_V1",
+  "new_signature": "public.get_daily_ai_member_research_delta_v1(text,text)",
+  "wrapper_definition_sha256": "a23ac838e94bc1d5d244bd9b9577082a16817a31aa4557a2f24bd445d033ec78",
+  "candidate_sql_sha256": "eaa3a954c29f4825c23362aa0b5e5dfbcec7b615d38ef57081f62e4f72c4ddb7",
+  "rollback_sql_sha256": "bf2f098c42d7422ccebf40433b96685ab0ae5b4af898661bad393b03d7253c7f",
+  "old_reader": "public.get_daily_ai_member_research_v1()",
+  "old_reader_definition_sha256": "75f25f11361c83e33297f4f7386339cdb959d02f4431a9571681eda59717cbc8",
+  "pinned_readers": [
+    {
+      "signature": "public.is_research_owner_v1()",
+      "hash": "eaf18ce70212175aa93b60e23b266978cb631cb98bda4c74169fd2ea06fd162b",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "security_definer": true
+    },
+    {
+      "signature": "academy_private.access_v11()",
+      "hash": "6a3d6865188b13c70e37f23e4235e18c83ba993b1e619ba8e7536038088cd135",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "security_definer": true
+    },
+    {
+      "signature": "vnext_private.ai_edition_rights_v1(text,timestamptz)",
+      "hash": "a1d17f43ddc8c19103d436f84aed6cd59710da9e6e96a4de09efdd714101a054",
+      "acl": "{postgres=X/postgres}",
+      "security_definer": true
+    },
+    {
+      "signature": "public.get_daily_ai_member_research_v1()",
+      "hash": "75f25f11361c83e33297f4f7386339cdb959d02f4431a9571681eda59717cbc8",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "security_definer": true
+    }
+  ],
+  "security": "INVOKER",
+  "execute_grants": [
+    "postgres",
+    "authenticated"
+  ],
+  "anonymous_grant": false,
+  "original_readers_modified": false,
+  "old_reader_executes_on_every_request": true,
+  "network_payload_optimization_only": true,
+  "db_cpu_reduction_claimed": false,
+  "production_10000_member_capacity_proven": false,
+  "permission_cache": false,
+  "production_change_performed": false,
+  "response_contract": {
+    "schema": "VNEXT_AI_MEMBER_DELTA_V1",
+    "common_fields": [
+      "mode",
+      "user_id",
+      "tier",
+      "business_date",
+      "research_only",
+      "edition"
+    ],
+    "unchanged": "Only when current nonnull edition.id and server tier both equal known values; no payload/cards field.",
+    "full": "payload is the complete unmodified original-reader response, including null edition after withdrawal or expiry."
+  },
+  "client_cache_binding": [
+    "user_id",
+    "Auth generation",
+    "business_date",
+    "edition.id",
+    "tier",
+    "edition.expires_at"
+  ],
+  "client_rules": [
+    "Keep cards only in memory.",
+    "FULL replaces all cached data, including clearing null editions.",
+    "UNCHANGED requires a current cache with exact server user/tier/date/edition/expiry binding.",
+    "No cache, mismatch or malformed UNCHANGED must clear and request known=null.",
+    "Identity change, authorization denial, expiry and Taipei date change invalidate the cache."
+  ]
+}

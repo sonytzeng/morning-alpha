@@ -1,0 +1,66 @@
+{
+  "schema": "MEMBER_RESEARCH_DELTA_RELEASE_V1",
+  "recorded_at": "2026-10-31T10:49:10.621173+00:00",
+  "source_sha256": {
+    "src/lib/supabase.ts": "14f0e9280c2b524d1878d2bd2fbaeb91f524777b17b404f38711f1914e0f6274",
+    "src/lib/supabaseAuthFetch.ts": "e92d69e21d7f25c3d3b531fb541b730ac30fbeb5d0dce09e28e67f6747e3b5d1",
+    "src/pages/academy/useAcademyAccess.ts": "2e6c1990e6260442ba3da2e57f54195bad0a5b2af7c0b93e87cdea56ceaad44f",
+    "src/features/vnext/dailyAiMemberDelta.ts": "22134787335f9c2443187c14285e8e908279ccc786bbc512300e75b80eae8379",
+    "src/pages/vnext/MemberPage.tsx": "26b844cf14626778bd81ee7426db8aa50b4a8d60459e6772b04055817b8b5069",
+    "src/features/vnext/dailyAiCopy.ts": "763bbf51e5a5de09f8bb525f5e653f155df4a8c99f3006d434da75f0abb900eb",
+    "src/pages/vnext/DailyAiMemberResearch.tsx": "44fbebe135446718b352a5eb34f0eea66926d8cd114679071882231e31e23e08",
+    "src/pages/home/page.tsx": "f804a9e2b1e5b886a70c6a5062fdb2032ede2f193a0fb9778f27f2a11bd4508c",
+    "src/pages/pricing/Pricing.tsx": "9ff0b2b18faf52363a1f66c8ee2eb4f57994339aa52fd4fd5a82a8912b106a63"
+  },
+  "database": {
+    "migration": "member_ai_research_delta_v1",
+    "sql_sha256": "eaa3a954c29f4825c23362aa0b5e5dfbcec7b615d38ef57081f62e4f72c4ddb7",
+    "deployed_definition_sha256": "a23ac838e94bc1d5d244bd9b9577082a16817a31aa4557a2f24bd445d033ec78",
+    "actual_postflight_pass": true,
+    "original_four_readers_unchanged": true,
+    "security_invoker": true,
+    "authenticated_execute": true,
+    "anon_execute": false,
+    "service_role_execute": false
+  },
+  "verification": {
+    "type_check": "PASS",
+    "build": "PASS",
+    "lint": "PASS",
+    "git_diff_check": "PASS",
+    "related_component_hook_delta_tests": {
+      "pass": 166,
+      "fail": 0,
+      "limitations": "Includes overlap with individual suites; --test-force-exit after all tests complete because existing Vite watchers remain."
+    },
+    "home_pricing_member_tests": {
+      "pass": 31,
+      "fail": 0
+    },
+    "auth_transport_tests": {
+      "pass": 14,
+      "fail": 0
+    },
+    "independent_client_tests": {
+      "pass": 64,
+      "fail": 0
+    }
+  },
+  "behavior": [
+    "Every Delta request reruns original entitlement/publication/rights reader.",
+    "UNCHANGED reuses RAM only with exact user/generation/day/tier/edition/expiry binding.",
+    "Hidden tab clears protected RAM and stops app polling.",
+    "AI success does not also load heavyweight legacy snapshots.",
+    "Late malformed UNCHANGED after timeout cannot clear fresh fallback or start another RPC.",
+    "Auth fetch and response body are aborted at 15 seconds per request; SDK retry and lock settings are retained.",
+    "Closed-market home and plan page link to short/medium/long research.",
+    "Documented own-review assumptions and limitations have specific Chinese labels."
+  ],
+  "pricing_changed": false,
+  "checkout_enabled": false,
+  "cron_changed": false,
+  "production_10000_capacity_proven": false,
+  "paid_subscriber_goal_achieved": false,
+  "full_historical_admission_suite": "NOT_CLAIMED; existing sealed fixture drift retained separately",
+  "frontend_deployed": false
+}

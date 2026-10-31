@@ -70,6 +70,14 @@ test('actual component starts in a single horizon, shows gaps and source dates, 
   assert.equal((html.match(/class="vnext-card dam-card"/g)||[]).length,9);
   const expanded=renderToStaticMarkup(React.createElement(Page,{data,viewState:{filter:'ALL',query:'',limit:72}}));
   assert.equal((expanded.match(/class="vnext-card dam-card"/g)||[]).length,72);assert(!expanded.includes('再看9檔'));
+  const ownReview=fixture();ownReview.cards[0].gaps=[
+   'OWN_REVIEW_NOT_SEC_VERDICT_BOUND_QUOTE_EXPIRY_ASSUMPTIONS_NOT_FCFE_OR_DIVIDENDS',
+   'VALUATION_NOT_SUPPORTED_ONLY_AT_BOUND_PRICE_AND_REVIEWED_25_PERCENT_DISCOUNT_POLICY',
+   'ASSUMED_PAYOUT_NOT_FCFE_OR_DECLARED_DIVIDENDS_TERMINAL_VALUE_AND_EPS_NORMALIZATION_UNCERTAIN'];
+  const reviewHtml=renderToStaticMarkup(React.createElement(Page,{data:parseDailyAiMember(ownReview,'2026-10-31',now)}));
+  assert(reviewHtml.includes('並非 SEC 的判斷'));assert(reviewHtml.includes('25% 折價門檻'));
+  assert(reviewHtml.includes('並非實際股權自由現金流或已宣告股利'));
+  assert(!reviewHtml.includes('這項資料尚待確認，需補齊後再評估。'));
   const searched=renderToStaticMarkup(React.createElement(Page,{data,viewState:{filter:'ALL',query:'1000',limit:72}}));
   assert.equal((searched.match(/class="vnext-card dam-card"/g)||[]).length,1);assert(searched.includes('value="1000"'));
   const filtered=renderToStaticMarkup(React.createElement(Page,{data,viewState:{filter:'WATCH',query:'',limit:72}}));

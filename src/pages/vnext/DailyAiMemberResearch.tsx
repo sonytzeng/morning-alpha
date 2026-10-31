@@ -11,7 +11,7 @@ const order:Record<DailyAiMemberState,number>={WATCH:0,WAIT:1,AVOID:2,INSUFFICIE
 const date=(value:string)=>new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value));
 function Gaps({gaps}:{gaps:string[]}){
  if(!gaps.length)return null;
- return <section className="dam-gaps"><h4>還缺哪些個股資料？</h4><ul>{gaps.slice(0,3).map((gap,i)=><li key={i}>{dailyAiGapLabel(gap)}</li>)}</ul>{gaps.length>3&&<details><summary>再看 {gaps.length-3} 項資料限制</summary><ul>{gaps.slice(3).map((gap,i)=><li key={i}>{dailyAiGapLabel(gap)}</li>)}</ul></details>}</section>;
+ return <section className="dam-gaps"><h4>研究限制與待確認資料</h4><ul>{gaps.slice(0,3).map((gap,i)=><li key={i}>{dailyAiGapLabel(gap)}</li>)}</ul>{gaps.length>3&&<details><summary>再看 {gaps.length-3} 項資料限制</summary><ul>{gaps.slice(3).map((gap,i)=><li key={i}>{dailyAiGapLabel(gap)}</li>)}</ul></details>}</section>;
 }
 const openFinancialSource=(source:string)=>/^https:\/\/openapi\.twse\.com\.tw\/v1\/(?:opendata\/|exchangeReport\/BWIBBU_d(?:$|\?))/.test(source)||/^https:\/\/www\.tpex\.org\.tw\/openapi\/v1\//.test(source);
 function EditionSources({year}:{year:string}){
@@ -23,7 +23,9 @@ function EditionSources({year}:{year:string}){
   </ul>
   <p>上述資料集由金融監督管理委員會證券期貨局提供，原始資料來自臺灣證券交易所及櫃買中心，依<a href="https://data.gov.tw/license" target="_blank" rel="noopener noreferrer">政府資料開放授權條款第 1 版</a>釋出及利用。資料年份標示不代表每筆財報均為當期，請保留各筆實際期別。</p>
   <p>Board of Governors of the Federal Reserve System（美國聯準會理事會）：<a href="https://www.federalreserve.gov/feeds/press_all.xml" target="_blank" rel="noopener noreferrer">官方新聞發布 RSS</a>。依其<a href="https://www.federalreserve.gov/disclaimer.htm" target="_blank" rel="noopener noreferrer">公開領域與著作權政策</a>，未另行標示權利的資訊屬公共領域，第三方素材及標誌除外。RSS 僅提供聯準會發布背景，不能代替美股收盤行情。</p>
+  <p>引用美國證券交易委員會（SEC）<a href="https://www.sec.gov/edgar/search/" target="_blank" rel="noopener noreferrer">EDGAR 公開申報資料</a>時，依其<a href="https://www.sec.gov/about/webmaster-frequently-asked-questions" target="_blank" rel="noopener noreferrer">公開申報內容使用說明</a>保留來源。公司申報數字、自有研究意見與明示假設的估值情境會分開說明。研究意見由 Morning Alpha 整理；情境估值依分析假設推算，使用時請一併核對敏感度與重評條件。季度與年度的會計準則、期間及修訂狀態，以各筆資料與缺口為準。</p>
   <p>事實摘要與研究判讀由 Morning Alpha 整理，未轉載新聞或公告全文。</p>
+  <p>引用資料中的候選研究註記保留產出時狀態；本頁可讀範圍以本版發布審核為準。</p>
  </details>;
 }
 function Evidence({card,year}:{card:DailyAiMemberCard;year:string}){

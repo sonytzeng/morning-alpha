@@ -31,9 +31,9 @@ try{
  create function cron.schedule(p_jobname text,p_schedule text,p_command text) returns bigint language plpgsql as $$begin insert into cron.job values(p_jobname,p_schedule,p_command);return 1;end$$;`);
  // All new application SQL in exact release order. Only platform extension,
  // existing-table and authentication ports are synthetic; no staging stub.
- for(const name of ['daily-ai-jobs','daily-ai-batches','daily-ai-dispatch','daily-ai-handoff','daily-ai-member','daily-ai-use-review','daily-ai-intake','daily-ai-intake-cron']){
+ for(const name of ['daily-ai-jobs','daily-ai-batches','daily-ai-dispatch','daily-ai-handoff','daily-ai-member','daily-ai-use-review','daily-ai-intake','daily-ai-market-policy-v2','daily-ai-model-revision-v7','daily-ai-intake-cron']){
   const sql=readFileSync(new URL('../research/'+name+'.candidate.sql',import.meta.url),'utf8');
-  if(name==='daily-ai-intake')assert(sql.includes("target_revision constant text:='"+stockAiModelRevision('gpt-4o-mini')+"'"),'Watchdog and worker model identity must match');
+  if(name==='daily-ai-intake')assert(sql.includes("target_revision constant text:='"+stockAiModelRevision('gpt-6-astra')+"'"),'Watchdog and worker model identity must match');
   await db.exec(sql);
  }
  const run='00000000-0000-0000-0000-000000000001',revision='a'.repeat(64),inputs=[],companies=[],sourceCutoff='2026-10-29T00:00:00Z';
@@ -58,14 +58,15 @@ try{
  bad=structuredClone(refreshed);bad[0].bars[0].close=99;await assert.rejects(()=>call('SOURCE',id,{lease:claimed.lease,inputs:bad}),/AI_INTAKE_RETAINED_BYTES/);
  bad=structuredClone(refreshed);bad[0].bars.at(-1).available_at='2099-01-01T00:00:00Z';await assert.rejects(()=>call('SOURCE',id,{lease:claimed.lease,inputs:bad}),/AI_INTAKE_FUTURE_RECEIPT/);
  // The collector is real, while these HTTP fixtures contain synthetic values.
- // Calendar/session dates come from the actual covered calendar, not today-as-US.
+ // Treasury observation dates stay XML date coordinates, not index closes.
  const usDate=latestCompletedUsSession(Date.now()),usPrior=previousMarketTradingDate('US',usDate),night=dailyAiExpectedTaiwanNight(new Date().toISOString());
  const marketCapture=await collectDailyAiGlobalMarket({businessDate:queued.business_date,clock:()=>new Date().toISOString(),signal:new AbortController().signal,fetcher:async source=>{
   if(String(source).includes('taifex'))return Response.json([{Contract:'TX',TradingSession:'盤後',Date:night.trading_date.replaceAll('-',''),'ContractMonth(Week)':night.trading_date.slice(0,7).replace('-',''),Last:'20000',Change:'100','%':'0.50%'}]);
-  const symbol=decodeURIComponent(new URL(source).pathname.split('/').at(-1));const times=[usPrior,usDate].map(d=>Date.parse(d+'T13:30:00Z')/1000);
-  return Response.json({chart:{error:null,result:[{meta:{symbol,instrumentType:'INDEX',currency:'USD',exchangeTimezoneName:'America/New_York',dataGranularity:'1d',regularMarketTime:times[1]},timestamp:times,indicators:{quote:[{close:[100,101]}]}}]}});
+  assert(String(source).startsWith('https://home.treasury.gov/'),'no unlicensed equity quote request');
+  const entries=[[usPrior,[4.61,4.98,5.32]],[usDate,[4.56,4.94,5.31]]].map(([d,r])=>'<entry><content><m:properties><d:NEW_DATE m:type="Edm.DateTime">'+d+'T00:00:00</d:NEW_DATE>'+['BC_2YEAR','BC_10YEAR','BC_30YEAR'].map((field,i)=>'<d:'+field+' m:type="Edm.Double">'+r[i]+'</d:'+field+'>').join('')+'</m:properties></content></entry>').join('');
+  return new Response('<feed xmlns="http://www.w3.org/2005/Atom" xmlns:d="http://schemas.microsoft.com/ado/2007/08/dataservices" xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"><title>DailyTreasuryYieldCurveRateData</title>'+entries+'</feed>');
  }});
- assert.equal(marketCapture.market.length,4);assert.equal(JSON.parse(marketCapture.market[0].content).session_date,usDate);
+ assert.equal(marketCapture.market.length,2);assert.equal(JSON.parse(marketCapture.market[0].content).session_date,usDate);assert.equal(JSON.parse(marketCapture.market[0].content).unit,'PERCENT');assert(marketCapture.additionalGaps.includes('US_EQUITY_CLOSE_NOT_COLLECTED_US_NEWS_CONTEXT_ONLY'));
  const nightFact=JSON.parse(marketCapture.market.find(e=>JSON.parse(e.content).native_symbol==='TX').content);assert.equal(nightFact.trading_date,night.trading_date);assert.equal(nightFact.session_date,night.session_date);
  const htmlMarket=structuredClone(marketCapture.market);htmlMarket.find(e=>JSON.parse(e.content).native_symbol==='TX').source='https://www.taifex.com.tw/cht/3/futDailyMarketReport?queryType=2&marketCode=1&queryDate='+night.trading_date.replaceAll('-','%2F')+'&commodity_id=TX';
  await db.exec('reset role');assert.equal((await db.query('select vnext_runtime.validate_daily_ai_market_v1($1,clock_timestamp(),$2) valid',[htmlMarket,queued.business_date])).rows[0].valid,true);htmlMarket.find(e=>JSON.parse(e.content).native_symbol==='TX').source+='&extra=1';assert.equal((await db.query('select vnext_runtime.validate_daily_ai_market_v1($1,clock_timestamp(),$2) valid',[htmlMarket,queued.business_date])).rows[0].valid,false);await db.exec('set role service_role');
@@ -75,6 +76,8 @@ try{
  badMarket=structuredClone(marketCapture.market);const futureFact=JSON.parse(badMarket[0].content);futureFact.session_date='2099-01-01';badMarket[0].content=JSON.stringify(futureFact);await sealMarket(badMarket[0]);await assert.rejects(()=>call('SOURCE',id,{lease:claimed.lease,inputs:refreshed,market:badMarket}),/AI_INTAKE_MARKET/);
  badMarket=structuredClone(marketCapture.market);badMarket[0].evidence_hash='f'.repeat(64);await assert.rejects(()=>call('SOURCE',id,{lease:claimed.lease,inputs:refreshed,market:badMarket}),/AI_INTAKE_MARKET/);
  badMarket=structuredClone(marketCapture.market);badMarket[0].published_at=badMarket[0].available_at;await assert.rejects(()=>call('SOURCE',id,{lease:claimed.lease,inputs:refreshed,market:badMarket}),/AI_INTAKE_MARKET/);
+ badMarket=structuredClone(marketCapture.market);badMarket[0].source='https://query1.finance.yahoo.com/v8/finance/chart/%5EIXIC?interval=1d&range=1mo';await assert.rejects(()=>call('SOURCE',id,{lease:claimed.lease,inputs:refreshed,market:badMarket}),/AI_INTAKE_MARKET/);
+ badMarket=structuredClone(marketCapture.market);const wrongRate=JSON.parse(badMarket[0].content);wrongRate.change_10y_bp=99;badMarket[0].content=JSON.stringify(wrongRate);await sealMarket(badMarket[0]);await assert.rejects(()=>call('SOURCE',id,{lease:claimed.lease,inputs:refreshed,market:badMarket}),/AI_INTAKE_MARKET/);
  await db.exec('reset role');await db.query("insert into public.news_events values(gen_random_uuid(),'測試公司0 原始標題','供應商原始摘要','測試來源','TEST','https://example.com/test-news',now()-interval '1 hour',now()-interval '30 minutes',$1)",['e'.repeat(64)]);await db.exec('set role service_role');
  const sourced=await call('SOURCE',id,{lease:claimed.lease,inputs:refreshed,gaps:['PRICE_REFRESH_SOURCE_SCOPE_DISCLOSED',...marketCapture.additionalGaps],symbol_gaps:symbolGaps,market:marketCapture.market});assert.equal(sourced.state,'SOURCED');assert.equal(sourced.member_published,false);assert(sourced.news.length>0);assert.equal(sourced.gaps_by_symbol['1000'][0],'PRICE_REFRESH_SYNTHETIC_ISOLATED_TEST');assert.deepEqual(sourced.market,marketCapture.market);assert(!sourced.intake_gaps.includes('MARKET_IMMUTABLE_AS_OF_SNAPSHOT_UNAVAILABLE'));
  assert(sourced.inputs.every(i=>i.cutoff===sourced.cutoff));assert.deepEqual(sourced.inputs[0].facts,claimed.inputs[0].facts);assert.equal(sourced.news[0].available_at,sourced.cutoff);assert(Date.parse(sourced.cutoff)>=Date.parse(received));assert.equal(sourced.source_cutoff,sourceCutoff);
@@ -82,7 +85,7 @@ try{
  await db.exec('reset role');await db.query("update public.news_events set title='新標題不可以改寫已凍結輸入'");await assert.rejects(()=>db.query('update vnext_runtime.ai_stock_intakes set cutoff=now() where id=$1',[id]),/AI_INTAKE_IMMUTABLE/);await db.exec('set role service_role');
  const replay=await call('CLAIM',id);assert.equal(replay.state,'SOURCED');assert.equal(replay.cutoff,sourced.cutoff);assert.deepEqual(replay.news,sourced.news);assert.deepEqual(replay.market,sourced.market);
  const sourceIntake={intake_id:id,snapshot_hash:sourced.snapshot_hash,source_kind:sourced.source_kind,source_id:sourced.source_id,source_revision:sourced.source_revision,source_cutoff:sourced.source_cutoff,source_business_date:sourced.source_business_date,projection:sourced.projection};
- const parsedSource=await parseDailyAiSourceSnapshot(sourced,sourced.cutoff,new AbortController().signal,'INTAKE');assert.equal(parsedSource.market.length,4);
+ const parsedSource=await parseDailyAiSourceSnapshot(sourced,sourced.cutoff,new AbortController().signal,'INTAKE');assert.equal(parsedSource.market.length,2);
  const seed=await buildDailyAiSeed({...parsedSource,cutoff:sourced.cutoff,sourceIntake});
  const storeBody=async body=>{const text=canonical(body),hash=await snapshotHash(body);await db.query('select public.store_daily_stock_ai_batch_v1($1,$2)',[text,hash]);return hash;};
  let wrong=structuredClone(seed.body);wrong.source_intake.snapshot_hash='f'.repeat(64);await assert.rejects(()=>storeBody(wrong).then(batch_id=>call('COMPLETE',id,{lease:claimed.lease,batch_id})),/AI_INTAKE_BATCH_CONFLICT/);
@@ -99,7 +102,7 @@ try{
  // starts the exact retained batch, then suppresses fresh duplicate transport.
  const resume=async()=>(await db.query('select public.resume_daily_stock_ai_intake_v1($1) result',[id])).rows[0].result;
  assert.equal((await resume()).state,'COOLDOWN');await db.exec('reset role');await db.query("update vnext_runtime.ai_stock_dispatches set created_at=now()-interval '6 minutes' where batch_id=$1",[completed.batch_id]);await db.exec('set role service_role');assert.equal((await resume()).state,'DISPATCHED');
- await db.exec('reset role');const modelRevision=stockAiModelRevision('gpt-4o-mini');
+ await db.exec('reset role');const modelRevision=stockAiModelRevision('gpt-6-astra');
  for(const [symbol,inputHash] of Object.entries(seed.body.packet_hashes)){
   const key=await snapshotHash({version:'DAILY_AI_BATCH_1',input_hash:inputHash,model_revision:modelRevision});
   await db.query("insert into vnext_runtime.ai_stock_jobs(id,input_hash,model_revision,symbol,cutoff,state,attempts,lease,lease_until,result) values($1,$2,$3,$4,$5,'FAILED',3,gen_random_uuid(),now()-interval '1 minute',null)",[key,inputHash,modelRevision,symbol,sourced.cutoff]);

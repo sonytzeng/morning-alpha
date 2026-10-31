@@ -1,4 +1,5 @@
 import {HORIZONS, hashValid, snapshotHash, sourceSafe, validObservationTime, type Horizon} from '../src/features/vnext/contracts.ts';
+import {validateStockAnalysisClaim,validateStockAnalysisCondition} from './daily-ai-semantics.ts';
 
 export type AnalysisEvidence={id:string;symbol:string|null;kind:'NEWS'|'MARKET'|'FINANCIAL'|'PRICE';
  source:string;published_at:string|null;available_at:string;content:string;
@@ -38,15 +39,16 @@ function parseHorizons(packet:AnalysisPacket,value:unknown):HorizonAnalysis[]{
  const known=new Map(packet.evidence.map(e=>[e.id,e]));
  const claim=(value:unknown):CitedClaim=>{const r=record(value),ids=list(r.evidence_ids,100).map(v=>text(v,200));
   if(!ids.length||new Set(ids).size!==ids.length||ids.some(id=>!known.has(id)))throw Error('AI_ANALYSIS_CITATION');
-  return {text:text(r.text),evidence_ids:ids};};
+  const parsed={text:text(r.text),evidence_ids:ids};validateStockAnalysisClaim(packet,parsed);return parsed;};
  const horizons=list(value,3).map(value=>{const r=record(value),h=text(r.horizon,10);
   if(!Object.hasOwn(HORIZONS,h)||!['WATCH','WAIT','AVOID','INSUFFICIENT'].includes(String(r.status)))throw Error('AI_ANALYSIS_STATE');
   const gaps=list(r.gaps,30).map(v=>text(v));
   if(r.status==='INSUFFICIENT'&&!gaps.length)throw Error('AI_ANALYSIS_GAPS');
   const reason=claim(r.reason),counter_evidence=list(r.counter_evidence,20).map(claim);
   if(r.status==='WATCH'&&!reason.evidence_ids.some(id=>known.get(id)!.symbol===packet.symbol))throw Error('AI_ANALYSIS_COMPANY_EVIDENCE');
-  return {horizon:h as Horizon,status:r.status as HorizonAnalysis['status'],reason,counter_evidence,
-   confirmation:text(r.confirmation),invalidation:text(r.invalidation),gaps};
+  const confirmation=text(r.confirmation),invalidation=text(r.invalidation);
+  validateStockAnalysisCondition(confirmation);validateStockAnalysisCondition(invalidation);
+  return {horizon:h as Horizon,status:r.status as HorizonAnalysis['status'],reason,counter_evidence,confirmation,invalidation,gaps};
  });
  if(horizons.length!==3||new Set(horizons.map(h=>h.horizon)).size!==3)throw Error('AI_ANALYSIS_HORIZONS');
  return horizons;

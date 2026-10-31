@@ -4,7 +4,7 @@ import {snapshotHash} from '../src/features/vnext/contracts.ts';
 import {stockAiModelRevision} from '../supabase/functions/_shared/daily-stock-ai-runner.ts';
 
 test('real Edge entrypoint reuses 72 completed jobs, stages privately and fails closed on token lookup errors',async()=>{
- const internal='test-only-internal-secret-0123456789',delivery='test-only-delivery-secret-0123456789',modelRevision=stockAiModelRevision('gpt-4o-mini');
+ const internal='test-only-internal-secret-0123456789',delivery='test-only-delivery-secret-0123456789',modelRevision=stockAiModelRevision('gpt-6-astra');
  const cutoff=new Date(Date.now()-3600000).toISOString(),seen=new Date(Date.parse(cutoff)-60000).toISOString();
  const packets=Array.from({length:72},(_,i)=>({symbol:String(1000+i),company:'測試',cutoff,evidence:[{id:'E',symbol:String(1000+i),kind:'NEWS',source:'https://www.twse.com.tw/',published_at:seen,available_at:seen,content:'測試資料'}]}));
  const completed={};

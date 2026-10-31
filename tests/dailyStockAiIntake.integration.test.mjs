@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
 import {loadOrIntakeDailyStockAiBatch} from '../supabase/functions/daily-stock-analysis-v1/intake.ts';
+import {stockAiModelRevision} from '../supabase/functions/_shared/daily-stock-ai-runner.ts';
 
 const projection='DAILY_AI_RETAINED_INPUT_PROJECTION_V1';
 const baseGaps=['RETAINED_INPUT_OLDER_OBSERVATIONS_OMITTED','NEWS_PROVIDER_EXCERPTS_ONLY_NOT_FULL_ARTICLE',
@@ -39,7 +40,8 @@ test('real Edge entrypoint compiles only a retained receipt with known NEWS and 
   globalThis.fetch=async(url,init)=>{
    const parsed=new URL(String(url)),name=parsed.pathname.split('/').at(-1);calls.push(name);
    if(parsed.hostname==='api.openai.com'){
-    providerCalls++;const packet=JSON.parse(JSON.parse(init.body).messages[1].content),news=packet.evidence.filter(e=>e.kind==='NEWS');
+    providerCalls++;const request=JSON.parse(init.body),packet=JSON.parse(request.messages[1].content),news=packet.evidence.filter(e=>e.kind==='NEWS');
+    assert.equal(request.model,'gpt-6-astra');assert.equal(request.reasoning_effort,'low');assert.equal(request.max_completion_tokens,6000);
     assert.equal(packet.cutoff,cutoff);assert.equal(packet.data_through,original.handoff.inputs[0].through);
     const price=packet.evidence.find(e=>e.kind==='PRICE'),financial=packet.evidence.find(e=>e.kind==='FINANCIAL');
     assert.equal(price.published_at,null);assert.equal(price.available_at,original.observed);assert.equal(price.time_basis,'OBSERVED_AFTER_RECEIPT');
@@ -69,9 +71,15 @@ test('real Edge entrypoint compiles only a retained receipt with known NEWS and 
     return Response.json({state:'STORED',batch_id:failure==='save-unconfirmed'?'f'.repeat(64):stored.id,packets:72,member_published:false});
    }
    if(name==='load_daily_stock_ai_progress_v1')return Response.json({schema:'DAILY_AI_PROGRESS_V1',batch_id:stored.id,model_revision:args.p_model_revision,completed:{}});
+   if(name==='retain_daily_ai_model_candidate_v1'){
+    const packet=stored.packets.find(p=>p.symbol===args.p_symbol);assert(packet);assert.equal(args.p_cutoff,cutoff);
+    assert.equal(args.p_input_hash,await snapshotHash(packet));assert.equal(args.p_model_revision,stockAiModelRevision('gpt-6-astra'));
+    assert.equal(args.p_candidate.symbol,packet.symbol);assert.equal(args.p_receipt.response_id,'test-provider-receipt');
+    return Response.json({state:'RETAINED',member_published:false});
+   }
    if(name==='daily_stock_ai_job_v1'){
     if(args.p_op==='CLAIM')return Response.json({state:'ACQUIRED',lease:'test-lease'});
-    assert.equal(args.p_op,'COMPLETE');assert.equal(args.p_result.publication_ready,false);return Response.json({state:'STORED'});
+    assert.equal(args.p_op,'COMPLETE');assert(calls.includes('retain_daily_ai_model_candidate_v1'));assert.equal(args.p_result.publication_ready,false);return Response.json({state:'STORED'});
    }
    if(name==='dispatch_daily_stock_ai_batch_v1'){assert.equal(args.p_batch_id,stored.id);return Response.json({state:'DISPATCHED'});}
    assert.fail('unexpected network call: '+name);
@@ -81,7 +89,7 @@ test('real Edge entrypoint compiles only a retained receipt with known NEWS and 
   const reset=()=>{handoff=structuredClone(original.handoff);failure=null;stored=null;storedBody=null;providerCalls=0;calls.length=0;};
   let response=await invoke(),body=await response.json();assert.equal(response.status,202);assert.equal(body.model_calls,1);assert.equal(body.counts.COMPLETE,1);assert.equal(body.counts.DEFERRED,71);assert.equal(body.member_published,false);assert.equal(providerCalls,1);
   assert.notEqual(storedBody.cutoff,storedBody.source_handoff.source_cutoff);
-  assert.deepEqual(calls,['load_daily_stock_ai_batch_v1','load_daily_stock_ai_handoff_v1','store_daily_stock_ai_batch_v1','load_daily_stock_ai_batch_v1','load_daily_stock_ai_progress_v1','daily_stock_ai_job_v1','completions','daily_stock_ai_job_v1','dispatch_daily_stock_ai_batch_v1']);
+  assert.deepEqual(calls,['load_daily_stock_ai_batch_v1','load_daily_stock_ai_handoff_v1','store_daily_stock_ai_batch_v1','load_daily_stock_ai_batch_v1','load_daily_stock_ai_progress_v1','daily_stock_ai_job_v1','completions','retain_daily_ai_model_candidate_v1','daily_stock_ai_job_v1','dispatch_daily_stock_ai_batch_v1']);
   reset();handoff.news=[];handoff.intake_gaps.push('NEWS_NONE_AVAILABLE_WITHIN_48H');
   response=await invoke();body=await response.json();assert.equal(response.status,202);assert.equal(providerCalls,1);assert.equal(body.model_calls,1);
   const cases=[

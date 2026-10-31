@@ -1,5 +1,6 @@
 import {buildDailyAiSeed} from '../../../research/daily-ai-seed.ts';
 import {refreshDailyAiPrices} from '../../../research/daily-ai-refresh.ts';
+import {refreshDailyAiFinancials,dailyAiFinancialRefreshUnavailable,type DailyAiFinancialRefreshResult} from '../../../research/daily-ai-financial-refresh.ts';
 import {compareTime,hashValid,validObservationTime} from '../../../src/features/vnext/contracts.ts';
 import type {FunnelInput} from '../../../src/features/vnext/researchFunnel.ts';
 import type {AnalysisEvidence} from '../../../research/daily-ai-analysis.ts';
@@ -8,7 +9,9 @@ import type {DailyStockSourceResult} from './source-handler.ts';
 
 type Rpc=(name:string,args:Record<string,unknown>,signal:AbortSignal)=>Promise<unknown>;
 type Refresh=typeof refreshDailyAiPrices;
+type FinancialRefresh=typeof refreshDailyAiFinancials;
 export type DailyStockSourcePorts={rpc:Rpc;fetcher:typeof fetch;clock:()=>string;refresh?:Refresh;
+ refreshFinancials?:FinancialRefresh;
  collectNews?:(signal:AbortSignal)=>Promise<{complete:boolean}>;
  collectMarket?:(input:{businessDate:string;signal:AbortSignal})=>Promise<{market:AnalysisEvidence[];additionalGaps:string[];receipts:unknown[]}>};
 const object=(value:unknown):Record<string,unknown>=>{
@@ -72,12 +75,16 @@ export async function prepareDailyStockAiSource(intakeId:string,ports:DailyStock
   const claim=acquired(current,intakeId,now);
   let refreshed:Awaited<ReturnType<Refresh>>,newsComplete=false;
   let globalMarket:{market:AnalysisEvidence[];additionalGaps:string[];receipts:unknown[]};
-  const missingMarket=()=>({market:[],additionalGaps:['MARKET_REFRESH_UNAVAILABLE','US_MARKET_CONTEXT_UNAVAILABLE','TAIWAN_NIGHT_SESSION_UNVERIFIED'],receipts:[]});
+  let financial:DailyAiFinancialRefreshResult;
+  const missingMarket=()=>({market:[],additionalGaps:['MARKET_REFRESH_UNAVAILABLE','US_TREASURY_YIELD_CURVE_UNAVAILABLE','US_EQUITY_CLOSE_NOT_COLLECTED_US_NEWS_CONTEXT_ONLY','TAIWAN_NIGHT_SESSION_UNVERIFIED'],receipts:[]});
   try{
-   [refreshed,newsComplete,globalMarket]=await Promise.all([
+   [refreshed,newsComplete,globalMarket,financial]=await Promise.all([
     (ports.refresh??refreshDailyAiPrices)({inputs:claim.inputs,businessDate:claim.businessDate,fetcher:ports.fetcher,clock:ports.clock,signal}),
     ports.collectNews?ports.collectNews(signal).then(r=>r.complete===true).catch(()=>false):Promise.resolve(false),
     ports.collectMarket?ports.collectMarket({businessDate:claim.businessDate,signal}).catch(missingMarket):Promise.resolve(missingMarket()),
+    ports.refreshFinancials?ports.refreshFinancials({inputs:claim.inputs,businessDate:claim.businessDate,fetcher:ports.fetcher,clock:ports.clock,signal}).catch(error=>{
+     if(signal.aborted)throw error;return dailyAiFinancialRefreshUnavailable(claim.inputs,ports.clock());
+    }):Promise.resolve(dailyAiFinancialRefreshUnavailable(claim.inputs,ports.clock())),
    ]);stopped(signal);
   }catch(error){
    if(!signal.aborted){try{await call('FAIL',{p_lease:claim.lease,p_code:'AI_INTAKE_REFRESH_FAILED'});}catch{/* Preserve the original sanitized failure. */}}
@@ -86,10 +93,23 @@ export async function prepareDailyStockAiSource(intakeId:string,ports:DailyStock
   if(!Array.isArray(globalMarket.market)||globalMarket.market.length>4||!Array.isArray(globalMarket.additionalGaps)
    ||globalMarket.additionalGaps.length>20||globalMarket.additionalGaps.some(g=>!code(g)))throw Error('AI_INTAKE_MARKET_PORT_INVALID');
   const market=await parseDailyAiMarketEvidence(globalMarket.market,ports.clock(),signal);stopped(signal);
-  const gaps=[...new Set([...refreshed.additionalGaps,...globalMarket.additionalGaps,...(newsComplete?[]:['NEWS_REFRESH_UNAVAILABLE'])])];
+  if(!Array.isArray(financial.inputs)||financial.inputs.length!==72||new Set(financial.inputs.map(s=>s.symbol)).size!==72
+   ||financial.inputs.some(s=>!Array.isArray(s.facts)||s.facts.length>1000||!claim.inputs.some(base=>base.symbol===s.symbol&&base.company===s.company))
+   ||!Array.isArray(financial.additionalGaps)||financial.additionalGaps.some(g=>!code(g))
+   ||financial.proof?.schema!=='DAILY_AI_FINANCIAL_REFRESH_V1')throw Error('AI_INTAKE_FINANCIAL_PORT_INVALID');
+  const finalLocalCutoff=ports.clock();if(!validObservationTime(finalLocalCutoff)||!validObservationTime(financial.cutoff)
+   ||compareTime(financial.cutoff,finalLocalCutoff)>0)throw Error('AI_INTAKE_FINANCIAL_PORT_INVALID');
+  // Each acquisition receives the same immutable baseline. Merge only the
+  // financial facts; price bars and their receipts come solely from price refresh.
+  const financialBySymbol=new Map(financial.inputs.map(s=>[s.symbol,s.facts]));
+  const sourceInputs=refreshed.inputs.map(s=>({...s,facts:financialBySymbol.get(s.symbol)!,cutoff:finalLocalCutoff}));
+  const symbolGaps=Object.fromEntries(sourceInputs.map(s=>[s.symbol,[...new Set([
+   ...(refreshed.gapsBySymbol[s.symbol]??[]),...(financial.gapsBySymbol[s.symbol]??[]),
+  ])]]));
+  const gaps=[...new Set([...refreshed.additionalGaps,...globalMarket.additionalGaps,...financial.additionalGaps,...(newsComplete?[]:['NEWS_REFRESH_UNAVAILABLE'])])];
   // SOURCE samples its final DB receipt only after all acquisition ports settle.
   // An unknown SOURCE commit is never followed by a competing FAIL transition.
-  current=object(await call('SOURCE',{p_lease:claim.lease,p_inputs:refreshed.inputs,p_gaps:gaps,p_symbol_gaps:refreshed.gapsBySymbol,p_market:market}));stopped(signal);
+  current=object(await call('SOURCE',{p_lease:claim.lease,p_inputs:sourceInputs,p_gaps:gaps,p_symbol_gaps:symbolGaps,p_market:market,p_financial_refresh:financial.proof}));stopped(signal);
  }
  if(current.state!=='SOURCED'||current.intake_id!==intakeId||!intakeUuid(current.lease)||typeof current.cutoff!=='string')throw Error('AI_INTAKE_SOURCE_UNCONFIRMED');
  const cutoff=current.cutoff,now=ports.clock();

@@ -1,7 +1,7 @@
 import type {AnalysisEvidence} from './daily-ai-analysis.ts';
 import {validObservationTime} from '../src/features/vnext/contracts.ts';
 import {latestCompletedUsCashSession} from '../supabase/functions/_shared/us-cash-session-calendar.ts';
-import {coveredCalendarDate,isMarketTradingDate,previousMarketTradingDate,MARKET_CALENDAR_VERSION} from '../supabase/functions/_shared/market-session-contract.mjs';
+import {coveredCalendarDate,isMarketTradingDate,MARKET_CALENDAR_VERSION} from '../supabase/functions/_shared/market-session-contract.mjs';
 
 // TAIFEX schema and attribution rules checked 2026-10-31 against primary sources:
 // https://openapi.taifex.com.tw/swagger.json (DailyMarketReportFut)
@@ -10,12 +10,9 @@ import {coveredCalendarDate,isMarketTradingDate,previousMarketTradingDate,MARKET
 // A Friday night has a Monday trading-volume attribution date. Neither date is
 // a publication timestamp or the research business date.
 export const DAILY_AI_GLOBAL_MARKET_URLS={
- IXIC:'https://query1.finance.yahoo.com/v8/finance/chart/%5EIXIC?interval=1d&range=1mo',
- SOX:'https://query1.finance.yahoo.com/v8/finance/chart/%5ESOX?interval=1d&range=1mo',
- GSPC:'https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?interval=1d&range=1mo',
  TX:'https://openapi.taifex.com.tw/v1/DailyMarketReportFut',
 } as const;
-type Instrument=keyof typeof DAILY_AI_GLOBAL_MARKET_URLS;
+type Instrument='TREASURY'|'TX';
 export type DailyAiGlobalMarketReceipt={source:string;instrument:Instrument;state:'CAPTURED'|'UNAVAILABLE';
  received_at:string|null;hash:string|null;bytes:number|null;error?:string};
 type ObjectValue=Record<string,unknown>;
@@ -29,10 +26,10 @@ const numeric=(v:unknown)=>typeof v==='string'&&/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/
 const digest=async(bytes:Uint8Array)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),v=>v.toString(16).padStart(2,'0')).join('');
 const stopped=(s:AbortSignal)=>{if(s.aborted)throw Error('AI_GLOBAL_MARKET_ABORTED');};
 
-async function readJson(url:string,fetcher:typeof fetch,signal:AbortSignal,format:'JSON'|'HTML'='JSON',timeoutMs=6000){
+async function readJson(url:string,fetcher:typeof fetch,signal:AbortSignal,format:'JSON'|'HTML'|'XML'='JSON',timeoutMs=6000){
  const controller=new AbortController(),combined=AbortSignal.any([signal,controller.signal]);let timer:ReturnType<typeof setTimeout>|undefined;
  const work=(async()=>{
-  const response=await fetcher(url,{method:'GET',redirect:'error',credentials:'omit',headers:{Accept:format==='HTML'?'text/html':'application/json'},signal:combined});
+  const response=await fetcher(url,{method:'GET',redirect:'error',credentials:'omit',headers:{Accept:format==='HTML'?'text/html':format==='XML'?'application/xml,text/xml':'application/json'},signal:combined});
   if(!response.ok||Number(response.headers.get('content-length'))>2000000)throw Error('AI_GLOBAL_MARKET_HTTP_OR_SIZE');
   const reader=response.body?.getReader();if(!reader)throw Error('AI_GLOBAL_MARKET_BODY');
   const chunks:Uint8Array[]=[];let size=0;
@@ -41,41 +38,62 @@ async function readJson(url:string,fetcher:typeof fetch,signal:AbortSignal,forma
   finally{void reader.cancel().catch(()=>{});reader.releaseLock();}
   const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
   stopped(combined);const text=new TextDecoder('utf-8',{fatal:true}).decode(bytes);
-  return {value:format==='HTML'?text:JSON.parse(text),bytes:size,hash:await digest(bytes)};
+  return {value:format==='JSON'?JSON.parse(text):text,bytes:size,hash:await digest(bytes)};
  })();
  try{return await Promise.race([work,new Promise<never>((_,reject)=>{
   timer=setTimeout(()=>{controller.abort();reject(Error('AI_GLOBAL_MARKET_TIMEOUT'));},timeoutMs);
  })]);}finally{if(timer)clearTimeout(timer);controller.abort();}
 }
-function usFacts(value:unknown,instrument:Exclude<Instrument,'TX'>,received_at:string){
- const chart=object(object(value).chart);if(chart.error!==null&&chart.error!==undefined)throw Error('AI_GLOBAL_MARKET_PROVIDER');
- if(!Array.isArray(chart.result)||chart.result.length!==1)throw Error('AI_GLOBAL_MARKET_SCHEMA');
- const result=object(chart.result[0]),meta=object(result.meta),indicators=object(result.indicators);
- if(meta.symbol!=='^'+instrument||meta.instrumentType!=='INDEX'||meta.currency!=='USD'||meta.exchangeTimezoneName!=='America/New_York'
-  ||meta.dataGranularity!=='1d'||!Number.isSafeInteger(meta.regularMarketTime)||Number(meta.regularMarketTime)*1000>Date.parse(received_at))
-  throw Error('AI_GLOBAL_MARKET_INDEX_IDENTITY');
- if(!Array.isArray(result.timestamp)||result.timestamp.length<2||result.timestamp.length>64
-  ||!Array.isArray(indicators.quote)||indicators.quote.length!==1)throw Error('AI_GLOBAL_MARKET_SCHEMA');
- const closes=object(indicators.quote[0]).close;
- if(!Array.isArray(closes)||closes.length!==result.timestamp.length)throw Error('AI_GLOBAL_MARKET_SCHEMA');
- const session=latestCompletedUsCashSession(Date.parse(received_at)),prior=session&&previousMarketTradingDate('US',session);
- if(!session||!prior)throw Error('AI_GLOBAL_MARKET_CALENDAR_UNCOVERED');
- const selected=new Map<string,{close:number;at:string}>();
- for(let i=0;i<result.timestamp.length;i++){
-  const timestamp=result.timestamp[i],close=finite(closes[i]);
-  if(!Number.isSafeInteger(timestamp)||Number(timestamp)<=0||Number(timestamp)*1000>Date.parse(received_at))throw Error('AI_GLOBAL_MARKET_BAR_TIME');
-  const day=nyDay(Number(timestamp)*1000);if(day!==session&&day!==prior)continue;
-  if(close===null||close<=0||selected.has(day))throw Error('AI_GLOBAL_MARKET_DAILY_BAR');
-  selected.set(day,{close,at:new Date(Number(timestamp)*1000).toISOString()});
+/** Official monthly XML API; the series metadata identifies CC0 1.0:
+ * https://home.treasury.gov/treasury-daily-interest-rate-xml-feed
+ * https://catalog.data.gov/dataset/interest-rate-statistics-daily-treasury-yield-curve-rates
+ * The cash calendar selects a request month around Taipei/US month boundaries;
+ * actual Treasury observation dates always come from XML, not the NYSE calendar. */
+export function dailyAiTreasuryYieldUrl(businessDate:string,observedAt=businessDate+'T23:59:59+08:00'){
+ if(!date(businessDate)||!validObservationTime(observedAt))throw Error('AI_GLOBAL_MARKET_SCOPE');
+ const requestDate=latestCompletedUsCashSession(Date.parse(observedAt))??nyDay(Date.parse(observedAt));
+ return 'https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value_month='
+  +requestDate.slice(0,7).replace('-','');
+}
+function treasuryFacts(value:unknown,source:string,received_at:string){
+ if(typeof value!=='string'||/<!DOCTYPE|<!ENTITY/i.test(value))throw Error('AI_GLOBAL_MARKET_TREASURY_XML');
+ const root=value.match(/<feed\b([^>]*)>/)?.[1]??'';
+ for(const [prefix,uri] of [['','http://www.w3.org/2005/Atom'],[':d','http://schemas.microsoft.com/ado/2007/08/dataservices'],[':m','http://schemas.microsoft.com/ado/2007/08/dataservices/metadata']]){
+  if(!new RegExp('xmlns'+prefix+'=["\']'+uri.replaceAll('.','[.]')+'["\']').test(root))throw Error('AI_GLOBAL_MARKET_TREASURY_XML');
  }
- const current=selected.get(session),previous=selected.get(prior);if(!current||!previous)throw Error('AI_GLOBAL_MARKET_STALE_OR_MISSING_SESSION');
- const change=current.close-previous.close,percent=Math.round(change/previous.close*100*1000000)/1000000;
- if(!Number.isFinite(change)||!Number.isFinite(percent))throw Error('AI_GLOBAL_MARKET_DAILY_BAR');
- return {kind:'US_CASH_INDEX',native_symbol:'^'+instrument,market:'US',session:'REGULAR',session_date:session,trading_date:session,
-  currency:'USD',unit:'INDEX_POINTS',close:current.close,prior_close:previous.close,prior_session_date:prior,
-  source_bar_at:current.at,prior_bar_at:previous.at,bar_timestamp_basis:'PROVIDER_DAILY_BAR_TIME_NOT_PUBLICATION',
-  change_points:change,change_percent:percent,
-  comparison_basis:'PREVIOUS_COMPLETED_US_CASH_SESSION_CLOSE'};
+ if(!/<title\b[^>]*>DailyTreasuryYieldCurveRateData<\/title>/.test(value))throw Error('AI_GLOBAL_MARKET_TREASURY_XML');
+ const requestMonth=new URL(source).searchParams.get('field_tdr_date_value_month'),today=nyDay(Date.parse(received_at));
+ const entries=Array.from(value.matchAll(/<entry\b[^>]*>([\s\S]*?)<\/entry>/g));
+ if(!entries.length||entries.length>64||entries.length!==(value.match(/<entry\b/g)??[]).length)throw Error('AI_GLOBAL_MARKET_TREASURY_XML');
+ const rows:{date:string;coordinate:string;rates:(number|null)[]}[]=[];
+ for(const entry of entries){
+  const properties=Array.from(entry[1].matchAll(/<m:properties>([\s\S]*?)<\/m:properties>/g));if(properties.length!==1)throw Error('AI_GLOBAL_MARKET_TREASURY_XML');
+  const p=properties[0][1],dates=Array.from(p.matchAll(/<d:NEW_DATE\b([^>]*)>([^<]*)<\/d:NEW_DATE>/g));
+  if(dates.length!==1||!/(?:^|\s)m:type=["']Edm[.]DateTime["']/.test(dates[0][1]))throw Error('AI_GLOBAL_MARKET_TREASURY_XML');
+  const coordinate=dates[0][2].trim(),d=coordinate.slice(0,10);
+  if(!/^\d{4}-\d\d-\d\dT00:00:00$/.test(coordinate)||!date(d)||d.slice(0,7).replace('-','')!==requestMonth||d>today
+   ||[0,6].includes(new Date(d+'T12:00:00Z').getUTCDay())||rows.some(r=>r.date===d))throw Error('AI_GLOBAL_MARKET_TREASURY_DATE');
+  const rates=['BC_2YEAR','BC_10YEAR','BC_30YEAR'].map(field=>{
+   const matches=Array.from(p.matchAll(new RegExp('<d:'+field+'\\b([^>]*)>([^<]*)</d:'+field+'>','g')));
+   if(matches.length>1)throw Error('AI_GLOBAL_MARKET_TREASURY_XML');
+   if(!matches.length||/(?:^|\s)m:null=["']true["']/.test(matches[0][1]))return null;
+   if(!/(?:^|\s)m:type=["']Edm[.]Double["']/.test(matches[0][1]))throw Error('AI_GLOBAL_MARKET_TREASURY_XML');
+   const n=numeric(matches[0][2].trim());if(n===null||Math.abs(n)>100)throw Error('AI_GLOBAL_MARKET_TREASURY_RATE');return n;
+  });
+  rows.push({date:d,coordinate,rates});
+ }
+ rows.sort((a,b)=>b.date.localeCompare(a.date));const current=rows[0],candidate=rows[1],prior=candidate&&candidate.rates.every(n=>n!==null)?candidate:null;
+ const age=(Date.parse(today+'T00:00:00Z')-Date.parse(current.date+'T00:00:00Z'))/86400000;
+ if(current.rates.some(n=>n===null)||!Number.isInteger(age)||age<0||age>7)throw Error('AI_GLOBAL_MARKET_TREASURY_MISSING_OR_STALE');
+ const change=(i:number)=>prior?Math.round((current.rates[i]!-prior.rates[i]!)*100*1000000)/1000000:null;
+ return {kind:'US_TREASURY_PAR_YIELD_CURVE',native_symbol:'UST_PAR_YIELD_CURVE',market:'US',session:'DAILY_OBSERVATION',
+  session_date:current.date,trading_date:current.date,currency:'USD',unit:'PERCENT',
+  yield_2y:current.rates[0],yield_10y:current.rates[1],yield_30y:current.rates[2],
+  prior_yield_2y:prior?.rates[0]??null,prior_yield_10y:prior?.rates[1]??null,prior_yield_30y:prior?.rates[2]??null,
+  change_2y_bp:change(0),change_10y_bp:change(1),change_30y_bp:change(2),prior_session_date:prior?.date??null,
+  comparison_basis:'PREVIOUS_AVAILABLE_TREASURY_OBSERVATION',rate_model:'NOMINAL_CONSTANT_MATURITY_PAR_YIELD',
+  source_row_date_basis:'NEW_DATE_DATE_COORDINATE_NOT_PUBLICATION',observation_date_coordinate:current.coordinate,
+  observation_age_calendar_days:age};
 }
 /** Expected latest fully ended physical night and its distinct volume date. */
 export function dailyAiExpectedTaiwanNight(received_at:string){
@@ -148,24 +166,25 @@ function taiwanNightHtmlFacts(value:unknown,received_at:string){
  return taiwanFacts(rows,received_at);
 }
 
-/** Four public requests, concurrency two, each bounded to 6 seconds/2 MB.
+/** Two public requests, concurrency two, each bounded to 6 seconds/2 MB.
  * One verified TAIFEX report fallback may take 12 seconds if the daily API is stale.
- * Sources are independent of paid quotes. A failed/stale night API yields a gap
- * instead of substituting a day session or changing its trading date. */
+ * Treasury rates are macro context, never a substitute for US equity closes.
+ * A failed/stale night API yields a gap instead of changing its trading date. */
 export async function collectDailyAiGlobalMarket(input:{fetcher:typeof fetch;clock:()=>string;signal:AbortSignal;businessDate:string}){
  stopped(input.signal);const began=input.clock();
  if(!date(input.businessDate)||!validObservationTime(began)||taipeiDay(began)!==input.businessDate)throw Error('AI_GLOBAL_MARKET_SCOPE');
- const instruments=Object.keys(DAILY_AI_GLOBAL_MARKET_URLS) as Instrument[],receipts:DailyAiGlobalMarketReceipt[]=new Array(4),evidence:(AnalysisEvidence|null)[]=new Array(4).fill(null);
+ const instruments:Instrument[]=['TREASURY','TX'],receipts:DailyAiGlobalMarketReceipt[]=new Array(2),evidence:(AnalysisEvidence|null)[]=new Array(2).fill(null);
  let cursor=0;
  const worker=async()=>{for(;;){const i=cursor++;if(i>=instruments.length)return;stopped(input.signal);
-  const instrument=instruments[i],source=DAILY_AI_GLOBAL_MARKET_URLS[instrument];let capture:{received_at:string;hash:string;bytes:number}|null=null;
+  const instrument=instruments[i],source=instrument==='TREASURY'?dailyAiTreasuryYieldUrl(input.businessDate,began):DAILY_AI_GLOBAL_MARKET_URLS.TX;let capture:{received_at:string;hash:string;bytes:number}|null=null;
   try{
-   const raw=await readJson(source,input.fetcher,input.signal);stopped(input.signal);const received_at=input.clock();
+   const raw=await readJson(source,input.fetcher,input.signal,instrument==='TREASURY'?'XML':'JSON');stopped(input.signal);const received_at=input.clock();
    if(!validObservationTime(received_at)||Date.parse(received_at)<Date.parse(began)||taipeiDay(received_at)!==input.businessDate)throw Error('AI_GLOBAL_MARKET_CLOCK');
    capture={received_at,hash:raw.hash,bytes:raw.bytes};
-   const facts=instrument==='TX'?taiwanFacts(raw.value,received_at):usFacts(raw.value,instrument,received_at);
+   const facts=instrument==='TX'?taiwanFacts(raw.value,received_at):treasuryFacts(raw.value,source,received_at);
    const content=JSON.stringify({schema:'DAILY_AI_GLOBAL_MARKET_FACT_V1',...facts,research_business_date:input.businessDate,
-    freshness:'LATEST_COMPLETED_SESSION',timestamp_basis:'RECEIPT_ONLY_PUBLICATION_UNKNOWN',calendar_version:MARKET_CALENDAR_VERSION,
+    freshness:instrument==='TREASURY'?'LATEST_AVAILABLE_TREASURY_OBSERVATION':'LATEST_COMPLETED_SESSION',timestamp_basis:'RECEIPT_ONLY_PUBLICATION_UNKNOWN',
+    calendar_version:instrument==='TREASURY'?'TREASURY_XML_ACTUAL_DATES_V1':MARKET_CALENDAR_VERSION,
     received_at,source_response_sha256:raw.hash,source_response_bytes:raw.bytes});
    evidence[i]={id:`global:${instrument}:${facts.session_date}`,symbol:null,kind:'MARKET',source,published_at:null,
     available_at:received_at,first_seen_at:received_at,as_of:received_at,time_basis:'OBSERVED_AFTER_RECEIPT',content,
@@ -179,7 +198,7 @@ export async function collectDailyAiGlobalMarket(input:{fetcher:typeof fetch;clo
   }
  }};
  await Promise.all([worker(),worker()]);stopped(input.signal);
- if(evidence[3]===null){
+ if(evidence[1]===null){
   const expected=dailyAiExpectedTaiwanNight(began);
   if(expected){
    const source=dailyAiTaiwanNightReportUrl(expected.trading_date);let capture:{received_at:string;hash:string;bytes:number}|null=null;
@@ -191,7 +210,7 @@ export async function collectDailyAiGlobalMarket(input:{fetcher:typeof fetch;clo
     const content=JSON.stringify({schema:'DAILY_AI_GLOBAL_MARKET_FACT_V1',...facts,research_business_date:input.businessDate,
      freshness:'LATEST_COMPLETED_SESSION',timestamp_basis:'RECEIPT_ONLY_PUBLICATION_UNKNOWN',calendar_version:MARKET_CALENDAR_VERSION,
      received_at,source_response_sha256:raw.hash,source_response_bytes:raw.bytes});
-    evidence[3]={id:`global:TX:${facts.session_date}`,symbol:null,kind:'MARKET',source,published_at:null,
+    evidence[1]={id:`global:TX:${facts.session_date}`,symbol:null,kind:'MARKET',source,published_at:null,
      available_at:received_at,first_seen_at:received_at,as_of:received_at,time_basis:'OBSERVED_AFTER_RECEIPT',content,evidence_hash:await digest(new TextEncoder().encode(content))};
     receipts.push({source,instrument:'TX',state:'CAPTURED',...capture});
    }catch(error){
@@ -202,9 +221,9 @@ export async function collectDailyAiGlobalMarket(input:{fetcher:typeof fetch;clo
    }
   }
  }
- const market=evidence.filter((e):e is AnalysisEvidence=>e!==null),additionalGaps:string[]=[];
- for(const instrument of instruments.filter(i=>i!=='TX'))if(!receipts.find(r=>r.instrument===instrument&&r.state==='CAPTURED'))additionalGaps.push('US_CLOSE_'+instrument+'_UNAVAILABLE');
- if(market.filter(e=>JSON.parse(e.content).market==='US').length<2)additionalGaps.push('US_COMPLETED_CASH_SESSION_PARTIAL');
+ const market=evidence.filter((e):e is AnalysisEvidence=>e!==null),additionalGaps:string[]=['US_EQUITY_CLOSE_NOT_COLLECTED_US_NEWS_CONTEXT_ONLY'];
+ if(evidence[0]===null)additionalGaps.push('US_TREASURY_YIELD_CURVE_UNAVAILABLE');
+ else if(JSON.parse(evidence[0].content).prior_session_date===null)additionalGaps.push('US_TREASURY_PRIOR_OBSERVATION_UNAVAILABLE');
  if(!receipts.find(r=>r.instrument==='TX'&&r.state==='CAPTURED'))additionalGaps.push('TAIWAN_NIGHT_SESSION_UNVERIFIED');
  // Keep the content digest convention explicit and consistent with packet SQL.
  for(const e of market)if(e.evidence_hash!==await digest(new TextEncoder().encode(e.content)))throw Error('AI_GLOBAL_MARKET_HASH');

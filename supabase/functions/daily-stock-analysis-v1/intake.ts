@@ -3,7 +3,7 @@ import {compareTime,hashValid,sourceSafe,validObservationTime} from '../../../sr
 import type {AnalysisEvidence} from '../../../research/daily-ai-analysis.ts';
 import type {FunnelInput} from '../../../src/features/vnext/researchFunnel.ts';
 import type {StockAnalysisSelector,StoredStockAnalysisBatch} from './handler.ts';
-import {MARKET_CALENDAR_VERSION,latestCompletedUsSession,previousMarketTradingDate} from '../_shared/market-session-contract.mjs';
+import {MARKET_CALENDAR_VERSION} from '../_shared/market-session-contract.mjs';
 import {dailyAiExpectedTaiwanNight} from '../../../research/daily-ai-global-market.ts';
 
 type Rpc=(name:string,args:Record<string,unknown>,signal:AbortSignal)=>Promise<unknown>;
@@ -32,7 +32,7 @@ export async function parseDailyAiSourceSnapshot(value:unknown,cutoff:string,sig
   ||typeof h.source_cutoff!=='string'||!validObservationTime(h.source_cutoff)||!day(h.source_business_date)
   ||h.source_business_date!==inTaipei(h.source_cutoff)||compareTime(h.source_cutoff,cutoff)>0||h.business_date!==inTaipei(cutoff)
   ||h.cutoff!==cutoff||!validObservationTime(cutoff)||h.member_published!==false
-  ||!Array.isArray(h.inputs)||h.inputs.length!==72||!Array.isArray(h.news)||h.news.length>868||!Array.isArray(h.market)||h.market.length>4
+  ||!Array.isArray(h.inputs)||h.inputs.length!==72||!Array.isArray(h.news)||h.news.length>868||!Array.isArray(h.market)||h.market.length>2
   ||kind==='HANDOFF'&&h.market.length!==0
   ||!Array.isArray(h.source_issues)||h.source_issues.length>1600||!Array.isArray(h.intake_gaps)
   ||h.intake_gaps.length>64||h.intake_gaps.some(g=>!code(g))||new Set(h.intake_gaps).size!==h.intake_gaps.length
@@ -50,6 +50,7 @@ export async function parseDailyAiSourceSnapshot(value:unknown,cutoff:string,sig
    ||i.cutoff!==(kind==='HANDOFF'?h.source_cutoff:cutoff)
    ||!Array.isArray(i.bars)||i.bars.length>400||!Array.isArray(i.facts)||i.facts.length>1000
    ||!Array.isArray(i.expected_sessions)||i.expected_sessions.length>400)throw Error('AI_INTAKE_INPUT_INVALID');
+  if(i.facts.some(value=>{const fact=object(value);return typeof fact.source==='string'&&restrictedFinancialSource(fact.source);}))throw Error('AI_INTAKE_RESTRICTED_FINANCIAL_SOURCE');
   return i as unknown as FunnelInput;
  });
  if(new Set(inputs.map(i=>i.symbol)).size!==72)throw Error('AI_INTAKE_INPUT_INVALID');
@@ -102,7 +103,7 @@ export async function parseDailyAiSourceSnapshot(value:unknown,cutoff:string,sig
 /** Retained market observations remain global context; no stock-specific
  * beneficiary or a missing night session can be manufactured from them. */
 export async function parseDailyAiMarketEvidence(value:unknown,cutoff:string,signal:AbortSignal):Promise<AnalysisEvidence[]>{
- if(!Array.isArray(value)||value.length>4||new TextEncoder().encode(JSON.stringify(value)).byteLength>80000)throw Error('AI_INTAKE_MARKET_LIMIT');
+ if(!Array.isArray(value)||value.length>2||new TextEncoder().encode(JSON.stringify(value)).byteLength>80000)throw Error('AI_INTAKE_MARKET_LIMIT');
  const ids=new Set<string>(),result:AnalysisEvidence[]=[];
  for(const item of value){
   stopped(signal);const e=object(item);
@@ -113,42 +114,56 @@ export async function parseDailyAiMarketEvidence(value:unknown,cutoff:string,sig
    ||typeof e.as_of!=='string'||!validObservationTime(e.as_of)||compareTime(e.as_of,e.available_at)>0
    ||typeof e.evidence_hash!=='string'||!hashValid(e.evidence_hash))throw Error('AI_INTAKE_MARKET_INVALID');
   if(e.published_at!==null||e.time_basis!=='OBSERVED_AFTER_RECEIPT'||e.first_seen_at!==e.available_at||e.as_of!==e.available_at)throw Error('AI_INTAKE_MARKET_TIME');
-  const usSources=new Map(['^IXIC','^SOX','^GSPC'].map(symbol=>['https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(symbol)+'?interval=1d&range=1mo',symbol]));
   const c=object(JSON.parse(e.content)),url=new URL(e.source),parameters=[...url.searchParams.keys()];
+  const researchMonth=day(c.research_business_date)?c.research_business_date.slice(0,7).replace('-',''):'';
+  const priorMonth=day(c.research_business_date)?new Date(Date.parse(c.research_business_date.slice(0,7)+'-01T00:00:00Z')-86400000).toISOString().slice(0,7).replace('-',''):'';
+  const observationMonth=day(c.session_date)?c.session_date.slice(0,7).replace('-',''):'';
+  const treasury=[researchMonth,priorMonth].includes(observationMonth)&&observationMonth!==''
+   &&e.source==='https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value_month='+observationMonth;
   const nightHtml=url.origin==='https://www.taifex.com.tw'&&url.pathname==='/cht/3/futDailyMarketReport'
    &&parameters.length===4&&new Set(parameters).size===4
    &&url.searchParams.get('queryType')==='2'&&url.searchParams.get('marketCode')==='1'&&url.searchParams.get('commodity_id')==='TX'
    &&typeof c.trading_date==='string'&&url.searchParams.get('queryDate')===c.trading_date.replaceAll('-','/');
-  const instrument=usSources.get(e.source),night=e.source==='https://openapi.taifex.com.tw/v1/DailyMarketReportFut'||nightHtml;
-  if(!instrument&&!night)throw Error('AI_INTAKE_MARKET_SOURCE');
-  if(c.schema!=='DAILY_AI_GLOBAL_MARKET_FACT_V1'||c.native_symbol!==(night?'TX':instrument)||c.kind!==(night?'TAIWAN_NIGHT_FUTURE':'US_CASH_INDEX')
-   ||c.market!==(night?'TW':'US')||c.session!==(night?'AFTERHOURS':'REGULAR')||c.currency!==(night?'TWD':'USD')||c.unit!=='INDEX_POINTS'
-   ||c.freshness!=='LATEST_COMPLETED_SESSION'||c.timestamp_basis!=='RECEIPT_ONLY_PUBLICATION_UNKNOWN'||c.received_at!==e.available_at
+  const night=e.source==='https://openapi.taifex.com.tw/v1/DailyMarketReportFut'||nightHtml;
+  if(!treasury&&!night)throw Error('AI_INTAKE_MARKET_SOURCE');
+  if(c.schema!=='DAILY_AI_GLOBAL_MARKET_FACT_V1'||c.native_symbol!==(night?'TX':'UST_PAR_YIELD_CURVE')
+   ||c.kind!==(night?'TAIWAN_NIGHT_FUTURE':'US_TREASURY_PAR_YIELD_CURVE')||c.market!==(night?'TW':'US')
+   ||c.session!==(night?'AFTERHOURS':'DAILY_OBSERVATION')||c.currency!==(night?'TWD':'USD')||c.unit!==(night?'INDEX_POINTS':'PERCENT')
+   ||c.freshness!==(night?'LATEST_COMPLETED_SESSION':'LATEST_AVAILABLE_TREASURY_OBSERVATION')
+   ||c.timestamp_basis!=='RECEIPT_ONLY_PUBLICATION_UNKNOWN'||c.received_at!==e.available_at
    ||!day(c.research_business_date)||c.research_business_date!==inTaipei(cutoff)||!day(c.session_date)||!day(c.trading_date)
-   ||c.session_date>inTaipei(e.available_at)||typeof c.close!=='number'||!Number.isFinite(c.close)||c.close<=0
-   ||typeof c.change_points!=='number'||!Number.isFinite(c.change_points)||typeof c.change_percent!=='number'||!Number.isFinite(c.change_percent)
-   ||typeof c.comparison_basis!=='string'||!c.comparison_basis.trim()||c.comparison_basis.length>150
-   ||typeof c.source_response_sha256!=='string'||!hashValid(c.source_response_sha256)||!Number.isSafeInteger(c.source_response_bytes)
-   ||Number(c.source_response_bytes)<1||Number(c.source_response_bytes)>2000000||c.calendar_version!==MARKET_CALENDAR_VERSION)throw Error('AI_INTAKE_MARKET_CONTENT');
-  const common=['schema','kind','native_symbol','market','session','session_date','trading_date','currency','unit','close','change_points','change_percent',
+   ||c.session_date>inTaipei(e.available_at)||typeof c.source_response_sha256!=='string'||!hashValid(c.source_response_sha256)
+   ||!Number.isSafeInteger(c.source_response_bytes)||Number(c.source_response_bytes)<1||Number(c.source_response_bytes)>2000000
+   ||c.calendar_version!==(night?MARKET_CALENDAR_VERSION:'TREASURY_XML_ACTUAL_DATES_V1'))throw Error('AI_INTAKE_MARKET_CONTENT');
+  const common=['schema','kind','native_symbol','market','session','session_date','trading_date','currency','unit',
    'comparison_basis','research_business_date','freshness','timestamp_basis','calendar_version','received_at','source_response_sha256','source_response_bytes'];
-  const extras=night?['native_contract','contract_month','session_ended_on','scheduled_session_start','scheduled_session_end','trading_date_basis','change_reference_value','contract_selection']:
-   ['prior_close','prior_session_date','source_bar_at','prior_bar_at','bar_timestamp_basis'];
-  if(Object.keys(c).sort().join('|')!==[...common,...extras].sort().join('|')||e.id!=='global:'+(night?'TX':instrument?.slice(1))+':'+c.session_date)throw Error('AI_INTAKE_MARKET_CONTENT');
-  if(!night&&(c.trading_date!==c.session_date||!day(c.prior_session_date)||c.prior_session_date>=c.session_date
-   ||c.calendar_version!==MARKET_CALENDAR_VERSION||c.session_date!==latestCompletedUsSession(Date.parse(e.available_at))
-   ||c.prior_session_date!==previousMarketTradingDate('US',c.session_date)
-   ||typeof c.prior_close!=='number'||!Number.isFinite(c.prior_close)||c.prior_close<=0
-   ||typeof c.source_bar_at!=='string'||!validObservationTime(c.source_bar_at)||compareTime(c.source_bar_at,e.available_at)>0
-   ||typeof c.prior_bar_at!=='string'||!validObservationTime(c.prior_bar_at)||compareTime(c.prior_bar_at,c.source_bar_at)>=0
-   ||inNewYork(c.source_bar_at)!==c.session_date||inNewYork(c.prior_bar_at)!==c.prior_session_date))throw Error('AI_INTAKE_MARKET_CONTENT');
-  if(!night&&(c.comparison_basis!=='PREVIOUS_COMPLETED_US_CASH_SESSION_CLOSE'||c.bar_timestamp_basis!=='PROVIDER_DAILY_BAR_TIME_NOT_PUBLICATION'
-   ||Math.abs(Number(c.change_points)-(c.close-Number(c.prior_close)))>1e-8
-   ||Math.abs(c.change_percent-Math.round(Number(c.change_points)/Number(c.prior_close)*100*1000000)/1000000)>1e-8))throw Error('AI_INTAKE_MARKET_VALUES');
+  const extras=night?['close','change_points','change_percent','native_contract','contract_month','session_ended_on','scheduled_session_start','scheduled_session_end','trading_date_basis','change_reference_value','contract_selection']:
+   ['rate_model','yield_2y','yield_10y','yield_30y','prior_yield_2y','prior_yield_10y','prior_yield_30y','change_2y_bp','change_10y_bp','change_30y_bp','prior_session_date','source_row_date_basis','observation_date_coordinate','observation_age_calendar_days'];
+  if(Object.keys(c).sort().join('|')!==[...common,...extras].sort().join('|')||e.id!=='global:'+(night?'TX':'TREASURY')+':'+c.session_date)throw Error('AI_INTAKE_MARKET_CONTENT');
+  if(treasury){
+   const age=(Date.parse(inNewYork(e.available_at)+'T00:00:00Z')-Date.parse(c.session_date+'T00:00:00Z'))/86400000;
+   if(c.trading_date!==c.session_date||c.comparison_basis!=='PREVIOUS_AVAILABLE_TREASURY_OBSERVATION'
+    ||c.rate_model!=='NOMINAL_CONSTANT_MATURITY_PAR_YIELD'||c.source_row_date_basis!=='NEW_DATE_DATE_COORDINATE_NOT_PUBLICATION'
+    ||c.observation_date_coordinate!==c.session_date+'T00:00:00'||!Number.isInteger(c.observation_age_calendar_days)
+    ||c.observation_age_calendar_days!==age||age<0||age>7)throw Error('AI_INTAKE_MARKET_TREASURY');
+   const tenors=['2y','10y','30y'];
+   for(const tenor of tenors){const rate=c['yield_'+tenor];if(typeof rate!=='number'||!Number.isFinite(rate)||Math.abs(rate)>100)throw Error('AI_INTAKE_MARKET_TREASURY');}
+   if(c.prior_session_date===null){
+    if(tenors.some(tenor=>c['prior_yield_'+tenor]!==null||c['change_'+tenor+'_bp']!==null))throw Error('AI_INTAKE_MARKET_TREASURY');
+   }else{
+    if(!day(c.prior_session_date)||c.prior_session_date>=c.session_date)throw Error('AI_INTAKE_MARKET_TREASURY');
+    for(const tenor of tenors){const prior=c['prior_yield_'+tenor],change=c['change_'+tenor+'_bp'];
+     if(typeof prior!=='number'||!Number.isFinite(prior)||Math.abs(prior)>100||typeof change!=='number'||!Number.isFinite(change)
+      ||Math.abs(change-(Number(c['yield_'+tenor])-prior)*100)>1e-7)throw Error('AI_INTAKE_MARKET_TREASURY');
+    }
+   }
+  }
   if(night){
    const expected=dailyAiExpectedTaiwanNight(e.available_at);
    if(!expected||Object.entries(expected).some(([key,value])=>c[key]!==value)||c.comparison_basis!=='TAIFEX_REPORTED_OPENING_REFERENCE'
     ||c.trading_date_basis!=='TAIFEX_NEXT_REGULAR_SESSION_ATTRIBUTION'||c.contract_selection!=='NEAREST_MONTH_PRESENT_IN_OFFICIAL_COMPLETED_SESSION'
+    ||typeof c.close!=='number'||!Number.isFinite(c.close)||c.close<=0||typeof c.change_points!=='number'||!Number.isFinite(c.change_points)
+    ||typeof c.change_percent!=='number'||!Number.isFinite(c.change_percent)
     ||typeof c.contract_month!=='string'||!/^\d{6}$/.test(c.contract_month)||c.contract_month<c.session_date.slice(0,7).replace('-','')
     ||c.native_contract!=='TX'+c.contract_month||typeof c.change_reference_value!=='number'||!Number.isFinite(c.change_reference_value)||c.change_reference_value<=0
     ||Math.abs(c.change_reference_value-(c.close-c.change_points))>1e-8
@@ -167,7 +182,7 @@ export async function loadOrIntakeDailyStockAiBatch(selector:StockAnalysisSelect
  stopped(signal);
  const args='batch_id' in selector?{p_batch_id:selector.batch_id,p_cutoff:null}:{p_batch_id:null,p_cutoff:selector.cutoff};
  const retained=await rpc('load_daily_stock_ai_batch_v1',args,signal);stopped(signal);
- if(retained!==null)return retained as StoredStockAnalysisBatch;
+ if(retained!==null){rejectRestrictedAnalysisSources(retained);return retained as StoredStockAnalysisBatch;}
  if(!('cutoff' in selector))return null;
  const raw=await rpc('load_daily_stock_ai_handoff_v1',{p_cutoff:selector.cutoff},signal);stopped(signal);
  if(raw===null)return null;
@@ -179,6 +194,24 @@ export async function loadOrIntakeDailyStockAiBatch(selector:StockAnalysisSelect
  if(loaded===null)throw Error('AI_INTAKE_RELOAD_UNCONFIRMED');
  const batch=object(loaded);
  if(batch.id!==seed.metadata.payload_hash||batch.cutoff!==selector.cutoff)throw Error('AI_INTAKE_RELOAD_MISMATCH');
+ rejectRestrictedAnalysisSources(loaded);
  // The handler revalidates all 72 packets and source times before any model.
  return loaded as StoredStockAnalysisBatch;
+}
+/** Apply the commercial source restriction to already retained V1 batches too;
+ * changing the collector alone must not allow an old queued packet to run. */
+function restrictedFinancialSource(source:string){
+ try{const host=new URL(source).hostname;return ['tsmc.com','mediatek.com','honhai.com'].some(domain=>host===domain||host.endsWith('.'+domain));}
+ catch{return false;}
+}
+function rejectRestrictedAnalysisSources(value:unknown){
+ const batch=object(value);if(!Array.isArray(batch.packets))return;
+ for(const value of batch.packets){const packet=object(value);if(!Array.isArray(packet.evidence))continue;
+  for(const value of packet.evidence){const e=object(value);if(typeof e.source!=='string')continue;
+   if(e.kind==='FINANCIAL'&&restrictedFinancialSource(e.source))throw Error('AI_INTAKE_RESTRICTED_FINANCIAL_SOURCE');
+   if(e.kind!=='MARKET')continue;
+   let hostname='';try{hostname=new URL(e.source).hostname;}catch{continue;}
+   if(hostname==='yahoo.com'||hostname.endsWith('.yahoo.com'))throw Error('AI_INTAKE_RESTRICTED_MARKET_SOURCE');
+  }
+ }
 }

@@ -37,6 +37,8 @@ create function vnext_runtime.seal_daily_stock_ai_intake_v1() returns trigger
 language plpgsql set search_path='' as $$
 begin
  if old.state='COMPLETE' then raise exception 'AI_INTAKE_IMMUTABLE';end if;
+ if tg_op='UPDATE' and old.state='SOURCED' and new.state='COMPLETE'
+  and not vnext_runtime.validate_daily_ai_market_v1(new.market,new.cutoff,new.business_date) then raise exception 'AI_INTAKE_MARKET_POLICY';end if;
  if old.state='SOURCED' and (tg_op='DELETE' or new.state<>'COMPLETE'
   or (to_jsonb(new)-array['state','batch_id','updated_at']) is distinct from (to_jsonb(old)-array['state','batch_id','updated_at']))
   then raise exception 'AI_INTAKE_IMMUTABLE';end if;
@@ -82,9 +84,9 @@ revoke all on function vnext_runtime.daily_ai_intake_company_evidence_v1(jsonb,j
 -- publication remains unknown; the actual receipt and content digest are exact.
 create function vnext_runtime.validate_daily_ai_market_v1(p_market jsonb,p_cutoff timestamptz,p_business_date date) returns boolean
 language plpgsql immutable set search_path='' as $$
-declare e jsonb;c jsonb;native_symbol text;seen text[]:='{}';
+declare e jsonb;c jsonb;native_symbol text;seen text[]:='{}';tenor text;source_month text;prior_month text;ny_receipt date;
 begin
- if jsonb_typeof(p_market) is distinct from 'array' or jsonb_array_length(p_market)>4 or octet_length(p_market::text)>60000
+ if jsonb_typeof(p_market) is distinct from 'array' or jsonb_array_length(p_market)>2 or octet_length(p_market::text)>60000
   or (select count(distinct m->>'id') from jsonb_array_elements(p_market)m)<>jsonb_array_length(p_market) then return false;end if;
  for e in select * from jsonb_array_elements(p_market) loop
   if (select count(*) from jsonb_object_keys(e))<>11 or jsonb_typeof(e->'id') is distinct from 'string'
@@ -99,29 +101,54 @@ begin
   c:=(e->>'content')::jsonb;
   if jsonb_typeof(c) is distinct from 'object' or c->>'schema' is distinct from 'DAILY_AI_GLOBAL_MARKET_FACT_V1'
    or c->>'research_business_date' is distinct from p_business_date::text
-   or c->>'freshness' is distinct from 'LATEST_COMPLETED_SESSION' or c->>'timestamp_basis' is distinct from 'RECEIPT_ONLY_PUBLICATION_UNKNOWN'
-   or c->>'received_at' is distinct from e->>'available_at' or c->>'unit' is distinct from 'INDEX_POINTS'
+   or c->>'timestamp_basis' is distinct from 'RECEIPT_ONLY_PUBLICATION_UNKNOWN'
+   or c->>'received_at' is distinct from e->>'available_at'
    or coalesce(c->>'source_response_sha256','') !~ '^[a-f0-9]{64}$'
    or jsonb_typeof(c->'source_response_bytes') is distinct from 'number' or (c->>'source_response_bytes')::numeric not between 1 and 2000000
-   or jsonb_typeof(c->'close') is distinct from 'number' or (c->>'close')::numeric<=0
-   or jsonb_typeof(c->'change_points') is distinct from 'number' or jsonb_typeof(c->'change_percent') is distinct from 'number'
    or coalesce(c->>'comparison_basis','')='' or coalesce(c->>'calendar_version','')=''
    or coalesce(c->>'session_date','') !~ '^\d{4}-\d\d-\d\d$' or (c->>'session_date')::date>p_business_date
    or coalesce(c->>'trading_date','') !~ '^\d{4}-\d\d-\d\d$' then return false;end if;
   native_symbol:=c->>'native_symbol';
   if native_symbol=any(seen) then return false;end if;seen:=array_append(seen,native_symbol);
-  if c->>'kind'='US_CASH_INDEX' then
-   if native_symbol not in('^IXIC','^SOX','^GSPC') or c->>'market' is distinct from 'US' or c->>'session' is distinct from 'REGULAR'
-    or c->>'currency' is distinct from 'USD' or e->>'source' is distinct from 'https://query1.finance.yahoo.com/v8/finance/chart/%5E'||substring(native_symbol from 2)||'?interval=1d&range=1mo'
-    or c->>'trading_date' is distinct from c->>'session_date' or coalesce(c->>'prior_session_date','') !~ '^\d{4}-\d\d-\d\d$'
-    or (c->>'prior_session_date')::date>=(c->>'session_date')::date or jsonb_typeof(c->'prior_close') is distinct from 'number' or (c->>'prior_close')::numeric<=0
-    or c->>'source_bar_at' is null or c->>'prior_bar_at' is null or not isfinite((c->>'source_bar_at')::timestamptz)
-    or not isfinite((c->>'prior_bar_at')::timestamptz) or (c->>'source_bar_at')::timestamptz>p_cutoff
-    or (c->>'prior_bar_at')::timestamptz>=(c->>'source_bar_at')::timestamptz then return false;end if;
+  if c->>'kind'='US_TREASURY_PAR_YIELD_CURVE' then
+   source_month:=replace(substring(c->>'session_date' from 1 for 7),'-','');
+   prior_month:=to_char(date_trunc('month',p_business_date::timestamp)-interval '1 month','YYYYMM');
+   ny_receipt:=((e->>'available_at')::timestamptz at time zone 'America/New_York')::date;
+   if native_symbol is distinct from 'UST_PAR_YIELD_CURVE' or c->>'market' is distinct from 'US' or c->>'session' is distinct from 'DAILY_OBSERVATION'
+    or c->>'currency' is distinct from 'USD' or c->>'unit' is distinct from 'PERCENT'
+    or c->>'freshness' is distinct from 'LATEST_AVAILABLE_TREASURY_OBSERVATION'
+    or c->>'calendar_version' is distinct from 'TREASURY_XML_ACTUAL_DATES_V1'
+    or c->>'comparison_basis' is distinct from 'PREVIOUS_AVAILABLE_TREASURY_OBSERVATION'
+    or c->>'rate_model' is distinct from 'NOMINAL_CONSTANT_MATURITY_PAR_YIELD'
+    or c->>'source_row_date_basis' is distinct from 'NEW_DATE_DATE_COORDINATE_NOT_PUBLICATION'
+    or c->>'observation_date_coordinate' is distinct from (c->>'session_date')||'T00:00:00'
+    or c->>'trading_date' is distinct from c->>'session_date' or (c->>'session_date')::date>ny_receipt
+    or ny_receipt-(c->>'session_date')::date not between 0 and 7
+    or jsonb_typeof(c->'observation_age_calendar_days') is distinct from 'number'
+    or (c->>'observation_age_calendar_days')::numeric<>ny_receipt-(c->>'session_date')::date
+    or source_month not in(to_char(p_business_date,'YYYYMM'),prior_month)
+    or e->>'source' is distinct from 'https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value_month='||source_month
+    or c ?| array['close','change_points','change_percent','prior_close','source_bar_at','prior_bar_at','bar_timestamp_basis']
+    or not(c?'prior_session_date') then return false;end if;
+   foreach tenor in array array['2y','10y','30y'] loop
+    if jsonb_typeof(c->('yield_'||tenor)) is distinct from 'number' or abs((c->>('yield_'||tenor))::numeric)>100 then return false;end if;
+    if c->'prior_session_date'='null'::jsonb then
+     if c->('prior_yield_'||tenor) is distinct from 'null'::jsonb or c->('change_'||tenor||'_bp') is distinct from 'null'::jsonb then return false;end if;
+    else
+     if coalesce(c->>'prior_session_date','') !~ '^\d{4}-\d\d-\d\d$' or (c->>'prior_session_date')::date>=(c->>'session_date')::date
+      or replace(substring(c->>'prior_session_date' from 1 for 7),'-','')<>source_month
+      or jsonb_typeof(c->('prior_yield_'||tenor)) is distinct from 'number' or abs((c->>('prior_yield_'||tenor))::numeric)>100
+      or jsonb_typeof(c->('change_'||tenor||'_bp')) is distinct from 'number'
+      or abs((c->>('change_'||tenor||'_bp'))::numeric-((c->>('yield_'||tenor))::numeric-(c->>('prior_yield_'||tenor))::numeric)*100)>0.000001 then return false;end if;
+    end if;
+   end loop;
   elsif c->>'kind'='TAIWAN_NIGHT_FUTURE' then
    -- Friday night can be attributed by the exchange to Monday. It remains a
    -- received AFTERHOURS observation; do not relabel that native trading date.
    if native_symbol is distinct from 'TX' or c->>'market' is distinct from 'TW' or c->>'session' is distinct from 'AFTERHOURS'
+    or c->>'unit' is distinct from 'INDEX_POINTS' or c->>'freshness' is distinct from 'LATEST_COMPLETED_SESSION'
+    or jsonb_typeof(c->'close') is distinct from 'number' or (c->>'close')::numeric<=0
+    or jsonb_typeof(c->'change_points') is distinct from 'number' or jsonb_typeof(c->'change_percent') is distinct from 'number'
     or c->>'currency' is distinct from 'TWD' or not(coalesce(e->>'source','')='https://openapi.taifex.com.tw/v1/DailyMarketReportFut'
      or coalesce(e->>'source','')='https://www.taifex.com.tw/cht/3/futDailyMarketReport?queryType=2&marketCode=1&queryDate='||replace(c->>'trading_date','-','%2F')||'&commodity_id=TX') then return false;end if;
   else return false;end if;
@@ -304,7 +331,7 @@ grant execute on function public.dispatch_daily_stock_ai_intake_v1(uuid) to serv
 create function public.resume_daily_stock_ai_intake_v1(p_intake_id uuid) returns jsonb
 language plpgsql security definer set search_path='' as $$
 declare q vnext_runtime.ai_stock_intakes;b vnext_runtime.ai_stock_batches;done integer;retryable integer;keys text[];receipt jsonb;
- target_revision constant text:='gpt-4o-mini:DAILY_AI_STOCK_ANALYSIS_V1:prompt-4';at_time timestamptz:=clock_timestamp();
+ target_revision constant text:='gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low';at_time timestamptz:=clock_timestamp();
 begin
  perform pg_advisory_xact_lock(hashtextextended('daily-ai-resume:'||p_intake_id::text,0));
  select * into strict q from vnext_runtime.ai_stock_intakes where id=p_intake_id;

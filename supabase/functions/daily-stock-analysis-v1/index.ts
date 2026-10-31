@@ -8,9 +8,12 @@ import {handleDailyStockSource} from './source-handler.ts';
 import {prepareDailyStockAiSource} from './source.ts';
 import {collectDailyStockAiNews} from '../_shared/daily-stock-ai-news.ts';
 import {collectDailyAiGlobalMarket} from '../../../research/daily-ai-global-market.ts';
+import {refreshDailyAiFinancials} from '../../../research/daily-ai-financial-refresh.ts';
 
 const url=Deno.env.get('SUPABASE_URL')??'',service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')??'';
-const internalSecret=Deno.env.get('CRON_SECRET')??'',model='gpt-4o-mini';
+const internalSecret=Deno.env.get('CRON_SECRET')??'',model='gpt-6-astra';
+// Independent semantic review passed before enabling bounded continuation.
+const autoContinue=true;
 const modelRevision=stockAiModelRevision(model);
 const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false},global:{
  fetch:(u:Parameters<typeof fetch>[0],i?:Parameters<typeof fetch>[1])=>{
@@ -43,6 +46,7 @@ Deno.serve(async request=>{
    rpc,fetcher:fetch,clock:()=>new Date().toISOString(),
    collectNews:newsSignal=>collectDailyStockAiNews({baseUrl:url,internalSecret,fetcher:fetch,signal:newsSignal}),
    collectMarket:({businessDate,signal:marketSignal})=>collectDailyAiGlobalMarket({businessDate,signal:marketSignal,fetcher:fetch,clock:()=>new Date().toISOString()}),
+   refreshFinancials:refreshDailyAiFinancials,
   },signal)});
  }
  let loaded:StoredStockAnalysisBatch|null=null;
@@ -56,11 +60,20 @@ Deno.serve(async request=>{
    if(!loaded)throw Error('AI_BATCH_SOURCE_REQUIRED');
    const progress=await rpc('load_daily_stock_ai_progress_v1',{p_batch_id:loaded.id,p_model_revision:modelRevision},signal);
    const completed=parseStockAiProgress(progress,loaded.id,modelRevision);
-   return runStoredStockAiBatch(packets,{
+   // A human dispatches exactly two semantic pilots. Sorting changes neither
+   // packet bytes nor job identities, so completed pilots remain reusable.
+   const priority=new Map([['1504',0],['2330',1]]);
+   const ordered=packets.map((packet,index)=>({packet,index})).sort((a,b)=>(priority.get(a.packet.symbol)??2)-(priority.get(b.packet.symbol)??2)||a.index-b.index).map(p=>p.packet);
+   return runStoredStockAiBatch(ordered,{
     // Once a paid result is valid, allow its bounded COMPLETE write to settle.
     // Interrupting an unknown commit must not unlock a duplicate paid request.
     rpc:(name,args)=>rpc(name,args,args.p_op==='COMPLETE'?undefined:signal),
     apiKey:Deno.env.get('OPENAI_API_KEY')??'',model,fetcher:fetch,signal,completed,
+    onCandidate:async(candidate,receipt,inputHash,packet)=>{
+     const retained=await rpc('retain_daily_ai_model_candidate_v1',{p_input_hash:inputHash,p_model_revision:modelRevision,
+      p_symbol:packet.symbol,p_cutoff:packet.cutoff,p_candidate:candidate,p_receipt:receipt},signal);
+     if(!retained||retained.state!=='RETAINED'||retained.member_published!==false)throw Error('STOCK_AI_CANDIDATE_RETAIN_UNCONFIRMED');
+    },
    },maxStocks);
   },
  });
@@ -72,7 +85,7 @@ Deno.serve(async request=>{
   }
   // SQL limits total dispatches and each job's attempts. Busy/cache-only calls
   // never form a continuation loop; only an actual bounded model call advances.
-  if(summary.requires_next_checkpoint===true&&summary.model_calls===1&&typeof summary.batch_id==='string'){
+  if(autoContinue&&summary.requires_next_checkpoint===true&&summary.model_calls===1&&typeof summary.batch_id==='string'){
    const task=rpc('dispatch_daily_stock_ai_batch_v1',{p_batch_id:summary.batch_id}).catch(()=>{console.warn('STOCK_AI_CONTINUATION_PENDING');});
    const runtime=(globalThis as unknown as {EdgeRuntime?:{waitUntil:(p:Promise<unknown>)=>void}}).EdgeRuntime;
    if(runtime)runtime.waitUntil(task);else await task;

@@ -6,7 +6,7 @@ const gapLabels:Record<string,string>={
  SUPPLEMENT_LIMIT_OLDER_ITEMS_NOT_INCLUDED:'本次保留較新的新聞與市場資料，較早的項目尚未納入。',
  COMPANY_EVIDENCE_LIMIT_OLDER_ITEMS_NOT_INCLUDED:'本次保留部分公司資料，較早的項目尚未全部納入。',
  ORIGINAL_PUBLICATION_TIME_UNKNOWN_RECEIPT_REVIEW_ONLY:'部分原始資料未確認發布時間；這份研究依實際收到的資料分析。',
- FINANCIAL_DATA_RETAINED_NOT_REFRESHED:'公司財務資料沿用已取得的版本，本次尚未重新蒐集。',
+ FINANCIAL_DATA_RETAINED_NOT_REFRESHED:'部分公司財務資料沿用已取得的版本；本次新增資料與期間以各筆來源標示為準。',
  INSTITUTIONAL_DATA_RETAINED_NOT_REFRESHED:'法人交易資料沿用已取得的版本，本次尚未重新蒐集。',
  PRICE_REFRESH_BACKLOG_OLDER_SESSIONS_NOT_FETCHED:'本次先補最近五個交易日量價，較早缺漏仍需補齊。',
  PRICE_EXCHANGE_CLASSIFICATION_UNCONFIRMED:'尚未確認這檔股票適用的交易所資料，量價更新仍待核對。',
@@ -31,7 +31,22 @@ const gapLabels:Record<string,string>={
  US_COMPLETED_CASH_SESSION_PARTIAL:'本次美股完整交易時段的市場資料尚未齊備。',
  TAIWAN_NIGHT_SESSION_UNVERIFIED:'本次尚未核實台指期最近已結束的夜盤；不以日盤或較早行情代替。',
  TAIWAN_NIGHT_RETAINED_OFFICIAL_RECEIPT_NOT_NEW_FETCH:'夜盤依據為已保留且可核對的官方版本，非本次重新抓取。',
+ US_EQUITY_CLOSE_NOT_COLLECTED_US_NEWS_CONTEXT_ONLY:'本版美國市場背景依新聞與利率資料分析，未另行取得美股指數收盤資料。',
+ US_TREASURY_YIELD_CURVE_UNAVAILABLE:'本次尚未取得可核對的美國公債殖利率資料。',
+ US_TREASURY_PRIOR_OBSERVATION_UNAVAILABLE:'美國公債殖利率缺少可比較的前筆資料，未推算變動。',
+ PUBLICATION_TIME_UNKNOWN_NEW_FINANCIALS_ARE_RECEIPT_TIME_OBSERVATIONS:'新取得的財報資料未確認原始發布時間；本版依實際收到的版本研究。',
+ FINANCIAL_API_LATEST_REPORTED_2026_Q2_NO_Q3_ROW_IN_THIS_CAPTURE:'本次官方財報列為 2026 年第 2 季申報資料，尚未取得第 3 季完整財報。',
+ EPS_REPORTED_QUARTER_LABEL_SINGLE_VS_YTD_NOT_PROVEN_NO_TTM_OR_DIFFERENCING:'EPS 保留官方原值；單季或累計口徑仍待核對，不推算近四季 EPS。',
+ FOUR_CONSECUTIVE_SINGLE_QUARTER_EPS_SERIES_NOT_ESTABLISHED_BY_NEW_OPEN_DATA:'尚無可核對的連續四季單季 EPS，長期獲利趨勢仍需補查。',
+ CAPEX_DEMAND_MOAT_VALUATION_REQUIRE_SEPARATE_EVIDENCE:'資本支出、需求、競爭優勢與估值，仍需更多直接證據。',
+ NO_MATCHING_LISTED_COMPANY_EPS_ROW_IN_ACTUAL_OPEN_API_RESPONSE:'本次官方 EPS 來源未取得這家公司可對應的資料列。',
+ NO_MATCHING_GENERAL_INDUSTRY_INCOME_ROW_IN_ACTUAL_OPEN_API_RESPONSE:'本次官方損益表來源未取得這家公司可對應的資料列，相關比率仍待補齊。',
+ RESTRICTED_COMPANY_WEBSITE_FACTS_REMOVED_NOT_RELABELLED_OR_RELICENSED:'部分先前財報觀測未納入本版，目前不足以比較完整季度變化。',
+ TPEX_EPS_UNIT_YUAN_MAPPED_FROM_OFFICIAL_DATASET20757_COLUMN_NO_CURRENCY_REINFERENCE:'上櫃 EPS 單位依官方資料集欄位，本版未額外換算。',
 };
+export function dailyAiAnalysisText(value:string):string{
+ return value.replaceAll('AS_REPORTED','來源原報口徑').replaceAll('TTM','近四季合計');
+}
 export function dailyAiGapLabel(gap:string):string{
- return gapLabels[gap]??(/^[A-Z][A-Z0-9_]{7,}$/.test(gap)?'這項資料尚待確認，需補齊後再評估。':gap);
+ return gapLabels[gap]??(/^[A-Z][A-Z0-9_]{7,}$/.test(gap)?'這項資料尚待確認，需補齊後再評估。':dailyAiAnalysisText(gap));
 }

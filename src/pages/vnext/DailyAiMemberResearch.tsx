@@ -42,7 +42,14 @@ export default function DailyAiMemberResearch({data,selectedHorizon,onHorizonCha
  const horizon=selectedHorizon??localHorizon;
  const {filter,query,limit}=viewState??localView;
  const changeView=(change:(previous:DailyAiMemberViewState)=>DailyAiMemberViewState)=>{if(viewState===undefined)setLocalView(change);onViewChange?.(change);};
- useEffect(()=>{const update=()=>setNow(Date.now()),timer=setInterval(update,15000);document.addEventListener('visibilitychange',update);return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',update);};},[]);
+ const expiresAt=data.edition?.expires_at??null;
+ useEffect(()=>{
+  const update=()=>setNow(previous=>Math.max(previous,Date.now())),timer=setInterval(update,15000);
+  const expiry=expiresAt===null?null:Date.parse(expiresAt);
+  const deadline=expiry===null?undefined:setTimeout(()=>setNow(previous=>Math.max(previous,Date.now(),expiry)),Math.min(2147483647,Math.max(0,expiry-Date.now())));
+  document.addEventListener('visibilitychange',update);
+  return()=>{clearInterval(timer);clearTimeout(deadline);document.removeEventListener('visibilitychange',update);};
+ },[expiresAt]);
  const edition=data.edition;
  if(!edition||Date.parse(edition.expires_at)<=now)return <main className="vnext-content dam" id="stock-observations"><h1>每日股票研究</h1><section role="status" className="vnext-empty"><h2>{edition?'這個研究版本已到期':'目前尚無已發布的研究版本'}</h2><p>等待完成資料核對與發布的最新研究。</p></section></main>;
  const sourceYear=data.business_date.slice(0,4),all=data.cards.filter(c=>c.horizon===horizon),rows=all.filter(c=>(filter==='ALL'||c.status===filter)&&(!query.trim()||`${c.symbol} ${c.company}`.includes(query.trim())))

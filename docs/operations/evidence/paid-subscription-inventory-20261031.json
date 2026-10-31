@@ -1,0 +1,73 @@
+{
+  "schema": "PAID_SUBSCRIPTION_INVENTORY_V1",
+  "observed_at": "2026-10-31T10:55:32.77759+00:00",
+  "method": "Production SELECT aggregates only; no personal data, payment amounts, webhook payloads, provider identifiers, writes, checkout activation or customer messages.",
+  "production_configuration": {
+    "billing_mode": "disabled",
+    "signup_mode": "beta_full",
+    "trial_days_configured": 14,
+    "configured_signup_policy_is_not_an_existing_subscriber_count": true
+  },
+  "account_inventory": {
+    "nonanonymous_auth_users": 2,
+    "profiles": 2,
+    "profile_role_admin": 1,
+    "profile_role_member": 1,
+    "canonical_entitlement_rows": 1,
+    "canonical_owner": 1,
+    "named_enabled_research_owners": 1,
+    "admin_owner_overlap": 1,
+    "canonical_beta_full": 0,
+    "canonical_trialing": 0,
+    "canonical_free": 0,
+    "canonical_paid_active": 0,
+    "profiles_without_canonical_entitlement": 1,
+    "legacy_active_without_entitlement_unknown_expiry": 1
+  },
+  "payment_evidence": {
+    "canonical_paid_active_payment_provider_source_rows": 0,
+    "canonical_entitlements_with_provider_linkage": 0,
+    "billing_webhook_ledger_table_exists": true,
+    "billing_webhook_event_rows": 0,
+    "payment_evidence_backed_subscriptions_observed": 0,
+    "actual_external_paid_subscribers": null,
+    "qualification": "No payment-backed subscription is evidenced in the inspected database. External payment-provider reconciliation was not performed. An entitlement state, profile status, owner access, beta access or trial is not itself evidence that money was collected."
+  },
+  "legacy_access_caveat": "The legacy profile resolver can label subscription_status=active with paid_until=NULL as paid_active access. The one observed legacy profile is therefore excluded from verified payment counts; it has neither a canonical entitlement nor a payment-provider linkage. Admin and owner counts overlap and must not be added together.",
+  "ten_thousand_goal": {
+    "target_verified_paid_subscribers": 10000,
+    "achieved": false,
+    "production_capacity_proven": false,
+    "three_observed_blockers": [
+      {
+        "blocker": "Payment conversion remains disabled",
+        "evidence": "Production billing_mode=disabled; the pricing UI states public testing, no payment and no trial activation.",
+        "next_acceptance": "Owner approves the existing price/payment configuration, followed by a real provider-signed successful-payment and entitlement/revocation end-to-end check. This audit does not activate checkout."
+      },
+      {
+        "blocker": "A verifiable paid-subscriber measurement has no populated evidence",
+        "evidence": "Zero canonical paid_active rows, zero provider-linked entitlements and zero billing_webhook_events; the only non-owner member is legacy active with unknown expiry.",
+        "next_acceptance": "Reconcile processed, verified provider payment/subscription events to current non-owner entitlements; publish aggregate counts with exclusions for owner/admin, beta, trial, free, expired and refunded/canceled access. Profile access labels alone cannot satisfy the target."
+      },
+      {
+        "blocker": "The new daily research batch is incomplete after provider throttling",
+        "evidence": "The independently inspected 0524783a79af043a70be593d2e019c435bc067f168a5b2567a831e32d78b4ddc batch has 18 COMPLETE and 54 FAILED jobs with exact STOCK_AI_PROVIDER_HTTP_429 at attempt 3. The installed dispatcher guard prevents automatic repeated spending; recovery remains separately bounded and reviewed.",
+        "next_acceptance": "Finish only the explicitly approved missing work, preserve the 18 completed receipts, then pass source-use/quality review, publish through Owner UI and verify short/mid/long member delivery. Paid-scale reliability and capacity require separately measured evidence."
+      }
+    ]
+  },
+  "sources": {
+    "production_aggregate_tables": [
+      "auth.users",
+      "public.profiles",
+      "public.member_entitlements",
+      "public.membership_access_config",
+      "public.billing_webhook_events",
+      "research_private.owner_access"
+    ],
+    "local_legacy_access_resolver": "supabase/functions/_shared/member-entitlement.ts:70",
+    "local_billing_event_state_machine": "supabase/migrations/20260822183421_member_access_trial_state_machine.sql:387",
+    "pricing_ui": "src/pages/pricing/Pricing.tsx:78",
+    "membership_ui": "src/components/membership/MembershipStatusCard.tsx"
+  }
+}

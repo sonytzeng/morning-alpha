@@ -161,4 +161,3 @@ end $$;
 revoke all on function public.load_daily_stock_ai_citation_repair_v1(text,text,text) from public,anon,authenticated,service_role;
 grant execute on function public.load_daily_stock_ai_citation_repair_v1(text,text,text) to service_role;
 commit;
-

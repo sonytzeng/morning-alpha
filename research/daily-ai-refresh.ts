@@ -6,7 +6,7 @@ import type {DailyBar,FunnelInput} from '../src/features/vnext/researchFunnel.ts
 type Receipt={source:string;date:string;state:'CAPTURED'|'UNAVAILABLE';received_at:string|null;hash:string|null};
 const stopped=(signal:AbortSignal)=>{if(signal.aborted)throw Error('AI_REFRESH_ABORTED');};
 const taipeiDay=(at:string)=>new Date(Date.parse(at)+8*3600000).toISOString().slice(0,10);
-const digest=async(bytes:Uint8Array)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),v=>v.toString(16).padStart(2,'0')).join('');
+const digest=async(bytes:Uint8Array)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes as BufferSource)),v=>v.toString(16).padStart(2,'0')).join('');
 const day=(s:string)=>/^\d{4}-\d\d-\d\d$/.test(s)&&validObservationTime(s+'T00:00:00Z');
 async function read(response:Response){
  if(!response.ok||Number(response.headers.get('content-length'))>2000000)throw Error('AI_REFRESH_HTTP');

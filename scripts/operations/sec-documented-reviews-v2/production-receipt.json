@@ -1,0 +1,86 @@
+{
+  "schema": "DOCUMENTED_REVIEW_V2_PRODUCTION_POSTFLIGHT_V1",
+  "result": "PASS",
+  "actor": "financial_quality",
+  "project_id": "cttfzgvhiewfckydcrci",
+  "sql_candidate_sha256": "ec3df9d09e5ed1fb55c85eab4e28774096cdefc51929bd3d55ab7ab30fb43b26",
+  "observation": {
+    "registry": {
+      "rows": 1,
+      "fact_count": 3,
+      "facts_sha256": "53765d515cc65a5deec0514fcf8c4cae8873010f54d016cfecfec7b039c1ad94",
+      "facts_text_sha256": "53765d515cc65a5deec0514fcf8c4cae8873010f54d016cfecfec7b039c1ad94",
+      "review_valid_until": "2026-11-02T13:30:00+08:00",
+      "source_seal_sha256": "6b3cfccff75a1960196a2edd9685290f7eb66b0bd7f0dd396c84de597ca12526",
+      "source_admitted_any": false,
+      "member_publication_approved_any": false
+    },
+    "observed_at": "2026-10-31T11:14:47.7926+00:00",
+    "registry_rls": {
+      "force": false,
+      "enabled": true
+    },
+    "loader_summary": {
+      "seal": "6b3cfccff75a1960196a2edd9685290f7eb66b0bd7f0dd396c84de597ca12526",
+      "facts": 3,
+      "schema": "DOCUMENTED_REVIEW_REGISTRY_V2",
+      "valid_until": "2026-11-02T13:30:00+08:00",
+      "facts_sha256": "53765d515cc65a5deec0514fcf8c4cae8873010f54d016cfecfec7b039c1ad94",
+      "source_admitted": false,
+      "member_publication_approved": false
+    },
+    "function_hashes": [
+      {
+        "name": "daily_stock_ai_intake_v1",
+        "schema": "public",
+        "sha256": "a9074dcad28525d207b9b28f894c95392823ae44331446827f968d6f83e763c6"
+      },
+      {
+        "name": "stage_daily_ai_research_edition_v1",
+        "schema": "public",
+        "sha256": "e744ae5fd8f0f31967e179ffdbdf3cc74672892564c0f6c454c8ff7847626b44"
+      },
+      {
+        "name": "project_daily_stock_ai_inputs_v1",
+        "schema": "vnext_runtime",
+        "sha256": "7b3da81170bfdae84fdac26fbf88844791f4e4d795b6e687499b7a655559a977"
+      },
+      {
+        "name": "validate_daily_ai_financial_refresh_sec_v1",
+        "schema": "vnext_runtime",
+        "sha256": "0d6cde2b2d48fd5976434bdd8a2859db0483b7b500b9d0eb45c083d37e438711"
+      },
+      {
+        "name": "validate_daily_ai_financial_refresh_v5",
+        "schema": "vnext_runtime",
+        "sha256": "e6f4aa5a0f9f89fa42eaeff44fcde20c75620ec3937f9cdc477706415b87e318"
+      }
+    ],
+    "registry_privileges": [
+      {
+        "role": "anon",
+        "table_any": false,
+        "loader_execute": false,
+        "v2_validator_execute": false
+      },
+      {
+        "role": "authenticated",
+        "table_any": false,
+        "loader_execute": false,
+        "v2_validator_execute": false
+      },
+      {
+        "role": "service_role",
+        "table_any": false,
+        "loader_execute": true,
+        "v2_validator_execute": false
+      }
+    ],
+    "batch_052_existing_editions": 0
+  },
+  "scope": "Read-only inspection after root applied V2 SQL; no complete fact content emitted.",
+  "production_writes": 0,
+  "model_calls": 0,
+  "dispatches": 0,
+  "deploys": 0
+}

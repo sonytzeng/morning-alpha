@@ -1,0 +1,15 @@
+{
+  "schema": "EXACT_SEC_PRIMARY_DOCUMENTS_LOCAL_SQL_RESULT_V1",
+  "result": "PASS",
+  "checks": 532,
+  "server_version": "17.5",
+  "old_behavior_cases": 420,
+  "exact_additional_documents": 3,
+  "production_used": false,
+  "network_used": false,
+  "source_permissions_written": false,
+  "business_rows_changed": false,
+  "candidate_sql_sha256": "17e77864fb1cdf52e779e0248d8471abc918585268ed74cb87a149a2ad7f0c83",
+  "before_definition_sha256": "615d822ecd384d65e92cc9232a373af3a91610b5fdbd9d52a75236b57a2493a9",
+  "after_definition_sha256": "93f4623a2f17ad952f049804c2e2b1ca640d712ea7f92a0842aed9292a92737a"
+}

@@ -23,7 +23,7 @@ const addDay=(d:string,n:number)=>new Date(Date.parse(d+'T12:00:00Z')+n*86400000
 const nyDay=(ms:number)=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(ms));
 const finite=(v:unknown)=>typeof v==='number'&&Number.isFinite(v)?v:null;
 const numeric=(v:unknown)=>typeof v==='string'&&/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(v.trim())?finite(Number(v)):finite(v);
-const digest=async(bytes:Uint8Array)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),v=>v.toString(16).padStart(2,'0')).join('');
+const digest=async(bytes:Uint8Array)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes as BufferSource)),v=>v.toString(16).padStart(2,'0')).join('');
 const stopped=(s:AbortSignal)=>{if(s.aborted)throw Error('AI_GLOBAL_MARKET_ABORTED');};
 
 async function readJson(url:string,fetcher:typeof fetch,signal:AbortSignal,format:'JSON'|'HTML'|'XML'='JSON',timeoutMs=6000){

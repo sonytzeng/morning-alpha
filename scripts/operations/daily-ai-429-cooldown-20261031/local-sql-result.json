@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "checks": 215,
+  "postgres": "17.5",
+  "baseline_definition_sha256": "436ec37a8a6d32169bd1bab60ebf9bc4338845588f19efac7de78a4384387db3",
+  "candidate_definition_sha256": "d0c3395e030c92b8cd55cedb53882fbb86cc07b37ac57c0d4b007db623467878",
+  "production_calls": 0,
+  "external_calls": 0,
+  "local_vault_and_net_instrumented": true,
+  "limitation": "Isolated single PostgreSQL/WASM connection; no production multi-connection timing, queued Edge cancellation or provider recovery proof."
+}

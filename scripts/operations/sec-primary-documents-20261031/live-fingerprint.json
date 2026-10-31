@@ -1,0 +1,14 @@
+{
+  "schema": "SEC_PRIMARY_DOCUMENTS_LIVE_BASELINE_V1",
+  "project_id": "cttfzgvhiewfckydcrci",
+  "signature": "vnext_private.ai_use_primary_documents_v1(text,text[],text[])",
+  "definition_sha256": "615d822ecd384d65e92cc9232a373af3a91610b5fdbd9d52a75236b57a2493a9",
+  "owner": "postgres",
+  "provolatile": "i",
+  "prosecdef": false,
+  "proconfig": [
+    "search_path=\"\""
+  ],
+  "proacl": "{postgres=X/postgres}",
+  "production_query_read_only": true
+}

@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "checks": 418,
+  "postgres": "17.5",
+  "candidate_sha256": "eabfd2e637f095fbfc5ea3ec2ce10bb80303a23b47ff967813a4e581232efb3c",
+  "retained_seed_sha256": "0524783a79af043a70be593d2e019c435bc067f168a5b2567a831e32d78b4ddc",
+  "retained_seed_bytes": 5197315,
+  "synthetic_model_results": true,
+  "synthetic_expiry_clock_test": true,
+  "original_complete": 18,
+  "original_failed_429_attempts3": 54,
+  "original_jobs_unchanged": true,
+  "old_functions_unchanged": true,
+  "production_calls": 0,
+  "external_calls": 0,
+  "limitation": "Single isolated PostgreSQL/WASM connection; not production lock-wait/load evidence. No CPU capacity improvement claimed."
+}

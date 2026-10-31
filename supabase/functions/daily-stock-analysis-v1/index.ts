@@ -10,7 +10,10 @@ import {collectDailyAiOfficialNews} from '../../../research/daily-ai-official-ne
 import {collectDailyAiGlobalMarket} from '../../../research/daily-ai-global-market.ts';
 import {refreshDailyAiFinancials} from '../../../research/daily-ai-financial-refresh.ts';
 import {withRetainedSecDailyFinancials} from '../../../research/sec-daily-financial-replay.candidate.ts';
+import {withDocumentedReviewV2Financials,withDocumentedReviewV2SourceRpc} from '../../../research/documented-review-replay-v2.candidate.ts';
 import {handleDailyStockCitationRepair} from './repair-handler.ts';
+import {handleDailyStockRateLimitRecovery} from './rate-limit-recovery-handler.ts';
+import {runStoredStockAiRateLimitRecovery,stockAiRateLimitRecoveryRevision} from './rate-limit-recovery-runner.ts';
 
 const url=Deno.env.get('SUPABASE_URL')??'',service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')??'';
 const internalSecret=Deno.env.get('CRON_SECRET')??'',model='gpt-6-astra';
@@ -54,6 +57,22 @@ Deno.serve(async request=>{
   return Response.json({error:limited?'INPUT_LIMIT':'SCOPE_INVALID',model_calls:0,member_published:false},{status:limited?413:422,headers:{'Cache-Control':'no-store'}});
  }
  const req=new Request(authorized,{body:text});
+ if(input&&typeof input==='object'&&!Array.isArray(input)&&Object.hasOwn(input,'recovery_symbol')){
+  return handleDailyStockRateLimitRecovery(req,{
+   internalSecret,clock:()=>new Date().toISOString(),
+   loadBatch:(batchId,signal)=>loadOrIntakeDailyStockAiBatch({batch_id:batchId},rpc,signal),
+   loadFence:(selector,signal)=>rpc('load_daily_stock_ai_rate_limit_recovery_v1',{p_batch_id:selector.batch_id,p_symbol:selector.recovery_symbol,p_review_document_hash:selector.review_document_hash},signal),
+   runRecovery:(packets,selector,signal)=>runStoredStockAiRateLimitRecovery(packets,selector,{
+    rpc:(name,args)=>rpc(name,args,args.p_op==='COMPLETE'?undefined:signal),
+    apiKey:Deno.env.get('OPENAI_API_KEY')??'',fetcher:fetch,signal,
+    onCandidate:async(candidate,receipt,inputHash,packet)=>{
+     const retained=await rpc('retain_daily_ai_model_candidate_v1',{p_input_hash:inputHash,p_model_revision:stockAiRateLimitRecoveryRevision,
+      p_symbol:packet.symbol,p_cutoff:packet.cutoff,p_candidate:candidate,p_receipt:receipt},signal);
+     if(!retained||retained.state!=='RETAINED'||retained.member_published!==false)throw Error('STOCK_AI_CANDIDATE_RETAIN_UNCONFIRMED');
+    },
+   }),
+  });
+ }
  if(input&&typeof input==='object'&&!Array.isArray(input)&&(Object.hasOwn(input,'repair_symbol')||Object.hasOwn(input,'review_document_hash'))){
   return handleDailyStockCitationRepair(req,{
    internalSecret,clock:()=>new Date().toISOString(),
@@ -72,10 +91,10 @@ Deno.serve(async request=>{
  }
  if(input&&typeof input==='object'&&!Array.isArray(input)&&Object.hasOwn(input,'intake_id')){
   return handleDailyStockSource(req,{internalSecret,runSource:(intakeId,signal)=>prepareDailyStockAiSource(intakeId,{
-   rpc,fetcher:fetch,clock:()=>new Date().toISOString(),
+   rpc:withDocumentedReviewV2SourceRpc(rpc,()=>new Date().toISOString()),fetcher:fetch,clock:()=>new Date().toISOString(),
    collectNews:({inputs,businessDate,signal:newsSignal})=>collectDailyAiOfficialNews({inputs,businessDate,fetcher:fetch,clock:()=>new Date().toISOString(),signal:newsSignal}),
    collectMarket:({businessDate,signal:marketSignal})=>collectDailyAiGlobalMarket({businessDate,signal:marketSignal,fetcher:fetch,clock:()=>new Date().toISOString()}),
-   refreshFinancials:withRetainedSecDailyFinancials(refreshDailyAiFinancials,(args,registrySignal)=>rpc('load_daily_stock_ai_sec_replay_v1',args,registrySignal)),
+   refreshFinancials:withDocumentedReviewV2Financials(withRetainedSecDailyFinancials(refreshDailyAiFinancials,(args,registrySignal)=>rpc('load_daily_stock_ai_sec_replay_v1',args,registrySignal))),
   },signal)});
  }
  let loaded:StoredStockAnalysisBatch|null=null;
@@ -114,7 +133,7 @@ Deno.serve(async request=>{
   }
   // SQL limits total dispatches and each job's attempts. Busy/cache-only calls
   // never form a continuation loop; only an actual bounded model call advances.
-  if(autoContinue&&summary.requires_next_checkpoint===true&&summary.model_calls===1&&typeof summary.batch_id==='string'){
+  if(autoContinue&&summary.requires_next_checkpoint===true&&summary.model_calls===1&&summary.counts?.COMPLETE===1&&typeof summary.batch_id==='string'){
    const task=rpc('dispatch_daily_stock_ai_batch_v1',{p_batch_id:summary.batch_id}).catch(()=>{console.warn('STOCK_AI_CONTINUATION_PENDING');});
    const runtime=(globalThis as unknown as {EdgeRuntime?:{waitUntil:(p:Promise<unknown>)=>void}}).EdgeRuntime;
    if(runtime)runtime.waitUntil(task);else await task;

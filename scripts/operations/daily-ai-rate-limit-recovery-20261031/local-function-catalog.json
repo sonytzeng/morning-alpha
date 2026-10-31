@@ -1,0 +1,305 @@
+{
+  "schema": "DAILY_AI_RATE_LIMIT_RECOVERY_LOCAL_CATALOG_V1",
+  "postgres": "17.5",
+  "candidate_sql_sha256": "eabfd2e637f095fbfc5ea3ec2ce10bb80303a23b47ff967813a4e581232efb3c",
+  "functions": [
+    {
+      "signature": "public.daily_stock_ai_rate_limit_recovery_job_v1(text, text, text, text, text, text, jsonb, jsonb, uuid, text)",
+      "definition": "CREATE OR REPLACE FUNCTION public.daily_stock_ai_rate_limit_recovery_job_v1(p_batch_id text, p_symbol text, p_review_document_hash text, p_op text, p_key text, p_identity_text text DEFAULT NULL::text, p_context jsonb DEFAULT NULL::jsonb, p_result jsonb DEFAULT NULL::jsonb, p_lease uuid DEFAULT NULL::uuid, p_code text DEFAULT NULL::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare context jsonb;original vnext_runtime.ai_stock_jobs;j vnext_runtime.ai_stock_jobs;identity_text text;at_time timestamptz:=clock_timestamp();\nbegin\n if p_op is null or p_op not in('CLAIM','COMPLETE','FAIL') then raise exception 'AI_RATE_LIMIT_RECOVERY_OPERATION';end if;\n perform 1 from vnext_runtime.ai_stock_batches where id=p_batch_id for update;\n if not found then raise exception 'AI_RATE_LIMIT_RECOVERY_BATCH_MISSING';end if;\n at_time:=clock_timestamp();\n context:=public.load_daily_stock_ai_rate_limit_recovery_v1(p_batch_id,p_symbol,p_review_document_hash);\n if p_key is distinct from context->>'job_key' then raise exception 'AI_RATE_LIMIT_RECOVERY_KEY';end if;\n if p_op='CLAIM' then\n  identity_text:='{\"input_hash\":\"'||(context->>'input_hash')||'\",\"model_revision\":\"'||(context->>'model_revision')||'\",\"version\":\"DAILY_AI_BATCH_1\"}';\n  if p_identity_text is distinct from identity_text or p_context is distinct from jsonb_build_object('input_hash',context->>'input_hash','model_revision',context->>'model_revision','symbol',p_symbol,'cutoff',context->>'cutoff')\n   then raise exception 'AI_RATE_LIMIT_RECOVERY_IDENTITY';end if;\n  select * into strict original from vnext_runtime.ai_stock_jobs where id=context->>'original_job_key';\n  if original.symbol is distinct from p_symbol or original.input_hash is distinct from context->>'input_hash'\n   or original.cutoff is distinct from (context->>'cutoff')::timestamptz\n   or original.model_revision is distinct from 'gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low'\n   then raise exception 'AI_RATE_LIMIT_RECOVERY_ORIGINAL_INELIGIBLE';end if;\n  if original.state='COMPLETE' then return jsonb_build_object('state','CACHED','result',original.result);end if;\n  if original.state<>'FAILED' or original.attempts<>3 or original.code is distinct from 'STOCK_AI_PROVIDER_HTTP_429'\n   or original.symbol is distinct from p_symbol or original.input_hash is distinct from context->>'input_hash'\n   or original.cutoff is distinct from (context->>'cutoff')::timestamptz\n   or original.model_revision is distinct from 'gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low'\n   then raise exception 'AI_RATE_LIMIT_RECOVERY_ORIGINAL_INELIGIBLE';end if;\n  select * into j from vnext_runtime.ai_stock_jobs where id=p_key;\n  if found then\n   if j.symbol is distinct from p_symbol or j.input_hash is distinct from context->>'input_hash'\n    or j.cutoff is distinct from (context->>'cutoff')::timestamptz or j.model_revision is distinct from context->>'model_revision'\n    then raise exception 'AI_RATE_LIMIT_RECOVERY_JOB_CONFLICT';end if;\n   if j.state='COMPLETE' then return jsonb_build_object('state','CACHED','result',j.result);end if;\n   if j.state='RUNNING' and j.lease_until>at_time then return jsonb_build_object('state','BUSY');end if;\n   return jsonb_build_object('state','EXHAUSTED');\n  end if;\n  if exists(select from vnext_runtime.ai_stock_batches b cross join lateral jsonb_each_text(b.payload->'packet_hashes') p\n   left join vnext_runtime.ai_stock_jobs old on old.id=encode(sha256(convert_to('{\"input_hash\":\"'||p.value||'\",\"model_revision\":\"gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low\",\"version\":\"DAILY_AI_BATCH_1\"}','UTF8')),'hex')\n   where b.id=p_batch_id and (old.id is null or old.symbol is distinct from p.key or old.input_hash is distinct from p.value or old.cutoff is distinct from b.cutoff\n    or old.model_revision is distinct from 'gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low'\n    or (old.state='COMPLETE' or old.state='FAILED' and old.attempts=3 and old.code='STOCK_AI_PROVIDER_HTTP_429') is distinct from true))\n   then raise exception 'AI_RATE_LIMIT_RECOVERY_ORIGINAL_BATCH_NOT_CLOSED';end if;\n  if least((context->>'cutoff')::timestamptz+interval '72 hours','2026-11-02T05:30:00Z'::timestamptz)<=at_time then raise exception 'AI_RATE_LIMIT_RECOVERY_EXPIRED';end if;\n  if exists(select from vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 r join vnext_runtime.ai_stock_jobs n on n.id=r.recovery_job_key where r.batch_id=p_batch_id and r.symbol<>p_symbol\n   and (n.state='FAILED' or n.state='RUNNING' and n.lease_until<=at_time)) then return jsonb_build_object('state','EXHAUSTED');end if;\n  if exists(select from vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 r left join vnext_runtime.ai_stock_jobs n on n.id=r.recovery_job_key where r.batch_id=p_batch_id and r.symbol<>p_symbol\n   and (n.id is null or n.state='RUNNING')) then return jsonb_build_object('state','BUSY');end if;\n end if;\n -- Existing SQL validates the lease/result; the only writable key here is the\n -- fixed new recovery job. No original key can reach COMPLETE or FAIL.\n return public.daily_stock_ai_job_v1(p_op,p_key,p_identity_text,p_context,p_result,p_lease,p_code);\nend $function$\n",
+      "metadata": {
+        "oid": "16631",
+        "proacl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "probin": null,
+        "prosrc": "\ndeclare context jsonb;original vnext_runtime.ai_stock_jobs;j vnext_runtime.ai_stock_jobs;identity_text text;at_time timestamptz:=clock_timestamp();\nbegin\n if p_op is null or p_op not in('CLAIM','COMPLETE','FAIL') then raise exception 'AI_RATE_LIMIT_RECOVERY_OPERATION';end if;\n perform 1 from vnext_runtime.ai_stock_batches where id=p_batch_id for update;\n if not found then raise exception 'AI_RATE_LIMIT_RECOVERY_BATCH_MISSING';end if;\n at_time:=clock_timestamp();\n context:=public.load_daily_stock_ai_rate_limit_recovery_v1(p_batch_id,p_symbol,p_review_document_hash);\n if p_key is distinct from context->>'job_key' then raise exception 'AI_RATE_LIMIT_RECOVERY_KEY';end if;\n if p_op='CLAIM' then\n  identity_text:='{\"input_hash\":\"'||(context->>'input_hash')||'\",\"model_revision\":\"'||(context->>'model_revision')||'\",\"version\":\"DAILY_AI_BATCH_1\"}';\n  if p_identity_text is distinct from identity_text or p_context is distinct from jsonb_build_object('input_hash',context->>'input_hash','model_revision',context->>'model_revision','symbol',p_symbol,'cutoff',context->>'cutoff')\n   then raise exception 'AI_RATE_LIMIT_RECOVERY_IDENTITY';end if;\n  select * into strict original from vnext_runtime.ai_stock_jobs where id=context->>'original_job_key';\n  if original.symbol is distinct from p_symbol or original.input_hash is distinct from context->>'input_hash'\n   or original.cutoff is distinct from (context->>'cutoff')::timestamptz\n   or original.model_revision is distinct from 'gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low'\n   then raise exception 'AI_RATE_LIMIT_RECOVERY_ORIGINAL_INELIGIBLE';end if;\n  if original.state='COMPLETE' then return jsonb_build_object('state','CACHED','result',original.result);end if;\n  if original.state<>'FAILED' or original.attempts<>3 or original.code is distinct from 'STOCK_AI_PROVIDER_HTTP_429'\n   or original.symbol is distinct from p_symbol or original.input_hash is distinct from context->>'input_hash'\n   or original.cutoff is distinct from (context->>'cutoff')::timestamptz\n   or original.model_revision is distinct from 'gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low'\n   then raise exception 'AI_RATE_LIMIT_RECOVERY_ORIGINAL_INELIGIBLE';end if;\n  select * into j from vnext_runtime.ai_stock_jobs where id=p_key;\n  if found then\n   if j.symbol is distinct from p_symbol or j.input_hash is distinct from context->>'input_hash'\n    or j.cutoff is distinct from (context->>'cutoff')::timestamptz or j.model_revision is distinct from context->>'model_revision'\n    then raise exception 'AI_RATE_LIMIT_RECOVERY_JOB_CONFLICT';end if;\n   if j.state='COMPLETE' then return jsonb_build_object('state','CACHED','result',j.result);end if;\n   if j.state='RUNNING' and j.lease_until>at_time then return jsonb_build_object('state','BUSY');end if;\n   return jsonb_build_object('state','EXHAUSTED');\n  end if;\n  if exists(select from vnext_runtime.ai_stock_batches b cross join lateral jsonb_each_text(b.payload->'packet_hashes') p\n   left join vnext_runtime.ai_stock_jobs old on old.id=encode(sha256(convert_to('{\"input_hash\":\"'||p.value||'\",\"model_revision\":\"gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low\",\"version\":\"DAILY_AI_BATCH_1\"}','UTF8')),'hex')\n   where b.id=p_batch_id and (old.id is null or old.symbol is distinct from p.key or old.input_hash is distinct from p.value or old.cutoff is distinct from b.cutoff\n    or old.model_revision is distinct from 'gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low'\n    or (old.state='COMPLETE' or old.state='FAILED' and old.attempts=3 and old.code='STOCK_AI_PROVIDER_HTTP_429') is distinct from true))\n   then raise exception 'AI_RATE_LIMIT_RECOVERY_ORIGINAL_BATCH_NOT_CLOSED';end if;\n  if least((context->>'cutoff')::timestamptz+interval '72 hours','2026-11-02T05:30:00Z'::timestamptz)<=at_time then raise exception 'AI_RATE_LIMIT_RECOVERY_EXPIRED';end if;\n  if exists(select from vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 r join vnext_runtime.ai_stock_jobs n on n.id=r.recovery_job_key where r.batch_id=p_batch_id and r.symbol<>p_symbol\n   and (n.state='FAILED' or n.state='RUNNING' and n.lease_until<=at_time)) then return jsonb_build_object('state','EXHAUSTED');end if;\n  if exists(select from vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 r left join vnext_runtime.ai_stock_jobs n on n.id=r.recovery_job_key where r.batch_id=p_batch_id and r.symbol<>p_symbol\n   and (n.id is null or n.state='RUNNING')) then return jsonb_build_object('state','BUSY');end if;\n end if;\n -- Existing SQL validates the lease/result; the only writable key here is the\n -- fixed new recovery job. No original key can reach COMPLETE or FAIL.\n return public.daily_stock_ai_job_v1(p_op,p_key,p_identity_text,p_context,p_result,p_lease,p_code);\nend ",
+        "procost": 100,
+        "prokind": "f",
+        "prolang": "12767",
+        "proname": "daily_stock_ai_rate_limit_recovery_job_v1",
+        "prorows": 0,
+        "pronargs": 10,
+        "proowner": "10",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "proretset": false,
+        "prosecdef": true,
+        "prorettype": "3802",
+        "prosqlbody": null,
+        "prosupport": "-",
+        "proargmodes": null,
+        "proargnames": [
+          "p_batch_id",
+          "p_symbol",
+          "p_review_document_hash",
+          "p_op",
+          "p_key",
+          "p_identity_text",
+          "p_context",
+          "p_result",
+          "p_lease",
+          "p_code"
+        ],
+        "proargtypes": [
+          "25",
+          "25",
+          "25",
+          "25",
+          "25",
+          "25",
+          "3802",
+          "3802",
+          "2950",
+          "25"
+        ],
+        "proisstrict": false,
+        "proparallel": "u",
+        "protrftypes": null,
+        "provariadic": "0",
+        "provolatile": "v",
+        "proleakproof": false,
+        "pronamespace": "2200",
+        "proallargtypes": null,
+        "proargdefaults": "({CONST :consttype 25 :consttypmod -1 :constcollid 100 :constlen -1 :constbyval false :constisnull true :location -1 :constvalue <>} {CONST :consttype 3802 :consttypmod -1 :constcollid 0 :constlen -1 :constbyval false :constisnull true :location -1 :constvalue <>} {CONST :consttype 3802 :consttypmod -1 :constcollid 0 :constlen -1 :constbyval false :constisnull true :location -1 :constvalue <>} {CONST :consttype 2950 :consttypmod -1 :constcollid 0 :constlen 16 :constbyval false :constisnull true :location -1 :constvalue <>} {CONST :consttype 25 :consttypmod -1 :constcollid 100 :constlen -1 :constbyval false :constisnull true :location -1 :constvalue <>})",
+        "pronargdefaults": 5
+      },
+      "definition_sha256": "fcec571f097c18bb102b766dd2a84800874d8e07965d8a23e369b4add7048fb2"
+    },
+    {
+      "signature": "public.dispatch_daily_stock_ai_rate_limit_recovery_v1(text, text, text)",
+      "definition": "CREATE OR REPLACE FUNCTION public.dispatch_daily_stock_ai_rate_limit_recovery_v1(p_batch_id text, p_symbol text, p_review_document_hash text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare context jsonb;prior vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1;j vnext_runtime.ai_stock_jobs;original vnext_runtime.ai_stock_jobs;\n token text;request_id bigint;at_time timestamptz:=clock_timestamp();\nbegin\n if p_review_document_hash is null or p_review_document_hash !~ '^[a-f0-9]{64}$' then raise exception 'AI_RATE_LIMIT_RECOVERY_REVIEW';end if;\n perform 1 from vnext_runtime.ai_stock_batches where id=p_batch_id for update;\n if not found then raise exception 'AI_RATE_LIMIT_RECOVERY_BATCH_MISSING';end if;\n at_time:=clock_timestamp();\n context:=vnext_runtime.daily_stock_ai_rate_limit_recovery_context_v1(p_batch_id,p_symbol);\n select * into prior from vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 where batch_id=p_batch_id and symbol=p_symbol;\n if found and prior.review_document_hash<>p_review_document_hash then raise exception 'AI_RATE_LIMIT_RECOVERY_REVIEW_CONFLICT';end if;\n select * into original from vnext_runtime.ai_stock_jobs where id=context->>'original_job_key';\n if found and original.symbol=p_symbol and original.input_hash=context->>'input_hash' and original.cutoff=(context->>'cutoff')::timestamptz\n  and original.model_revision='gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low' and original.state='COMPLETE'\n  then return context||jsonb_build_object('state','CACHED');end if;\n if original.id is null or original.state<>'FAILED' or original.attempts<>3 or original.code is distinct from 'STOCK_AI_PROVIDER_HTTP_429'\n  or original.symbol is distinct from p_symbol or original.input_hash is distinct from context->>'input_hash'\n  or original.cutoff is distinct from (context->>'cutoff')::timestamptz\n  or original.model_revision is distinct from 'gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low'\n  then raise exception 'AI_RATE_LIMIT_RECOVERY_ORIGINAL_INELIGIBLE';end if;\n if exists(select from vnext_runtime.ai_stock_batches b cross join lateral jsonb_each_text(b.payload->'packet_hashes') p\n  left join vnext_runtime.ai_stock_jobs old on old.id=encode(sha256(convert_to('{\"input_hash\":\"'||p.value||'\",\"model_revision\":\"gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low\",\"version\":\"DAILY_AI_BATCH_1\"}','UTF8')),'hex')\n  where b.id=p_batch_id and (old.id is null or old.symbol is distinct from p.key or old.input_hash is distinct from p.value or old.cutoff is distinct from b.cutoff\n   or old.model_revision is distinct from 'gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low'\n   or (old.state='COMPLETE' or old.state='FAILED' and old.attempts=3 and old.code='STOCK_AI_PROVIDER_HTTP_429') is distinct from true))\n  then raise exception 'AI_RATE_LIMIT_RECOVERY_ORIGINAL_BATCH_NOT_CLOSED';end if;\n if least((context->>'cutoff')::timestamptz+interval '72 hours','2026-11-02T05:30:00Z'::timestamptz)<=at_time then raise exception 'AI_RATE_LIMIT_RECOVERY_EXPIRED';end if;\n if exists(select from vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 r join vnext_runtime.ai_stock_jobs n on n.id=r.recovery_job_key where r.batch_id=p_batch_id and n.state='FAILED')\n  then return context||jsonb_build_object('state','STOPPED');end if;\n if exists(select from vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 r join vnext_runtime.ai_stock_jobs n on n.id=r.recovery_job_key where r.batch_id=p_batch_id and n.state='RUNNING' and n.lease_until<=at_time)\n  then return context||jsonb_build_object('state','STOPPED_UNKNOWN');end if;\n if exists(select from vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 r left join vnext_runtime.ai_stock_jobs n on n.id=r.recovery_job_key where r.batch_id=p_batch_id and (n.id is null or n.state='RUNNING'))\n  then return context||jsonb_build_object('state','BUSY');end if;\n if prior.batch_id is not null then\n  select * into strict j from vnext_runtime.ai_stock_jobs where id=prior.recovery_job_key;\n  if j.state='COMPLETE' then return context||jsonb_build_object('state','CACHED');end if;\n  raise exception 'AI_RATE_LIMIT_RECOVERY_PRIOR_STATE';\n end if;\n if exists(select from vnext_runtime.ai_stock_jobs where id=context->>'job_key') then raise exception 'AI_RATE_LIMIT_RECOVERY_UNRECEIPTED_JOB';end if;\n -- Explicit separate recovery authorization: one receipt per eligible target,\n -- at most54. Historical normal216 remains unchanged; all new transports still\n -- enter its shared audit table without erasing or rebating an old attempt.\n if (select count(*) from vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 where batch_id=p_batch_id)>=54 then return context||jsonb_build_object('state','RECOVERY_BUDGET_EXHAUSTED');end if;\n select decrypted_secret into token from vault.decrypted_secrets where name='morning_alpha_daily_delivery_token' order by created_at desc limit 1;\n if token is null or length(token) not between 24 and 512 then raise exception 'AI_DISPATCH_CREDENTIAL_UNAVAILABLE';end if;\n select net.http_post(url:='https://cttfzgvhiewfckydcrci.supabase.co/functions/v1/daily-stock-analysis-v1',\n  headers:=jsonb_build_object('Content-Type','application/json','x-daily-delivery-token',token),\n  body:=jsonb_build_object('batch_id',p_batch_id,'recovery_symbol',p_symbol,'review_document_hash',p_review_document_hash),timeout_milliseconds:=60000) into request_id;\n if request_id is null or request_id<=0 then raise exception 'AI_RATE_LIMIT_RECOVERY_DISPATCH_UNCONFIRMED';end if;\n insert into vnext_runtime.ai_stock_dispatches(request_id,batch_id) values(request_id,p_batch_id);\n insert into vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1(batch_id,symbol,review_document_hash,input_hash,cutoff,original_job_key,recovery_job_key,model_revision,dispatch_request_id)\n values(p_batch_id,p_symbol,p_review_document_hash,context->>'input_hash',(context->>'cutoff')::timestamptz,context->>'original_job_key',context->>'job_key',context->>'model_revision',request_id);\n return context||jsonb_build_object('state','DISPATCHED','review_document_hash',p_review_document_hash,'request_id',request_id);\nend $function$\n",
+      "metadata": {
+        "oid": "16626",
+        "proacl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "probin": null,
+        "prosrc": "\ndeclare context jsonb;prior vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1;j vnext_runtime.ai_stock_jobs;original vnext_runtime.ai_stock_jobs;\n token text;request_id bigint;at_time timestamptz:=clock_timestamp();\nbegin\n if p_review_document_hash is null or p_review_document_hash !~ '^[a-f0-9]{64}$' then raise exception 'AI_RATE_LIMIT_RECOVERY_REVIEW';end if;\n perform 1 from vnext_runtime.ai_stock_batches where id=p_batch_id for update;\n if not found then raise exception 'AI_RATE_LIMIT_RECOVERY_BATCH_MISSING';end if;\n at_time:=clock_timestamp();\n context:=vnext_runtime.daily_stock_ai_rate_limit_recovery_context_v1(p_batch_id,p_symbol);\n select * into prior from vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 where batch_id=p_batch_id and symbol=p_symbol;\n if found and prior.review_document_hash<>p_review_document_hash then raise exception 'AI_RATE_LIMIT_RECOVERY_REVIEW_CONFLICT';end if;\n select * into original from vnext_runtime.ai_stock_jobs where id=context->>'original_job_key';\n if found and original.symbol=p_symbol and original.input_hash=context->>'input_hash' and original.cutoff=(context->>'cutoff')::timestamptz\n  and original.model_revision='gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low' and original.state='COMPLETE'\n  then return context||jsonb_build_object('state','CACHED');end if;\n if original.id is null or original.state<>'FAILED' or original.attempts<>3 or original.code is distinct from 'STOCK_AI_PROVIDER_HTTP_429'\n  or original.symbol is distinct from p_symbol or original.input_hash is distinct from context->>'input_hash'\n  or original.cutoff is distinct from (context->>'cutoff')::timestamptz\n  or original.model_revision is distinct from 'gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low'\n  then raise exception 'AI_RATE_LIMIT_RECOVERY_ORIGINAL_INELIGIBLE';end if;\n if exists(select from vnext_runtime.ai_stock_batches b cross join lateral jsonb_each_text(b.payload->'packet_hashes') p\n  left join vnext_runtime.ai_stock_jobs old on old.id=encode(sha256(convert_to('{\"input_hash\":\"'||p.value||'\",\"model_revision\":\"gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low\",\"version\":\"DAILY_AI_BATCH_1\"}','UTF8')),'hex')\n  where b.id=p_batch_id and (old.id is null or old.symbol is distinct from p.key or old.input_hash is distinct from p.value or old.cutoff is distinct from b.cutoff\n   or old.model_revision is distinct from 'gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low'\n   or (old.state='COMPLETE' or old.state='FAILED' and old.attempts=3 and old.code='STOCK_AI_PROVIDER_HTTP_429') is distinct from true))\n  then raise exception 'AI_RATE_LIMIT_RECOVERY_ORIGINAL_BATCH_NOT_CLOSED';end if;\n if least((context->>'cutoff')::timestamptz+interval '72 hours','2026-11-02T05:30:00Z'::timestamptz)<=at_time then raise exception 'AI_RATE_LIMIT_RECOVERY_EXPIRED';end if;\n if exists(select from vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 r join vnext_runtime.ai_stock_jobs n on n.id=r.recovery_job_key where r.batch_id=p_batch_id and n.state='FAILED')\n  then return context||jsonb_build_object('state','STOPPED');end if;\n if exists(select from vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 r join vnext_runtime.ai_stock_jobs n on n.id=r.recovery_job_key where r.batch_id=p_batch_id and n.state='RUNNING' and n.lease_until<=at_time)\n  then return context||jsonb_build_object('state','STOPPED_UNKNOWN');end if;\n if exists(select from vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 r left join vnext_runtime.ai_stock_jobs n on n.id=r.recovery_job_key where r.batch_id=p_batch_id and (n.id is null or n.state='RUNNING'))\n  then return context||jsonb_build_object('state','BUSY');end if;\n if prior.batch_id is not null then\n  select * into strict j from vnext_runtime.ai_stock_jobs where id=prior.recovery_job_key;\n  if j.state='COMPLETE' then return context||jsonb_build_object('state','CACHED');end if;\n  raise exception 'AI_RATE_LIMIT_RECOVERY_PRIOR_STATE';\n end if;\n if exists(select from vnext_runtime.ai_stock_jobs where id=context->>'job_key') then raise exception 'AI_RATE_LIMIT_RECOVERY_UNRECEIPTED_JOB';end if;\n -- Explicit separate recovery authorization: one receipt per eligible target,\n -- at most54. Historical normal216 remains unchanged; all new transports still\n -- enter its shared audit table without erasing or rebating an old attempt.\n if (select count(*) from vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 where batch_id=p_batch_id)>=54 then return context||jsonb_build_object('state','RECOVERY_BUDGET_EXHAUSTED');end if;\n select decrypted_secret into token from vault.decrypted_secrets where name='morning_alpha_daily_delivery_token' order by created_at desc limit 1;\n if token is null or length(token) not between 24 and 512 then raise exception 'AI_DISPATCH_CREDENTIAL_UNAVAILABLE';end if;\n select net.http_post(url:='https://cttfzgvhiewfckydcrci.supabase.co/functions/v1/daily-stock-analysis-v1',\n  headers:=jsonb_build_object('Content-Type','application/json','x-daily-delivery-token',token),\n  body:=jsonb_build_object('batch_id',p_batch_id,'recovery_symbol',p_symbol,'review_document_hash',p_review_document_hash),timeout_milliseconds:=60000) into request_id;\n if request_id is null or request_id<=0 then raise exception 'AI_RATE_LIMIT_RECOVERY_DISPATCH_UNCONFIRMED';end if;\n insert into vnext_runtime.ai_stock_dispatches(request_id,batch_id) values(request_id,p_batch_id);\n insert into vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1(batch_id,symbol,review_document_hash,input_hash,cutoff,original_job_key,recovery_job_key,model_revision,dispatch_request_id)\n values(p_batch_id,p_symbol,p_review_document_hash,context->>'input_hash',(context->>'cutoff')::timestamptz,context->>'original_job_key',context->>'job_key',context->>'model_revision',request_id);\n return context||jsonb_build_object('state','DISPATCHED','review_document_hash',p_review_document_hash,'request_id',request_id);\nend ",
+        "procost": 100,
+        "prokind": "f",
+        "prolang": "12767",
+        "proname": "dispatch_daily_stock_ai_rate_limit_recovery_v1",
+        "prorows": 0,
+        "pronargs": 3,
+        "proowner": "10",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "proretset": false,
+        "prosecdef": true,
+        "prorettype": "3802",
+        "prosqlbody": null,
+        "prosupport": "-",
+        "proargmodes": null,
+        "proargnames": [
+          "p_batch_id",
+          "p_symbol",
+          "p_review_document_hash"
+        ],
+        "proargtypes": [
+          "25",
+          "25",
+          "25"
+        ],
+        "proisstrict": false,
+        "proparallel": "u",
+        "protrftypes": null,
+        "provariadic": "0",
+        "provolatile": "v",
+        "proleakproof": false,
+        "pronamespace": "2200",
+        "proallargtypes": null,
+        "proargdefaults": null,
+        "pronargdefaults": 0
+      },
+      "definition_sha256": "32ca0f32baccaccbc70d988b35e2ebe00243e7a953a5ff11b883dfc0f397571d"
+    },
+    {
+      "signature": "public.load_daily_stock_ai_rate_limit_recovery_progress_v1(text)",
+      "definition": "CREATE OR REPLACE FUNCTION public.load_daily_stock_ai_rate_limit_recovery_progress_v1(p_batch_id text)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare b vnext_runtime.ai_stock_batches;item record;context jsonb;original vnext_runtime.ai_stock_jobs;recovery vnext_runtime.ai_stock_jobs;\n keys text[]:='{}';original_done integer:=0;recovery_done integer:=0;first_symbol text;packet jsonb;original_key text;recovery_key text;\nbegin\n if p_batch_id is null or p_batch_id !~ '^[a-f0-9]{64}$' then raise exception 'AI_RATE_LIMIT_RECOVERY_SCOPE';end if;\n select * into strict b from vnext_runtime.ai_stock_batches where id=p_batch_id;\n select min(key) into first_symbol from jsonb_each_text(b.payload->'packet_hashes');\n if first_symbol is null then raise exception 'AI_RATE_LIMIT_RECOVERY_BATCH';end if;\n -- Verify the full immutable5MB commitment once, then each individual packet.\n context:=vnext_runtime.daily_stock_ai_rate_limit_recovery_context_v1(p_batch_id,first_symbol);\n for item in select key,value from jsonb_each_text(b.payload->'packet_hashes') order by key loop\n  packet:=(b.payload->'packet_texts'->>item.key)::jsonb;\n  if item.value !~ '^[a-f0-9]{64}$' or encode(sha256(convert_to(b.payload->'packet_texts'->>item.key,'UTF8')),'hex') is distinct from item.value\n   or packet->>'symbol' is distinct from item.key or (packet->>'cutoff')::timestamptz is distinct from b.cutoff then raise exception 'AI_RATE_LIMIT_RECOVERY_PACKET';end if;\n  original_key:=encode(sha256(convert_to('{\"input_hash\":\"'||item.value||'\",\"model_revision\":\"gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low\",\"version\":\"DAILY_AI_BATCH_1\"}','UTF8')),'hex');\n  recovery_key:=encode(sha256(convert_to('{\"input_hash\":\"'||item.value||'\",\"model_revision\":\"gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low:recovery-1\",\"version\":\"DAILY_AI_BATCH_1\"}','UTF8')),'hex');\n  select * into original from vnext_runtime.ai_stock_jobs where id=original_key;\n  if found and original.state='COMPLETE' and original.symbol=item.key and original.input_hash=item.value and original.cutoff=b.cutoff\n   and original.model_revision='gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low' then keys:=array_append(keys,original.id);original_done:=original_done+1;continue;end if;\n  select j.* into recovery from vnext_runtime.ai_stock_jobs j join vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 r on r.recovery_job_key=j.id\n   join vnext_runtime.ai_stock_dispatches d on d.request_id=r.dispatch_request_id and d.batch_id=r.batch_id\n   where r.batch_id=p_batch_id and r.symbol=item.key and r.input_hash=item.value and r.cutoff=b.cutoff\n    and r.original_job_key=original_key and r.recovery_job_key=recovery_key and r.model_revision='gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low:recovery-1'\n    and j.state='COMPLETE' and j.symbol=item.key and j.input_hash=item.value and j.cutoff=b.cutoff and j.model_revision=r.model_revision;\n  if found then keys:=array_append(keys,recovery.id);recovery_done:=recovery_done+1;end if;\n end loop;\n return jsonb_build_object('schema','DAILY_AI_RATE_LIMIT_RECOVERY_PROGRESS_V1','batch_id',p_batch_id,\n  'original_model_revision','gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low',\n  'recovery_model_revision','gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low:recovery-1',\n  'complete',cardinality(keys)=72,'counts',jsonb_build_object('original_complete',original_done,'recovery_complete',recovery_done,'remaining',72-cardinality(keys)),\n  'job_keys',to_jsonb(keys),'member_published',false);\nend $function$\n",
+      "metadata": {
+        "oid": "16635",
+        "proacl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "probin": null,
+        "prosrc": "\ndeclare b vnext_runtime.ai_stock_batches;item record;context jsonb;original vnext_runtime.ai_stock_jobs;recovery vnext_runtime.ai_stock_jobs;\n keys text[]:='{}';original_done integer:=0;recovery_done integer:=0;first_symbol text;packet jsonb;original_key text;recovery_key text;\nbegin\n if p_batch_id is null or p_batch_id !~ '^[a-f0-9]{64}$' then raise exception 'AI_RATE_LIMIT_RECOVERY_SCOPE';end if;\n select * into strict b from vnext_runtime.ai_stock_batches where id=p_batch_id;\n select min(key) into first_symbol from jsonb_each_text(b.payload->'packet_hashes');\n if first_symbol is null then raise exception 'AI_RATE_LIMIT_RECOVERY_BATCH';end if;\n -- Verify the full immutable5MB commitment once, then each individual packet.\n context:=vnext_runtime.daily_stock_ai_rate_limit_recovery_context_v1(p_batch_id,first_symbol);\n for item in select key,value from jsonb_each_text(b.payload->'packet_hashes') order by key loop\n  packet:=(b.payload->'packet_texts'->>item.key)::jsonb;\n  if item.value !~ '^[a-f0-9]{64}$' or encode(sha256(convert_to(b.payload->'packet_texts'->>item.key,'UTF8')),'hex') is distinct from item.value\n   or packet->>'symbol' is distinct from item.key or (packet->>'cutoff')::timestamptz is distinct from b.cutoff then raise exception 'AI_RATE_LIMIT_RECOVERY_PACKET';end if;\n  original_key:=encode(sha256(convert_to('{\"input_hash\":\"'||item.value||'\",\"model_revision\":\"gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low\",\"version\":\"DAILY_AI_BATCH_1\"}','UTF8')),'hex');\n  recovery_key:=encode(sha256(convert_to('{\"input_hash\":\"'||item.value||'\",\"model_revision\":\"gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low:recovery-1\",\"version\":\"DAILY_AI_BATCH_1\"}','UTF8')),'hex');\n  select * into original from vnext_runtime.ai_stock_jobs where id=original_key;\n  if found and original.state='COMPLETE' and original.symbol=item.key and original.input_hash=item.value and original.cutoff=b.cutoff\n   and original.model_revision='gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low' then keys:=array_append(keys,original.id);original_done:=original_done+1;continue;end if;\n  select j.* into recovery from vnext_runtime.ai_stock_jobs j join vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 r on r.recovery_job_key=j.id\n   join vnext_runtime.ai_stock_dispatches d on d.request_id=r.dispatch_request_id and d.batch_id=r.batch_id\n   where r.batch_id=p_batch_id and r.symbol=item.key and r.input_hash=item.value and r.cutoff=b.cutoff\n    and r.original_job_key=original_key and r.recovery_job_key=recovery_key and r.model_revision='gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low:recovery-1'\n    and j.state='COMPLETE' and j.symbol=item.key and j.input_hash=item.value and j.cutoff=b.cutoff and j.model_revision=r.model_revision;\n  if found then keys:=array_append(keys,recovery.id);recovery_done:=recovery_done+1;end if;\n end loop;\n return jsonb_build_object('schema','DAILY_AI_RATE_LIMIT_RECOVERY_PROGRESS_V1','batch_id',p_batch_id,\n  'original_model_revision','gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low',\n  'recovery_model_revision','gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low:recovery-1',\n  'complete',cardinality(keys)=72,'counts',jsonb_build_object('original_complete',original_done,'recovery_complete',recovery_done,'remaining',72-cardinality(keys)),\n  'job_keys',to_jsonb(keys),'member_published',false);\nend ",
+        "procost": 100,
+        "prokind": "f",
+        "prolang": "12767",
+        "proname": "load_daily_stock_ai_rate_limit_recovery_progress_v1",
+        "prorows": 0,
+        "pronargs": 1,
+        "proowner": "10",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "proretset": false,
+        "prosecdef": true,
+        "prorettype": "3802",
+        "prosqlbody": null,
+        "prosupport": "-",
+        "proargmodes": null,
+        "proargnames": [
+          "p_batch_id"
+        ],
+        "proargtypes": [
+          "25"
+        ],
+        "proisstrict": false,
+        "proparallel": "u",
+        "protrftypes": null,
+        "provariadic": "0",
+        "provolatile": "s",
+        "proleakproof": false,
+        "pronamespace": "2200",
+        "proallargtypes": null,
+        "proargdefaults": null,
+        "pronargdefaults": 0
+      },
+      "definition_sha256": "8c31eb5e297108a7bef1d71c5fd3022563201768098517bd19809800832d1c0a"
+    },
+    {
+      "signature": "public.load_daily_stock_ai_rate_limit_recovery_v1(text, text, text)",
+      "definition": "CREATE OR REPLACE FUNCTION public.load_daily_stock_ai_rate_limit_recovery_v1(p_batch_id text, p_symbol text, p_review_document_hash text)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare context jsonb;r vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1;\nbegin\n if p_review_document_hash is null or p_review_document_hash !~ '^[a-f0-9]{64}$' then raise exception 'AI_RATE_LIMIT_RECOVERY_REVIEW';end if;\n context:=vnext_runtime.daily_stock_ai_rate_limit_recovery_context_v1(p_batch_id,p_symbol);\n select * into strict r from vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 where batch_id=p_batch_id and symbol=p_symbol;\n if r.review_document_hash<>p_review_document_hash then raise exception 'AI_RATE_LIMIT_RECOVERY_REVIEW_CONFLICT';end if;\n if r.input_hash is distinct from context->>'input_hash' or r.cutoff is distinct from (context->>'cutoff')::timestamptz\n  or r.original_job_key is distinct from context->>'original_job_key' or r.recovery_job_key is distinct from context->>'job_key'\n  or r.model_revision is distinct from context->>'model_revision' or r.dispatch_request_id<=0\n  or not exists(select from vnext_runtime.ai_stock_dispatches d where d.request_id=r.dispatch_request_id and d.batch_id=r.batch_id)\n  then raise exception 'AI_RATE_LIMIT_RECOVERY_RECEIPT';end if;\n return context||jsonb_build_object('state','READY','review_document_hash',r.review_document_hash,'dispatch_request_id',r.dispatch_request_id);\nend $function$\n",
+      "metadata": {
+        "oid": "16630",
+        "proacl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "probin": null,
+        "prosrc": "\ndeclare context jsonb;r vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1;\nbegin\n if p_review_document_hash is null or p_review_document_hash !~ '^[a-f0-9]{64}$' then raise exception 'AI_RATE_LIMIT_RECOVERY_REVIEW';end if;\n context:=vnext_runtime.daily_stock_ai_rate_limit_recovery_context_v1(p_batch_id,p_symbol);\n select * into strict r from vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 where batch_id=p_batch_id and symbol=p_symbol;\n if r.review_document_hash<>p_review_document_hash then raise exception 'AI_RATE_LIMIT_RECOVERY_REVIEW_CONFLICT';end if;\n if r.input_hash is distinct from context->>'input_hash' or r.cutoff is distinct from (context->>'cutoff')::timestamptz\n  or r.original_job_key is distinct from context->>'original_job_key' or r.recovery_job_key is distinct from context->>'job_key'\n  or r.model_revision is distinct from context->>'model_revision' or r.dispatch_request_id<=0\n  or not exists(select from vnext_runtime.ai_stock_dispatches d where d.request_id=r.dispatch_request_id and d.batch_id=r.batch_id)\n  then raise exception 'AI_RATE_LIMIT_RECOVERY_RECEIPT';end if;\n return context||jsonb_build_object('state','READY','review_document_hash',r.review_document_hash,'dispatch_request_id',r.dispatch_request_id);\nend ",
+        "procost": 100,
+        "prokind": "f",
+        "prolang": "12767",
+        "proname": "load_daily_stock_ai_rate_limit_recovery_v1",
+        "prorows": 0,
+        "pronargs": 3,
+        "proowner": "10",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "proretset": false,
+        "prosecdef": true,
+        "prorettype": "3802",
+        "prosqlbody": null,
+        "prosupport": "-",
+        "proargmodes": null,
+        "proargnames": [
+          "p_batch_id",
+          "p_symbol",
+          "p_review_document_hash"
+        ],
+        "proargtypes": [
+          "25",
+          "25",
+          "25"
+        ],
+        "proisstrict": false,
+        "proparallel": "u",
+        "protrftypes": null,
+        "provariadic": "0",
+        "provolatile": "s",
+        "proleakproof": false,
+        "pronamespace": "2200",
+        "proallargtypes": null,
+        "proargdefaults": null,
+        "pronargdefaults": 0
+      },
+      "definition_sha256": "b2c30483420d9c420cc4ab831df4c049c57d447ebe1089a2c907edf5ec28e0ad"
+    },
+    {
+      "signature": "vnext_runtime.daily_stock_ai_rate_limit_recovery_context_v1(text, text)",
+      "definition": "CREATE OR REPLACE FUNCTION vnext_runtime.daily_stock_ai_rate_limit_recovery_context_v1(p_batch_id text, p_symbol text)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare b vnext_runtime.ai_stock_batches;packet jsonb;packet_text text;input_hash text;original_key text;new_key text;\n original_revision constant text:='gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low';\n recovery_revision constant text:='gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low:recovery-1';\nbegin\n if p_batch_id is distinct from '0524783a79af043a70be593d2e019c435bc067f168a5b2567a831e32d78b4ddc'\n  or p_symbol is null or p_symbol !~ '^\\d{4,6}$' then raise exception 'AI_RATE_LIMIT_RECOVERY_SCOPE';end if;\n select * into strict b from vnext_runtime.ai_stock_batches where id=p_batch_id;\n if b.payload->>'schema' is distinct from 'DAILY_AI_BATCH_INPUT_V1' or not isfinite(b.cutoff) or b.cutoff>clock_timestamp()\n  or encode(sha256(convert_to(b.payload_text,'UTF8')),'hex') is distinct from b.id\n  or b.payload is distinct from (b.payload_text::jsonb)||jsonb_build_object('packets',(\n   select jsonb_agg(x.value::jsonb order by x.key) from jsonb_each_text(b.payload_text::jsonb->'packet_texts')x))\n  or jsonb_array_length(b.payload->'packets') is distinct from 72\n  or (select count(*) from jsonb_object_keys(b.payload->'packet_hashes'))<>72 then raise exception 'AI_RATE_LIMIT_RECOVERY_BATCH';end if;\n packet_text:=b.payload->'packet_texts'->>p_symbol;input_hash:=b.payload->'packet_hashes'->>p_symbol;\n select p into strict packet from jsonb_array_elements(b.payload->'packets')p where p->>'symbol'=p_symbol;\n if input_hash is null or input_hash !~ '^[a-f0-9]{64}$' or packet_text is null\n  or encode(sha256(convert_to(packet_text,'UTF8')),'hex') is distinct from input_hash or packet_text::jsonb is distinct from packet\n  or packet->>'symbol' is distinct from p_symbol or (packet->>'cutoff')::timestamptz is distinct from b.cutoff then raise exception 'AI_RATE_LIMIT_RECOVERY_PACKET';end if;\n original_key:=encode(sha256(convert_to('{\"input_hash\":\"'||input_hash||'\",\"model_revision\":\"'||original_revision||'\",\"version\":\"DAILY_AI_BATCH_1\"}','UTF8')),'hex');\n new_key:=encode(sha256(convert_to('{\"input_hash\":\"'||input_hash||'\",\"model_revision\":\"'||recovery_revision||'\",\"version\":\"DAILY_AI_BATCH_1\"}','UTF8')),'hex');\n return jsonb_build_object('batch_id',b.id,'symbol',p_symbol,'input_hash',input_hash,'cutoff',b.payload->>'cutoff',\n  'original_job_key',original_key,'job_key',new_key,'model_revision',recovery_revision,'member_published',false);\nend $function$\n",
+      "metadata": {
+        "oid": "16625",
+        "proacl": [
+          "postgres=X/postgres"
+        ],
+        "probin": null,
+        "prosrc": "\ndeclare b vnext_runtime.ai_stock_batches;packet jsonb;packet_text text;input_hash text;original_key text;new_key text;\n original_revision constant text:='gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low';\n recovery_revision constant text:='gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low:recovery-1';\nbegin\n if p_batch_id is distinct from '0524783a79af043a70be593d2e019c435bc067f168a5b2567a831e32d78b4ddc'\n  or p_symbol is null or p_symbol !~ '^\\d{4,6}$' then raise exception 'AI_RATE_LIMIT_RECOVERY_SCOPE';end if;\n select * into strict b from vnext_runtime.ai_stock_batches where id=p_batch_id;\n if b.payload->>'schema' is distinct from 'DAILY_AI_BATCH_INPUT_V1' or not isfinite(b.cutoff) or b.cutoff>clock_timestamp()\n  or encode(sha256(convert_to(b.payload_text,'UTF8')),'hex') is distinct from b.id\n  or b.payload is distinct from (b.payload_text::jsonb)||jsonb_build_object('packets',(\n   select jsonb_agg(x.value::jsonb order by x.key) from jsonb_each_text(b.payload_text::jsonb->'packet_texts')x))\n  or jsonb_array_length(b.payload->'packets') is distinct from 72\n  or (select count(*) from jsonb_object_keys(b.payload->'packet_hashes'))<>72 then raise exception 'AI_RATE_LIMIT_RECOVERY_BATCH';end if;\n packet_text:=b.payload->'packet_texts'->>p_symbol;input_hash:=b.payload->'packet_hashes'->>p_symbol;\n select p into strict packet from jsonb_array_elements(b.payload->'packets')p where p->>'symbol'=p_symbol;\n if input_hash is null or input_hash !~ '^[a-f0-9]{64}$' or packet_text is null\n  or encode(sha256(convert_to(packet_text,'UTF8')),'hex') is distinct from input_hash or packet_text::jsonb is distinct from packet\n  or packet->>'symbol' is distinct from p_symbol or (packet->>'cutoff')::timestamptz is distinct from b.cutoff then raise exception 'AI_RATE_LIMIT_RECOVERY_PACKET';end if;\n original_key:=encode(sha256(convert_to('{\"input_hash\":\"'||input_hash||'\",\"model_revision\":\"'||original_revision||'\",\"version\":\"DAILY_AI_BATCH_1\"}','UTF8')),'hex');\n new_key:=encode(sha256(convert_to('{\"input_hash\":\"'||input_hash||'\",\"model_revision\":\"'||recovery_revision||'\",\"version\":\"DAILY_AI_BATCH_1\"}','UTF8')),'hex');\n return jsonb_build_object('batch_id',b.id,'symbol',p_symbol,'input_hash',input_hash,'cutoff',b.payload->>'cutoff',\n  'original_job_key',original_key,'job_key',new_key,'model_revision',recovery_revision,'member_published',false);\nend ",
+        "procost": 100,
+        "prokind": "f",
+        "prolang": "12767",
+        "proname": "daily_stock_ai_rate_limit_recovery_context_v1",
+        "prorows": 0,
+        "pronargs": 2,
+        "proowner": "10",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "proretset": false,
+        "prosecdef": true,
+        "prorettype": "3802",
+        "prosqlbody": null,
+        "prosupport": "-",
+        "proargmodes": null,
+        "proargnames": [
+          "p_batch_id",
+          "p_symbol"
+        ],
+        "proargtypes": [
+          "25",
+          "25"
+        ],
+        "proisstrict": false,
+        "proparallel": "u",
+        "protrftypes": null,
+        "provariadic": "0",
+        "provolatile": "s",
+        "proleakproof": false,
+        "pronamespace": "16387",
+        "proallargtypes": null,
+        "proargdefaults": null,
+        "pronargdefaults": 0
+      },
+      "definition_sha256": "43ebb34cf9afacf435b452e22a71cb823f8bd8125548d720eb38da335256ae4b"
+    },
+    {
+      "signature": "vnext_runtime.seal_daily_stock_ai_rate_limit_recovery_receipt_v1()",
+      "definition": "CREATE OR REPLACE FUNCTION vnext_runtime.seal_daily_stock_ai_rate_limit_recovery_receipt_v1()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin raise exception 'AI_RATE_LIMIT_RECOVERY_RECEIPT_IMMUTABLE';end $function$\n",
+      "metadata": {
+        "oid": "16622",
+        "proacl": [
+          "postgres=X/postgres"
+        ],
+        "probin": null,
+        "prosrc": "\nbegin raise exception 'AI_RATE_LIMIT_RECOVERY_RECEIPT_IMMUTABLE';end ",
+        "procost": 100,
+        "prokind": "f",
+        "prolang": "12767",
+        "proname": "seal_daily_stock_ai_rate_limit_recovery_receipt_v1",
+        "prorows": 0,
+        "pronargs": 0,
+        "proowner": "10",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "proretset": false,
+        "prosecdef": false,
+        "prorettype": "2279",
+        "prosqlbody": null,
+        "prosupport": "-",
+        "proargmodes": null,
+        "proargnames": null,
+        "proargtypes": [],
+        "proisstrict": false,
+        "proparallel": "u",
+        "protrftypes": null,
+        "provariadic": "0",
+        "provolatile": "v",
+        "proleakproof": false,
+        "pronamespace": "16387",
+        "proallargtypes": null,
+        "proargdefaults": null,
+        "pronargdefaults": 0
+      },
+      "definition_sha256": "2cd3a0e54a061311c0ff5d3eeab2f2db576e0ecddd6e2578f9b891afe9bfa8d8"
+    }
+  ]
+}

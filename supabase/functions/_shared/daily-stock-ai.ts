@@ -1,6 +1,7 @@
 import {analyseStock,validateAnalysisPacket,type AnalysisPacket} from '../../../research/daily-ai-analysis.ts';
 import {buildStockAnalysisContext} from '../../../research/daily-ai-semantics.ts';
 import {HORIZONS,snapshotHash} from '../../../src/features/vnext/contracts.ts';
+import {assertStockAiPaidModelAllowed} from './daily-stock-ai-cost-policy.ts';
 
 export type StockAiProviderReceipt={response_id:string;model:string;input_tokens:number;output_tokens:number};
 export type StockAiCandidateObserver=(candidate:unknown,receipt:StockAiProviderReceipt,inputHash:string)=>Promise<void>;
@@ -108,6 +109,7 @@ export function dailyStockAnalysisResponseFormat(packet:AnalysisPacket){
 /** Server-only port. Reuses a server supplied credential; never accepts member
  * request options, changes secrets, publishes content or logs provider bodies. */
 export async function analyseStockWithProvider(packet:AnalysisPacket,config:{apiKey:string;model:string;fetcher:typeof fetch;signal?:AbortSignal;onCandidate?:StockAiCandidateObserver;onProviderFailure?:StockAiProviderFailureObserver;citationRepair?:true;allFactsCitationRepair?:true}){
+ assertStockAiPaidModelAllowed();
  if(!config.apiKey||!config.model||config.model.length>100)throw Error('STOCK_AI_CONFIGURATION_REQUIRED');
  if(config.citationRepair!==undefined&&config.citationRepair!==true)throw Error('STOCK_AI_REPAIR_CONFIGURATION');
  if(config.allFactsCitationRepair!==undefined&&(config.allFactsCitationRepair!==true||config.citationRepair!==true))throw Error('STOCK_AI_REPAIR_CONFIGURATION');

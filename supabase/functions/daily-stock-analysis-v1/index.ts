@@ -14,6 +14,9 @@ import {withDocumentedReviewV2Financials,withDocumentedReviewV2SourceRpc} from '
 import {handleDailyStockCitationRepair} from './repair-handler.ts';
 import {handleDailyStockRateLimitRecovery} from './rate-limit-recovery-handler.ts';
 import {runStoredStockAiRateLimitRecovery,stockAiRateLimitRecoveryRevision} from './rate-limit-recovery-runner.ts';
+import {stockAiPaidModelRequestGuard} from '../_shared/daily-stock-ai-cost-policy.ts';
+import {withRetainedIssuerIrDailyFinancials} from '../../../research/issuer-ir-daily-financial-replay.ts';
+import {withRetainedUmcIrDailyFinancials} from '../../../research/umc-ir-daily-financial-replay.ts';
 
 const url=Deno.env.get('SUPABASE_URL')??'',service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')??'';
 const internalSecret=Deno.env.get('CRON_SECRET')??'',model='gpt-6-astra';
@@ -56,6 +59,7 @@ Deno.serve(async request=>{
  catch(error){const limited=error instanceof Error&&error.message==='INPUT_LIMIT';
   return Response.json({error:limited?'INPUT_LIMIT':'SCOPE_INVALID',model_calls:0,member_published:false},{status:limited?413:422,headers:{'Cache-Control':'no-store'}});
  }
+ const costStop=stockAiPaidModelRequestGuard(input);if(costStop)return costStop;
  const req=new Request(authorized,{body:text});
  if(input&&typeof input==='object'&&!Array.isArray(input)&&Object.hasOwn(input,'recovery_symbol')){
   return handleDailyStockRateLimitRecovery(req,{
@@ -94,7 +98,10 @@ Deno.serve(async request=>{
    rpc:withDocumentedReviewV2SourceRpc(rpc,()=>new Date().toISOString()),fetcher:fetch,clock:()=>new Date().toISOString(),
    collectNews:({inputs,businessDate,signal:newsSignal})=>collectDailyAiOfficialNews({inputs,businessDate,fetcher:fetch,clock:()=>new Date().toISOString(),signal:newsSignal}),
    collectMarket:({businessDate,signal:marketSignal})=>collectDailyAiGlobalMarket({businessDate,signal:marketSignal,fetcher:fetch,clock:()=>new Date().toISOString()}),
-   refreshFinancials:withDocumentedReviewV2Financials(withRetainedSecDailyFinancials(refreshDailyAiFinancials,(args,registrySignal)=>rpc('load_daily_stock_ai_sec_replay_v1',args,registrySignal))),
+   refreshFinancials:withRetainedUmcIrDailyFinancials(withRetainedIssuerIrDailyFinancials(
+    withDocumentedReviewV2Financials(withRetainedSecDailyFinancials(refreshDailyAiFinancials,(args,registrySignal)=>rpc('load_daily_stock_ai_sec_replay_v1',args,registrySignal))),
+    (args,registrySignal)=>rpc('load_daily_stock_ai_issuer_ir_replay_v1',args,registrySignal),
+   ),(args,registrySignal)=>rpc('load_daily_stock_ai_umc_ir_replay_v1',args,registrySignal)),
   },signal)});
  }
  let loaded:StoredStockAnalysisBatch|null=null;

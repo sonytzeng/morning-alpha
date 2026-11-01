@@ -5,6 +5,7 @@ import type {FunnelInput} from '../../../src/features/vnext/researchFunnel.ts';
 import type {StockAnalysisSelector,StoredStockAnalysisBatch} from './handler.ts';
 import {MARKET_CALENDAR_VERSION} from '../_shared/market-session-contract.mjs';
 import {dailyAiExpectedTaiwanNight} from '../../../research/daily-ai-global-market.ts';
+import {bindQuarantinedIssuerSource,hasQuarantinedIssuerFacts,hasQuarantinedIssuerEvidence,ISSUER_QUARANTINE_GAP,type QuarantinedIssuerSourcePolicy} from '../../../research/quarantined-issuer-source.ts';
 
 type Rpc=(name:string,args:Record<string,unknown>,signal:AbortSignal)=>Promise<unknown>;
 const object=(v:unknown):Record<string,unknown>=>{
@@ -85,8 +86,12 @@ async function retainedOwnNewsContent(c:Record<string,unknown>,n:Record<string,u
  }
  if(n.id!=='retained-own-news:'+n.evidence_hash)throw Error('AI_INTAKE_NEWS_CONTENT');
 }
-export async function parseDailyAiSourceSnapshot(value:unknown,cutoff:string,signal:AbortSignal,kind:'HANDOFF'|'INTAKE'='HANDOFF'){
- const h=object(value);
+export async function parseDailyAiSourceSnapshot(value:unknown,cutoff:string,signal:AbortSignal,kind:'HANDOFF'|'INTAKE'='HANDOFF',privateResearch?:QuarantinedIssuerSourcePolicy){
+ // Only SOURCE code supplies this separate argument; request/snapshot fields
+ // cannot enable it. All normal model/handoff callers retain their old gate.
+ const h=object(structuredClone(value));
+ if(privateResearch&&kind!=='INTAKE')throw Error('AI_INTAKE_QUARANTINE_SCOPE');
+ if(!privateResearch&&hasQuarantinedIssuerFacts(h.inputs))throw Error('AI_INTAKE_RESTRICTED_FINANCIAL_SOURCE');
  const correctedNewsPolicy=kind==='INTAKE'&&Array.isArray(h.intake_gaps)&&h.intake_gaps.includes('NEWS_SOURCE_POLICY_GNEWS_EXCLUDED');
  const requiredNewsGaps=correctedNewsPolicy?['NEWS_SOURCE_POLICY_GNEWS_EXCLUDED','OFFICIAL_NEWS_FIXED_FEEDS_NOT_ALL_COMPANY_OR_MARKET_NEWS',
   'MOPS_PUBLICATION_TIMEZONE_UNDECLARED_RECEIPT_BASIS_ONLY','OFFICIAL_NEWS_EXCERPT_NOT_FULL_DISCLOSURE','FED_RSS_NOT_EQUITY_CLOSE_OR_COMPLETE_MACRO_COVERAGE',
@@ -111,7 +116,8 @@ export async function parseDailyAiSourceSnapshot(value:unknown,cutoff:string,sig
  if(kind==='INTAKE'&&(['INSTITUTIONAL_FLOW_NOT_REFRESHED','CORPORATE_ACTIONS_NOT_REFRESHED_RAW_PRICES_ONLY']
   .some(g=>!(h.intake_gaps as unknown[]).includes(g))||!['FINANCIAL_DATA_RETAINED_NOT_REFRESHED','FINANCIAL_RETAINED_OBSERVATIONS_MAY_BE_STALE']
   .some(g=>(h.intake_gaps as unknown[]).includes(g))))throw Error('AI_INTAKE_LIMITATIONS_MISSING');
- let inputBytes=2;
+ const quarantinedIssuerBinding=privateResearch?await bindQuarantinedIssuerSource(h.inputs as FunnelInput[],cutoff,privateResearch):undefined;
+ stopped(signal);let inputBytes=2;
  const inputs=h.inputs.map(value=>{
   const i=object(value);
   inputBytes+=new TextEncoder().encode(JSON.stringify(i)).byteLength+1;if(inputBytes>8000000)throw Error('AI_INTAKE_INPUT_LIMIT');
@@ -119,7 +125,8 @@ export async function parseDailyAiSourceSnapshot(value:unknown,cutoff:string,sig
    ||i.cutoff!==(kind==='HANDOFF'?h.source_cutoff:cutoff)
    ||!Array.isArray(i.bars)||i.bars.length>400||!Array.isArray(i.facts)||i.facts.length>1000
    ||!Array.isArray(i.expected_sessions)||i.expected_sessions.length>400)throw Error('AI_INTAKE_INPUT_INVALID');
-  if(i.facts.some(value=>{const fact=object(value);return typeof fact.source==='string'&&restrictedFinancialSource(fact.source);}))throw Error('AI_INTAKE_RESTRICTED_FINANCIAL_SOURCE');
+  if(i.facts.some(value=>{const fact=object(value);return typeof fact.source==='string'&&restrictedFinancialSource(fact.source)
+   &&!(typeof fact.id==='string'&&quarantinedIssuerBinding?.restrictedIds.has(fact.id));}))throw Error('AI_INTAKE_RESTRICTED_FINANCIAL_SOURCE');
   return i as unknown as FunnelInput;
  });
  if(new Set(inputs.map(i=>i.symbol)).size!==72)throw Error('AI_INTAKE_INPUT_INVALID');
@@ -176,7 +183,8 @@ export async function parseDailyAiSourceSnapshot(value:unknown,cutoff:string,sig
   }
  }
  const market=await parseDailyAiMarketEvidence(h.market,cutoff,signal);
- return {inputs,news,market,additionalGaps:[...h.intake_gaps as string[],...new Set(issueGaps)],gapsBySymbol,
+ return {inputs,news,market,additionalGaps:[...h.intake_gaps as string[],...new Set(issueGaps),...(quarantinedIssuerBinding?[ISSUER_QUARANTINE_GAP]:[])],gapsBySymbol,
+  ...(quarantinedIssuerBinding?{quarantinedIssuerBinding}:{}),
   ...(kind==='HANDOFF'?{sourceHandoff:{...original,handoff_id:h.handoff_id as string,source_run_id:h.source_run_id as string}}:
    {sourceIntake:{...original,intake_id:h.intake_id as string,source_kind:h.source_kind as 'VNEXT_ACQUIRED'|'ASOF_INTAKE',source_id:h.source_id as string,snapshot_hash:h.snapshot_hash as string}})};
 }
@@ -290,8 +298,12 @@ function restrictedNewsSource(source:string,content:Record<string,unknown>){
 }
 function rejectRestrictedAnalysisSources(value:unknown){
  const batch=object(value);if(!Array.isArray(batch.packets))return;
- for(const value of batch.packets){const packet=object(value);if(!Array.isArray(packet.evidence))continue;
-  for(const value of packet.evidence){const e=object(value);if(typeof e.source!=='string')continue;
+ for(const value of batch.packets){const packet=object(value);
+  if(Array.isArray(packet.data_gaps)&&packet.data_gaps.includes(ISSUER_QUARANTINE_GAP))throw Error('AI_INTAKE_RESTRICTED_FINANCIAL_SOURCE');
+  if(!Array.isArray(packet.evidence))continue;
+  for(const value of packet.evidence){const e=object(value);
+   if(hasQuarantinedIssuerEvidence(e))throw Error('AI_INTAKE_RESTRICTED_FINANCIAL_SOURCE');
+   if(typeof e.source!=='string')continue;
    if(e.kind==='FINANCIAL'&&restrictedFinancialSource(e.source))throw Error('AI_INTAKE_RESTRICTED_FINANCIAL_SOURCE');
    if(e.kind==='NEWS'){
     let content:Record<string,unknown>={};

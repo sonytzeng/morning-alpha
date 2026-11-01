@@ -6,6 +6,10 @@ import type {FunnelInput} from '../../../src/features/vnext/researchFunnel.ts';
 import type {AnalysisEvidence} from '../../../research/daily-ai-analysis.ts';
 import {intakeUuid,parseDailyAiSourceSnapshot,parseDailyAiMarketEvidence} from './intake.ts';
 import type {DailyStockSourceResult} from './source-handler.ts';
+import {STOCK_AI_PAID_CALLS_ENABLED} from '../_shared/daily-stock-ai-cost-policy.ts';
+import {hasQuarantinedIssuerFacts,verifyQuarantinedIssuerSeed,type QuarantinedIssuerSourcePolicy} from '../../../research/quarantined-issuer-source.ts';
+import {ISSUER_IR_SOURCE_SEAL} from '../../../research/issuer-ir-daily-financial-replay.ts';
+import {UMC_IR_SOURCE_SEAL} from '../../../research/umc-ir-daily-financial-replay.ts';
 
 type Rpc=(name:string,args:Record<string,unknown>,signal:AbortSignal)=>Promise<unknown>;
 type Refresh=typeof refreshDailyAiPrices;
@@ -83,6 +87,8 @@ export async function prepareDailyStockAiSource(intakeId:string,ports:DailyStock
  if(current.intake_id!==intakeId||current.member_published!==false)throw Error('AI_INTAKE_RESPONSE');
  if(['BUSY','EXHAUSTED','SOURCE_UNAVAILABLE','EXPIRED'].includes(String(current.state)))return {state:current.state as 'BUSY'|'EXHAUSTED'|'SOURCE_UNAVAILABLE'|'EXPIRED',intake_id:intakeId};
  const dispatch=async(batchId:string):Promise<DailyStockSourceResult>=>{
+  stopped(signal);
+  if(!STOCK_AI_PAID_CALLS_ENABLED)return {state:'SOURCE_PREPARED',intake_id:intakeId,batch_id:batchId,analysis_dispatched:false};
   let confirmed=false;
   try{
    stopped(signal);const d=object(await ports.rpc('dispatch_daily_stock_ai_batch_v1',{p_batch_id:batchId},signal));
@@ -155,8 +161,19 @@ export async function prepareDailyStockAiSource(intakeId:string,ports:DailyStock
  if(current.state!=='SOURCED'||current.intake_id!==intakeId||!intakeUuid(current.lease)||typeof current.cutoff!=='string')throw Error('AI_INTAKE_SOURCE_UNCONFIRMED');
  const cutoff=current.cutoff,now=ports.clock();
  if(!validObservationTime(now)||!validObservationTime(cutoff)||compareTime(cutoff,now)>0)throw Error('AI_INTAKE_FUTURE_SNAPSHOT');
- const prepared=await parseDailyAiSourceSnapshot(current,cutoff,signal,'INTAKE');stopped(signal);
+ // Research preparation alone may retain exact reviewed PDF observations.
+ // This internal capability is never read from HTTP body or snapshot flags.
+ let privateResearch:QuarantinedIssuerSourcePolicy|undefined;
+ if(Array.isArray(current.inputs)&&hasQuarantinedIssuerFacts(current.inputs as FunnelInput[])){
+  const [issuer_registry,umc_registry]=await Promise.all([
+   ports.rpc('load_daily_stock_ai_issuer_ir_replay_v1',{p_source_seal:ISSUER_IR_SOURCE_SEAL,p_cutoff:cutoff},signal),
+   ports.rpc('load_daily_stock_ai_umc_ir_replay_v1',{p_source_seal:UMC_IR_SOURCE_SEAL,p_cutoff:cutoff},signal),
+  ]);stopped(signal);
+  privateResearch={scope:'PRIVATE_SOURCE_RESEARCH_ONLY',issuer_registry,umc_registry,source_admitted:false,member_publication_approved:false};
+ }
+ const prepared=await parseDailyAiSourceSnapshot(current,cutoff,signal,'INTAKE',privateResearch);stopped(signal);
  const seed=await buildDailyAiSeed({...prepared,cutoff,signal});stopped(signal);
+ if(prepared.quarantinedIssuerBinding)await verifyQuarantinedIssuerSeed(seed.body,prepared.quarantinedIssuerBinding);stopped(signal);
  const saved=object(await ports.rpc('store_daily_stock_ai_batch_v1',{p_text:seed.payload_text,p_hash:seed.metadata.payload_hash},signal));stopped(signal);
  if(saved.state!=='STORED'||saved.batch_id!==seed.metadata.payload_hash||saved.packets!==72||saved.member_published!==false)throw Error('AI_INTAKE_SAVE_UNCONFIRMED');
  const finished=object(await call('COMPLETE',{p_lease:current.lease,p_batch_id:seed.metadata.payload_hash}));stopped(signal);

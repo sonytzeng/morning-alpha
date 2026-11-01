@@ -1,12 +1,12 @@
 import {hashValid,sourceSafe,validObservationTime} from './contracts.ts';
-import {parseDailyAiMember,type DailyAiMemberCard,type DailyAiMemberEdition} from './dailyAiMember.ts';
+import {dailyAiAnalysisOrigin,parseDailyAiMember,type DailyAiMemberCard,type DailyAiMemberEdition} from './dailyAiMember.ts';
 
 type ReviewStatus='PASS'|'FAIL'|'PENDING';
 export type DailyAiOwnerAudience='free'|'premium';
 export type DailyAiOwnerAction='APPROVE'|'REVOKE';
 export type DailyAiOwnerReview={id:string;snapshot_hash:string;reviewer_ref:string;quality:ReviewStatus;time_status:ReviewStatus;licensing:ReviewStatus;reason:string;recorded_at:string;expires_at:string;quality_document_hash:string;time_document_hash:string;license_document_hash:string};
 export type DailyAiOwnerPublication={id:number;review_id:string;actor:string;action:DailyAiOwnerAction;audience:DailyAiOwnerAudience;occurred_at:string};
-export type DailyAiOwnerResearch={schema:'VNEXT_AI_OWNER_EDITION_V1';preview_only:true;edition:(DailyAiMemberEdition&{batch_id:string;jobs:72;periods:216})|null;cards:DailyAiMemberCard[];source_urls:string[];rights_ready:boolean;integrity_ready:boolean;review_ready:boolean;publish_ready:boolean;review:DailyAiOwnerReview|null;publication:DailyAiOwnerPublication|null};
+export type DailyAiOwnerResearch={schema:'VNEXT_AI_OWNER_EDITION_V1';preview_only:true;edition:(DailyAiMemberEdition&{batch_id:string;jobs:72|0;periods:216})|null;cards:DailyAiMemberCard[];source_urls:string[];rights_ready:boolean;integrity_ready:boolean;review_ready:boolean;publish_ready:boolean;review:DailyAiOwnerReview|null;publication:DailyAiOwnerPublication|null};
 const record=(value:unknown):Record<string,unknown>=>{if(!value||typeof value!=='object'||Array.isArray(value))throw Error('AI_OWNER_OBJECT');return value as Record<string,unknown>;};
 const text=(value:unknown,max=3000)=>{if(typeof value!=='string'||!value.trim()||value.length>max)throw Error('AI_OWNER_TEXT');return value;};
 const one=<T extends string>(value:unknown,values:readonly T[]):T=>{if(typeof value!=='string'||!values.includes(value as T))throw Error('AI_OWNER_ENUM');return value as T;};
@@ -34,8 +34,9 @@ export function parseDailyAiOwner(value:unknown,now=Date.now()):DailyAiOwnerRese
  // Validate the exact premium card projection at an instant within its own
  // validity window; no expiry or evidence date is rewritten for preview.
  const preview=parseDailyAiMember({schema:'VNEXT_AI_MEMBER_EDITION_V1',tier:'owner',business_date:rawEdition.edition_date,research_only:true,edition:rawEdition,cards:p.cards},undefined,Math.min(now,Date.parse(expiresAt)-1));
- if(!preview.edition||rawEdition.jobs!==72||rawEdition.periods!==216)throw Error('AI_OWNER_UNIVERSE');
- const edition={...preview.edition,batch_id:hash(rawEdition.batch_id),jobs:72 as const,periods:216 as const};
+ const expectedJobs=dailyAiAnalysisOrigin(preview.edition)==='OFFLINE_REVIEWED'?0:72;
+ if(!preview.edition||rawEdition.jobs!==expectedJobs||rawEdition.periods!==216)throw Error('AI_OWNER_UNIVERSE');
+ const edition={...preview.edition,batch_id:hash(rawEdition.batch_id),jobs:expectedJobs as 72|0,periods:216 as const};
  const urls=new Set(source_urls);if(preview.cards.some(c=>c.sources?.some(s=>!urls.has(s.source))))throw Error('AI_OWNER_SOURCE_SET');
  let review:DailyAiOwnerReview|null=null,publication:DailyAiOwnerPublication|null=null;
  if(p.review!==null){const r=record(p.review);review={id:uuid(r.id),snapshot_hash:hash(r.snapshot_hash),reviewer_ref:text(r.reviewer_ref,200),quality:one(r.quality,['PASS','FAIL','PENDING']),time_status:one(r.time_status,['PASS','FAIL','PENDING']),licensing:one(r.licensing,['PASS','FAIL','PENDING']),reason:text(r.reason),recorded_at:time(r.recorded_at),expires_at:time(r.expires_at),quality_document_hash:hash(r.quality_document_hash),time_document_hash:hash(r.time_document_hash),license_document_hash:hash(r.license_document_hash)};

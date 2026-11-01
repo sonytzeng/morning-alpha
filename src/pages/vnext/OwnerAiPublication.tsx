@@ -2,7 +2,7 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {supabase} from '@/lib/supabase';
 import type {AcademyAccess} from '@/pages/academy/useAcademyAccess';
 import {HORIZONS,type Horizon} from '@/features/vnext/contracts';
-import {DAILY_AI_MEMBER_STATES} from '@/features/vnext/dailyAiMember';
+import {DAILY_AI_MEMBER_STATES,dailyAiAnalysisOrigin} from '@/features/vnext/dailyAiMember';
 import {dailyAiGapLabel} from '@/features/vnext/dailyAiCopy';
 import {dailyAiOwnerCanApprove,dailyAiOwnerCanRevoke,dailyAiOwnerReviewRequest,parseDailyAiOwner,parseDailyAiOwnerReviewResult,type DailyAiOwnerAction,type DailyAiOwnerAudience,type DailyAiOwnerResearch} from '@/features/vnext/dailyAiOwner';
 import DailyAiOwnerPricePlans from './DailyAiOwnerPricePlans';
@@ -15,14 +15,15 @@ export function OwnerAiEditionReview({data,busy=false,onReview}:{data:DailyAiOwn
  const [horizon,setHorizon]=useState<Horizon>('SHORT'),[query,setQuery]=useState(''),[limit,setLimit]=useState(9),[audience,setAudience]=useState<DailyAiOwnerAudience>('premium'),[now,setNow]=useState(Date.now);
  useEffect(()=>{const update=()=>setNow(Date.now()),timer=setInterval(update,15000);document.addEventListener('visibilitychange',update);return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',update);};},[]);
  const e=data.edition,r=data.review,publication=data.publication;
- if(!e)return <section className="vnext-empty" role="status"><h3>尚無完成的每日 AI 研究版本</h3><p>必須先完成 72 檔、216 個期間分析，才能在這裡預覽與核准。</p></section>;
+ if(!e)return <section className="vnext-empty" role="status"><h3>尚無完成的股票研究版本</h3><p>必須先完成 72 檔、216 個期間分析，才能在這裡預覽與核准。</p></section>;
+ const offlineReviewed=dailyAiAnalysisOrigin(e)==='OFFLINE_REVIEWED',stockCount=new Set(data.cards.map(c=>c.symbol)).size;
  const canApprove=dailyAiOwnerCanApprove(data,now),canRevoke=dailyAiOwnerCanRevoke(data),current=Date.parse(e.expires_at)>now;
  const rows=data.cards.filter(c=>c.horizon===horizon&&(!query.trim()||`${c.symbol} ${c.company}`.includes(query.trim())));
  return <div className="dam">
-  <p>研究版本 <strong>{e.edition_date}</strong> · 收盤資料截至 <strong>{e.data_through}</strong> · {e.jobs} 檔 / {e.periods} 個期間分析</p>
+  <p>{offlineReviewed?'離線審核分析':'AI 證據分析'} · 研究版本 <strong>{e.edition_date}</strong> · 收盤資料截至 <strong>{e.data_through}</strong> · {stockCount} 檔 / {e.periods} 個期間分析</p>
   <p>證據截止 {date(e.evidence_cutoff)}；準備完成 {date(e.prepared_at)}；有效至 {date(e.expires_at)}（台北）。</p>
   <p>這是 Owner 私人預覽。會員閱讀權限依實際審查與核准紀錄決定。</p>
-  <ul aria-label="每日 AI 研究發布檢查">
+  <ul aria-label={offlineReviewed?'離線審核分析發布檢查':'每日 AI 研究發布檢查'}>
    <li>完整性與原始資料承諾：{data.integrity_ready?'通過':'尚未通過'}</li>
    <li>全部 {data.source_urls.length} 個來源的會員使用權：{data.rights_ready?'通過':'尚未通過'}</li>
    <li>獨立審查：品質 {status(r?.quality)} · 時效 {status(r?.time_status)} · 授權 {status(r?.licensing)}</li>
@@ -41,7 +42,7 @@ export function OwnerAiEditionReview({data,busy=false,onReview}:{data:DailyAiOwn
   <div className="vnext-horizons dam-periods" aria-label="Owner 預覽研究期間">{(Object.keys(HORIZONS) as Horizon[]).map(h=><button key={h} aria-pressed={horizon===h} onClick={()=>{setHorizon(h);setQuery('');setLimit(9);}}><strong>{HORIZONS[h].label}</strong><span>{HORIZONS[h].duration}</span><small>{data.cards.filter(c=>c.horizon===h).length} 檔</small></button>)}</div>
   <h4>目前預覽：{HORIZONS[horizon].label}</h4><label className="dam-search">搜尋本期間股票<input value={query} placeholder="公司或代號" onChange={event=>{setQuery(event.target.value);setLimit(9);}}/></label>
   <p role="status">符合條件 {rows.length} 檔；每張卡片只顯示所選期間的分析。</p>
-  <div className="vnext-grid">{rows.slice(0,limit).map(c=><article className="vnext-card dam-card" key={c.symbol}><div className="dam-card-top"><span className="dam-period-badge">{HORIZONS[c.horizon].label}</span><span className={`dam-status dam-status-${c.status.toLowerCase()}`}>{DAILY_AI_MEMBER_STATES[c.status]}</span></div><h4>{c.company} {c.symbol}</h4><h5>AI 判斷與理由</h5><p>{c.reason.text}</p><h5>接下來確認</h5><p>{c.confirmation}</p><h5>取消或重評條件</h5><p>{c.invalidation}</p><h5>反面證據</h5>{c.counter_evidence?.length?<ul>{c.counter_evidence.map((claim,i)=><li key={i}>{claim.text}</li>)}</ul>:<p>本版未列出具名反面證據。</p>}{c.gaps.length>0&&<><h5>資料缺口</h5><ul>{c.gaps.map((gap,i)=><li key={i}>{dailyAiGapLabel(gap)}</li>)}</ul></>}<details><summary>核對來源與時間（{c.sources?.length??0}）</summary><ul>{c.sources?.map(s=><li key={s.id}><a href={s.source} target="_blank" rel="noopener noreferrer">{s.id} · {new URL(s.source).hostname}</a><p>{s.published_at?`原發布 ${date(s.published_at)}`:'原發布時間未確認，僅依實際收到後的資料研究。'}；可用時間 {date(s.available_at)}。</p></li>)}</ul></details></article>)}</div>
+  <div className="vnext-grid">{rows.slice(0,limit).map(c=><article className="vnext-card dam-card" key={c.symbol}><div className="dam-card-top"><span className="dam-period-badge">{HORIZONS[c.horizon].label}</span><span className={`dam-status dam-status-${c.status.toLowerCase()}`}>{DAILY_AI_MEMBER_STATES[c.status]}</span></div><h4>{c.company} {c.symbol}</h4><h5>{offlineReviewed?'離線審核分析與理由':'AI 判斷與理由'}</h5><p>{c.reason.text}</p><h5>接下來確認</h5><p>{c.confirmation}</p><h5>取消或重評條件</h5><p>{c.invalidation}</p><h5>反面證據</h5>{c.counter_evidence?.length?<ul>{c.counter_evidence.map((claim,i)=><li key={i}>{claim.text}</li>)}</ul>:<p>本版未列出具名反面證據。</p>}{c.gaps.length>0&&<><h5>資料缺口</h5><ul>{c.gaps.map((gap,i)=><li key={i}>{dailyAiGapLabel(gap)}</li>)}</ul></>}<details><summary>核對來源與時間（{c.sources?.length??0}）</summary><ul>{c.sources?.map(s=><li key={s.id}><a href={s.source} target="_blank" rel="noopener noreferrer">{s.id} · {new URL(s.source).hostname}</a><p>{s.published_at?`原發布 ${date(s.published_at)}`:'原發布時間未確認，僅依實際收到後的資料研究。'}；可用時間 {date(s.available_at)}。</p></li>)}</ul></details></article>)}</div>
   {rows.length>limit&&<button onClick={()=>setLimit(value=>value+9)}>再看 9 檔</button>}
  </div>;
 }
@@ -71,5 +72,5 @@ export default function OwnerAiPublication({access}:{access:AcademyAccess}){
   finally{if(current(candidate)){pending.current=false;setBusy(false);setRevision(value=>value+1);}}
  };
  if(!owner)return null;
- return <section className="vnext-section" aria-labelledby="owner-daily-ai-heading"><h2 id="owner-daily-ai-heading">每日 AI 股票研究 · 會員發布</h2><button disabled={busy} onClick={()=>{setNotice('');setRevision(value=>value+1);}}>重新讀取每日 AI 審查</button><p role="status">{data?notice:''}</p>{error?<p role="status">目前無法取得完整版本或審查結果，無法核准。</p>:!data?<p role="status">正在讀取完整研究與實際發布條件。</p>:<><OwnerAiEditionReview key={data.edition?.id??'empty'} data={data} busy={busy} onReview={submit}/><DailyAiOwnerPricePlans access={access} editionId={data.edition?.id??null}/></>}</section>;
+ return <section className="vnext-section" aria-labelledby="owner-daily-ai-heading"><h2 id="owner-daily-ai-heading">{dailyAiAnalysisOrigin(data?.edition)==='OFFLINE_REVIEWED'?'離線審核分析':'每日 AI 股票研究'} · 會員發布</h2><button disabled={busy} onClick={()=>{setNotice('');setRevision(value=>value+1);}}>{dailyAiAnalysisOrigin(data?.edition)==='OFFLINE_REVIEWED'?'重新讀取離線分析審查':'重新讀取每日 AI 審查'}</button><p role="status">{data?notice:''}</p>{error?<p role="status">目前無法取得完整版本或審查結果，無法核准。</p>:!data?<p role="status">正在讀取完整研究與實際發布條件。</p>:<><OwnerAiEditionReview key={data.edition?.id??'empty'} data={data} busy={busy} onReview={submit}/><DailyAiOwnerPricePlans access={access} editionId={data.edition?.id??null}/></>}</section>;
 }

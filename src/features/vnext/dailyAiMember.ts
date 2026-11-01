@@ -9,10 +9,13 @@ export type DailyAiMemberSource={id:string;source:string;kind:'NEWS'|'MARKET'|'F
 export type DailyAiMemberCard={symbol:string;company:string;horizon:Horizon;status:DailyAiMemberState;
  reason:DailyAiMemberClaim;counter_evidence:DailyAiMemberClaim[]|null;confirmation:string;invalidation:string;
  gaps:string[];sources:DailyAiMemberSource[]|null;classification:'INFERENCE'};
-export type DailyAiMemberEdition={id:string;edition_date:string;data_through:string;evidence_cutoff:string;
+export type DailyAiAnalysisOrigin='MODEL_GENERATED'|'OFFLINE_REVIEWED';
+export type DailyAiMemberEdition={id:string;edition_date:string;data_through:string;evidence_cutoff:string;analysis_origin?:DailyAiAnalysisOrigin;
  prepared_at:string;expires_at:string;mode:'AS_OF_RESEARCH';forecast:false;performance_available:false};
 export type DailyAiMemberResearch={schema:'VNEXT_AI_MEMBER_EDITION_V1';tier:'free'|'premium'|'owner';business_date:string;
  research_only:true;edition:DailyAiMemberEdition|null;cards:DailyAiMemberCard[]};
+export const dailyAiAnalysisOrigin=(edition:Pick<DailyAiMemberEdition,'analysis_origin'>|null|undefined):DailyAiAnalysisOrigin=>
+ edition?.analysis_origin==='OFFLINE_REVIEWED'?'OFFLINE_REVIEWED':'MODEL_GENERATED';
 const object=(value:unknown):Record<string,unknown>=>{if(!value||typeof value!=='object'||Array.isArray(value))throw Error('AI_MEMBER_OBJECT');return value as Record<string,unknown>;};
 const text=(value:unknown,max=1500)=>{if(typeof value!=='string'||!value.trim()||value.length>max)throw Error('AI_MEMBER_TEXT');return value;};
 const array=(value:unknown,max=216):unknown[]=>{if(!Array.isArray(value)||value.length>max)throw Error('AI_MEMBER_ARRAY');return value;};
@@ -35,6 +38,7 @@ export function parseDailyAiMember(value:unknown,expectedBusinessDate?:string,no
  if(p.edition===null){if(values.length)throw Error('AI_MEMBER_EMPTY_EDITION');return {schema:'VNEXT_AI_MEMBER_EDITION_V1',tier,business_date,research_only:true,edition:null,cards:[]};}
  const e=object(p.edition),edition:DailyAiMemberEdition={id:hash(e.id),edition_date:day(e.edition_date),data_through:day(e.data_through),
   evidence_cutoff:time(e.evidence_cutoff),prepared_at:time(e.prepared_at),expires_at:time(e.expires_at),mode:'AS_OF_RESEARCH',forecast:false,performance_available:false};
+ if(e.analysis_origin!==undefined)edition.analysis_origin=one(e.analysis_origin,['MODEL_GENERATED','OFFLINE_REVIEWED']);
  if(e.mode!=='AS_OF_RESEARCH'||e.forecast!==false||e.performance_available!==false)throw Error('AI_MEMBER_SCOPE');
  const cutoff=Date.parse(edition.evidence_cutoff),prepared=Date.parse(edition.prepared_at);
  if(cutoff>prepared||prepared>now||Date.parse(edition.expires_at)<=now||Date.parse(edition.expires_at)<=prepared

@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import {HORIZONS,compareTime,type Horizon} from '@/features/vnext/contracts';
-import {DAILY_AI_MEMBER_STATES,type DailyAiMemberCard,type DailyAiMemberSource,type DailyAiMemberResearch as Research,type DailyAiMemberState} from '@/features/vnext/dailyAiMember';
+import {DAILY_AI_MEMBER_STATES,dailyAiAnalysisOrigin,type DailyAiMemberCard,type DailyAiMemberSource,type DailyAiMemberResearch as Research,type DailyAiMemberState} from '@/features/vnext/dailyAiMember';
 import {dailyAiAnalysisText,dailyAiGapLabel} from '@/features/vnext/dailyAiCopy';
 import {dailyAiPricePlanForCard,type DailyAiMemberPricePlans,type DailyAiPricePlan} from '@/features/vnext/dailyAiPricePlan';
 import './daily-ai-member.css';
@@ -77,12 +77,13 @@ export default function DailyAiMemberResearch({data,pricePlans=null,pricePlansUn
  },[expiresAt,priceDeadline]);
  const edition=data.edition;
  if(!edition||Date.parse(edition.expires_at)<=now)return <main className="vnext-content dam" id="stock-observations"><h1>每日股票研究</h1><section role="status" className="vnext-empty"><h2>{edition?'這個研究版本已到期':'目前尚無已發布的研究版本'}</h2><p>等待完成資料核對與發布的最新研究。</p></section></main>;
+ const offlineReviewed=dailyAiAnalysisOrigin(edition)==='OFFLINE_REVIEWED';
  const sourceYear=data.business_date.slice(0,4),all=data.cards.filter(c=>c.horizon===horizon),rows=all.filter(c=>(filter==='ALL'||c.status===filter)&&(!query.trim()||`${c.symbol} ${c.company}`.includes(query.trim())))
   .sort((a,b)=>order[a.status]-order[b.status]||a.symbol.localeCompare(b.symbol));
  const commonGaps=[...new Set(data.cards[0]?.gaps??[])].filter(gap=>data.cards.every(card=>card.gaps.includes(gap))),commonGapSet=new Set(commonGaps);
  const change=(next:Horizon)=>{setHorizon(next);onHorizonChange?.(next);changeView(()=>({filter:'ALL',query:'',limit:9}));};
  return <main className="vnext-content dam" id="stock-observations">
-  <header className="vnext-intro"><p className="vnext-eyebrow">每日股票研究 · AI 證據分析</p><h1>今天先看懂，再決定</h1>
+  <header className="vnext-intro"><p className="vnext-eyebrow">每日股票研究 · {offlineReviewed?'離線審核分析':'AI 證據分析'}</p><h1>今天先看懂，再決定</h1>
    <p>研究版本 <strong>{edition.edition_date}</strong> · 台股收盤資料截至 <strong>{edition.data_through}</strong></p>
    <p>證據截止：{date(edition.evidence_cutoff)}；發布準備完成：{date(edition.prepared_at)}（台北）。有效至 {date(edition.expires_at)}。</p>
    <p>以下是根據當時可用資料作出的研究判讀。關注、等待與不適合分開呈現；尚未有可驗證的策略績效。</p>
@@ -100,7 +101,7 @@ export default function DailyAiMemberResearch({data,pricePlans=null,pricePlansUn
     const planSources=plan?pricePlans?.source_sets?.find(set=>set.symbol===card.symbol)?.sources.filter(source=>plan.evidence_ids.includes(source.id))??[]:[];
     return <article className="vnext-card dam-card" key={card.symbol}>
     <div className="dam-card-top"><span className="dam-period-badge">{HORIZONS[horizon].label} · {HORIZONS[horizon].duration}</span><span className={`dam-status dam-status-${card.status.toLowerCase()}`}>{DAILY_AI_MEMBER_STATES[card.status]}</span></div>
-    <h3>{card.company}<small>{card.symbol}</small></h3><h4>為什麼這樣判斷？</h4><p>{dailyAiAnalysisText(card.reason.text)}</p><p className="dam-inference">AI 判讀 · 請搭配下方證據與反面條件</p>
+    <h3>{card.company}<small>{card.symbol}</small></h3><h4>為什麼這樣判斷？</h4><p>{dailyAiAnalysisText(card.reason.text)}</p><p className="dam-inference">{offlineReviewed?'離線審核分析':'AI 判讀'} · 請搭配下方證據與反面條件</p>
     <h4>接下來看什麼確認？</h4><p>{dailyAiAnalysisText(card.confirmation)}</p><div className="vnext-risk"><h4>什麼情況取消或重評？</h4><p>{dailyAiAnalysisText(card.invalidation)}</p>
      {card.counter_evidence!==null&&<><h4>反面證據與風險</h4>{card.counter_evidence.length?<ul>{card.counter_evidence.map((c,i)=><li key={i}>{dailyAiAnalysisText(c.text)}</li>)}</ul>:<p>本版未列出具名反面證據；不代表沒有風險。</p>}</>}
     </div>

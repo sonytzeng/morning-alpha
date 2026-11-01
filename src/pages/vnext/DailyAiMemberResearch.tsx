@@ -1,7 +1,8 @@
 import {useEffect,useState} from 'react';
-import {HORIZONS,type Horizon} from '@/features/vnext/contracts';
-import {DAILY_AI_MEMBER_STATES,type DailyAiMemberCard,type DailyAiMemberResearch as Research,type DailyAiMemberState} from '@/features/vnext/dailyAiMember';
+import {HORIZONS,compareTime,type Horizon} from '@/features/vnext/contracts';
+import {DAILY_AI_MEMBER_STATES,type DailyAiMemberCard,type DailyAiMemberSource,type DailyAiMemberResearch as Research,type DailyAiMemberState} from '@/features/vnext/dailyAiMember';
 import {dailyAiAnalysisText,dailyAiGapLabel} from '@/features/vnext/dailyAiCopy';
+import {dailyAiPricePlanForCard,type DailyAiMemberPricePlans,type DailyAiPricePlan} from '@/features/vnext/dailyAiPricePlan';
 import './daily-ai-member.css';
 
 const periods={SHORT:'先看近期事件與量價，確認條件成立後再評估。',MEDIUM:'追蹤未來數週的營收、營運與事件變化。',LONG:'檢查長期需求、獲利與估值能否支持布局。'};
@@ -9,6 +10,26 @@ const states=Object.keys(DAILY_AI_MEMBER_STATES) as DailyAiMemberState[];
 export type DailyAiMemberViewState={filter:DailyAiMemberState|'ALL';query:string;limit:number};
 const order:Record<DailyAiMemberState,number>={WATCH:0,WAIT:1,AVOID:2,INSUFFICIENT:3};
 const date=(value:string)=>new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value));
+const money=(value:number)=>new Intl.NumberFormat('zh-TW',{maximumFractionDigits:2}).format(value);
+// PostgreSQL may retain microseconds; a browser timer must use the first
+// representable millisecond at or after that exact deadline.
+const priceDeadlineMs=(value:string)=>{const ms=Date.parse(value);return Number.isFinite(ms)&&compareTime(value,new Date(ms).toISOString())>0?ms+1:ms;};
+function PricePlan({plan,status,sources}:{plan:DailyAiPricePlan;status:DailyAiMemberState;sources:readonly DailyAiMemberSource[]}){
+ return <section className="dam-price-plan" aria-label="條件式價格研究"><h4>條件式價格研究</h4>
+  <p>{status==='WAIT'?'目前仍在等待確認；價格進入區間後，仍需核對上方確認條件。':'研究區間用來追蹤條件，仍需核對事件與風險。'}</p>
+  <dl><div><dt>研究區間</dt><dd>NT${money(plan.entry_range[0])}～{money(plan.entry_range[1])}</dd></div>
+   <div><dt>超過先等</dt><dd>NT${money(plan.wait_above)} 以上先等待重評</dd></div>
+   {plan.stop_kind==='PRICE'&&plan.stop!==null?<div><dt>停止參考價</dt><dd>NT${money(plan.stop)}</dd></div>:null}
+  </dl>
+  <p className="dam-price-invalidation"><strong>停止／重評條件：</strong>{plan.invalidation}</p>
+  <p className="dam-summary-note">條件式研究；關注與等待狀態均不代表買進指令。</p>
+  <details><summary>價格依據與有效期</summary><p>{plan.basis}</p><p>研究方法：{plan.method}</p>
+   <p>價格計畫核對：{date(plan.as_of)}；有效至 {date(plan.expires_at)}（台北）。</p>
+   <ul>{sources.map(source=><li key={source.id}><a href={source.source} target="_blank" rel="noopener noreferrer">{new URL(source.source).hostname}</a>
+    <span>{source.published_at?`原發布：${date(source.published_at)}`:'原發布時間未確認'} · 本次可用：{date(source.available_at)}</span></li>)}</ul>
+  </details>
+ </section>;
+}
 function Gaps({gaps}:{gaps:string[]}){
  if(!gaps.length)return null;
  return <section className="dam-gaps"><h4>研究限制與待確認資料</h4><ul>{gaps.slice(0,3).map((gap,i)=><li key={i}>{dailyAiGapLabel(gap)}</li>)}</ul>{gaps.length>3&&<details><summary>再看 {gaps.length-3} 項資料限制</summary><ul>{gaps.slice(3).map((gap,i)=><li key={i}>{dailyAiGapLabel(gap)}</li>)}</ul></details>}</section>;
@@ -36,20 +57,24 @@ function Evidence({card,year}:{card:DailyAiMemberCard;year:string}){
   <span>{s.published_at?`原發布：${date(s.published_at)}`:'原發布時間未確認；依收到後的資料研究。'} · 本次可用：{date(s.available_at)}</span>
  </li>)}</ul>{openFinancial&&<p>本卡引用臺灣證券交易所／櫃買中心 {year} 年 EPS、財報、每日估值或重大訊息等公開資料，依<a href="https://data.gov.tw/license" target="_blank" rel="noopener noreferrer">政府資料開放授權條款第 1 版</a>使用；各資料集顯名見上方共用來源說明。</p>}{treasury&&<p>美國公債殖利率：U.S. Treasury，資料集標示 <a href="https://catalog.data.gov/dataset/interest-rate-statistics-daily-treasury-yield-curve-rates" target="_blank" rel="noopener noreferrer">CC0</a>；利率資料不代表美股指數收盤。</p>}</details>;
 }
-export default function DailyAiMemberResearch({data,selectedHorizon,onHorizonChange,viewState,onViewChange}:{data:Research;selectedHorizon?:Horizon;onHorizonChange?:(horizon:Horizon)=>void;
+export default function DailyAiMemberResearch({data,pricePlans=null,pricePlansUnavailable=false,priceSubjectUserId,selectedHorizon,onHorizonChange,viewState,onViewChange}:{data:Research;pricePlans?:DailyAiMemberPricePlans|null;pricePlansUnavailable?:boolean;priceSubjectUserId?:string;selectedHorizon?:Horizon;onHorizonChange?:(horizon:Horizon)=>void;
  viewState?:DailyAiMemberViewState;onViewChange?:(change:(previous:DailyAiMemberViewState)=>DailyAiMemberViewState)=>void}){
  const [localHorizon,setHorizon]=useState<Horizon>('SHORT'),[localView,setLocalView]=useState<DailyAiMemberViewState>({filter:'ALL',query:'',limit:9}),[now,setNow]=useState(Date.now);
  const horizon=selectedHorizon??localHorizon;
  const {filter,query,limit}=viewState??localView;
  const changeView=(change:(previous:DailyAiMemberViewState)=>DailyAiMemberViewState)=>{if(viewState===undefined)setLocalView(change);onViewChange?.(change);};
  const expiresAt=data.edition?.expires_at??null;
+ const planExpiries=pricePlans?.edition_id===data.edition?.id&&pricePlans?.tier===data.tier
+  &&(!priceSubjectUserId||pricePlans.subject_user_id===priceSubjectUserId)?pricePlans.plans.map(plan=>priceDeadlineMs(plan.expires_at)).filter(expiry=>Number.isFinite(expiry)&&expiry>now):[];
+ const priceDeadline=planExpiries.length?Math.min(...planExpiries):Infinity;
  useEffect(()=>{
   const update=()=>setNow(previous=>Math.max(previous,Date.now())),timer=setInterval(update,15000);
-  const expiry=expiresAt===null?null:Date.parse(expiresAt);
+  const expiry=expiresAt===null?null:Math.min(Date.parse(expiresAt),priceDeadline);
   const deadline=expiry===null?undefined:setTimeout(()=>setNow(previous=>Math.max(previous,Date.now(),expiry)),Math.min(2147483647,Math.max(0,expiry-Date.now())));
   document.addEventListener('visibilitychange',update);
+  update();
   return()=>{clearInterval(timer);clearTimeout(deadline);document.removeEventListener('visibilitychange',update);};
- },[expiresAt]);
+ },[expiresAt,priceDeadline]);
  const edition=data.edition;
  if(!edition||Date.parse(edition.expires_at)<=now)return <main className="vnext-content dam" id="stock-observations"><h1>每日股票研究</h1><section role="status" className="vnext-empty"><h2>{edition?'這個研究版本已到期':'目前尚無已發布的研究版本'}</h2><p>等待完成資料核對與發布的最新研究。</p></section></main>;
  const sourceYear=data.business_date.slice(0,4),all=data.cards.filter(c=>c.horizon===horizon),rows=all.filter(c=>(filter==='ALL'||c.status===filter)&&(!query.trim()||`${c.symbol} ${c.company}`.includes(query.trim())))
@@ -71,15 +96,17 @@ export default function DailyAiMemberResearch({data,selectedHorizon,onHorizonCha
    <label className="dam-search">搜尋本期間股票<input value={query} placeholder="股票名稱或代號" onChange={e=>{const query=e.target.value;changeView(()=>({filter:'ALL',query,limit:9}));}}/></label>
    <p role="status">{HORIZONS[horizon].label} · 符合目前篩選 {rows.length} 檔 · 先列值得追蹤，再列等待與風險；同類按代號排列。</p>
    {!all.some(c=>c.status==='WATCH')&&<p className="dam-wait">本期間目前沒有「值得追蹤」的股票，請先看等待原因與資料缺口。</p>}
-   <div className="vnext-grid">{rows.slice(0,limit).map(card=><article className="vnext-card dam-card" key={card.symbol}>
+   <div className="vnext-grid">{rows.slice(0,limit).map(card=>{const plan=dailyAiPricePlanForCard(pricePlans?.tier===data.tier?pricePlans:null,card,edition.id,now,priceSubjectUserId);
+    const planSources=plan?pricePlans?.source_sets?.find(set=>set.symbol===card.symbol)?.sources.filter(source=>plan.evidence_ids.includes(source.id))??[]:[];
+    return <article className="vnext-card dam-card" key={card.symbol}>
     <div className="dam-card-top"><span className="dam-period-badge">{HORIZONS[horizon].label} · {HORIZONS[horizon].duration}</span><span className={`dam-status dam-status-${card.status.toLowerCase()}`}>{DAILY_AI_MEMBER_STATES[card.status]}</span></div>
     <h3>{card.company}<small>{card.symbol}</small></h3><h4>為什麼這樣判斷？</h4><p>{dailyAiAnalysisText(card.reason.text)}</p><p className="dam-inference">AI 判讀 · 請搭配下方證據與反面條件</p>
     <h4>接下來看什麼確認？</h4><p>{dailyAiAnalysisText(card.confirmation)}</p><div className="vnext-risk"><h4>什麼情況取消或重評？</h4><p>{dailyAiAnalysisText(card.invalidation)}</p>
      {card.counter_evidence!==null&&<><h4>反面證據與風險</h4>{card.counter_evidence.length?<ul>{card.counter_evidence.map((c,i)=><li key={i}>{dailyAiAnalysisText(c.text)}</li>)}</ul>:<p>本版未列出具名反面證據；不代表沒有風險。</p>}</>}
     </div>
     <Gaps gaps={card.gaps.filter(gap=>!commonGapSet.has(gap))}/>
-    <p className="dam-price-note">價格條件：本版未提供已驗證的買進區間，先依確認條件追蹤。</p><Evidence card={card} year={sourceYear}/>
-   </article>)}</div>
+    {plan?<PricePlan plan={plan} status={card.status} sources={planSources}/>:<p className="dam-price-note">{pricePlansUnavailable?'價格計畫暫時無法核對，先依確認條件追蹤。':'價格條件：本版未提供已驗證的買進區間，先依確認條件追蹤。'}</p>}<Evidence card={card} year={sourceYear}/>
+   </article>;})}</div>
    {!rows.length?<p className="vnext-empty">這個分類沒有股票，可切換其他結果查看原因。</p>:rows.length>limit?<button className="vnext-primary" onClick={()=>changeView(previous=>({...previous,limit:previous.limit+9}))}>再看 9 檔</button>:null}
   </section>
  </main>;

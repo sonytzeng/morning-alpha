@@ -4,11 +4,12 @@
  * reviews:{quality,time,source_use},price_plans:[]}.
  * Each supplied review binds edition_id/cards_hash/packets_hash, status=PASS,
  * reviewed_at, expires_at and document_hash. Hashes use snapshotHash.
- * A plan binds edition_id/symbol/horizon, status=VERIFIED, currency=TWD,
- * entry_range:[low,high], wait_above, stop, invalidation, basis, evidence_ids,
- * as_of, expires_at, plus review:{status,plan_hash,reviewed_at,document_hash}.
+ * Plans follow DAILY_AI_PRICE_PLAN_V1 and the same strict verifier used by the
+ * member consumer. PRICE stops require a price; EVENT stops require stop=null
+ * and cited non-price evidence. Plan references bind the exact original packet,
+ * including legitimate sources not selected by the AI prose claim.
  * Both WATCH and WAIT require a verified plan. WAIT still cannot be buy-ready.
- * plan_hash hashes the complete plan excluding its review field.
+ * plan_hash hashes the complete body excluding top-level plan_hash and review.
  * Supplied reviews are evidence references, not independently authenticated
  * signatures. A successful audit never grants Owner or billing authorization.
  */
@@ -18,12 +19,12 @@ import {resolve} from 'node:path';
 import {validateAnalysisPacket} from '../../research/daily-ai-analysis.ts';
 import {validateStockAnalysisClaim,validateStockAnalysisCondition} from '../../research/daily-ai-semantics.ts';
 import {snapshotHash,hashValid,sourceSafe,validObservationTime,compareTime} from '../../src/features/vnext/contracts.ts';
+import {verifyDailyAiPricePlan} from '../../src/features/vnext/dailyAiPricePlan.ts';
 
 const horizons=['SHORT','MEDIUM','LONG'];
 const statuses=['WATCH','WAIT','AVOID','INSUFFICIENT'];
 const object=v=>!!v&&typeof v==='object'&&!Array.isArray(v);
 const nonempty=v=>typeof v==='string'&&v.trim().length>0;
-const positive=v=>typeof v==='number'&&Number.isFinite(v)&&v>0;
 const evidenceEntries=packet=>Array.isArray(packet?.evidence)?packet.evidence.filter(object):[];
 const key=v=>`${v?.symbol}:${v?.horizon}`;
 const atOrBefore=(a,b)=>validObservationTime(a)&&validObservationTime(b)&&compareTime(a,b)<=0;
@@ -59,7 +60,7 @@ export async function auditStockPaidReadiness(input,now=Date.now()){
   if(card.classification!=='INFERENCE')issue('CARD_CLASSIFICATION',card);
   if(!statuses.includes(card.status))issue('CARD_STATUS',card);
   else counts[card.horizon][card.status]++;
-  if(card.status!=='WATCH'&&card.buy_ready===true)issue('NON_ACTIONABLE_PROMOTED_TO_BUY',card);
+  if(card.buy_ready===true)issue('NON_ACTIONABLE_PROMOTED_TO_BUY',card);
   if(card.status==='INSUFFICIENT')issue('RESEARCH_INSUFFICIENT',card);
   if(!Array.isArray(card.gaps)||card.gaps.some(g=>!nonempty(g))||(card.status==='INSUFFICIENT'&&!card.gaps.length))issue('CARD_GAPS',card);
   for(const field of ['confirmation','invalidation'])try{
@@ -99,24 +100,14 @@ export async function auditStockPaidReadiness(input,now=Date.now()){
   planKeys.add(id);planByKey.set(id,plan);
   const card=cards.find(c=>object(c)&&key(c)===id),packet=bySymbol.get(plan.symbol);
   if(!card||!packet){issue('PRICE_PLAN_ORPHAN',plan);continue;}
-  const evidence=new Map(evidenceEntries(packet).map(e=>[e.id,e]));
-  const {review,...body}=plan;
-  const planHash=await snapshotHash(body);
-  const range=plan.entry_range;
-  const valid=editionValid&&plan.edition_id===edition.id&&plan.status==='VERIFIED'&&plan.currency==='TWD'
-   &&Array.isArray(range)&&range.length===2&&range.every(positive)&&range[0]<=range[1]
-   &&positive(plan.wait_above)&&plan.wait_above>=range[1]&&positive(plan.stop)&&plan.stop<range[0]
-   &&nonempty(plan.invalidation)&&nonempty(plan.basis)&&Array.isArray(plan.evidence_ids)&&plan.evidence_ids.length>0
-   &&new Set(plan.evidence_ids).size===plan.evidence_ids.length&&plan.evidence_ids.every(id=>evidence.has(id))
-   &&plan.evidence_ids.some(id=>evidence.get(id)?.kind==='PRICE')
-   &&atOrBefore(edition.evidence_cutoff,plan.as_of)&&atOrBefore(plan.as_of,nowIso)
-   &&future(plan.expires_at,now)&&atOrBefore(plan.as_of,plan.expires_at)&&atOrBefore(plan.expires_at,edition.expires_at)
-   &&object(review)&&review.status==='PASS'&&review.plan_hash===planHash&&hashValid(review.document_hash)
-   &&atOrBefore(plan.as_of,review.reviewed_at)&&atOrBefore(review.reviewed_at,nowIso)
-   &&atOrBefore(review.reviewed_at,plan.expires_at);
-  if(!valid)issue('PRICE_PLAN_INVALID',plan);
-  else verifiedPlans++;
-  if(card.status!=='WATCH'&&plan.buy_ready===true)issue('NON_ACTIONABLE_PROMOTED_TO_BUY',card);
+  // Reuse the real consumer contract; the audit must not accept a plan that
+  // the actual member view would reject or invent numeric EVENT stops.
+  try{
+   if(!editionValid)throw Error('AI_PRICE_PLAN_EDITION_EXPIRED');
+   const verified=await verifyDailyAiPricePlan(plan,{edition,card,evidence:evidenceEntries(packet)},now);
+   if(!verified)throw Error('AI_PRICE_PLAN_MISSING');verifiedPlans++;
+  }catch(error){issue('PRICE_PLAN_INVALID',plan,error instanceof Error?error.message:'AI_PRICE_PLAN_INVALID');}
+  if(plan.buy_ready===true)issue('NON_ACTIONABLE_PROMOTED_TO_BUY',card);
  }
  const plannedCards=cards.filter(c=>object(c)&&['WATCH','WAIT'].includes(c.status));
  for(const card of plannedCards)if(!planByKey.has(key(card)))issue('VERIFIED_PRICE_PLAN_MISSING',card);

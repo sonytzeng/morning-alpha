@@ -9,6 +9,8 @@ import CompletedResearch from './CompletedResearch';
 import {parseCompletedResearch,type CompletedResearch as CompletedData} from '@/features/vnext/completedResearch';
 import {parseDailyAiMember,type DailyAiMemberResearch as DailyAiData} from '@/features/vnext/dailyAiMember';
 import {DailyAiMemberDeltaError,dailyAiMemberKnownArgs,eligibleDailyAiMemberCache,parseDailyAiMemberDelta,type DailyAiMemberCache,type DailyAiMemberReadScope} from '@/features/vnext/dailyAiMemberDelta';
+import {DailyAiPricePlanReadError,eligibleDailyAiPricePlanCache,readDailyAiMemberPricePlans} from '@/features/vnext/dailyAiPricePlanService';
+import type {DailyAiMemberPricePlans} from '@/features/vnext/dailyAiPricePlan';
 import DailyAiMemberResearch,{type DailyAiMemberViewState} from './DailyAiMemberResearch';
 import type {Horizon} from '@/features/vnext/contracts';
 import './vnext.css';
@@ -24,12 +26,14 @@ export default function MemberPage({account=false}:{account?:boolean}){
  const [dailyView,setDailyView]=useState<DailyViewMemory|null>(null),dailyScope=useRef<DailyViewScope|null>(null);
  const memberViewScope=useRef<{identity:string;tier:DailyAiData['tier'];requestDate:string}|null>(null);
  const [state,setState]=useState<{identity:string;generation:number;readEpoch:number;requestDate:string;data?:MemberResearch;completed?:CompletedData|null;completedError?:boolean;dailyAi?:DailyAiData;dailyAiError?:boolean;error?:boolean}|null>(null);
+ const [priceState,setPriceState]=useState<{scope:DailyAiMemberReadScope;editionId:string;data:DailyAiMemberPricePlans|null;error:boolean}|null>(null);
  const renderedState=useRef(state);renderedState.current=state;
  const current=useRef(access);current.current=access;
  const retryRef=useRef(retry);retryRef.current=retry;
  const mounted=useRef(false),readEpoch=useRef(0),publicEpoch=useRef(0);
  const readController=useRef<AbortController|null>(null),watchController=useRef<AbortController|null>(null);
  const aiReadController=useRef<AbortController|null>(null);
+ const priceReadController=useRef<AbortController|null>(null);
  const activeRead=useRef<AbortController|null>(null);
  const aiCache=useRef<DailyAiMemberCache|null>(null);
  const accessRetry=useRef<{identity:string;requestDate:string;at:number}|null>(null);
@@ -39,8 +43,8 @@ export default function MemberPage({account=false}:{account?:boolean}){
  // Invalidation is synchronous: an older closure cannot revive data while the
  // entitlement hook is still waiting to render its next generation.
  const invalidate=useCallback(()=>{
-  readEpoch.current++;readController.current?.abort();aiReadController.current?.abort();watchController.current?.abort();watchController.current=null;activeRead.current=null;aiCache.current=null;
-  setState(null);setNotice('');setBusy(false);
+  readEpoch.current++;readController.current?.abort();aiReadController.current?.abort();priceReadController.current?.abort();watchController.current?.abort();watchController.current=null;activeRead.current=null;aiCache.current=null;
+  setState(null);setPriceState(null);setNotice('');setBusy(false);
  },[]);
  const requestRead=useCallback(()=>{
   if(!mounted.current||document.visibilityState==='hidden'||activeRead.current)return;
@@ -109,6 +113,7 @@ export default function MemberPage({account=false}:{account?:boolean}){
   const requestDate=memberTaipeiDate();
   if(access.kind!=='member'||access.signal.aborted||!requestDate||requestDate!==dateRef.current||document.visibilityState==='hidden'){invalidate();return;}
   const epoch=++readEpoch.current,controller=new AbortController();readController.current=controller;activeRead.current=controller;let live=true;
+  priceReadController.current?.abort();priceReadController.current=null;
   watchController.current?.abort();watchController.current=null;setBusy(false);setNotice('');
   const bind={identity:access.id,generation:access.generation,readEpoch:epoch,requestDate};
   const aiScope:DailyAiMemberReadScope={identity:access.id,generation:access.generation,signal:access.signal,tier:access.catalog.tier,requestDate};
@@ -188,6 +193,7 @@ export default function MemberPage({account=false}:{account?:boolean}){
     // A stale/malformed UNCHANGED response can never keep cards alive. Ask for
     // a full server projection once; another miss fails into bounded fallback.
     aiCache.current=null;
+    setPriceState(null);
     setState(s=>({...(s?.readEpoch===epoch?s:{}),...bind,data:undefined,completed:null,dailyAi:undefined}));
     return read(null);
    }
@@ -209,11 +215,27 @@ export default function MemberPage({account=false}:{account?:boolean}){
     }
     setState(s=>({...(s?.readEpoch===epoch?s:{}),...bind,data:undefined,completed:null,completedError:false,dailyAi,dailyAiError:false,error:false}));
    }
+   // Price plans are an independent optional projection. Research renders
+   // immediately; a slower or absent plan endpoint cannot trigger legacy reads.
+   if(dailyAi.edition&&dailyAi.tier!=='free'&&valid()){
+    const editionId=dailyAi.edition.id,prices=new AbortController();priceReadController.current=prices;
+    const abortPrices=()=>prices.abort();controller.signal.addEventListener('abort',abortPrices);
+    const priceValid=()=>valid()&&!prices.signal.aborted&&aiCache.current?.data.edition?.id===editionId;
+    setPriceState(previous=>previous?.data&&eligibleDailyAiPricePlanCache({scope:previous.scope,data:previous.data},aiScope,dailyAi)?previous:null);
+    void readDailyAiMemberPricePlans(dailyAi,{...aiScope,signal:prices.signal},(id,signal)=>supabase.rpc('get_daily_ai_member_price_plans_v1',{p_edition_id:id}).abortSignal(signal))
+     .then(plans=>{if(priceValid())setPriceState({scope:aiScope,editionId,data:plans,error:false});})
+     .catch(error=>{if(priceValid()){
+      if(error instanceof DailyAiPricePlanReadError&&error.code==='SCOPE'){entitlementChanged();return;}
+      setPriceState({scope:aiScope,editionId,data:null,error:true});
+     }})
+     .finally(()=>{controller.signal.removeEventListener('abort',abortPrices);if(priceReadController.current===prices)priceReadController.current=null;});
+   }else if(valid())setPriceState(null);
    if(!dailyAi.edition&&valid())await legacy();
   }catch(error){
    if(valid()){
     if(error instanceof DailyAiMemberDeltaError&&error.code==='SCOPE'||error&&typeof error==='object'&&'code' in error&&error.code==='42501'){entitlementChanged();return;}
     aiCache.current=null;
+    setPriceState(null);
     setState(s=>({...(s?.readEpoch===epoch?s:{}),...bind,data:undefined,completed:null,completedError:false,dailyAi:undefined,dailyAiError:true}));
     await legacy();
    }
@@ -230,6 +252,12 @@ export default function MemberPage({account=false}:{account?:boolean}){
   &&state.readEpoch===readEpoch.current&&state.requestDate===today&&today===dateRef.current;
  const data=matchingState?state.data:null;
  const dailyAi=matchingState?state?.dailyAi:undefined;
+ const currentPriceScope:DailyAiMemberReadScope|null=access.kind==='member'&&dailyAi?.edition?
+  {identity:access.id,generation:access.generation,signal:access.signal,tier:access.catalog.tier,requestDate:state!.requestDate}:null;
+ const pricePlans=currentPriceScope&&dailyAi&&priceState?.data&&eligibleDailyAiPricePlanCache({scope:priceState.scope,data:priceState.data},currentPriceScope,dailyAi)?priceState.data:null;
+ const pricePlansUnavailable=!!(currentPriceScope&&dailyAi?.edition&&priceState?.error&&priceState.editionId===dailyAi.edition.id
+  &&priceState.scope.identity===currentPriceScope.identity&&priceState.scope.generation===currentPriceScope.generation
+  &&priceState.scope.signal===currentPriceScope.signal&&priceState.scope.tier===currentPriceScope.tier&&priceState.scope.requestDate===currentPriceScope.requestDate);
  const visibleDailyScope:DailyViewScope|null=access.kind==='member'&&dailyAi?.edition?
   {identity:access.id,tier:dailyAi.tier,editionId:dailyAi.edition.id,requestDate:state!.requestDate}:null;
  const canChangeDailyView=()=>!!visibleDailyScope&&access.kind==='member'&&current.current.kind==='member'&&mounted.current
@@ -270,7 +298,7 @@ export default function MemberPage({account=false}:{account?:boolean}){
  };
  const denied=access.kind==='denied',failed=access.kind==='unavailable'||(matchingState&&state.error);
  return <div className="vnext vm"><a className="vnext-skip" href="#stock-observations">跳到股票觀察</a><MemberNavigation/>
- {denied?<PublicExperience market={publicMarket} loading={marketLoading}/>:!account&&matchingState&&dailyAi?.edition?<DailyAiMemberResearch key={access.kind==='member'?access.id:''} data={dailyAi} selectedHorizon={selectedHorizon} onHorizonChange={changeDailyHorizon}
+ {denied?<PublicExperience market={publicMarket} loading={marketLoading}/>:!account&&matchingState&&dailyAi?.edition?<DailyAiMemberResearch key={access.kind==='member'?access.id:''} data={dailyAi} pricePlans={pricePlans} pricePlansUnavailable={pricePlansUnavailable} priceSubjectUserId={currentPriceScope?.identity} selectedHorizon={selectedHorizon} onHorizonChange={changeDailyHorizon}
   viewState={sameDailyScope(dailyView,visibleDailyScope)?dailyView!.view:emptyDailyView()} onViewChange={changeDailyView}/>:data?account?<main className="vnext-content"><h1>會員中心</h1><MemberObservationEntry/><p>既有會員權益與股票學院不變。</p><a href="/academy">前往股票學院</a></main>:data.tier==='owner'&&state?.completed?<CompletedResearch key={access.kind==='member'?access.id:''} data={state.completed} selectedHorizon={selectedHorizon} onHorizonChange={changeLegacyHorizon}/>:<>{state?.dailyAiError&&<p className="vnext-content" role="alert">每日 AI 研究暫時無法讀取；下方顯示既有已核准內容。</p>}{data.tier==='owner'&&state?.completedError&&<p className="vnext-content" role="alert">本人收盤研究暫時無法讀取；下方是會員已核准內容，不代表本次分析沒有結果。</p>}<MemberExperience key={access.kind==='member'?access.id:''} data={data} market={publicMarket} onWatch={watch} busy={busy} notice={notice}/></>
  :<main className="vnext-content vnext-empty" role="status"><h1>{denied?'登入後，閱讀股票觀察':failed?'目前無法讀取股票觀察':'正在確認可閱讀的內容'}</h1><p>{denied?'免費會員可閱讀每日精選摘要；Premium 可查看完整已核准研究。研究不是正式推薦。':failed?'尚未取得資料，不代表今天沒有候選。請稍後再試。':'請稍候。'}</p>{denied?<a href="/login?next=%2Fstocks" className="vnext-primary">登入帳號</a>:failed?<button className="vnext-primary" onClick={()=>{invalidate();retry();setRevision(r=>r+1);}}>重新讀取</button>:null}</main>}
  </div>;

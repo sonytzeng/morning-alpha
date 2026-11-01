@@ -8,6 +8,8 @@ import ts from 'typescript';
 import * as member from '../src/features/vnext/member.ts';
 import {parseCompletedResearch} from '../src/features/vnext/completedResearch.ts';
 import * as dailyMember from '../src/features/vnext/dailyAiMember.ts';
+import * as pricePlans from '../src/features/vnext/dailyAiPricePlan.ts';
+import {snapshotHash} from '../src/features/vnext/contracts.ts';
 import {completedResponse} from './helpers/completedResearchFixture.mjs';
 import {buildPublicMarketReadModel} from '../src/lib/publicMarketReadModel.ts';
 import {publicMarketInput} from '../supabase/functions/_shared/public-market-projection.ts';
@@ -17,6 +19,9 @@ const compiled=ts.transpileModule(readFileSync(new URL('../'+file,import.meta.ur
  compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
 const deltaFile='src/features/vnext/dailyAiMemberDelta.ts';
 const compiledDelta=ts.transpileModule(readFileSync(new URL('../'+deltaFile,import.meta.url),'utf8'),{fileName:deltaFile,
+ compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
+const priceFile='src/features/vnext/dailyAiPricePlanService.ts';
+const compiledPrices=ts.transpileModule(readFileSync(new URL('../'+priceFile,import.meta.url),'utf8'),{fileName:priceFile,
  compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const BEFORE=Date.parse('2026-10-18T15:59:59.990Z'),AFTER=BEFORE+20;
 const TODAY='2026-10-18',TOMORROW='2026-10-19';
@@ -57,6 +62,10 @@ function harness({now=BEFORE,initialAccess=access(),account=false}={}){
  vm.runInNewContext(compiledDelta,{exports:deltaExports,Date:ClockDate,
   require(name){if(name==='./dailyAiMember.ts')return dailyMember;throw Error('UNAPPROVED_MEMBER_DELTA_IMPORT:'+name);}}, {filename:deltaFile});
  const schedule=(fn,ms,interval=false)=>{const id=++timerId;timers.set(id,{fn,due:clock+ms,ms,interval});return id;};
+ const priceExports={};
+ vm.runInNewContext(compiledPrices,{exports:priceExports,Date:ClockDate,AbortController,structuredClone,
+  setTimeout:(f,ms)=>schedule(f,ms),clearTimeout:id=>timers.delete(id),
+  require(name){if(name==='./dailyAiPricePlan.ts')return {...pricePlans,parseDailyAiMemberPricePlans:(...args)=>{const pending=pricePlans.parseDailyAiMemberPricePlans(...args);parses.push(pending);return pending;}};throw Error('UNAPPROVED_PRICE_SERVICE_IMPORT:'+name);}}, {filename:priceFile});
  vm.runInNewContext(compiled,{exports,Date:ClockDate,Intl,AbortController,
   setTimeout:(f,ms)=>schedule(f,ms),clearTimeout:id=>timers.delete(id),setInterval:(f,ms)=>schedule(f,ms,true),clearInterval:id=>timers.delete(id),
   window:{addEventListener:(n,f)=>listen('window',n,f),removeEventListener:(n,f)=>remove('window',n,f)},document,
@@ -69,6 +78,7 @@ function harness({now=BEFORE,initialAccess=access(),account=false}={}){
    if(name==='@/features/vnext/completedResearch')return {parseCompletedResearch:value=>{const pending=parseCompletedResearch(value,clock);parses.push(pending);return pending;}};
    if(name==='@/features/vnext/dailyAiMember')return {...dailyMember,parseDailyAiMember:(value,date)=>dailyMember.parseDailyAiMember(value,date,clock)};
    if(name==='@/features/vnext/dailyAiMemberDelta')return deltaExports;
+   if(name==='@/features/vnext/dailyAiPricePlanService')return priceExports;
    if(name==='./MemberNavigation')return {default:'MemberNavigation',MemberObservationEntry:'MemberObservationEntry'};
    if(name==='./MemberExperience')return {default:'MemberExperience'};
    if(name==='./PublicExperience')return {default:'PublicExperience'};
@@ -101,6 +111,10 @@ function harness({now=BEFORE,initialAccess=access(),account=false}={}){
 }
 
 const AI='get_daily_ai_member_research_delta_v1',OLD_AI='get_daily_ai_member_research_v1';
+const PRICE='get_daily_ai_member_price_plans_v1';
+// Optional price calls keep their own observable transport entries. Existing
+// continuity assertions below still measure only the research/fallback chain.
+const researchCalls=h=>h.rpc.filter(call=>call.name!==PRICE);
 const fullDelta=(payload,user='A')=>({schema:'VNEXT_AI_MEMBER_DELTA_V1',mode:'FULL',user_id:user,tier:payload.tier,business_date:payload.business_date,research_only:true,edition:payload.edition,payload});
 const unchangedDelta=(payload=aiEdition(),user='A')=>({schema:'VNEXT_AI_MEMBER_DELTA_V1',mode:'UNCHANGED',user_id:user,tier:payload.tier,business_date:payload.business_date,research_only:true,edition:payload.edition});
 const noKnown={p_known_edition_id:null,p_known_tier:null};
@@ -109,6 +123,16 @@ const noEdition=(tier='premium',date=TODAY)=>({schema:'VNEXT_AI_MEMBER_EDITION_V
 const aiEdition=(tier='premium')=>({schema:'VNEXT_AI_MEMBER_EDITION_V1',tier,business_date:'2026-10-30',research_only:true,
  edition:{id:'a'.repeat(64),edition_date:'2026-10-30',data_through:'2026-10-30',evidence_cutoff:'2026-10-30T06:00:00Z',prepared_at:'2026-10-30T06:05:00Z',expires_at:'2026-10-31T00:00:00Z',mode:'AS_OF_RESEARCH',forecast:false,performance_available:false},
  cards:Array.from({length:tier==='free'?3:72},(_,i)=>['SHORT','MEDIUM','LONG'].map(horizon=>({symbol:String(1000+i),company:'測試公司',horizon,status:'WAIT',reason:{text:'測試判斷',evidence_ids:['E1']},confirmation:'測試確認',invalidation:'測試失效',gaps:[],classification:'INFERENCE',...(tier==='free'?{}:{counter_evidence:[],sources:[{id:'E1',source:'https://www.twse.com.tw/test',kind:'NEWS',published_at:'2026-10-30T05:00:00Z',available_at:'2026-10-30T05:00:00Z',time_basis:'PUBLISHED',first_seen_at:null,as_of:null,evidence_hash:null}]})}))).flat()});
+const priceUser='00000000-0000-0000-0000-000000000001';
+async function priceFixture(editionId='a'.repeat(64)){
+ const research=aiEdition();research.edition.id=editionId;research.cards[0].sources[0].kind='PRICE';
+ const body={schema:'DAILY_AI_PRICE_PLAN_V1',edition_id:editionId,symbol:research.cards[0].symbol,horizon:'SHORT',status:'VERIFIED',currency:'TWD',
+  method:'SYNTHETIC_LIFECYCLE_TEST',basis:'合成價格計畫，僅驗證身份與版本生命週期',entry_range:[100,105],wait_above:105,
+  stop_kind:'PRICE',stop:95,stop_evidence_ids:['E1'],invalidation:'合成條件失效時停止沿用',evidence_ids:['E1'],
+  as_of:'2026-10-30T06:05:00Z',expires_at:'2026-10-30T20:00:00Z',buy_ready:false};
+ const hash=await snapshotHash(body),plan={...body,plan_hash:hash,review:{status:'PASS',plan_hash:hash,reviewed_at:'2026-10-30T06:06:00Z',document_hash:'b'.repeat(64)}};
+ return {research,payload:{schema:'VNEXT_AI_MEMBER_PRICE_PLANS_V1',edition_id:editionId,tier:'premium',subject_user_id:priceUser,research_only:true,plans:[plan],source_sets:[{symbol:research.cards[0].symbol,sources:research.cards[0].sources}]}};
+}
 async function absentAi(h,tier='premium',date=TODAY){await h.resolve(h.call(AI),noEdition(tier,date));}
 async function legacyHarness(options={}){
  const h=harness(options),tier=options.initialAccess?.catalog?.tier??'premium',date=member.memberTaipeiDate(options.now??BEFORE);
@@ -126,7 +150,7 @@ test('member Taipei date and optional payload binding reject impossible or diffe
 test('AI empty edition starts one approved legacy read and public transport remains anonymous',async()=>{
  const h=await legacyHarness(),legacy=h.call('get_vnext_member_v1');await h.resolve(legacy,research());
  assert.equal(h.member.data.business_date,TODAY);assert.equal(legacy.args,undefined);
- assert.deepEqual(h.rpc.map(r=>r.name),[AI,'get_vnext_member_v1']);
+ assert.deepEqual(researchCalls(h).map(r=>r.name),[AI,'get_vnext_member_v1']);
  assert.deepEqual(JSON.parse(JSON.stringify(h.publicCalls[0].args)),{headers:{Authorization:''},body:{report_date:null}});h.unmount();
 });
 test('access signal abort fences a pending private response before the Auth hook rerenders',async()=>{
@@ -136,8 +160,8 @@ test('access signal abort fences a pending private response before the Auth hook
  await h.resolve(old,research());assert.equal(h.member,undefined);h.unmount();
 });
 test('hidden clear rejects a stale watch handler without dispatching another RPC',async()=>{
- const h=await legacyHarness();await h.resolve(h.call('get_vnext_member_v1'),research());const watch=h.member.onWatch,count=h.rpc.length;
- h.visibility('hidden');const pending=watch('SYNTHETIC',true),dispatched=h.rpc.length;
+ const h=await legacyHarness();await h.resolve(h.call('get_vnext_member_v1'),research());const watch=h.member.onWatch,count=researchCalls(h).length;
+ h.visibility('hidden');const pending=watch('SYNTHETIC',true),dispatched=researchCalls(h).length;
  if(dispatched>count)await h.resolve(h.rpc.at(-1),{});await pending;
  assert.equal(dispatched,count);assert.equal(h.member,undefined);h.unmount();
 });
@@ -213,10 +237,10 @@ test('failed Owner document retains the approved fallback and does not invent an
 });
 test('all member tiers with an approved AI edition never request invisible legacy, history or Owner data',async()=>{
  for(const tier of ['free','premium','owner']){
-  const h=harness({now:STABLE_NOW,initialAccess:access('A',1,tier)});assert.deepEqual(h.rpc.map(r=>r.name),[AI]);
+  const h=harness({now:STABLE_NOW,initialAccess:access('A',1,tier)});assert.deepEqual(researchCalls(h).map(r=>r.name),[AI]);
   const pending=h.call(AI);assert.deepEqual(JSON.parse(JSON.stringify(pending.args)),noKnown);await h.resolve(pending,aiEdition(tier));
   assert.equal(h.dailyAi.data.tier,tier);assert.equal(h.dailyAi.data.cards.length,tier==='free'?9:216);assert.equal(h.member,undefined);
-  assert.deepEqual(h.rpc.map(r=>r.name),[AI]);h.unmount();assert.equal(h.timers,0);
+  assert.deepEqual(researchCalls(h).map(r=>r.name),[AI]);h.unmount();assert.equal(h.timers,0);
  }
 });
 test('AI timeout starts fallback without waiting for a transport to honor abort and late AI stays rejected',async()=>{
@@ -231,9 +255,9 @@ test('late UNCHANGED after the AI deadline cannot clear a fresh legacy grant or 
   if(priorEdition){await h.resolve(h.call(AI),aiEdition());h.advance(30000);}
   const late=h.call(AI);h.advance(8000);await settle();h.render();assert(late.signal.aborted);
   const legacy=h.call('get_vnext_member_v1');assert(legacy);await h.resolve(legacy,research('2026-10-30'));assert(h.member);
-  const count=h.rpc.length,unchanged=unchangedDelta();unchanged.edition={...unchanged.edition,prepared_at:'2026-10-30T06:06:00Z'};
+  const count=researchCalls(h).length,unchanged=unchangedDelta();unchanged.edition={...unchanged.edition,prepared_at:'2026-10-30T06:06:00Z'};
   await h.resolve(late,unchanged);assert(h.member,'A timed-out AI result cannot withdraw the newer legacy grant');
-  assert.equal(h.member.data.tier,'premium');assert.equal(h.dailyAi,undefined);assert.equal(h.rpc.length,count,'No cache-miss retry may dispatch after the AI deadline');
+  assert.equal(h.member.data.tier,'premium');assert.equal(h.dailyAi,undefined);assert.equal(researchCalls(h).length,count,'No cache-miss retry may dispatch after the AI deadline');
   h.unmount();assert.equal(h.timers,0);
  }
 });
@@ -288,16 +312,16 @@ test('thirty-second same-scope recheck retains valid AI cards and controls while
 });
 test('focus and visible events coalesce one refresh and never restart an in-flight same-scope read',async()=>{
  const h=harness({now:STABLE_NOW}),first=h.call(AI);h.focus();h.visibility('visible');h.focus();h.advance(100);
- assert.equal(h.rpc.length,1);assert.equal(first.signal.aborted,false);assert.equal(h.retries,0);
- await h.resolve(first,aiEdition());h.focus();h.visibility('visible');h.focus();h.advance(99);assert.equal(h.rpc.length,1);
- h.advance(1);assert.equal(h.rpc.length,2);assert.equal(h.dailyAi.data.edition.id,'a'.repeat(64));
- h.focus();h.visibility('visible');h.advance(100);assert.equal(h.rpc.length,2);assert.equal(h.call(AI).signal.aborted,false);h.unmount();
+ assert.equal(researchCalls(h).length,1);assert.equal(first.signal.aborted,false);assert.equal(h.retries,0);
+ await h.resolve(first,aiEdition());h.focus();h.visibility('visible');h.focus();h.advance(99);assert.equal(researchCalls(h).length,1);
+ h.advance(1);assert.equal(researchCalls(h).length,2);assert.equal(h.dailyAi.data.edition.id,'a'.repeat(64));
+ h.focus();h.visibility('visible');h.advance(100);assert.equal(researchCalls(h).length,2);assert.equal(h.call(AI).signal.aborted,false);h.unmount();
 });
 test('hidden tabs clear private cards, stop polling, and return through one coalesced current read',async()=>{
  const h=harness({now:STABLE_NOW});await h.resolve(h.call(AI),aiEdition());h.dailyAi.onHorizonChange('LONG');h.dailyAi.onViewChange(p=>({...p,query:'1000',limit:72}));const old=h.dailyAi;
- h.visibility('hidden');assert.equal(h.dailyAi,undefined);const count=h.rpc.length;h.advance(120000);assert.equal(h.rpc.length,count);assert.equal(h.retries,0);
+ h.visibility('hidden');assert.equal(h.dailyAi,undefined);const count=researchCalls(h).length;h.advance(120000);assert.equal(researchCalls(h).length,count);assert.equal(h.retries,0);
  old.onViewChange(p=>({...p,query:'HIDDEN_OLD_CALLBACK'}));old.onHorizonChange('SHORT');h.visibility('visible');h.focus();h.advance(100);
- assert.equal(h.rpc.length,count+1);assert.equal(h.dailyAi,undefined);await h.resolve(h.call(AI),aiEdition());
+ assert.equal(researchCalls(h).length,count+1);assert.equal(h.dailyAi,undefined);await h.resolve(h.call(AI),aiEdition());
  assert.equal(h.dailyAi.selectedHorizon,'LONG');assert.equal(h.dailyAi.viewState.query,'1000');h.unmount();assert.equal(h.timers,0);
 });
 test('identity A to unresolved B to A never restores first-A controls or accepts obsolete callbacks',async()=>{
@@ -351,7 +375,7 @@ test('Taipei request date resets controls even if the returned edition ID remain
  assert(!/\b(?:localStorage|sessionStorage)\b/.test(source),'private continuity preferences must remain in memory');
 });
 test('account compatibility path remains legacy-only and never downloads the AI edition',async()=>{
- const h=harness({account:true});assert.deepEqual(h.rpc.map(r=>r.name),['get_vnext_member_v1']);
+ const h=harness({account:true});assert.deepEqual(researchCalls(h).map(r=>r.name),['get_vnext_member_v1']);
  await h.resolve(h.call('get_vnext_member_v1'),research());assert(!h.call(AI));h.unmount();assert.equal(h.timers,0);
 });
 
@@ -376,7 +400,7 @@ test('delta UNCHANGED uses only exact same-scope RAM and keeps the current verif
   await h.resolve(h.call(AI),aiEdition(tier));const previous=h.dailyAi.data;h.dailyAi.onViewChange(p=>({...p,query:'1000',limit:72}));h.dailyAi.onHorizonChange('LONG');
   h.advance(30000);const read=h.call(AI);assert.deepEqual(JSON.parse(JSON.stringify(read.args)),{p_known_edition_id:'a'.repeat(64),p_known_tier:tier});
   await h.resolve(read,unchangedDelta(aiEdition(tier)));assert.equal(h.dailyAi.data,previous);assert.equal(h.dailyAi.selectedHorizon,'LONG');assert.equal(h.dailyAi.viewState.query,'1000');
-  assert.deepEqual(h.rpc.map(r=>r.name),[AI,AI]);h.unmount();
+  assert.deepEqual(researchCalls(h).map(r=>r.name),[AI,AI]);h.unmount();
  }
 });
 test('delta first-load UNCHANGED without RAM clears and requests one FULL read with known=null',async()=>{
@@ -410,7 +434,7 @@ test('callbacks captured during a pending recheck cannot revive after its cache 
 test('a second unusable UNCHANGED falls back once and cannot form a cache-miss loop',async()=>{
  const h=harness({now:STABLE_NOW});await h.resolve(h.call(AI),unchangedDelta());const second=h.call(AI);await h.resolve(second,unchangedDelta());
  assert.equal(h.rpc.filter(r=>r.name===AI).length,2);assert.equal(h.rpc.filter(r=>r.name==='get_vnext_member_v1').length,1);assert.equal(h.dailyAi,undefined);
- await h.resolve(h.call('get_vnext_member_v1'),research('2026-10-30'));assert(h.member);assert.equal(h.rpc.length,3);h.unmount();
+ await h.resolve(h.call('get_vnext_member_v1'),research('2026-10-30'));assert(h.member);assert.equal(researchCalls(h).length,3);h.unmount();
 });
 test('hard identity, Auth generation, signal, tier and hidden boundaries never send an earlier RAM edition hint',async()=>{
  for(const boundary of ['identity','generation','signal','tier','hidden']){
@@ -434,11 +458,11 @@ test('wrong user, current tier or denial cannot enter cache-miss or legacy fallb
 test('missing delta RPC uses the unchanged original reader once and retains server payload validation',async()=>{
  for(const code of ['42883','PGRST202']){
   const h=harness({now:STABLE_NOW});await h.resolve(h.call(AI),null,{code,message:'Could not find function public.get_daily_ai_member_research_delta_v1(p_known_edition_id, p_known_tier)'});
-  const old=h.call(OLD_AI);assert(old);assert.equal(old.args,undefined);assert.deepEqual(h.rpc.map(r=>r.name),[AI,OLD_AI]);
+  const old=h.call(OLD_AI);assert(old);assert.equal(old.args,undefined);assert.deepEqual(researchCalls(h).map(r=>r.name),[AI,OLD_AI]);
   await h.resolve(old,aiEdition());assert.equal(h.dailyAi.data.cards.length,216);assert(!h.call('get_vnext_member_v1'));h.unmount();
  }
  const h=harness({now:STABLE_NOW});await h.resolve(h.call(AI),null,{code:'PGRST202',message:'Could not find public.get_daily_ai_member_research_delta_v1'});await h.resolve(h.call(OLD_AI),null,{code:'42883'});
- assert.deepEqual(h.rpc.map(r=>r.name),[AI,OLD_AI,'get_vnext_member_v1']);assert.equal(h.dailyAi,undefined);h.unmount();
+ assert.deepEqual(researchCalls(h).map(r=>r.name),[AI,OLD_AI,'get_vnext_member_v1']);assert.equal(h.dailyAi,undefined);h.unmount();
 });
 test('Free history and Owner completed authorization denial clears raw data and requires fresh access',async()=>{
  for(const tier of ['free','owner']){
@@ -464,4 +488,55 @@ test('repeated same-scope entitlement mismatch clears every response but throttl
  h.setAccess(access('A',2));await h.resolve(h.call(AI),aiEdition('owner'));assert.equal(h.dailyAi,undefined);assert.equal(h.member,undefined);assert.equal(h.retries,1);
  const retry=find(h.render(),'button').find(n=>n.props.children==='重新讀取');assert(retry,'A throttled mismatch must offer explicit recovery');retry.props.onClick();h.render();assert.equal(h.retries,2,'Manual recovery must not be throttled');
  h.setAccess(access('B',3));await h.resolve(h.call(AI),aiEdition('owner'));assert.equal(h.retries,3,'A different verified identity has a separate retry scope');h.unmount();
+});
+
+test('optional price read starts after visible research and sends only the edition selector',async()=>{
+ const f=await priceFixture(),h=harness({now:STABLE_NOW,initialAccess:access(priceUser)});
+ await h.resolve(h.call(AI),f.research);assert(h.dailyAi,'research must not wait for plans');assert.equal(h.dailyAi.pricePlans,null);
+ const call=h.call(PRICE);assert(call);assert.deepEqual(JSON.parse(JSON.stringify(call.args)),{p_edition_id:f.research.edition.id});assert(!h.call('get_vnext_member_v1'));
+ await h.resolve(call,f.payload);assert.equal(h.dailyAi.pricePlans.plans.length,1);assert.equal(h.dailyAi.pricePlans.plans[0].buy_ready,false);
+ assert.equal(h.dailyAi.priceSubjectUserId,priceUser);h.unmount();assert.equal(h.timers,0);
+});
+test('missing price RPC and network failure keep current research without legacy fallback or invented plans',async()=>{
+ for(const failure of ['missing','network']){
+  const f=await priceFixture(),h=harness({now:STABLE_NOW,initialAccess:access(priceUser)});await h.resolve(h.call(AI),f.research);
+  const research=h.dailyAi.data,call=h.call(PRICE);
+  if(failure==='missing')await h.resolve(call,null,{code:'PGRST202',message:'Could not find get_daily_ai_member_price_plans_v1'});else await h.reject(call);
+  assert.equal(h.dailyAi.data,research);assert.equal(h.dailyAi.pricePlans,null);assert.equal(h.dailyAi.pricePlansUnavailable,true);
+  assert(!h.call('get_vnext_member_v1'));assert.equal(h.rpc.filter(c=>c.name===PRICE).length,1);h.unmount();
+ }
+});
+test('price deadline aborts only the add-on and a late success cannot restore prices',async()=>{
+ const f=await priceFixture(),h=harness({now:STABLE_NOW,initialAccess:access(priceUser)});await h.resolve(h.call(AI),f.research);
+ const call=h.call(PRICE),research=h.dailyAi.data;h.advance(8000);await settle();h.render();
+ assert(call.signal.aborted);assert.equal(h.dailyAi.data,research);assert.equal(h.dailyAi.pricePlansUnavailable,true);
+ await h.resolve(call,f.payload);assert.equal(h.dailyAi.pricePlans,null);assert(!h.call('get_vnext_member_v1'));h.unmount();
+});
+test('price responses from hidden, changed generation, changed identity or a prior Taipei date stay fenced',async()=>{
+ for(const boundary of ['hidden','generation','identity','date']){
+  const f=await priceFixture(),h=harness({now:STABLE_NOW,initialAccess:access(priceUser)});await h.resolve(h.call(AI),f.research);const old=h.call(PRICE);
+  if(boundary==='hidden')h.visibility('hidden');
+  if(boundary==='generation')h.setAccess(access(priceUser,2));
+  if(boundary==='identity')h.setAccess(access('00000000-0000-0000-0000-000000000002',2));
+  if(boundary==='date')h.setClock(Date.parse('2026-10-31T00:00:00Z'));
+  await h.resolve(old,f.payload);assert.equal(h.dailyAi,undefined,boundary);if(boundary!=='date')assert(old.signal.aborted,boundary);
+  h.unmount();assert.equal(h.timers,0);
+ }
+});
+test('a replacement edition rejects earlier pending prices and accepts only its own independently verified plans',async()=>{
+ const first=await priceFixture(),second=await priceFixture('c'.repeat(64)),h=harness({now:STABLE_NOW,initialAccess:access(priceUser)});
+ await h.resolve(h.call(AI),first.research);const old=h.call(PRICE);h.advance(30000);await h.resolve(h.call(AI),second.research);
+ const fresh=h.call(PRICE);assert.notEqual(fresh,old);await h.resolve(old,first.payload);assert.equal(h.dailyAi.data.edition.id,second.research.edition.id);assert.equal(h.dailyAi.pricePlans,null);
+ await h.resolve(fresh,second.payload);assert.equal(h.dailyAi.pricePlans.edition_id,second.research.edition.id);h.unmount();
+});
+test('same-edition rechecks retain verified prices until the new price result, then fail only the price projection',async()=>{
+ const f=await priceFixture(),h=harness({now:STABLE_NOW,initialAccess:access(priceUser)});await h.resolve(h.call(AI),f.research);await h.resolve(h.call(PRICE),f.payload);
+ const plans=h.dailyAi.pricePlans,research=h.dailyAi.data;h.dailyAi.onHorizonChange('LONG');h.advance(30000);assert.equal(h.dailyAi.pricePlans,plans);
+ await h.resolve(h.call(AI),unchangedDelta(f.research,priceUser));assert.equal(h.dailyAi.data,research);assert.equal(h.dailyAi.pricePlans,plans);
+ await h.reject(h.call(PRICE));assert.equal(h.dailyAi.data,research);assert.equal(h.dailyAi.selectedHorizon,'LONG');assert.equal(h.dailyAi.pricePlans,null);assert.equal(h.dailyAi.pricePlansUnavailable,true);h.unmount();
+});
+test('price permission denial clears private grants, and Free never requests Premium plan data',async()=>{
+ const f=await priceFixture(),h=harness({now:STABLE_NOW,initialAccess:access(priceUser)});await h.resolve(h.call(AI),f.research);
+ await h.resolve(h.call(PRICE),null,{code:'42501',message:'REVOKED_DURING_PRICE_READ'});assert.equal(h.dailyAi,undefined);assert.equal(h.retries,1);assert(!h.call('get_vnext_member_v1'));h.unmount();
+ const free=harness({now:STABLE_NOW,initialAccess:access(priceUser,1,'free')});await free.resolve(free.call(AI),aiEdition('free'));assert(free.dailyAi);assert(!free.call(PRICE));assert.equal(free.dailyAi.pricePlans,null);free.unmount();
 });

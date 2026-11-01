@@ -5,6 +5,7 @@ import {HORIZONS,type Horizon} from '@/features/vnext/contracts';
 import {DAILY_AI_MEMBER_STATES} from '@/features/vnext/dailyAiMember';
 import {dailyAiGapLabel} from '@/features/vnext/dailyAiCopy';
 import {dailyAiOwnerCanApprove,dailyAiOwnerCanRevoke,dailyAiOwnerReviewRequest,parseDailyAiOwner,parseDailyAiOwnerReviewResult,type DailyAiOwnerAction,type DailyAiOwnerAudience,type DailyAiOwnerResearch} from '@/features/vnext/dailyAiOwner';
+import DailyAiOwnerPricePlans from './DailyAiOwnerPricePlans';
 import './daily-ai-member.css';
 
 const date=(value:string)=>new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value));
@@ -70,5 +71,5 @@ export default function OwnerAiPublication({access}:{access:AcademyAccess}){
   finally{if(current(candidate)){pending.current=false;setBusy(false);setRevision(value=>value+1);}}
  };
  if(!owner)return null;
- return <section className="vnext-section" aria-labelledby="owner-daily-ai-heading"><h2 id="owner-daily-ai-heading">每日 AI 股票研究 · 會員發布</h2><button disabled={busy} onClick={()=>{setNotice('');setRevision(value=>value+1);}}>重新讀取每日 AI 審查</button><p role="status">{data?notice:''}</p>{error?<p role="status">目前無法取得完整版本或審查結果，無法核准。</p>:!data?<p role="status">正在讀取完整研究與實際發布條件。</p>:<OwnerAiEditionReview key={data.edition?.id??'empty'} data={data} busy={busy} onReview={submit}/>}</section>;
+ return <section className="vnext-section" aria-labelledby="owner-daily-ai-heading"><h2 id="owner-daily-ai-heading">每日 AI 股票研究 · 會員發布</h2><button disabled={busy} onClick={()=>{setNotice('');setRevision(value=>value+1);}}>重新讀取每日 AI 審查</button><p role="status">{data?notice:''}</p>{error?<p role="status">目前無法取得完整版本或審查結果，無法核准。</p>:!data?<p role="status">正在讀取完整研究與實際發布條件。</p>:<><OwnerAiEditionReview key={data.edition?.id??'empty'} data={data} busy={busy} onReview={submit}/><DailyAiOwnerPricePlans access={access} editionId={data.edition?.id??null}/></>}</section>;
 }

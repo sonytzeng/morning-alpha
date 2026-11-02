@@ -37,7 +37,7 @@ const model=buildPublicMarketReadModel(publicMarketInput(retained.public_respons
  {batches:retained.tables.market_checkpoint_batches,proofs:retained.atomic_proofs.map(x=>x.proof)},'2026-10-02T12:30:00Z'));
 const publicPayload={...retained.public_response,payload:{...retained.public_response.payload,public_market_read_model:model}};
 
-function harness({now=BEFORE,initialAccess=access(),account=false}={}){
+function harness({now=BEFORE,initialAccess=access(),account=false,ownerReview=false}={}){
  let clock=now,currentAccess=initialAccess,cursor=0,tree,dirty=false,unmounted=false,timerId=0,retries=0;
  const slots=[],effects=[],queued=[],parses=[],timers=new Map(),listeners=new Map(),rpc=[],publicCalls=[];
  const listen=(type,name,fn)=>{const key=type+':'+name;if(!listeners.has(key))listeners.set(key,new Set());listeners.get(key).add(fn);};
@@ -87,7 +87,7 @@ function harness({now=BEFORE,initialAccess=access(),account=false}={}){
    if(name.endsWith('.css'))return {};
    throw Error('UNAPPROVED_MEMBER_COMPONENT_IMPORT:'+name);
   }},{filename:file});
- function render(){let count=0;do{assert(++count<30,'bounded React lifecycle');dirty=false;cursor=0;tree=exports.default({account});while(queued.length)queued.shift()();}while(dirty);return tree;}
+ function render(){let count=0;do{assert(++count<30,'bounded React lifecycle');dirty=false;cursor=0;tree=exports.default({account,ownerReview});while(queued.length)queued.shift()();}while(dirty);return tree;}
  render();
  return {rpc,publicCalls,render,
   call(name){return rpc.findLast(r=>r.name===name);},
@@ -539,4 +539,26 @@ test('price permission denial clears private grants, and Free never requests Pre
  const f=await priceFixture(),h=harness({now:STABLE_NOW,initialAccess:access(priceUser)});await h.resolve(h.call(AI),f.research);
  await h.resolve(h.call(PRICE),null,{code:'42501',message:'REVOKED_DURING_PRICE_READ'});assert.equal(h.dailyAi,undefined);assert.equal(h.retries,1);assert(!h.call('get_vnext_member_v1'));h.unmount();
  const free=harness({now:STABLE_NOW,initialAccess:access(priceUser,1,'free')});await free.resolve(free.call(AI),aiEdition('free'));assert(free.dailyAi);assert(!free.call(PRICE));assert.equal(free.dailyAi.pricePlans,null);free.unmount();
+});
+
+
+test('dedicated Owner review reads current research without old member or AI editions',async()=>{
+ const h=harness({now:STABLE_NOW,initialAccess:access('A',1,'owner'),ownerReview:true});
+ assert.deepEqual(h.rpc.map(r=>r.name),['get_owner_completed_research_v1']);
+ await h.resolve(h.call('get_owner_completed_research_v1'),await completedResponse());
+ assert(h.completed);assert.equal(h.dailyAi,undefined);assert.equal(h.member,undefined);
+ h.completed.onHorizonChange('LONG');assert.equal(h.completed.selectedHorizon,'LONG');
+ h.setAccess(access('B',2,'premium'));assert.equal(h.completed,undefined);
+ assert.equal(h.rpc.length,1);h.unmount();
+});
+test('Owner review empty, denied, deadline and late responses never expose older member content',async()=>{
+ for(const failure of ['empty','denied','deadline']){
+  const h=harness({now:STABLE_NOW,initialAccess:access('A',1,'owner'),ownerReview:true});
+  const call=h.call('get_owner_completed_research_v1');
+  if(failure==='empty')await h.resolve(call,{schema:'VNEXT_COMPLETED_OWNER_V1',owner_only:true,snapshot_text:null,snapshot_hash:null});
+  if(failure==='denied')await h.resolve(call,null,{code:'42501'});
+  if(failure==='deadline'){h.advance(8000);await settle();h.render();assert(call.signal.aborted);await h.resolve(call,await completedResponse());}
+  assert.equal(h.completed,undefined);assert.equal(h.member,undefined);assert.equal(h.dailyAi,undefined);
+  assert.equal(h.rpc.length,1);h.unmount();
+ }
 });

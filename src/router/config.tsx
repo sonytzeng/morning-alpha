@@ -38,6 +38,7 @@ const StockObservations = lazy(() => import("../pages/vnext/MemberPage"));
 const OwnerPublication = lazy(() => import("../pages/vnext/OwnerPublication"));
 
 const routes: RouteObject[] = [
+  {path: "/stocks/review", element: <DeferredRoute><StockObservations ownerReview /></DeferredRoute>},
   {
     path: "/vnext/publication",
     element: <DeferredRoute><OwnerPublication /></DeferredRoute>,

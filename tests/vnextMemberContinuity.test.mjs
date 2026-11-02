@@ -7,6 +7,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import * as member from '../src/features/vnext/member.ts';
 import {parseCompletedResearch} from '../src/features/vnext/completedResearch.ts';
+import {parseOwnerDailyResearch} from '../src/features/vnext/ownerDailyResearch.ts';
 import * as dailyMember from '../src/features/vnext/dailyAiMember.ts';
 import * as pricePlans from '../src/features/vnext/dailyAiPricePlan.ts';
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
@@ -37,7 +38,7 @@ const model=buildPublicMarketReadModel(publicMarketInput(retained.public_respons
  {batches:retained.tables.market_checkpoint_batches,proofs:retained.atomic_proofs.map(x=>x.proof)},'2026-10-02T12:30:00Z'));
 const publicPayload={...retained.public_response,payload:{...retained.public_response.payload,public_market_read_model:model}};
 
-function harness({now=BEFORE,initialAccess=access(),account=false,ownerReview=false}={}){
+function harness({now=BEFORE,initialAccess=access(),account=false,ownerReview=false,ownerDailyParser=parseOwnerDailyResearch}={}){
  let clock=now,currentAccess=initialAccess,cursor=0,tree,dirty=false,unmounted=false,timerId=0,retries=0;
  const slots=[],effects=[],queued=[],parses=[],timers=new Map(),listeners=new Map(),rpc=[],publicCalls=[];
  const listen=(type,name,fn)=>{const key=type+':'+name;if(!listeners.has(key))listeners.set(key,new Set());listeners.get(key).add(fn);};
@@ -76,6 +77,7 @@ function harness({now=BEFORE,initialAccess=access(),account=false,ownerReview=fa
    if(name==='@/pages/academy/useAcademyAccess')return {useAcademyAccess:()=>({access:currentAccess,retry})};
    if(name==='@/features/vnext/member')return {...member,memberTaipeiDate:now=>member.memberTaipeiDate(now??clock)};
    if(name==='@/features/vnext/completedResearch')return {parseCompletedResearch:value=>{const pending=parseCompletedResearch(value,clock);parses.push(pending);return pending;}};
+   if(name==='@/features/vnext/ownerDailyResearch')return {parseOwnerDailyResearch:(value,date)=>{const pending=ownerDailyParser(value,date,clock);parses.push(pending);return pending;}};
    if(name==='@/features/vnext/dailyAiMember')return {...dailyMember,parseDailyAiMember:(value,date)=>dailyMember.parseDailyAiMember(value,date,clock)};
    if(name==='@/features/vnext/dailyAiMemberDelta')return deltaExports;
    if(name==='@/features/vnext/dailyAiPricePlanService')return priceExports;
@@ -83,6 +85,7 @@ function harness({now=BEFORE,initialAccess=access(),account=false,ownerReview=fa
    if(name==='./MemberExperience')return {default:'MemberExperience'};
    if(name==='./PublicExperience')return {default:'PublicExperience'};
    if(name==='./CompletedResearch')return {default:'CompletedResearch'};
+   if(name==='./OwnerDailyResearch')return {default:'OwnerDailyResearch'};
    if(name==='./DailyAiMemberResearch')return {default:'DailyAiMemberResearch'};
    if(name.endsWith('.css'))return {};
    throw Error('UNAPPROVED_MEMBER_COMPONENT_IMPORT:'+name);
@@ -93,6 +96,7 @@ function harness({now=BEFORE,initialAccess=access(),account=false,ownerReview=fa
   call(name){return rpc.findLast(r=>r.name===name);},
   get member(){return find(render(),'MemberExperience')[0]?.props;},
   get completed(){return find(render(),'CompletedResearch')[0]?.props;},
+  get ownerDaily(){return find(render(),'OwnerDailyResearch')[0]?.props;},
   get dailyAi(){return find(render(),'DailyAiMemberResearch')[0]?.props;},
   get public(){return find(render(),'PublicExperience')[0]?.props;},
   get retries(){return retries;},
@@ -544,12 +548,12 @@ test('price permission denial clears private grants, and Free never requests Pre
 
 test('dedicated Owner review reads current research without old member or AI editions',async()=>{
  const h=harness({now:STABLE_NOW,initialAccess:access('A',1,'owner'),ownerReview:true});
- assert.deepEqual(h.rpc.map(r=>r.name),['get_owner_completed_research_v1']);
+ assert.deepEqual(h.rpc.map(r=>r.name),['get_owner_vnext_daily_v1','get_owner_completed_research_v1']);
  await h.resolve(h.call('get_owner_completed_research_v1'),await completedResponse());
  assert(h.completed);assert.equal(h.dailyAi,undefined);assert.equal(h.member,undefined);
  h.completed.onHorizonChange('LONG');assert.equal(h.completed.selectedHorizon,'LONG');
  h.setAccess(access('B',2,'premium'));assert.equal(h.completed,undefined);
- assert.equal(h.rpc.length,1);h.unmount();
+ assert.equal(h.rpc.length,2);h.unmount();
 });
 test('Owner review empty, denied, deadline and late responses never expose older member content',async()=>{
  for(const failure of ['empty','denied','deadline']){
@@ -559,6 +563,26 @@ test('Owner review empty, denied, deadline and late responses never expose older
   if(failure==='denied')await h.resolve(call,null,{code:'42501'});
   if(failure==='deadline'){h.advance(8000);await settle();h.render();assert(call.signal.aborted);await h.resolve(call,await completedResponse());}
   assert.equal(h.completed,undefined);assert.equal(h.member,undefined);assert.equal(h.dailyAi,undefined);
-  assert.equal(h.rpc.length,1);h.unmount();
+  assert.equal(h.rpc.length,2);h.unmount();
  }
+});
+
+test('Owner daily progress remains visible when the independent older document times out; permission changes clear both',async()=>{
+ const h=harness({now:STABLE_NOW,initialAccess:access('A',1,'owner'),ownerReview:true});
+ const call=h.call('get_owner_vnext_daily_v1');assert.equal(call.args.p_date,'2026-10-30');
+ await h.resolve(call,{business_date:'2026-10-30',state:'RUNNING',reason:'ACQUISITION_CONTINUATION',source_count:7,predictions:[],
+  member_published:0,analysis_value:'INSUFFICIENT_SAMPLE',performance_sample:0});
+ assert.equal(h.ownerDaily.data.state,'RUNNING');assert.equal(h.ownerDaily.data.source_count,7);
+ h.advance(8000);await settle();h.render();assert.equal(h.ownerDaily.data.state,'RUNNING');assert.equal(h.completed,undefined);
+ h.setAccess(access('B',2,'premium'));assert.equal(h.ownerDaily,undefined);assert.equal(h.completed,undefined);h.unmount();
+});
+test('Owner read deadline also bounds slow lock verification and rejects its later result',async()=>{
+ let release;
+ const payload={business_date:'2026-10-30',state:'RUNNING',reason:'ACQUISITION_CONTINUATION',source_count:7,predictions:[],
+  member_published:0,analysis_value:'INSUFFICIENT_SAMPLE',performance_sample:0};
+ const verified=await parseOwnerDailyResearch(payload,'2026-10-30',STABLE_NOW);
+ const h=harness({now:STABLE_NOW,initialAccess:access('A',1,'owner'),ownerReview:true,ownerDailyParser:()=>new Promise(resolve=>{release=resolve;})});
+ const late=h.resolve(h.call('get_owner_vnext_daily_v1'),payload);await settle();assert(release);
+ h.advance(8000);await settle();h.render();assert.equal(h.ownerDaily.data,null);assert.equal(h.ownerDaily.unavailable,true);
+ release(verified);await late;assert.equal(h.ownerDaily.data,null);assert.equal(h.ownerDaily.unavailable,true);h.unmount();
 });

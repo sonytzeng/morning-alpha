@@ -12,6 +12,44 @@ export type IssuerFinancialPacket={schema:'PRIVATE_RETAINED_ISSUER_FINANCIALS_V1
 const refuse=(ok:unknown,code:string)=>{if(!ok)throw Error('ISSUER_FINANCIAL_'+code);};
 const quarterEnd=(period:string|null)=>{const m=/^(20\d\d)-Q([1-4])$/.exec(period??'');return m?new Date(Date.UTC(Number(m[1]),Number(m[2])*3,0)).toISOString().slice(0,10):null;};
 
+/** A portal JSON point has an axis locator, never an invented PDF page. The
+ * pinned packet still binds the inspected original and its source study. */
+function validOriginalLocator(f:IssuerFact,reviewedAt:string):boolean{
+ const locator=f.source_locator;
+ if(!locator||typeof locator!=='object'||Array.isArray(locator))return false;
+ if(f.source!=='https://mopsfin.twse.com.tw/compare/data'&&Number.isSafeInteger(locator.page)&&Number(locator.page)>0)return true;
+ const p=f as IssuerFact&Partial<{normalizer_version:string;original_kind:string;source_received_at:string;
+  source_candidate_id:string;source_candidate_evidence_hash:string;source_candidate_file_sha256:string;
+  source_candidate_available_at:string;source_candidate_derived_at:string;derived_at:string;as_of_basis:string;
+  direct_single_quarter:boolean;ttm_established:boolean;interpretation_only:boolean;
+  source_terms_evidence:{url:string;sha256:string;bytes:number;received_at:string;consolidation_key_home_sha256:string}}>;
+ const point=locator.point,terms=p.source_terms_evidence,derivedAt=p.derived_at;
+ return f.kind==='MARGIN'&&f.source==='https://mopsfin.twse.com.tw/compare/data'&&!Object.hasOwn(locator,'page')
+  &&p.normalizer_version==='PORTAL_MARGIN_VERIFIED_REPLAY_V1'&&p.original_kind==='MARGIN'
+  &&p.as_of_basis==='FINANCIAL_PERIOD_END_NOT_PUBLICATION'&&p.direct_single_quarter===false
+  &&p.ttm_established===false&&p.interpretation_only===true&&f.published_at===null
+  &&f.first_seen_at===p.source_received_at&&f.available_at===p.derived_at
+  &&p.source_candidate_id===`official-portal-calculated-margin:${f.symbol}:${f.period}:${f.source_sha256}`
+  &&f.id===`portal-margin-verified:${f.symbol}:${f.period}:${f.source_sha256}`
+  &&hashValid(p.source_candidate_evidence_hash??'')&&hashValid(p.source_candidate_file_sha256??'')
+  &&typeof derivedAt==='string'&&validObservationTime(derivedAt)
+  &&[p.source_received_at,p.source_candidate_available_at,p.source_candidate_derived_at,derivedAt].every(at=>
+   typeof at==='string'&&validObservationTime(at)&&compareTime(at,reviewedAt)<=0&&compareTime(at,derivedAt)<=0)
+  &&f.values.measurement_basis==='OFFICIAL_PORTAL_CALCULATED_GROSS_MARGIN'
+  &&f.values.consolidation_as_reported==='C'&&f.values.consolidation==='CONSOLIDATED'
+  &&f.values.formula==='single_quarter_gross_profit / single_quarter_revenue * 100'
+  &&f.values.source_rounding==='SOURCE_PORTAL_TWO_DECIMAL_MAX; UNDERLYING_AMOUNTS_NOT_IN_THIS_RESPONSE'
+  &&f.values.single_quarter_amount_basis===(f.period?.endsWith('Q4')
+   ?'OFFICIAL_PORTAL_FY_CUMULATIVE_MINUS_Q3_CUMULATIVE':'ISSUER_REPORTED_SINGLE_QUARTER_AMOUNTS_PER_SOURCE_TERMS')
+  &&locator.request_metric==='GrossMargin'&&typeof locator.series_company_label==='string'&&locator.series_company_label.length>0
+  &&Number.isSafeInteger(locator.axis_index)&&Number(locator.axis_index)>=0
+  &&locator.period_label===f.period?.replace('-','')&&Array.isArray(point)&&point.length===3
+  &&point[0]===locator.axis_index&&point[1]===f.values.value&&point[2]==='C'
+  &&!!terms&&terms.url==='https://mopsfin.twse.com.tw/terms'&&hashValid(terms.sha256)
+  &&Number.isSafeInteger(terms.bytes)&&terms.bytes>0&&hashValid(terms.consolidation_key_home_sha256)
+  &&validObservationTime(terms.received_at)&&compareTime(terms.received_at,derivedAt)<=0;
+}
+
 export type IssuerFinancialBinding={packet:IssuerFinancialPacket;expectedHash:string};
 export async function mergeIssuerFinancialBatch(acquired:AcquiredResearch,bindings:readonly IssuerFinancialBinding[]):Promise<AcquiredResearch>{
  // Own every preimage before the first digest await. Packets retain independent
@@ -48,13 +86,13 @@ async function mergeOwnedIssuerFinancials(input:AcquiredResearch,p:IssuerFinanci
    // This is a reference to a locally inspected issuer original, not an HTTP
    // response body. The runner's existing 8 MB download limit is unchanged.
    &&hashValid(f.source_sha256)&&Number.isSafeInteger(f.source_bytes)&&f.source_bytes>0&&f.source_bytes<=32*1024*1024
-   &&f.source_locator!==null&&typeof f.source_locator==='object'&&Number.isSafeInteger(f.source_locator.page)&&Number(f.source_locator.page)>0
+   &&validOriginalLocator(f,p.created_at)
    &&traceIssues(f,p.created_at).length===0,'FACT_SCOPE');
   refuse(evidence_hash===await snapshotHash(factBody),'FACT_HASH');
   if(f.kind==='EPS'){
    refuse(f.values.unit==='TWD_PER_COMMON_SHARE'&&['BASIC','DILUTED'].includes(String(f.values.measurement_basis)),'EPS_UNIT');
    const bs=bases.get(f.symbol)??new Set<string>();bs.add(String(f.values.measurement_basis));bases.set(f.symbol,bs);refuse(bs.size===1,'EPS_BASIS');
-  }else if(f.kind==='MARGIN')refuse(f.values.unit==='PERCENT'&&value>=0&&value<=100,'MARGIN_UNIT');
+  }else if(f.kind==='MARGIN')refuse(f.values.unit==='PERCENT'&&value<=100,'MARGIN_UNIT');
   else refuse(['TWD','TWD_MILLION'].includes(String(f.values.unit))&&value>=0
    &&['EXPENDITURE_MAGNITUDE_NOT_CASH_INFLOW','ISSUER_REPORTED_CASH_OUTFLOW_MAGNITUDE'].includes(String(f.values.measurement_basis)),'CAPEX_UNIT');
  }

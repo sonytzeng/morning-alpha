@@ -8,6 +8,8 @@ import {mergeIssuerFinancials} from '../src/features/vnext/issuerFinancialIntake
 import {RECOMMENDATION_UNIVERSE} from '../supabase/functions/_shared/recommendation-stock-evidence.ts';
 import {retainedIssuerFinancials,retainedIssuerFinancialSupplement,retainedIssuerFinancialPartialSupplement,retainedIssuerFinancialReleases} from '../supabase/functions/_shared/retained-issuer-financials.ts';
 const release=retainedIssuerFinancialPartialSupplement;
+// Preserve the three-release contract; the later basic supplement has its own tests.
+const partialReleases=[retainedIssuerFinancials,retainedIssuerFinancialSupplement,release];
 const {packet,expectedHash}=release;
 const clone=v=>structuredClone(v);
 const at=(delta=1000)=>new Date(Date.parse(packet.created_at)+delta).toISOString();
@@ -16,7 +18,7 @@ async function acquired(cutoff=at()){
  return {...body,snapshot_hash:await snapshotHash(body)};
 }
 async function rehash(a){const {snapshot_hash,...body}=a;void snapshot_hash;a.snapshot_hash=await snapshotHash(body);return a;}
-async function mergeAll(input){for(const r of retainedIssuerFinancialReleases)input=await mergeIssuerFinancials(input,r.packet,r.expectedHash);return input;}
+async function mergeAll(input){for(const r of partialReleases)input=await mergeIssuerFinancials(input,r.packet,r.expectedHash);return input;}
 const count=a=>a.inputs.reduce((n,i)=>n+i.facts.length,0);
 
 test('partial release pins 31 original direct basic quarters without changing either previous release',async()=>{
@@ -26,7 +28,7 @@ test('partial release pins 31 original direct basic quarters without changing ei
  assert.equal(expectedHash,'c2edd821e88e331ce75ca3160f5e4fb9e46b757da050632b03c7720b3d631cc3');
  assert.equal(packet.source_study_sha256,'2d6927e770b3dc69ee701b54670801b8f534c8b37ac0ead0ad2ba449ff6ea5eb');
  assert.equal(packet.created_at,'2026-11-02T16:41:08.617339+00:00');assert.equal(packet.max_age_days,7);
- assert.deepEqual(retainedIssuerFinancialReleases,[retainedIssuerFinancials,retainedIssuerFinancialSupplement,release]);
+ assert.deepEqual(retainedIssuerFinancialReleases.slice(0,3),partialReleases);
  assert.equal(await snapshotHash(retainedIssuerFinancials.packet),'ba31adff1451a974b68a201c5cebfcc072b9a4b9e56c2b9c0ab088b578c2a942');
  assert.equal(await snapshotHash(retainedIssuerFinancialSupplement.packet),'9cd79b7eb5cf0ecb5686afc03999e239a2fc9c927359a752b00be0d86720a629');
  assert.equal(createHash('sha256').update(readFileSync(new URL('../supabase/functions/_shared/retained-issuer-financials-20261030.json',import.meta.url))).digest('hex'),'4a4e4ba4c5dda188a5b6d70b3a00fc56b7edd69cec3ad1954a90c5a5b9e1103b');
@@ -51,7 +53,7 @@ test('all three releases add only missing facts and repeat intake preserves immu
  const input=await acquired(),original=clone(input),out=await mergeAll(input);
  assert.deepEqual(input,original);assert.equal(out.inputs.length,72);assert.equal(count(out),77);
  const repeated=await mergeAll(out);assert.deepEqual(repeated,out);
- for(const r of retainedIssuerFinancialReleases)for(const f of r.packet.facts)assert.deepEqual(out.inputs.find(i=>i.symbol===f.symbol).facts.find(x=>x.id===f.id),f);
+ for(const r of partialReleases)for(const f of r.packet.facts)assert.deepEqual(out.inputs.find(i=>i.symbol===f.symbol).facts.find(x=>x.id===f.id),f);
  assert.deepEqual(out.inputs.map(i=>i.cutoff),input.inputs.map(i=>i.cutoff));
  assert(out.inputs.every(i=>i.facts.every(f=>f.member_publication_approved===false)));
 });

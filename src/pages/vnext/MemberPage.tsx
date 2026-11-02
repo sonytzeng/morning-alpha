@@ -6,7 +6,9 @@ import MemberNavigation,{MemberObservationEntry} from './MemberNavigation';
 import MemberExperience from './MemberExperience';
 import PublicExperience from './PublicExperience';
 import CompletedResearch from './CompletedResearch';
+import OwnerDailyResearch from './OwnerDailyResearch';
 import {parseCompletedResearch,type CompletedResearch as CompletedData} from '@/features/vnext/completedResearch';
+import {parseOwnerDailyResearch,type OwnerDailyResearch as OwnerDailyData} from '@/features/vnext/ownerDailyResearch';
 import {parseDailyAiMember,type DailyAiMemberResearch as DailyAiData} from '@/features/vnext/dailyAiMember';
 import {DailyAiMemberDeltaError,dailyAiMemberKnownArgs,eligibleDailyAiMemberCache,parseDailyAiMemberDelta,type DailyAiMemberCache,type DailyAiMemberReadScope} from '@/features/vnext/dailyAiMemberDelta';
 import {DailyAiPricePlanReadError,eligibleDailyAiPricePlanCache,readDailyAiMemberPricePlans} from '@/features/vnext/dailyAiPricePlanService';
@@ -25,7 +27,7 @@ export default function MemberPage({account=false,ownerReview=false}:{account?:b
  // UI preferences only: never keep cards, source data or an entitlement here.
  const [dailyView,setDailyView]=useState<DailyViewMemory|null>(null),dailyScope=useRef<DailyViewScope|null>(null);
  const memberViewScope=useRef<{identity:string;tier:DailyAiData['tier'];requestDate:string}|null>(null);
- const [state,setState]=useState<{identity:string;generation:number;readEpoch:number;requestDate:string;data?:MemberResearch;completed?:CompletedData|null;completedError?:boolean;dailyAi?:DailyAiData;dailyAiError?:boolean;error?:boolean}|null>(null);
+ const [state,setState]=useState<{identity:string;generation:number;readEpoch:number;requestDate:string;data?:MemberResearch;completed?:CompletedData|null;completedError?:boolean;ownerDaily?:OwnerDailyData|null;ownerDailyError?:boolean;dailyAi?:DailyAiData;dailyAiError?:boolean;error?:boolean}|null>(null);
  const [priceState,setPriceState]=useState<{scope:DailyAiMemberReadScope;editionId:string;data:DailyAiMemberPricePlans|null;error:boolean}|null>(null);
  const renderedState=useRef(state);renderedState.current=state;
  const current=useRef(access);current.current=access;
@@ -201,15 +203,34 @@ export default function MemberPage({account=false,ownerReview=false}:{account?:b
   void(async()=>{try{
    if(ownerReview){
     if(access.catalog.tier!=='owner'){setState({...bind,error:true});return;}
-    const deadline=new Promise<never>((_,reject)=>{aiTimer=setTimeout(()=>{controller.abort();reject(Error('OWNER_REVIEW_DEADLINE'));},8000);});
-    try{
-     const result=await Promise.race([supabase.rpc('get_owner_completed_research_v1').abortSignal(controller.signal),deadline]);
-     if(!valid())return;
-     if(result.error){if(result.error.code==='42501'){entitlementChanged();return;}throw Error('OWNER_REVIEW_READ');}
-     const completed=await parseCompletedResearch(result.data);
-     if(valid())setState({...bind,completed,error:!completed});
-    }catch{if(valid())setState({...bind,completed:null,error:true});}
-    finally{clearTimeout(aiTimer);if(live&&epoch===readEpoch.current&&controller.signal.aborted)setState({...bind,completed:null,error:true});}
+    // Daily locks and older editorial documents have independent read budgets.
+    // A slow historical document cannot hide today's saved natural evaluation.
+    const readOwner=async(kind:'daily'|'completed')=>{
+     const own=new AbortController(),abortOwn=()=>own.abort();let timer:ReturnType<typeof setTimeout>|undefined;
+     controller.signal.addEventListener('abort',abortOwn,{once:true});
+     try{
+      const query=kind==='daily'?supabase.rpc('get_owner_vnext_daily_v1',{p_date:requestDate}):supabase.rpc('get_owner_completed_research_v1');
+      const read=async()=>{
+       const result=await query.abortSignal(own.signal);
+       if(!valid()||own.signal.aborted)return null;
+       if(result.error){if(result.error.code==='42501'){entitlementChanged();return null;}throw Error('OWNER_REVIEW_READ');}
+       return kind==='daily'?{kind:'daily' as const,data:await parseOwnerDailyResearch(result.data,requestDate)}
+        :{kind:'completed' as const,data:await parseCompletedResearch(result.data)};
+      };
+      const projection=await Promise.race([read(),new Promise<never>((_,reject)=>{
+       timer=setTimeout(()=>{own.abort();reject(Error('OWNER_REVIEW_DEADLINE'));},8000);
+      })]);
+      if(!projection||!valid()||own.signal.aborted)return;
+      if(projection.kind==='daily'){
+       setState(s=>({...(s?.readEpoch===epoch?s:{}),...bind,ownerDaily:projection.data,ownerDailyError:false}));
+      }else{
+       setState(s=>({...(s?.readEpoch===epoch?s:{}),...bind,completed:projection.data,completedError:false}));
+      }
+     }catch{if(valid())setState(s=>({...(s?.readEpoch===epoch?s:{}),...bind,
+      ...(kind==='daily'?{ownerDaily:null,ownerDailyError:true}:{completed:null,completedError:true})}));}
+     finally{clearTimeout(timer);own.abort();controller.signal.removeEventListener('abort',abortOwn);}
+    };
+    await Promise.allSettled([readOwner('daily'),readOwner('completed')]);
     return;
    }
    if(account){await legacy();return;}
@@ -287,7 +308,7 @@ export default function MemberPage({account=false,ownerReview=false}:{account?:b
  const changeDailyHorizon=(next:Horizon)=>{if(canChangeDailyView())setSelectedHorizon(next);};
  const changeLegacyHorizon=(next:Horizon)=>{
   const now=current.current;
-  if((data||ownerReview&&state?.completed)&&state===renderedState.current&&access.kind==='member'&&now.kind==='member'&&mounted.current&&!access.signal.aborted
+  if((data||ownerReview&&(state?.completed||state?.ownerDaily))&&state===renderedState.current&&access.kind==='member'&&now.kind==='member'&&mounted.current&&!access.signal.aborted
    &&now.id===access.id&&now.generation===access.generation&&now.signal===access.signal
    &&state?.identity===access.id&&state.generation===access.generation&&state.readEpoch===readEpoch.current
    &&state.requestDate===dateRef.current&&memberTaipeiDate()===state.requestDate&&document.visibilityState!=='hidden')setSelectedHorizon(next);
@@ -310,8 +331,11 @@ export default function MemberPage({account=false,ownerReview=false}:{account?:b
   finally{access.signal.removeEventListener('abort',abort);if(valid()){watchController.current=null;setBusy(false);}}
  };
  const denied=access.kind==='denied',failed=access.kind==='unavailable'||(matchingState&&state.error);
- return <div className="vnext vm"><a className="vnext-skip" href="#stock-observations">跳到股票觀察</a><MemberNavigation/>{!ownerReview&&access.kind==='member'&&access.catalog.tier==='owner'&&<a className="vnext-content" href="/stocks/review">查看最新本人股票研究</a>}
- {ownerReview?matchingState&&state?.completed?<CompletedResearch data={state.completed} selectedHorizon={selectedHorizon} onHorizonChange={changeLegacyHorizon}/>:<main className="vnext-content vnext-empty" role="status"><h1>本人股票研究</h1><p>{denied?'請登入本人帳號查看研究。':failed?'目前無法讀取本人研究，請重新讀取。':'正在確認本人研究權限。'}</p>{denied?<a href="/login?next=%2Fstocks%2Freview">登入帳號</a>:failed?<button onClick={()=>{invalidate();retry();setRevision(r=>r+1);}}>重新讀取</button>:null}<a href="/stocks">查看會員研究</a></main>:denied?<PublicExperience market={publicMarket} loading={marketLoading}/>:!account&&matchingState&&dailyAi?.edition?<DailyAiMemberResearch key={access.kind==='member'?access.id:''} data={dailyAi} pricePlans={pricePlans} pricePlansUnavailable={pricePlansUnavailable} priceSubjectUserId={currentPriceScope?.identity} selectedHorizon={selectedHorizon} onHorizonChange={changeDailyHorizon}
+ return <div className="vnext vm"><a className="vnext-skip" href={ownerReview?'#owner-daily-research':'#stock-observations'}>跳到股票觀察</a><MemberNavigation/>{!ownerReview&&access.kind==='member'&&access.catalog.tier==='owner'&&<a className="vnext-content" href="/stocks/review">查看最新本人股票研究</a>}
+ {ownerReview?access.kind==='member'&&access.catalog.tier==='owner'&&!access.signal.aborted?<>
+  <OwnerDailyResearch key={access.id+':'+today} data={matchingState?state?.ownerDaily??null:null} unavailable={!!(matchingState&&(state?.ownerDailyError||state?.error))} requestDate={today} horizon={selectedHorizon} onHorizonChange={changeLegacyHorizon} onRefresh={()=>{invalidate();setRevision(r=>r+1);}}/>
+  {matchingState&&state?.completed?<details className="vnext-content"><summary>查看歷史收盤研究文件 · 行情截至 {state.completed.data_through}，不代替今日自動評估</summary><CompletedResearch data={state.completed} selectedHorizon={selectedHorizon} onHorizonChange={changeLegacyHorizon}/></details>:<section className="vnext-content" role="status"><p>{matchingState&&state?.completedError?'先前收盤研究文件暫時無法讀取；上方今日評估獨立顯示。':matchingState&&state?.completed===null?'尚無另外保存的收盤研究文件；上方今日評估獨立顯示。':'正在核對先前收盤研究文件；上方今日評估獨立顯示。'}</p></section>}
+ </>:<main className="vnext-content vnext-empty" role="status"><h1>本人股票研究</h1><p>{denied?'請登入本人帳號查看研究。':failed?'目前無法讀取本人研究，請重新讀取。':'正在確認本人研究權限。'}</p>{denied?<a href="/login?next=%2Fstocks%2Freview">登入帳號</a>:failed?<button onClick={()=>{invalidate();retry();setRevision(r=>r+1);}}>重新讀取</button>:null}<a href="/stocks">查看會員研究</a></main>:denied?<PublicExperience market={publicMarket} loading={marketLoading}/>:!account&&matchingState&&dailyAi?.edition?<DailyAiMemberResearch key={access.kind==='member'?access.id:''} data={dailyAi} pricePlans={pricePlans} pricePlansUnavailable={pricePlansUnavailable} priceSubjectUserId={currentPriceScope?.identity} selectedHorizon={selectedHorizon} onHorizonChange={changeDailyHorizon}
   viewState={sameDailyScope(dailyView,visibleDailyScope)?dailyView!.view:emptyDailyView()} onViewChange={changeDailyView}/>:data?account?<main className="vnext-content"><h1>會員中心</h1><MemberObservationEntry/><p>既有會員權益與股票學院不變。</p><a href="/academy">前往股票學院</a></main>:data.tier==='owner'&&state?.completed?<CompletedResearch key={access.kind==='member'?access.id:''} data={state.completed} selectedHorizon={selectedHorizon} onHorizonChange={changeLegacyHorizon}/>:<>{state?.dailyAiError&&<p className="vnext-content" role="alert">每日 AI 研究暫時無法讀取；下方顯示既有已核准內容。</p>}{data.tier==='owner'&&state?.completedError&&<p className="vnext-content" role="alert">本人收盤研究暫時無法讀取；下方是會員已核准內容，不代表本次分析沒有結果。</p>}<MemberExperience key={access.kind==='member'?access.id:''} data={data} market={publicMarket} onWatch={watch} busy={busy} notice={notice}/></>
  :<main className="vnext-content vnext-empty" role="status"><h1>{denied?'登入後，閱讀股票觀察':failed?'目前無法讀取股票觀察':'正在確認可閱讀的內容'}</h1><p>{denied?'免費會員可閱讀每日精選摘要；Premium 可查看完整已核准研究。研究不是正式推薦。':failed?'尚未取得資料，不代表今天沒有候選。請稍後再試。':'請稍候。'}</p>{denied?<a href="/login?next=%2Fstocks" className="vnext-primary">登入帳號</a>:failed?<button className="vnext-primary" onClick={()=>{invalidate();retry();setRevision(r=>r+1);}}>重新讀取</button>:null}</main>}
  </div>;

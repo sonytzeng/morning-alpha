@@ -2,6 +2,8 @@
 import packet from './retained-issuer-financials-20261030.json' with {type:'json'};
 import supplement from './retained-issuer-financials-20261102.json' with {type:'json'};
 import partial from './retained-issuer-financials-20261103-partial.json' with {type:'json'};
+import basic from './retained-issuer-financials-20261103-basic.json' with {type:'json'};
+import margin from './retained-issuer-financials-20261103-margin.json' with {type:'json'};
 import type {IssuerFinancialPacket} from '../../../src/features/vnext/issuerFinancialIntake.ts';
 export const retainedIssuerFinancials={
  // JSON is an untrusted boundary; the intake validates its pinned hash and
@@ -23,4 +25,16 @@ export const retainedIssuerFinancialPartialSupplement={
  packet:partial as unknown as IssuerFinancialPacket,
  expectedHash:'c2edd821e88e331ce75ca3160f5e4fb9e46b757da050632b03c7720b3d631cc3',
 };
-export const retainedIssuerFinancialReleases=[retainedIssuerFinancials,retainedIssuerFinancialSupplement,retainedIssuerFinancialPartialSupplement] as const;
+// These three four-quarter basic series were already documented separately.
+// Keep their original review time and required-image availability intact.
+export const retainedIssuerFinancialBasicSupplement={
+ packet:basic as unknown as IssuerFinancialPacket,
+ expectedHash:'7d0f5ca5ab48677d10381b4134c98c9f34695145cd0982a83c2c4f311aa6ea68',
+};
+// Official portal percentages keep their original JSON axis locators and
+// calculation basis. Two unreconciled quarters are held out of this release.
+export const retainedIssuerFinancialMarginSupplement={
+ packet:margin as unknown as IssuerFinancialPacket,
+ expectedHash:'6464fc192100e38265605b5dd5b98042a6c8300238ac3389716cca7b3a8c1745',
+};
+export const retainedIssuerFinancialReleases=[retainedIssuerFinancials,retainedIssuerFinancialSupplement,retainedIssuerFinancialPartialSupplement,retainedIssuerFinancialBasicSupplement,retainedIssuerFinancialMarginSupplement] as const;

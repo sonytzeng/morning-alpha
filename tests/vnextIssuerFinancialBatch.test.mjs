@@ -17,7 +17,7 @@ async function sequential(input,bindings=releases){for(const r of bindings)input
 async function rebindFact(packet){const f=packet.facts[0],{id,evidence_hash,...body}=f;void id;void evidence_hash;f.evidence_hash=await snapshotHash(body);return {packet,expectedHash:await snapshotHash(packet)};}
 
 test('batch output is deeply identical to ordered single calls at independent availability and seven-day expiry boundaries',async()=>{
- const times=[time(releases[0],-1),time(releases[1],-1),time(releases.at(-1)),
+ const times=[...releases.map(r=>time(r,-1)),time(releases.at(-1)),
   ...releases.flatMap(r=>[time(r,7*86400000-1),time(r,7*86400000)])];
  for(const cutoff of times){
   const input=await acquired(cutoff),original=clone(input),packets=clone(releases);
@@ -26,7 +26,7 @@ test('batch output is deeply identical to ordered single calls at independent av
   assert.equal(batch.snapshot_hash,await snapshotHash(Object.fromEntries(Object.entries(batch).filter(([k])=>k!=='snapshot_hash'))));
  }
  const live=await mergeIssuerFinancialBatch(await acquired(),releases);
- assert.equal(live.inputs.flatMap(i=>i.facts).length,77);
+ assert.equal(live.inputs.flatMap(i=>i.facts).length,325);
  assert(live.inputs.every(i=>i.facts.every(f=>f.source_admitted===false&&f.member_publication_approved===false)));
 });
 
@@ -37,6 +37,8 @@ test('batch owns the acquired input, every packet and every hash binding before 
  bindings[0].packet.facts[0].values.value=-999;
  bindings[1].packet.source_admitted=true;
  bindings[2].expectedHash='f'.repeat(64);
+ bindings[3].packet.facts[0].values.value=-123;
+ bindings[4].packet.facts[0].values.value=-456;
  bindings.push(clone(bindings[0]));
  assert.deepEqual(await pending,expected);
 });

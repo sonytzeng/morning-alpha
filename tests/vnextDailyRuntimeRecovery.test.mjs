@@ -81,15 +81,22 @@ test('SYNTHETIC release array adds the supplement once and preserves acquired by
  const binding=structuredClone(retainedIssuerFinancialReleases);
  const a=await runner({at:'2026-11-03T00:59:30Z',businessDate:'2026-11-03',issuerFinancials:binding});
  assert.equal(a.result.reason,'ACQUIRED_SNAPSHOT_CONTINUATION');
- const pinned=structuredClone(a.checkpoint.acquired);assert.equal(pinned.inputs.flatMap(i=>i.facts).length,77);
+ const pinned=structuredClone(a.checkpoint.acquired);assert.equal(pinned.inputs.flatMap(i=>i.facts).length,325);
  for(const symbol of ['2382','3443'])assert.equal(pinned.inputs.find(i=>i.symbol===symbol).facts.filter(f=>f.kind==='EPS').length,4);
- // This fixed synthetic clock is after the third release's true creation time.
- // Its 31 partial quarters join the prior 46; this is not a natural run receipt.
+ // This fixed synthetic clock is after the fifth release's original creation.
+ // The31 partial,12 basic and236 margin facts join46; not a natural receipt.
  const partial=binding[2];assert.equal(partial.expectedHash,'c2edd821e88e331ce75ca3160f5e4fb9e46b757da050632b03c7720b3d631cc3');
  assert.equal(partial.packet.facts.length,31);assert(Date.parse(partial.packet.created_at)<Date.parse('2026-11-03T00:59:30Z'));
  const partialIds=new Set(partial.packet.facts.map(f=>f.id)),joined=pinned.inputs.flatMap(i=>i.facts).filter(f=>partialIds.has(f.id));
  assert.equal(joined.length,31);assert.equal(new Set(joined.map(f=>f.symbol)).size,12);
  for(const f of partial.packet.facts)assert.deepEqual(joined.find(x=>x.id===f.id),f);
+ const basic=binding[3];assert.equal(basic.expectedHash,'7d0f5ca5ab48677d10381b4134c98c9f34695145cd0982a83c2c4f311aa6ea68');
+ assert.equal(basic.packet.facts.length,12);assert(Date.parse(basic.packet.created_at)<Date.parse('2026-11-03T00:59:30Z'));
+ for(const symbol of ['2303','3006','3711'])assert.equal(pinned.inputs.find(i=>i.symbol===symbol).facts.filter(f=>f.kind==='EPS').length,4);
+ for(const f of basic.packet.facts)assert.deepEqual(pinned.inputs.find(i=>i.symbol===f.symbol).facts.find(x=>x.id===f.id),f);
+ const margin=binding[4];assert.equal(margin.expectedHash,'6464fc192100e38265605b5dd5b98042a6c8300238ac3389716cca7b3a8c1745');
+ assert.equal(margin.packet.facts.length,236);assert(Date.parse(margin.packet.created_at)<Date.parse('2026-11-03T00:59:30Z'));
+ for(const f of margin.packet.facts)assert.deepEqual(pinned.inputs.find(i=>i.symbol===f.symbol).facts.find(x=>x.id===f.id),f);
  // Each new acquisition pays the existing clone/hash cost once per release.
  // A retained checkpoint must skip all releases, even if a later binding fails.
  for(const release of binding)release.expectedHash='0'.repeat(64);

@@ -8,6 +8,7 @@ import type {DailyBar} from './researchFunnel.ts';
 import {entryInputFromV2} from '../../../research/entry-v2-adapter.ts';
 import type {V2Input} from '../../../supabase/functions/_shared/recommendation-shadow-v2-engine.ts';
 import {mergeIssuerFinancialBatch,type IssuerFinancialPacket} from './issuerFinancialIntake.ts';
+import {previousMarketTradingDate} from '../../../supabase/functions/_shared/market-session-contract.mjs';
 export type Rpc=(name:string,args:Record<string,unknown>)=>Promise<unknown>;
 export type IssuerFinancialReleaseBinding={packet:IssuerFinancialPacket;expectedHash:string};
 export type RuntimePorts={rpc:Rpc;fetcher:typeof fetch;clock:()=>string;sleep:(ms:number)=>Promise<void>;
@@ -131,11 +132,18 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
    const capsule=lineage.evidence as V2Input;
    if(capsule.identity.report_date!==r.business_date||Date.parse(capsule.identity.generated_at)>Date.parse(acquired.evidence_cutoff))throw Error('ENTRY_CUTOFF_MISMATCH');
    const entry=await entryInputFromV2(capsule,lineage.hash,market as Parameters<typeof entryInputFromV2>[2],'FORWARD','REAL_RETAINED');
-   // A V2 capsule with no TAIEX observations must not erase the independently
-   // validated Canonical + official-index fallback. If V2 supplied any TAIEX
-   // observations, retain its original decision, including a null refusal for
-   // stale, conflicting or invalid quotes. Missing is not rejected evidence.
-   if(entry.market||capsule.data.quotes.some(q=>q.symbol==='TAIEX'))acquired.entry.market=entry.market;
+   // Only close observations for this premarket's completed TW session can veto the
+   // independently validated Canonical + official-index fallback. A capsule
+   // also retains older history; its mere presence is not a current refusal.
+   // Do not filter timestamps, values or quality here: a matching-session
+   // future/invalid/conflicting quote must retain V2's original null refusal.
+   const marketSession=previousMarketTradingDate('TW',r.business_date);
+   const marketObservationInScope=capsule.data.quotes.some(q=>{
+    if(q.symbol!=='TAIEX'||q.phase!=='close')return false;
+    const raw=object(q.raw_payload),native=object(raw.source_raw);
+    return String(raw.evidence_session_date||native.evidence_session_date||q.trading_date)===marketSession;
+   });
+   if(entry.market||marketObservationInScope)acquired.entry.market=entry.market;
    for(const stock of acquired.entry.stocks){const prior=entry.stocks.find(s=>s.symbol===stock.symbol);if(prior){stock.relative_strength=prior.relative_strength;stock.sector_return=prior.sector_return;stock.events_reviewed=prior.events_reviewed;stock.v2_status=prior.v2_status;}}
    const {snapshot_hash,...body}=acquired;void snapshot_hash;acquired.snapshot_hash=await snapshotHash(body);
   }

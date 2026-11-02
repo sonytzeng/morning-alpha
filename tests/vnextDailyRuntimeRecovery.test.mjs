@@ -481,6 +481,24 @@ test('worker keeps a validated V2 market quote authoritative over the previous-s
  assert.deepEqual(a.checkpoint.acquired.entry.market,expected.market);
 });
 
+test('worker does not let unrelated historical TAIEX rows or a report-date alias erase the exact official-session fallback',async()=>{
+ const f=await indexFixture();
+ for(const quotes of [
+  i=>[{...i.data.quotes.at(-1),trading_date:'2026-10-27',captured_at:'2026-10-27T05:30:00Z',ingested_at:'2026-10-27T06:00:00Z',raw_payload:{}}],
+  i=>[{...i.data.quotes.at(-1),phase:'premarket',trading_date:'2026-10-28',captured_at:'2026-10-27T16:00:00Z',ingested_at:'2026-10-28T23:00:00Z',raw_payload:{}}],
+  i=>[{...i.data.quotes.at(-1),phase:'premarket',trading_date:f.business,raw_payload:{}},
+   {...i.data.quotes.at(-1),id:'SYNTHETIC:OLDER',trading_date:'2026-10-27',captured_at:'2026-10-27T05:30:00Z',ingested_at:'2026-10-27T06:00:00Z',raw_payload:{}}],
+ ]){
+  const evidence=v2Fixture(f.at);evidence.data.quotes=quotes(evidence);const hash=await v2Hash(evidence),before=structuredClone(evidence);
+  assert.equal((await entryInputFromV2(evidence,hash,f.market,'FORWARD','REAL_RETAINED')).market,null);
+  const expected=(await assembleDaily(f.business,companies,[f.saved],f.at,f.market)).entry.market;
+  const a=await runner({at:f.at,businessDate:f.business,additionalSources:[f.saved],entryLineage:{market:f.market,evidence,hash}});
+  assert.deepEqual(a.checkpoint.acquired.entry.market,expected);
+  assert(Math.abs(expected.value.change_percent-2)<1e-10);assert.deepEqual(evidence,before);
+  assert.equal(a.locked.length,0,'fresh acquisition never rewrites an existing Forward lock');
+ }
+});
+
 test('worker fallback cannot repair missing official sessions, skip V2 hash validation, or invent Canonical',async()=>{
  const f=await indexFixture(),evidence=v2Fixture(f.at);evidence.data.quotes=[];
  const hash=await v2Hash(evidence);
@@ -499,6 +517,8 @@ test('worker never hides invalid, conflicting or future V2 quotes behind the off
   i=>i.data.quotes.at(-1).change_percent=null,
   i=>i.data.quotes.push({...i.data.quotes.at(-1),id:'SYNTHETIC:CONFLICT',value:21000}),
   i=>i.data.quotes=[{...i.data.quotes.at(-1),captured_at:'2999-01-01T00:00:00Z',ingested_at:'2999-01-01T00:00:00Z'}],
+  i=>i.data.quotes=[{...i.data.quotes.at(-1),trading_date:f.business,raw_payload:{evidence_session_date:'2026-10-28'},change_percent:null}],
+  i=>i.data.quotes=[{...i.data.quotes.at(-1),trading_date:f.business,raw_payload:{source_raw:{evidence_session_date:'2026-10-28'}},captured_at:'2999-01-01T00:00:00Z',ingested_at:'2999-01-01T00:00:00Z'}],
  ]){
   const evidence=v2Fixture(f.at);mutate(evidence);const hash=await v2Hash(evidence);
   const rejected=await entryInputFromV2(evidence,hash,f.market,'FORWARD','REAL_RETAINED');

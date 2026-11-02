@@ -1,7 +1,8 @@
-import test from 'node:test';
+// Historical synthetic protocol coverage; current policy is verified separately in dailyStockAiCurrentPolicyBoundary.test.mjs.
+import {historicalStockAiProtocolTest as test,importStockAiHistoricalModule} from './helpers/stockAiHistoricalProtocol.mjs';
 import assert from 'node:assert/strict';
-import {snapshotHash} from '../src/features/vnext/contracts.ts';
-import {stockAiModelRevision} from '../supabase/functions/_shared/daily-stock-ai-runner.ts';
+const {snapshotHash}=await importStockAiHistoricalModule('src/features/vnext/contracts.ts');
+const {stockAiModelRevision}=await importStockAiHistoricalModule('supabase/functions/_shared/daily-stock-ai-runner.ts');
 
 test('real Edge entrypoint reuses 72 completed jobs, stages privately and fails closed on token lookup errors',async()=>{
  const internal='test-only-internal-secret-0123456789',delivery='test-only-delivery-secret-0123456789',modelRevision=stockAiModelRevision('gpt-6-astra');
@@ -39,7 +40,7 @@ test('real Edge entrypoint reuses 72 completed jobs, stages privately and fails 
    }
    assert.fail('unexpected database claim, continuation or publication: '+name);
   };
-  await import('../supabase/functions/daily-stock-analysis-v1/index.ts');assert.equal(typeof worker,'function');
+  await importStockAiHistoricalModule('supabase/functions/daily-stock-analysis-v1/index.ts');assert.equal(typeof worker,'function');
   const req=headers=>new Request('https://worker.example.invalid',{method:'POST',headers,body:JSON.stringify({batch_id:batch.id})});
   let response=await worker(req({'x-daily-delivery-token':delivery})),body=await response.json();
   assert.equal(response.status,200);assert.equal(body.model_calls,0);assert.equal(body.counts.CACHED,72);assert.equal(body.edition_status,'STAGED_REVIEW_REQUIRED');assert.equal(body.member_published,false);

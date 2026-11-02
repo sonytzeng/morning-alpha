@@ -1,8 +1,9 @@
-import test from 'node:test';
+// Historical synthetic protocol coverage; current policy is verified separately in dailyStockAiCurrentPolicyBoundary.test.mjs.
+import {historicalStockAiOriginalSourceWorkerTest as test,importStockAiOriginalSourceWorkerModule as importStockAiHistoricalModule} from './helpers/stockAiHistoricalProtocol.mjs';
 import assert from 'node:assert/strict';
-import {snapshotHash} from '../src/features/vnext/contracts.ts';
-import {twseDailyUrl} from '../research/entry-official-history.ts';
-import {DAILY_AI_FINANCIAL_URLS} from '../research/daily-ai-financial-refresh.ts';
+const {snapshotHash}=await importStockAiHistoricalModule('src/features/vnext/contracts.ts');
+const {twseDailyUrl}=await importStockAiHistoricalModule('research/entry-official-history.ts');
+const {DAILY_AI_FINANCIAL_URLS}=await importStockAiHistoricalModule('research/daily-ai-financial-refresh.ts');
 
 test('real intake route refreshes prices/financials/news/markets in parallel, freezes truthful gaps, and resumes without reacquiring',async()=>{
  const NativeDate=globalThis.Date,oldFetch=globalThis.fetch,oldDeno=globalThis.Deno;
@@ -161,7 +162,7 @@ test('real intake route refreshes prices/financials/news/markets in parallel, fr
    }
    assert.fail('unexpected database, publication or model operation: '+op);
   };
-  const {dailyStockAiRpcTimeoutMs}=await import('../supabase/functions/daily-stock-analysis-v1/index.ts');assert.equal(typeof worker,'function');
+  const {dailyStockAiRpcTimeoutMs}=await importStockAiHistoricalModule('supabase/functions/daily-stock-analysis-v1/index.ts');assert.equal(typeof worker,'function');
   const sourceUrl='https://database.example.invalid/rest/v1/rpc/daily_stock_ai_intake_v1';
   assert.equal(dailyStockAiRpcTimeoutMs(sourceUrl,{method:'POST',body:JSON.stringify({p_op:'SOURCE'})}),16000);
   for(const [target,init] of [

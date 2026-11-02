@@ -1,6 +1,7 @@
-import test from 'node:test';
+// Historical synthetic protocol coverage; current policy is verified separately in dailyStockAiCurrentPolicyBoundary.test.mjs.
+import {historicalStockAiProtocolTest as test,importStockAiHistoricalModule} from './helpers/stockAiHistoricalProtocol.mjs';
 import assert from 'node:assert/strict';
-import {analyseStockWithProvider,readStockAiProviderFailure} from '../supabase/functions/_shared/daily-stock-ai.ts';
+const {analyseStockWithProvider,readStockAiProviderFailure}=await importStockAiHistoricalModule('supabase/functions/_shared/daily-stock-ai.ts');
 
 const packet={symbol:'2330',company:'測試公司',cutoff:'2026-10-30T12:00:00Z',evidence:[{id:'E1',symbol:'2330',kind:'NEWS',source:'https://www.twse.com.tw/',published_at:'2026-10-30T10:00:00Z',available_at:'2026-10-30T11:00:00Z',content:'測試資料，不是真實股票分析'}]};
 const privateText='private-message sk-test-secret owner@example.test packet-and-prompt';

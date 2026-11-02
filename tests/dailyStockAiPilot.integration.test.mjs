@@ -1,7 +1,8 @@
-import test from 'node:test';
+// Historical synthetic protocol coverage; current policy is verified separately in dailyStockAiCurrentPolicyBoundary.test.mjs.
+import {historicalStockAiProtocolTest as test,importStockAiHistoricalModule} from './helpers/stockAiHistoricalProtocol.mjs';
 import assert from 'node:assert/strict';
-import {snapshotHash} from '../src/features/vnext/contracts.ts';
-import {stockAiModelRevision} from '../supabase/functions/_shared/daily-stock-ai-runner.ts';
+const {snapshotHash}=await importStockAiHistoricalModule('src/features/vnext/contracts.ts');
+const {stockAiModelRevision}=await importStockAiHistoricalModule('supabase/functions/_shared/daily-stock-ai-runner.ts');
 
 test('reviewed source correction continues one model per call and never loops on cache, busy, exhausted or database-rejected work',async()=>{
  const symbols=Array.from({length:72},(_,i)=>String(1000+i));symbols[20]='1504';symbols[50]='2330';
@@ -45,7 +46,7 @@ test('reviewed source correction continues one model per call and never loops on
    }
    assert.fail('unexpected source/publication or unbounded continuation: '+name);
   };
-  await import('../supabase/functions/daily-stock-analysis-v1/index.ts');
+  await importStockAiHistoricalModule('supabase/functions/daily-stock-analysis-v1/index.ts');
   const invoke=()=>worker(new Request('https://worker.example.invalid',{method:'POST',headers:{'x-vnext-internal':secret},body:JSON.stringify({batch_id:batch.id})}));
   let r=await invoke(),summary=await r.json();assert.equal(r.status,202);assert.equal(summary.model_calls,1);assert.equal(models.length,1);assert.equal(dispatches.length,1);
   r=await invoke();summary=await r.json();assert.equal(r.status,202);assert.equal(summary.model_calls,1);assert.equal(summary.counts.CACHED,1);assert.equal(dispatches.length,2);

@@ -1,11 +1,12 @@
 // Execute the actual recovery handler and runner with isolated durable/provider ports.
 // Every fetch below is a local fixture; no paid model, database or dispatch is called.
-import test from 'node:test';
+// Historical synthetic protocol coverage; current policy is verified separately in dailyStockAiCurrentPolicyBoundary.test.mjs.
+import {historicalStockAiProtocolTest as test,importStockAiHistoricalModule} from './helpers/stockAiHistoricalProtocol.mjs';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {handleDailyStockRateLimitRecovery} from '../supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-handler.ts';
-import {runStoredStockAiRateLimitRecovery,stockAiRateLimitOriginalRevision,stockAiRateLimitRecoveryRevision} from '../supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-runner.ts';
-import {snapshotHash} from '../src/features/vnext/contracts.ts';
+const {handleDailyStockRateLimitRecovery}=await importStockAiHistoricalModule('supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-handler.ts');
+const {runStoredStockAiRateLimitRecovery,stockAiRateLimitOriginalRevision,stockAiRateLimitRecoveryRevision}=await importStockAiHistoricalModule('supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-runner.ts');
+const {snapshotHash}=await importStockAiHistoricalModule('src/features/vnext/contracts.ts');
 
 const secret='test-only-rate-limit-recovery-secret-0123456789',batchId='a'.repeat(64),reviewHash='b'.repeat(64);
 const cutoff='2026-10-31T07:17:02.217051Z';

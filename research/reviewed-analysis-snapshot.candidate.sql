@@ -8,7 +8,18 @@
 -- Candidate only. Separate OFFLINE_REVIEWED research provenance; no model job,
 -- provider receipt or paid request is created. Existing model editions remain
 -- immutable. UI parsers must accept explicit offline origin before deployment.
+-- Install documented-reviews-v2 first so offline and model editions share its
+-- retained-review expiry bound. Missing dependencies must fail before mutation.
 begin;
+do $offline_expiry_dependency$
+begin
+ if to_regprocedure('vnext_runtime.documented_review_edition_expiry_v2(jsonb,timestamptz)') is null
+  or to_regprocedure('vnext_runtime.documented_review_packet_fact_matches_v2(jsonb,jsonb)') is null
+  or to_regprocedure('vnext_runtime.documented_review_packet_original_id_v2(jsonb)') is null
+  or to_regclass('vnext_private.verified_documented_reviews_v2') is null
+  or to_regclass('vnext_private.verified_retained_sec_facts_v1') is null
+  then raise exception 'OFFLINE_DOCUMENTED_REVIEW_EXPIRY_DEPENDENCY_REQUIRED';end if;
+end $offline_expiry_dependency$;
 create table vnext_private.reviewed_analysis_snapshots_v1(
  snapshot_hash text primary key check(snapshot_hash ~ '^[a-f0-9]{64}$'),
  batch_id text not null references vnext_runtime.ai_stock_batches(id),
@@ -273,6 +284,8 @@ begin
  select * into strict b from vnext_runtime.ai_stock_batches where id=s.batch_id;
  if s.recorded_at>at_time or p_expires_at<=at_time or p_expires_at>(s.body->>'expires_at')::timestamptz
   or p_expires_at>b.cutoff+interval '72 hours' then raise exception 'OFFLINE_EDITION_EXPIRY';end if;
+ -- Reuse the current model-stage time cap; this can only shorten the requested expiry.
+ p_expires_at:=vnext_runtime.documented_review_edition_expiry_v2(b.payload,p_expires_at);
  payload:=vnext_private.offline_reviewed_payload_v1(s.snapshot_hash);eid:=encode(sha256(convert_to(payload::text,'UTF8')),'hex');
  insert into vnext_private.ai_research_editions(id,batch_id,business_date,cutoff,through,job_keys,job_set_hash,payload,expires_at,reviewed_snapshot_hash,created_at)
  values(eid,b.id,(b.cutoff at time zone 'Asia/Taipei')::date,b.cutoff,(b.payload->>'through')::date,'{}',

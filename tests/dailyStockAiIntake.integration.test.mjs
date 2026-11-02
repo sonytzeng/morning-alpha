@@ -1,8 +1,9 @@
-import test from 'node:test';
+// Historical synthetic protocol coverage; current policy is verified separately in dailyStockAiCurrentPolicyBoundary.test.mjs.
+import {historicalStockAiProtocolTest as test,importStockAiHistoricalModule} from './helpers/stockAiHistoricalProtocol.mjs';
 import assert from 'node:assert/strict';
-import {snapshotHash} from '../src/features/vnext/contracts.ts';
-import {loadOrIntakeDailyStockAiBatch} from '../supabase/functions/daily-stock-analysis-v1/intake.ts';
-import {stockAiModelRevision} from '../supabase/functions/_shared/daily-stock-ai-runner.ts';
+const {snapshotHash}=await importStockAiHistoricalModule('src/features/vnext/contracts.ts');
+const {loadOrIntakeDailyStockAiBatch}=await importStockAiHistoricalModule('supabase/functions/daily-stock-analysis-v1/intake.ts');
+const {stockAiModelRevision}=await importStockAiHistoricalModule('supabase/functions/_shared/daily-stock-ai-runner.ts');
 
 const projection='DAILY_AI_RETAINED_INPUT_PROJECTION_V1';
 const baseGaps=['RETAINED_INPUT_OLDER_OBSERVATIONS_OMITTED','NEWS_PROVIDER_EXCERPTS_ONLY_NOT_FULL_ARTICLE',
@@ -84,7 +85,7 @@ test('real Edge entrypoint compiles only a retained receipt with known NEWS and 
    if(name==='dispatch_daily_stock_ai_batch_v1'){assert.equal(args.p_batch_id,stored.id);return Response.json({state:'DISPATCHED'});}
    assert.fail('unexpected network call: '+name);
   };
-  await import('../supabase/functions/daily-stock-analysis-v1/index.ts');
+  await importStockAiHistoricalModule('supabase/functions/daily-stock-analysis-v1/index.ts');
   const invoke=()=>worker(new Request('https://worker.example.invalid',{method:'POST',headers:{'x-vnext-internal':internal},body:JSON.stringify({cutoff})}));
   const reset=()=>{handoff=structuredClone(original.handoff);failure=null;stored=null;storedBody=null;providerCalls=0;calls.length=0;};
   let response=await invoke(),body=await response.json();assert.equal(response.status,202);assert.equal(body.model_calls,1);assert.equal(body.counts.COMPLETE,1);assert.equal(body.counts.DEFERRED,71);assert.equal(body.member_published,false);assert.equal(providerCalls,1);

@@ -7,6 +7,7 @@ import {dirname,resolve,posix} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import ts from 'typescript';
 import {verifyIntegrationCandidate,integrationPhysicalMode} from '../../../tests/helpers/integrationAdmission.mjs';
+import {createCleHistoricalSourceView} from '../../../tests/helpers/continuousLearningSourceView.mjs';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../../..');
 export const BASE='7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3';
@@ -135,6 +136,10 @@ export function assemble(variant='candidate',read=physical,mode=integrationPhysi
  assert(['candidate','recovery'].includes(variant),'CLE_FIXED_VARIANT');
  // Both variants fail closed on the complete current integration tree FIRST.
  verifyIntegrationCandidate(read,undefined,mode);
+ // The dated V17 package keeps its original fixed sources. Only after CURRENT
+ // admission may its two reviewed market corrections be viewed historically.
+ // Never submit that predecessor view to the current integration gate.
+ const currentRead=read;read=createCleHistoricalSourceView(currentRead,mode).predecessorRead;
  assert.match(CATALOG_SHA256,/^[a-f0-9]{64}$/,'CLE_CATALOG_UNSEALED');
  const catalogBytes=Buffer.from(read(CATALOG));assert.equal(sha(catalogBytes),CATALOG_SHA256,'CLE_CATALOG_DRIFT');
  const c=JSON.parse(catalogBytes),confirmed=c.confirmed_sources;assert(confirmed,'CLE_SOURCE_SEAL_MISSING');
@@ -146,7 +151,7 @@ export function assemble(variant='candidate',read=physical,mode=integrationPhysi
  }
  const payload=payloads(base,current)[variant],bytes=encode(payload);
  assert.equal(bytes.length,c.payloads[variant].bytes,'CLE_PAYLOAD_SIZE');assert.equal(sha(bytes),c.payloads[variant].sha256,'CLE_PAYLOAD_DRIFT');
- verifyIntegrationCandidate(read,undefined,mode);
+ verifyIntegrationCandidate(currentRead,undefined,mode);
  return {payload,bytes,sha256:sha(bytes)};
 }
 export function materialize(variant='candidate'){

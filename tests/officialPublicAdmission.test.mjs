@@ -1,11 +1,12 @@
 // Existing PR284 assertions are immutable; current union is separately admitted.
 import test from 'node:test';import assert from 'node:assert/strict';
 import {readdirSync} from 'node:fs';
+import {execFileSync} from 'node:child_process';
 import {
  verifyIntegrationCandidate,createSourceUnionComposition,sourceUnionParentRead,reuseSourceUnionPinnedProof,SOURCE_UNION_PARENTS,
  integrationPhysicalRead,integrationPhysicalMode,integrationInventory,
  integrationHash,integrationHistoricalRead,SOURCE_UNION_R3_FILES,SOURCE_UNION_R3_BASE,SOURCE_UNION_R4_FILES,
- SOURCE_UNION_R5_FILES,FROZEN_SOURCE_UNION_R4,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,INTEGRATION_MANIFEST,
+ SOURCE_UNION_R5_FILES,FROZEN_SOURCE_UNION_R4,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,INTEGRATION_MANIFEST as FROZEN_RUNTIME_INTEGRATION_MANIFEST,CURRENT_INTEGRATION_MANIFEST as INTEGRATION_MANIFEST,
  SOURCE_UNION_R8_FILES,FROZEN_SOURCE_UNION_R7,
  SOURCE_UNION_R9_FILES,FROZEN_SOURCE_UNION_R8,
  SOURCE_UNION_R10_FILES,FROZEN_SOURCE_UNION_R9,
@@ -14,6 +15,25 @@ import {
  FROZEN_SOURCE_UNION_R13,SOURCE_UNION_R14_FILES,FROZEN_SOURCE_UNION_R14,
  FROZEN_SOURCE_UNION_R15,RUNTIME_INTEGRITY_FILES,
 } from './helpers/integrationAdmission.mjs';
+import {reviewedSuccessorPaths,reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';
+const frozenRuntimePaths=new Set(JSON.parse(integrationPhysicalRead(FROZEN_RUNTIME_INTEGRATION_MANIFEST)).files.map(row=>row.path));
+const successorAdded=reviewedSuccessorPaths().filter(path=>!frozenRuntimePaths.has(path));
+// One changed current test consumer has an exact older Actual-parent view.
+// Raw reads and all source-gate callbacks keep the physical current bytes.
+function readActualIssuerConsumer(path,bytes){
+ const consumer='tests/recommendationIssuerEventReview.test.mjs';
+ if(path!==consumer)return bytes;
+ const admitted=verifyIntegrationCandidate(),row=admitted.files.find(r=>r.path===consumer);
+ assert(row);assert.equal(row.mode,'100644');
+ if(integrationHash(bytes)!==row.after_sha256){verifyIntegrationCandidate();return bytes;}
+ assert.equal(integrationHash(integrationPhysicalRead(path)),row.after_sha256,'ISSUER_CONSUMER_CHANGED_AFTER_ADMISSION');
+ const metadata=execFileSync('git',['--no-replace-objects','ls-tree','-z','64565b5e44568c5c653bd2007992d482df36e60f','--',path],{cwd:new URL('../',import.meta.url)}).toString();
+ assert.equal(metadata,'100644 blob 44a2ab563b51a3e562475289eb179a10e042d2b4\t'+path+'\0');
+ const old=sourceUnionParentRead('actual',path);
+ assert.equal(integrationHash(old),'ba531707c69cad01edcf5706af28e15a04accc523ee674543e94e3e3fc78d225');
+ verifyIntegrationCandidate();
+ return old;
+}
 const runtimeAdded=RUNTIME_INTEGRITY_FILES.filter(r=>r.before_sha256===null||["research/entry-opportunity.ts","src/features/vnext/researchFunnel.ts","supabase/functions/_shared/market-calendar-data.json","tests/browser/ownerCockpitSupabaseMock.ts","research/entry-official-history.ts","tests/entryOpportunityOfficialHistory.test.mjs","src/components/base/MarketDataCards.tsx","src/pages/terms/page.tsx","supabase/functions/_shared/required-provider-validation.mjs","supabase/functions/_shared/provider-reliability-contract.mjs","supabase/functions/_shared/production-evidence-recorder.mjs","supabase/functions/fetch-market-data-v10/index.ts","supabase/functions/market-readiness-preflight/index.ts"].includes(r.path)).map(r=>r.path);
 import {assemble as financial,CHANGED,CATALOG} from '../scripts/operations/financial-response-period-20261020/materialize.mjs';
 import {worker4Baseline} from '../scripts/operations/forward-cutoff-20261020/materialize.mjs';
@@ -34,7 +54,7 @@ test('current union preserves the7986 four-source Worker packet, never mixing or
  for(const path of CHANGED){
   const frozen=sourceUnionParentRead('actual',path);
   assert.equal(candidate.payload.files.find(f=>f.name===path).content,frozen.toString(),'sealed Worker5 keeps the original source');
-  if(['src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts','src/features/vnext/dailyAdapter.ts'].includes(path))assert.equal(integrationHash(integrationPhysicalRead(path)),RUNTIME_INTEGRITY_FILES.find(r=>r.path===path).after_sha256,'current candidate is independently admitted, not substituted into Worker5');
+  if(['src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts','src/features/vnext/dailyAdapter.ts'].includes(path))assert.equal(integrationHash(integrationPhysicalRead(path)),reviewedSuccessorSourceHash(path,RUNTIME_INTEGRITY_FILES.find(r=>r.path===path).after_sha256),'current candidate is independently admitted, not substituted into Worker5');
   else assert.deepEqual(integrationPhysicalRead(path),frozen);
  }
  for(const p of ['src/features/vnext/contracts.ts','src/features/vnext/engine.ts','supabase/functions/_shared/decision-v1-evidence.ts']){
@@ -63,7 +83,11 @@ test('R4 admits current evaluator before the unchanged issuer review can reconst
  const injected=Buffer.concat([current,Buffer.from('UNREVIEWED_EVALUATOR')]);
  assert.deepEqual(integrationHistoricalRead('core',path,injected),injected,'historical reflection must not erase injected bytes');
  assert.throws(()=>verifyIntegrationCandidate(p=>p===path?injected:integrationPhysicalRead(p)),/SOURCE_DRIFT/);
- for(const p of ['tests/recommendationIssuerEventReview.test.mjs','research/recommendation-issuer-event-review-candidate.ts'])assert.deepEqual(integrationPhysicalRead(p),sourceUnionParentRead('actual',p));
+ for(const p of ['tests/recommendationIssuerEventReview.test.mjs','research/recommendation-issuer-event-review-candidate.ts'])assert.deepEqual(readActualIssuerConsumer(p,integrationPhysicalRead(p)),sourceUnionParentRead('actual',p));
+ const consumer='tests/recommendationIssuerEventReview.test.mjs',consumerBytes=integrationPhysicalRead(consumer),injectedConsumer=Buffer.concat([consumerBytes,Buffer.from('UNREVIEWED_ISSUER_CONSUMER')]);
+ assert.deepEqual(readActualIssuerConsumer(consumer,injectedConsumer),injectedConsumer,'strict consumer view never erases injected bytes');
+ assert.deepEqual(readActualIssuerConsumer('tests/unreviewed-consumer.mjs',injectedConsumer),injectedConsumer,'unknown paths keep raw bytes');
+ assert.throws(()=>verifyIntegrationCandidate(path=>path===consumer?injectedConsumer:integrationPhysicalRead(path)),/SOURCE_DRIFT/);
  const r3=verifyIntegrationCandidate().source_union.r3;assert.equal(r3.base,SOURCE_UNION_R3_BASE);
  assert.equal(r3.evaluator_evidence,'MEMORY_BASIS_CONTROL_AND_FRESH_DB_FIXTURE_NOT_PRODUCTION_ROLE_OR_RAW_PAYLOAD_PROOF');
 });
@@ -116,8 +140,8 @@ test('R5 full PR composition adds the old R4 root and three new paths, never a f
  const r9Added=SOURCE_UNION_R9_FILES.filter(r=>r.before_sha256===null).map(r=>r.path);
  const r10Added=SOURCE_UNION_R10_FILES.filter(r=>!old.files.some(f=>f.path===r.path)).map(r=>r.path);
  const r12Added=SOURCE_UNION_R12_FILES.filter(r=>r.before_sha256===null).map(r=>r.path);
- assert.deepEqual(m.files.filter(r=>![FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded].includes(r.path)).map(r=>r.path),paths);
- assert.deepEqual(integrationInventory(),[...paths,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded,INTEGRATION_MANIFEST].sort());
+ assert.deepEqual(m.files.filter(r=>![FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded,...successorAdded].includes(r.path)).map(r=>r.path),paths);
+ assert.deepEqual(integrationInventory(),[...paths,FROZEN_SOURCE_UNION_R5,FROZEN_SOURCE_UNION_R6,FROZEN_SOURCE_UNION_R7,...r8Added,FROZEN_SOURCE_UNION_R8,...r9Added,FROZEN_SOURCE_UNION_R9,...r10Added,FROZEN_SOURCE_UNION_R10,FROZEN_SOURCE_UNION_R11,...r12Added,FROZEN_SOURCE_UNION_R13,FROZEN_SOURCE_UNION_R14,FROZEN_SOURCE_UNION_R15,...runtimeAdded,...successorAdded,INTEGRATION_MANIFEST].sort());
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R5)).files.length,519,'R5 complete assertion stays frozen, not rewritten');
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R6)).files.length,520,'R6 complete assertion stays frozen, not rewritten');
  assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R11)).files.length,533,'R11 full root stays immutable, not relabelled as current');
@@ -161,7 +185,7 @@ test('R5 CI pins Deno2.9.2 and fully type-checks the exact research source offli
  const block=current.split(/(?=^      - )/m).find(b=>b.includes(command));assert(block);
  assert.doesNotMatch(block,/\bif:|continue-on-error:|--no-check|--allow-|secrets\./);
  const contracts='src/features/vnext/contracts.ts';
- assert.equal(integrationHash(integrationPhysicalRead(contracts)),RUNTIME_INTEGRITY_FILES.find(r=>r.path===contracts).after_sha256,'the complete current contracts module is admitted before Deno checks');
+ assert.equal(integrationHash(integrationPhysicalRead(contracts)),reviewedSuccessorSourceHash(contracts,RUNTIME_INTEGRITY_FILES.find(r=>r.path===contracts).after_sha256),'the complete current contracts module is admitted before Deno checks');
  assert.equal(integrationHash(sourceUnionParentRead('registry',contracts)),RUNTIME_INTEGRITY_FILES.find(r=>r.path===contracts).before_sha256,'the original registry contract remains immutable; shared serialization does not replace its frozen proof');
 });
 test('R8 current CI unconditionally runs both current synthetic suites and both research Deno checks AFTER complete admission',()=>{

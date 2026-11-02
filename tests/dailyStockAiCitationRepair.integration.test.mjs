@@ -1,7 +1,8 @@
-import test from 'node:test';
+// Historical synthetic protocol coverage; current policy is verified separately in dailyStockAiCurrentPolicyBoundary.test.mjs.
+import {historicalStockAiProtocolTest as test,importStockAiHistoricalModule} from './helpers/stockAiHistoricalProtocol.mjs';
 import assert from 'node:assert/strict';
-import {snapshotHash} from '../src/features/vnext/contracts.ts';
-import {stockAiCitationRepairRevision,stockAiAllFactsCitationRepairRevision,stockAiCitationRepairOriginalRevision} from '../supabase/functions/_shared/daily-stock-ai-runner.ts';
+const {snapshotHash}=await importStockAiHistoricalModule('src/features/vnext/contracts.ts');
+const {stockAiCitationRepairRevision,stockAiAllFactsCitationRepairRevision,stockAiCitationRepairOriginalRevision}=await importStockAiHistoricalModule('supabase/functions/_shared/daily-stock-ai-runner.ts');
 
 test('same Edge route repairs only the reviewed stock with fixed prompt8 and never continues or stages',async()=>{
  const symbols=Array.from({length:72},(_,i)=>String(1000+i));symbols[0]='2379';symbols[71]='2357';
@@ -60,7 +61,7 @@ test('same Edge route repairs only the reviewed stock with fixed prompt8 and nev
    }
    assert.fail('repair must not dispatch, stage, publish, refresh sources or run another route: '+name);
   };
-  await import('../supabase/functions/daily-stock-analysis-v1/index.ts');
+  await importStockAiHistoricalModule('supabase/functions/daily-stock-analysis-v1/index.ts');
   const invoke=async(symbol=requested,extra={})=>{
    requested=symbol;const r=await worker(new Request('https://worker.example.invalid',{method:'POST',headers:{'x-vnext-internal':secret},body:JSON.stringify({batch_id:batch.id,repair_symbol:symbol,review_document_hash:currentReview,...extra})}));return {response:r,body:await r.json()};
   };

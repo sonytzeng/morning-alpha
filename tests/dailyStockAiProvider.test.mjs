@@ -1,9 +1,10 @@
-import test from 'node:test';
+// Historical synthetic protocol coverage; current policy is verified separately in dailyStockAiCurrentPolicyBoundary.test.mjs.
+import {historicalStockAiProtocolTest as test,importStockAiHistoricalModule} from './helpers/stockAiHistoricalProtocol.mjs';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {analyseStockWithProvider,dailyStockAnalysisResponseFormat} from '../supabase/functions/_shared/daily-stock-ai.ts';
-import {snapshotHash} from '../src/features/vnext/contracts.ts';
-import {stockAiModelRevision} from '../supabase/functions/_shared/daily-stock-ai-runner.ts';
+const {analyseStockWithProvider,dailyStockAnalysisResponseFormat}=await importStockAiHistoricalModule('supabase/functions/_shared/daily-stock-ai.ts');
+const {snapshotHash}=await importStockAiHistoricalModule('src/features/vnext/contracts.ts');
+const {stockAiModelRevision}=await importStockAiHistoricalModule('supabase/functions/_shared/daily-stock-ai-runner.ts');
 const packet={symbol:'2330',company:'測試公司',cutoff:'2026-10-30T12:00:00Z',evidence:[{id:'E1',symbol:'2330',kind:'NEWS',source:'https://www.twse.com.tw/',published_at:'2026-10-30T10:00:00Z',available_at:'2026-10-30T11:00:00Z',content:'測試資料，不是真實股票分析'}]};
 const output={symbol:'2330',horizons:['SHORT','MEDIUM','LONG'].map(horizon=>({horizon,status:'WAIT',reason:{text:'等待確認',evidence_ids:['E1']},counter_evidence:[],confirmation:'等待新公告',invalidation:'新證據否定判斷',gaps:[]}))};
 const result=()=>({id:'test-provider-receipt',model:'test-model',choices:[{finish_reason:'stop',message:{content:JSON.stringify(output)}}],usage:{prompt_tokens:100,completion_tokens:100}});

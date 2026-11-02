@@ -20,10 +20,10 @@ const projection=e=>({id:e.id,source:e.source,kind:e.kind,published_at:e.publish
  time_basis:e.time_basis??'PUBLISHED',first_seen_at:e.first_seen_at??null,as_of:e.as_of??null,evidence_hash:e.evidence_hash??null});
 const now=Date.now(),oldCutoff=new Date(now-7200000).toISOString(),newCutoff=new Date(now-600000).toISOString();
 const expires=new Date(now+3600000).toISOString(),through=new Date(now-24*3600000).toISOString().slice(0,10);
-async function fixture(cutoff,eps){
+async function fixture(cutoff,eps,firstSymbol=null){
  const packet_texts={},packet_hashes={},packets=[],cards=[];
  for(let i=0;i<72;i++){
-  const symbol=String(1000+i),observed=new Date(Date.parse(cutoff)-60000).toISOString();
+  const symbol=i===0&&firstSymbol?firstSymbol:String(1000+i),observed=new Date(Date.parse(cutoff)-60000).toISOString();
   const financial={id:symbol+':FINANCIAL:one',symbol,kind:'FINANCIAL',source:'https://www.twse.com.tw/synthetic-financial',published_at:observed,available_at:observed,
    content:canonical({kind:'EPS',period:'2026-Q3',unit:'TWD_PER_SHARE',alternate_unit:'USD_PER_SHARE',basis:'BASIC_SINGLE_QUARTER',values:{eps}})};
   const price={...financial,id:symbol+':PRICE:one',kind:'PRICE',source:'https://www.twse.com.tw/synthetic-price',content:canonical({date:through,close:123,volume:5000})};
@@ -64,7 +64,25 @@ try{
  }
  await role('service_role');const oldEdition=(await q('select public.stage_daily_ai_research_edition_v1($1,$2,$3) result',[old.batchId,oldJobs,expires]))[0].result.edition_id;
  await role(null);const oldJobHash=(await q("select encode(sha256(convert_to(string_agg(id||':'||result::text,',' order by id),'UTF8')),'hex') hash from vnext_runtime.ai_stock_jobs"))[0].hash;
- await db.exec(await readFile(new URL('../research/reviewed-analysis-snapshot.candidate.sql',import.meta.url),'utf8'));
+ const freshSql=await originalSql('reviewed-analysis-snapshot.candidate.sql');
+ const sqlFunction=(sql,name)=>{
+  const match=sql.match(new RegExp('create (?:or replace )?function\\s+'+name.replaceAll('.','[.]')+'\\([\\s\\S]*?\\bas\\s+(\\$[A-Za-z_0-9]*\\$)[\\s\\S]*?\\1\\s*;','i'));
+  assert(match,'Expected actual SQL function '+name);return match[0];
+ };
+ await rejects(()=>db.exec(freshSql),/OFFLINE_DOCUMENTED_REVIEW_EXPIRY_DEPENDENCY_REQUIRED/,'Fresh install refuses an undefined expiry dependency');
+ await db.exec('rollback');
+ equal((await q("select to_regclass('vnext_private.reviewed_analysis_snapshots_v1') snapshot_table"))[0].snapshot_table,null,'Missing dependency leaves no partial offline installation');
+ // Use the actual retained-review helpers, with private synthetic registry rows.
+ // This exercises the same expiry semantics as the incremental installation.
+ await db.exec(`create table vnext_private.verified_documented_reviews_v2(facts_text text,review_valid_until text,review_price_basis_text text);
+ create table vnext_private.verified_retained_sec_facts_v1(facts_text text);`);
+ const documentedSql=await readFile(new URL('../scripts/operations/sec-documented-reviews-v2/documented-reviews-v2.candidate.sql',import.meta.url),'utf8');
+ for(const name of ['documented_review_packet_fact_matches_v2','documented_review_packet_original_id_v2','documented_review_edition_expiry_v2'])
+  await db.exec(sqlFunction(documentedSql,'vnext_runtime.'+name));
+ equal(sqlFunction(freshSql,'public.stage_offline_reviewed_analysis_edition_v1'),
+  sqlFunction(await originalSql('stage-only-to-offline-edition.incremental.candidate.sql'),'public.stage_offline_reviewed_analysis_edition_v1'),
+  'Fresh and incremental edition staging retain identical expiry behavior');
+ await db.exec(freshSql);
  equal(await definitions(),gatesBefore,'Existing quality/time/source-use/Owner stage and approval function sources remain unchanged');
  equal((await q("select prosrc from pg_proc where oid='vnext_private.ai_model_edition_integrity_legacy_v1(text)'::regprocedure"))[0].prosrc,legacySource,'Legacy model integrity branch remains byte-for-byte identical');
  equal((await q('select vnext_private.ai_edition_integrity_v1($1) valid',[oldEdition]))[0].valid,true);
@@ -166,6 +184,30 @@ try{
  await role('service_role');await useReview('independent-source-reviewer','PASS','VERIFIED','ALL_INPUTS_REVIEWED');await identity('premium');equal((await q('select public.get_daily_ai_member_research_v1() result'))[0].result.cards.length,216);
  await role('service_role');await review('independent-synthetic-reviewer','FAIL');await identity('premium');equal((await q('select public.get_daily_ai_member_research_v1() result'))[0].result.cards.length,0,'Later FAIL full quality review withdraws access');
  await role(null);equal((await q('select vnext_private.ai_edition_integrity_v1($1) valid',[oldEdition]))[0].valid,true,'Legacy edition still verifies after offline publication tests');
+ const bounded=await fixture(newCutoff,1.32,'2330'),packet=bounded.packets[0],observed=new Date(Date.parse(newCutoff)-60000).toISOString();
+ const facts=Array.from({length:15},(_,i)=>{
+  const f={id:(i<3?'own-documented-review:':'sec-quarter:')+'2330:synthetic-'+i,symbol:'2330',kind:i<3?'DEMAND':'EPS',period:'2026-Q3',
+   basis:i<3?'DOCUMENTED_REVIEW':'SINGLE_QUARTER',values:{value:i},source:'https://www.twse.com.tw/synthetic-financial',published_at:observed,
+   available_at:observed,first_seen_at:observed,as_of:observed,evidence_hash:sha('synthetic-retained-'+i)};
+  packet.evidence.push({id:'2330:FINANCIAL:'+f.id,symbol:'2330',kind:'FINANCIAL',source:f.source,published_at:f.published_at,
+   available_at:f.available_at,first_seen_at:f.first_seen_at,as_of:f.as_of,evidence_hash:f.evidence_hash,time_basis:'PUBLISHED',
+   content:canonical({kind:f.kind,period:f.period,basis:f.basis,values:f.values,original_id:f.id})});return f;
+ });
+ bounded.batch.packet_texts['2330']=canonical(packet);bounded.batch.packet_hashes['2330']=sha(bounded.batch.packet_texts['2330']);
+ bounded.batchText=canonical(bounded.batch);bounded.batchId=sha(bounded.batchText);bounded.body.batch_id=bounded.batchId;
+ const reviewDeadline=new Date(now+1800000).toISOString();
+ await q('insert into vnext_private.verified_documented_reviews_v2 values($1,$2,$3)',[canonical(facts.slice(0,3)),reviewDeadline,canonical({session_date:through,close_twd:123})]);
+ await q('insert into vnext_private.verified_retained_sec_facts_v1 values($1)',[canonical(facts.slice(3))]);
+ await role('service_role');await q('select public.store_daily_stock_ai_batch_v1($1,$2)',[bounded.batchText,bounded.batchId]);
+ const boundedSnapshot=await stageBody(bounded.body),boundedEdition=await stageEdition(boundedSnapshot.snapshot_hash);
+ await role(null);
+ equal((await q('select expires_at from vnext_private.ai_research_editions where id=$1',[boundedEdition.edition_id]))[0].expires_at,new Date(reviewDeadline),
+  'Fresh offline edition cannot outlive the exact documented-review deadline');
+ equal((await q('select count(*)::integer n from vnext_private.ai_research_publication_events where edition_id=$1',[boundedEdition.edition_id]))[0].n,0,
+  'Applying the expiry cap creates no publication');
+ await q('update vnext_private.verified_documented_reviews_v2 set review_valid_until=$1',[new Date(now-1000).toISOString()]);
+ await role('service_role');await rejects(()=>stageEdition(boundedSnapshot.snapshot_hash),/DOCUMENTED_REVIEW_V2_STAGE_EXPIRED_OR_SCOPE/,
+  'Expired documented reviews cannot be renewed by replaying the same offline snapshot');
  const summary={schema:'OFFLINE_REVIEWED_SNAPSHOT_SQL_TEST_V1',status:'PASS',assertions,model_calls:0,production_writes:0,
   synthetic_only:true,offline_model_jobs_created:0,legacy_integrity_source_identical:true,frontend_compatibility_required:false,
   source_use_time_quality_owner_premium_gates_preserved:true,authorizes_real_publication:false};

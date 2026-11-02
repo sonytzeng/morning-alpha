@@ -7,6 +7,7 @@ import {createHash} from 'node:crypto';
 import {resolve,dirname,relative} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {verifyIntegrationCandidate,integrationInventory,integrationPhysicalMode,RUNTIME_INTEGRITY_FILES,RUNTIME_INTEGRITY_BASE} from './integrationAdmission.mjs';
+import {reviewedSuccessorSourceHash} from './reviewedSourceSuccessor.mjs';
 
 export const MEMBER_CONTINUITY_BASE='cb678aeee5601c71f9b943cddff861763effc753';
 export const MEMBER_CONTINUITY_MANIFEST='docs/operations/evidence/member-continuity-20261018.json';
@@ -65,9 +66,8 @@ function before(row){
 // continuity receipt remains immutable and describes only its historical tree.
 function currentHash(path,legacyHash){
  const delta=RUNTIME_INTEGRITY_FILES.find(r=>r.path===path);
- if(!delta)return legacyHash;
- assert.equal(delta.before_sha256,legacyHash,'MEMBER_CONTINUITY_DELTA_PREIMAGE');
- return delta.after_sha256;
+ if(delta)assert.equal(delta.before_sha256,legacyHash,'MEMBER_CONTINUITY_DELTA_PREIMAGE');
+ return reviewedSuccessorSourceHash(path,delta?.after_sha256??legacyHash);
 }
 function actual(row){
  const file=physical(row.path);assert.equal(file.mode,row.mode,'MEMBER_CONTINUITY_MODE:'+row.path);

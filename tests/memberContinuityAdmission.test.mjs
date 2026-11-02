@@ -9,6 +9,7 @@ import {createHash} from 'node:crypto';
 import {MEMBER_CONTINUITY_BASE,MEMBER_CONTINUITY_MANIFEST,MEMBER_CONTINUITY_RUNTIME,
  verifyMemberContinuity,memberContinuityHistoricalRead,memberContinuityHistoricalReader,memberContinuityWebsiteOperations} from './helpers/memberContinuityAdmission.mjs';
 import {integrationInventory,integrationPhysicalRead,integrationPhysicalMode,RUNTIME_INTEGRITY_FILES,RUNTIME_INTEGRITY_BASE} from './helpers/integrationAdmission.mjs';
+import {reviewedSuccessorSourceHash,REVIEWED_SUCCESSOR_CATALOG} from './helpers/reviewedSourceSuccessor.mjs';
 
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const git=args=>execFileSync('git',['--no-replace-objects',...args],{maxBuffer:2e6});
@@ -22,7 +23,7 @@ test('continuity is a separately admitted exact two-source candidate with origin
  for(const path of [predecessor,'docs/operations/evidence/r10-functional-source-closure-20261017.json','docs/operations/evidence/core-member-integration-20261017-r10.json'])assert.deepEqual(readFileSync(path),prior(path));
  for(const row of m.files){const delta=RUNTIME_INTEGRITY_FILES.find(r=>r.path===row.path);
   if(delta)assert.equal(delta.before_sha256,row.after_sha256);
-  assert.equal(hash(readFileSync(row.path)),delta?.after_sha256??row.after_sha256);assert.equal(hash(prior(row.path)),row.before_sha256);}
+  assert.equal(hash(readFileSync(row.path)),reviewedSuccessorSourceHash(row.path,delta?.after_sha256??row.after_sha256));assert.equal(hash(prior(row.path)),row.before_sha256);}
  m.files[0].after_sha256='0'.repeat(64);assert.notEqual(verifyMemberContinuity().files[0].after_sha256,m.files[0].after_sha256);
 });
 test('historical translation is limited to exact current bytes of only two paths and returns copies',()=>{
@@ -69,7 +70,10 @@ test('historical website candidate preserves its two targets and excludes newer 
 async function fixture(){
  const dir=mkdtempSync(join(tmpdir(),'ma-member-continuity-')),put=(path,bytes)=>{mkdirSync(dirname(join(dir,path)),{recursive:true});writeFileSync(join(dir,path),bytes);};
  put('.git',Buffer.from('gitdir: '+git(['rev-parse','--absolute-git-dir']).toString().trim()+'\n'));
- for(const path of [helper,MEMBER_CONTINUITY_MANIFEST,...MEMBER_CONTINUITY_RUNTIME.map(row=>row.path)])put(path,readFileSync(path));
+ // Copy the actual independently pinned successor verifier/catalog. The fixture
+ // cannot invent replacement source hashes or bypass their Git/review lineage.
+ for(const path of [helper,'tests/helpers/reviewedSourceSuccessor.mjs',REVIEWED_SUCCESSOR_CATALOG,
+  MEMBER_CONTINUITY_MANIFEST,...MEMBER_CONTINUITY_RUNTIME.map(row=>row.path)])put(path,readFileSync(path));
  // Only this disposable physical-file fixture substitutes the full-tree gate.
  // The ordinary tests above execute the real complete composition verifier.
  // The substitute records every boundary and can reject a newly invalid live

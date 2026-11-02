@@ -11,6 +11,7 @@ import {tmpdir} from 'node:os';
 import vm from 'node:vm';
 import ts from 'typescript';
 import * as actual from '../scripts/operations/continuous-learning-20261020/materialize.mjs';
+import * as cleSourceView from './helpers/continuousLearningSourceView.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url)),require=createRequire(import.meta.url);
 const script='scripts/operations/continuous-learning-20261020/materialize.mjs';
@@ -28,7 +29,8 @@ function packager({seal=actual.CATALOG_SHA256,guard=()=>{}}={}){
   .replace("CATALOG_SHA256='"+actual.CATALOG_SHA256+"'","CATALOG_SHA256='"+seal+"'");
  const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
  vm.runInNewContext(js,{module,exports:module.exports,Buffer,process:{argv:[]},console,
-  require:spec=>spec.endsWith('/integrationAdmission.mjs')?{verifyIntegrationCandidate:guard,integrationPhysicalMode:()=> '100644'}:require(spec)},{filename:script});
+  require:spec=>spec.endsWith('/integrationAdmission.mjs')?{verifyIntegrationCandidate:guard,integrationPhysicalMode:()=> '100644'}:
+   spec.endsWith('/continuousLearningSourceView.mjs')?cleSourceView:require(spec)},{filename:script});
  return module.exports;
 }
 const draft=packager(),confirmed=Object.fromEntries([actual.INDEX,actual.CORE,actual.SDK_TYPES].map(name=>[name,sha(physical(name))]));
@@ -262,4 +264,83 @@ test('actual transformed candidate/recovery entrypoints AND RuntimeDatabase comp
   }
  }
  assert.deepEqual(failures,[],'Both transformed variants must pass; no generic/type-check suppression is allowed.\n'+failures.join('\n'));
+});
+
+test('narrow CLE source view retains both corrected current files and exact V17 payload bytes',()=>{
+ const rows=cleSourceView.CLE_MARKET_SOURCE_CORRECTIONS;
+ assert.equal(cleSourceView.CLE_HISTORICAL_SOURCE_BASE,actual.BASE);
+ assert(Object.isFrozen(rows));assert(rows.every(Object.isFrozen));
+ assert.deepEqual(rows.map(row=>row.path).sort(),[
+  'supabase/functions/_shared/market-calendar-data.json',
+  'supabase/functions/_shared/market-status.ts',
+ ]);
+ const view=cleSourceView.createCleHistoricalSourceView(physical,()=> '100644');
+ assert.equal(view.schema,'CLE_HISTORICAL_SOURCE_VIEW_V1');assert.equal(view.base,actual.BASE);
+ assert.equal(view.full_integration_admission,false);assert.equal(view.production_authorized,false);
+ for(const row of rows){
+  const current=physical(row.path),old=baseline(row.path);
+  assert.equal(sha(current),row.after_sha256);assert.equal(current.length,row.after_bytes);
+  assert.equal(sha(old),row.before_sha256);assert.equal(old.length,row.before_bytes);
+  assert.equal(row.mode,'100644');assert.notEqual(row.before_sha256,row.after_sha256);
+  assert.deepEqual(view.predecessorRead(row.path),old);
+  const returned=view.predecessorRead(row.path);returned.fill(0);
+  assert.deepEqual(view.predecessorRead(row.path),old,'caller mutation must not corrupt the archived preimage');
+  for(const result of [candidate,recovery])assert.equal(result.payload.files.find(file=>file.name===row.path).content,old.toString('utf8'));
+  assert.deepEqual(physical(row.path),current,'historical packaging cannot rewrite the corrected physical source');
+ }
+ assert(JSON.parse(physical('supabase/functions/_shared/market-calendar-data.json')).TW.preserved_exceptional_closures.includes('2026-10-23'));
+});
+
+test('CLE historical assembly admits the original current reader before and after translating its two fixed sources',()=>{
+ const rows=cleSourceView.CLE_MARKET_SOURCE_CORRECTIONS,admitted=[];
+ const checked=packager({seal:sha(catalogBytes),guard:source=>{
+  admitted.push(rows.map(row=>sha(source(row.path))));
+  for(const row of rows)assert.equal(sha(source(row.path)),row.after_sha256,'current admission must never receive archived market bytes');
+ }});
+ for(const variant of ['candidate','recovery']){
+  const result=checked.assemble(variant,read);
+  assert.equal(result.sha256,catalog.payloads[variant].sha256);
+ }
+ assert.equal(admitted.length,4);assert(admitted.every(hashes=>hashes.every((hash,index)=>hash===rows[index].after_sha256)));
+});
+
+test('CLE source view refuses known-source, mode, stale-current and caller-scope drift',()=>{
+ const rows=cleSourceView.CLE_MARKET_SOURCE_CORRECTIONS;
+ for(const row of rows){
+  const changed=Buffer.concat([physical(row.path),Buffer.from('\nUNREVIEWED_DRIFT')]);
+  assert.throws(()=>cleSourceView.createCleHistoricalSourceView(path=>path===row.path?changed:physical(path),()=> '100644'),/CLE_SOURCE_VIEW_CURRENT_SIZE|CLE_SOURCE_VIEW_CURRENT_HASH/);
+  const sameSize=Buffer.from(physical(row.path));sameSize[0]^=1;
+  assert.throws(()=>cleSourceView.createCleHistoricalSourceView(path=>path===row.path?sameSize:physical(path),()=> '100644'),/CLE_SOURCE_VIEW_CURRENT_HASH/);
+  assert.throws(()=>cleSourceView.createCleHistoricalSourceView(path=>path===row.path?baseline(path):physical(path),()=> '100644'),
+   /CLE_SOURCE_VIEW_CURRENT_SIZE|CLE_SOURCE_VIEW_CURRENT_HASH/,'historical bytes cannot masquerade as the corrected current source');
+  assert.throws(()=>cleSourceView.createCleHistoricalSourceView(physical,path=>path===row.path?'100755':'100644'),/CLE_SOURCE_VIEW_MODE/);
+  for(const variant of ['candidate','recovery']){
+   assert.throws(()=>api.assemble(variant,path=>path===row.path?changed:read(path)),/CLE_SOURCE_VIEW_CURRENT_SIZE|CLE_SOURCE_VIEW_CURRENT_HASH/);
+   assert.throws(()=>api.assemble(variant,read,path=>path===row.path?'100755':'100644'),/CLE_SOURCE_VIEW_MODE/);
+  }
+ }
+ assert.throws(()=>cleSourceView.createCleHistoricalSourceView(physical,()=> '100644',{base:'HEAD'}),/NO_CUSTOM_BASE_OR_SCOPE/);
+ assert.throws(()=>cleSourceView.createCleHistoricalSourceView(physical,()=> '100644',{paths:[actual.CORE]}),/NO_CUSTOM_BASE_OR_SCOPE/);
+});
+
+test('CLE source view revalidates mapped reads and never hides a third fixed-file drift or source exception',()=>{
+ for(const row of cleSourceView.CLE_MARKET_SOURCE_CORRECTIONS){
+  let changed=false;
+  const view=cleSourceView.createCleHistoricalSourceView(path=>path===row.path&&changed?
+   Buffer.concat([physical(path),Buffer.from('\nLATE_DRIFT')]):physical(path),()=> '100644');
+  changed=true;assert.throws(()=>view.predecessorRead(row.path),/CLE_SOURCE_VIEW_CURRENT_SIZE|CLE_SOURCE_VIEW_CURRENT_HASH/);
+  let wrongMode=false;
+  const modeView=cleSourceView.createCleHistoricalSourceView(physical,path=>path===row.path&&wrongMode?'100755':'100644');
+  wrongMode=true;assert.throws(()=>modeView.predecessorRead(row.path),/CLE_SOURCE_VIEW_MODE/);
+ }
+ const sentinel=Buffer.from('UNREVIEWED_THIRD_SOURCE'),other='supabase/functions/_shared/continuous-learning-core.mjs';
+ const view=cleSourceView.createCleHistoricalSourceView(path=>path===other?sentinel:physical(path),()=> '100644');
+ assert.equal(view.predecessorRead(other),sentinel);
+ for(const variant of ['candidate','recovery'])assert.throws(()=>api.assemble(variant,path=>path===actual.TYPE_CONTRACT?
+  Buffer.concat([read(path),Buffer.from('\nTHIRD_FIXED_DRIFT')]):read(path)),/SOURCE_DRIFT/);
+ const failure=Error('CLE_SOURCE_THROW'),missing='supabase/functions/_shared/unreviewed-source.ts';
+ const throwing=cleSourceView.createCleHistoricalSourceView(path=>{if(path===missing)throw failure;return physical(path);},()=> '100644');
+ assert.throws(()=>throwing.predecessorRead(missing),error=>error===failure);
+ for(const row of cleSourceView.CLE_MARKET_SOURCE_CORRECTIONS)assert.throws(()=>
+  cleSourceView.createCleHistoricalSourceView(path=>{if(path===row.path)throw failure;return physical(path);},()=> '100644'),error=>error===failure);
 });

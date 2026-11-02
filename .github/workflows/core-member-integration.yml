@@ -275,7 +275,8 @@ jobs:
           const repairReceipt={head,source_base:'a3602de17198dd9b769a16671ed97c4763e21cd8',source_view:'HISTORICAL_OWNER_STATUS_COPY_A360',source_operations:1,archive_sha256:sha(readFileSync(repairArchive)),production_authorized:false,source_receipt:'docs/operations/evidence/owner-status-copy-20261019.json',files:repair,predecessor_website:current.predecessor_website};
           writeFileSync(join(dir,'owner-status-copy-receipt.json'),JSON.stringify(repairReceipt,null,2)+'\n',{flag:'wx',mode:0o600});
           NODE
-      - name: Package the exact current single-file Owner regime label repair
+      - name: Package the immutable 6b7017 single-file Owner regime label repair
+        working-directory: build/source-acquisition-historical-base
         env:
           NODE_OPTIONS: --experimental-strip-types
           MEMBER_UI_ARTIFACT_DIR: ${{ runner.temp }}/morning-alpha-frontend-type-closure-ui
@@ -295,7 +296,7 @@ jobs:
           assert.equal(files.length,1);assert.equal(files[0].path,'src/features/research/cockpit.ts');
           const archive=join(dir,'owner-regime-display-source.zip');assert(!existsSync(archive));
           execFileSync('zip',['-X','-q',archive,...files.map(file=>file.path)]);
-          writeFileSync(join(dir,'owner-regime-display-receipt.json'),JSON.stringify({head,source_view:'CURRENT_OWNER_REGIME_DISPLAY_SOURCE',source_operations:1,archive_sha256:sha(readFileSync(archive)),production_authorized:false,source_receipt:'docs/operations/evidence/owner-regime-display-20261019.json',files,protected_sources:manifest.protected_sources},null,2)+'\n',{flag:'wx',mode:0o600});
+          writeFileSync(join(dir,'owner-regime-display-receipt.json'),JSON.stringify({head,source_base:'6b7017fcbb9fa2fd085f9658eca4d6ce382c32a3',source_view:'HISTORICAL_OWNER_REGIME_DISPLAY_6B7017',source_operations:1,archive_sha256:sha(readFileSync(archive)),production_authorized:false,source_receipt:'docs/operations/evidence/owner-regime-display-20261019.json',files,protected_sources:manifest.protected_sources},null,2)+'\n',{flag:'wx',mode:0o600});
           NODE
       - uses: actions/upload-artifact@v4
         with:

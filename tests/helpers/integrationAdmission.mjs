@@ -10,6 +10,8 @@ import {URL} from 'node:url';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {REVIEWED_SUCCESSOR_MANIFEST,REVIEWED_SUCCESSOR_SUPPORT,reviewedSuccessorPaths,reviewedSuccessorLineage,verifyReviewedSuccessorCatalog,applyReviewedSuccessor} from './reviewedSourceSuccessor.mjs';
+export {REVIEWED_SUCCESSOR_MANIFEST as CURRENT_INTEGRATION_MANIFEST} from './reviewedSourceSuccessor.mjs';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
@@ -1120,6 +1122,13 @@ export const INTEGRATION_DELTAS=Object.freeze([
  'tests/recommendationV2RuntimeIntegrity.test.mjs',
 ].sort());
 const root=new URL('../../',import.meta.url);
+// The original five support paths remain the historical trusted verifier
+// boundary. This successor extends it only by these two independently reviewed
+// files, whose literal bytes are checked independently of the candidate seal.
+const REVIEWED_SUCCESSOR_SUPPORT_PINS=Object.freeze([
+ Object.freeze({path:'tests/helpers/reviewedSourceSuccessor.mjs',sha256:'3a147ef0880ac9b9fb76c1b4efa7c4f811010d4abc171692e5dd607bf1c1dc60'}),
+ Object.freeze({path:'tests/reviewedSourceSuccessor.test.mjs',sha256:'aee9eee09185ba9ab040eb2504c7dc5fc2d9dba90b637a9ff0c9c2dcb8edb3bb'}),
+]);
 const git=args=>execFileSync('git',['--no-replace-objects',...args],{cwd:root,encoding:'utf8',maxBuffer:64e6});
 export const integrationHash=b=>createHash('sha256').update(b).digest('hex');
 const trees=new Map();
@@ -1165,7 +1174,7 @@ export function integrationScope(){
  // are NOT deletions/replacements authorized by its candidate.
  if(!fixedScope){
   assert.equal(git(['merge-base',INTEGRATION_PARENTS.core,INTEGRATION_PARENTS.member]).trim(),MEMBER_FORK,'INTEGRATION_PARENT_FORK');
-  fixedScope=Object.freeze([...new Set([...integrationParentPaths('core',INTEGRATION_BASE),...integrationParentPaths('member',MEMBER_FORK),...INTEGRATION_DELTAS])].sort());
+  fixedScope=Object.freeze([...new Set([...integrationParentPaths('core',INTEGRATION_BASE),...integrationParentPaths('member',MEMBER_FORK),...INTEGRATION_DELTAS,...reviewedSuccessorPaths()])].sort());
  }
  return [...fixedScope];
 }
@@ -1333,7 +1342,7 @@ function buildSourceUnionLineage(){
   assert.equal(row?.sha256,file.sha256,'UNION_PRIOR_NORMALIZER_PROOF_DRIFT');assert.equal(row?.mode,'100644','UNION_PRIOR_NORMALIZER_PROOF_MODE');}
  return {schema:'V1_SOURCE_UNION_CANDIDATE_1',base:SOURCE_UNION_BASE,parents:{...SOURCE_UNION_PARENTS},
   registry_support:{parent:REGISTRY_SUPPORT_PARENT,paths:[...REGISTRY_SUPPORT_PATHS]},receipts,
-  historical_proof,prior_normalizer_proof,normalizer:sourceUnionNormalizerLineage(),r3:sourceUnionR3Lineage(),r4:sourceUnionR4Lineage(),r5:sourceUnionR5Lineage(),r6:sourceUnionR6Lineage(),r7:sourceUnionR7Lineage(),r8:sourceUnionR8Lineage(),r9:sourceUnionR9Lineage(),r10:sourceUnionR10Lineage(),r11:sourceUnionR11Lineage(),r12:sourceUnionR12Lineage(),r14:sourceUnionR14Lineage(),r15:sourceUnionR15Lineage(),runtime_integrity:runtimeIntegrityLineage(),support_paths:[...SOURCE_UNION_SUPPORT],source_authorities_shared:false,member_gate_changed:false};
+  historical_proof,prior_normalizer_proof,normalizer:sourceUnionNormalizerLineage(),r3:sourceUnionR3Lineage(),r4:sourceUnionR4Lineage(),r5:sourceUnionR5Lineage(),r6:sourceUnionR6Lineage(),r7:sourceUnionR7Lineage(),r8:sourceUnionR8Lineage(),r9:sourceUnionR9Lineage(),r10:sourceUnionR10Lineage(),r11:sourceUnionR11Lineage(),r12:sourceUnionR12Lineage(),r14:sourceUnionR14Lineage(),r15:sourceUnionR15Lineage(),runtime_integrity:runtimeIntegrityLineage(),reviewed_successor:reviewedSuccessorLineage(),support_paths:[...SOURCE_UNION_SUPPORT],source_authorities_shared:false,member_gate_changed:false};
 }
 export function runtimeIntegrityLineage(){
  const prior_root={revision:RUNTIME_INTEGRITY_BASE,path:FROZEN_SOURCE_UNION_R15,sha256:'6c28e2c50a7ba444ba3b9b2f7386b2779eaed5166eb8adabc90f1ea0d41cf458'};
@@ -1668,18 +1677,27 @@ function sourceUnionExpected(){
    assert.equal(expected.get(file.path)?.sha256??null,file.before_sha256,'RUNTIME_BEFORE_COMPOSITION:'+file.path);
    expected.set(file.path,{mode:file.mode,sha256:file.after_sha256});
   }
+  // Append the complete independently reviewed immutable Git delta. The old
+  // terminal receipt becomes a frozen input; no historical row is replaced.
+  applyReviewedSuccessor(expected,[...SOURCE_UNION_SUPPORT]);
   for(const p of support)expected.delete(p);
   unionExpected=expected;
  }
  return unionExpected;
 }
 function verifySourceUnionBoundary(read,mode){
+ verifyReviewedSuccessorCatalog(read,mode);
+ assert.deepEqual(REVIEWED_SUCCESSOR_SUPPORT_PINS.map(row=>row.path),[...REVIEWED_SUCCESSOR_SUPPORT],'SUCCESSOR_EXACT_SUPPORT_PINS');
+ for(const row of REVIEWED_SUCCESSOR_SUPPORT_PINS){
+  assert.match(row.sha256,/^[a-f0-9]{64}$/,'SUCCESSOR_SUPPORT_REVIEW_REQUIRED');
+  assert.equal(integrationHash(read(row.path)),row.sha256,'SUCCESSOR_SUPPORT_SOURCE_DRIFT:'+row.path);
+ }
  sourceUnionLineage();
  for(const [p,row]of sourceUnionExpected()){
   assert.equal(integrationHash(read(p)),row.sha256,'INTEGRATION_SOURCE_DRIFT:'+p);
   assert.equal(mode(p),row.mode,'INTEGRATION_MODE_DRIFT:'+p);
  }
- for(const p of SOURCE_UNION_SUPPORT)assert.equal(mode(p),'100644','INTEGRATION_MODE_DRIFT:'+p);
+ for(const p of [...SOURCE_UNION_SUPPORT,...REVIEWED_SUCCESSOR_SUPPORT])assert.equal(mode(p),'100644','INTEGRATION_MODE_DRIFT:'+p);
  assert.deepEqual(Buffer.from(read(FROZEN_ORIGINAL_INGRESS)),frozenReceipt(ORIGINAL_REGISTRY_PARENT,FROZEN_ORIGINAL_INGRESS),'INTEGRATION_ORIGINAL_INGRESS_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_CONTINUOUS_LIFECYCLE)),frozenReceipt(V1_ACTUAL_PARENT,FROZEN_CONTINUOUS_LIFECYCLE),'INTEGRATION_CONTINUOUS_LIFECYCLE_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_OFFICIAL_PUBLIC)),frozenReceipt(PRIOR_CONTINUOUS_BASE,FROZEN_OFFICIAL_PUBLIC),'INTEGRATION_OFFICIAL_PUBLIC_RECEIPT_DRIFT');
@@ -1687,11 +1705,11 @@ function verifySourceUnionBoundary(read,mode){
 export function createSourceUnionComposition(read=integrationPhysicalRead,paths=integrationInventory(),mode=integrationPhysicalMode){
  verifySourceUnionBoundary(read,mode);
  const scope=integrationScope(),baseline=tree(INTEGRATION_BASE);
- assert.deepEqual([...paths].sort(),[...scope,INTEGRATION_MANIFEST].sort(),'INTEGRATION_UNKNOWN_PATH');
+ assert.deepEqual([...paths].sort(),[...scope,REVIEWED_SUCCESSOR_MANIFEST].sort(),'INTEGRATION_UNKNOWN_PATH');
  const old=JSON.parse(frozenReceipt(SOURCE_UNION_BASE,FROZEN_COLD_SOURCE)),oldRows=new Map(old.files.map(r=>[r.path,r]));
  return {...old,source_union:sourceUnionLineage(),files:scope.map(path=>({
   path,before_sha256:baseline.get(path)?.sha256??null,after_sha256:integrationHash(read(path)),mode:mode(path),
-  origin:INTEGRATION_DELTAS.includes(path)?'composition':oldRows.get(path).origin,
+  origin:INTEGRATION_DELTAS.includes(path)||reviewedSuccessorPaths().includes(path)?'composition':oldRows.get(path).origin,
  }))};
 }
 // Compatibility names preserve existing consumers, but both now verify the ONE
@@ -1757,8 +1775,8 @@ export function reuseSourceUnionPinnedProof(view){
 }
 export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=integrationInventory(),mode=integrationPhysicalMode){
  verifySourceUnionBoundary(read,mode);
- assert.equal(mode(INTEGRATION_MANIFEST),'100644','INTEGRATION_MANIFEST_MODE_DRIFT');
- const m=JSON.parse(read(INTEGRATION_MANIFEST));
+ assert.equal(mode(REVIEWED_SUCCESSOR_MANIFEST),'100644','INTEGRATION_MANIFEST_MODE_DRIFT');
+ const m=JSON.parse(read(REVIEWED_SUCCESSOR_MANIFEST));
  assert.deepEqual(Object.keys(m).sort(),['schema','base','parents','files','source_union','production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'].sort());
  assert.deepEqual(m.source_union,sourceUnionLineage(),'UNION_LINEAGE_DRIFT');
  assert.equal(m.schema,'CORE_MEMBER_COMPOSITION_V1');assert.equal(m.base,INTEGRATION_BASE);assert.deepEqual(m.parents,INTEGRATION_PARENTS);
@@ -1794,14 +1812,14 @@ export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=in
  for(const flag of ['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'])assert.equal(m[flag],false,'INTEGRATION_FORBIDDEN:'+flag);
  const scope=integrationScope();
  assert.deepEqual(m.files.map(r=>r.path),scope,'INTEGRATION_EXACT_SCOPE');
- assert.deepEqual([...paths].sort(),[...scope,INTEGRATION_MANIFEST].sort(),'INTEGRATION_UNKNOWN_PATH');
+ assert.deepEqual([...paths].sort(),[...scope,REVIEWED_SUCCESSOR_MANIFEST].sort(),'INTEGRATION_UNKNOWN_PATH');
  const baseline=tree(INTEGRATION_BASE);
  for(const row of m.files){
   assert.deepEqual(Object.keys(row).sort(),['path','before_sha256','after_sha256','mode','origin'].sort());
   const before=baseline.get(row.path);assert.equal(row.before_sha256,before?before.sha256:null);
   assert.match(row.after_sha256,/^[a-f0-9]{64}$/);assert.equal(integrationHash(read(row.path)),row.after_sha256,'INTEGRATION_SOURCE_DRIFT:'+row.path);
   assert.equal(mode(row.path),row.mode,'INTEGRATION_MODE_DRIFT:'+row.path);assert.match(row.mode,/^100(644|755)$/);
-  if(INTEGRATION_DELTAS.includes(row.path))assert.equal(row.origin,'composition');
+  if(INTEGRATION_DELTAS.includes(row.path)||reviewedSuccessorPaths().includes(row.path))assert.equal(row.origin,'composition');
   else{
    assert(['core','member','shared'].includes(row.origin));const sources=row.origin==='shared'?['core','member']:[row.origin];
    for(const source of sources){const parent=tree(INTEGRATION_PARENTS[source]).get(row.path);assert(parent);assert.equal(row.after_sha256,parent.sha256,'INTEGRATION_PARENT_SOURCE:'+row.path);assert.equal(row.mode,parent.mode);}
@@ -1829,7 +1847,7 @@ export function integrationSealRow(path,bytes){
  return decodedRows.find(row=>row.path===path);
 }
 export function integrationHistoricalRead(view,path,bytes){
- const row=integrationSealRow(path,integrationPhysicalRead(INTEGRATION_MANIFEST));
+ const row=integrationSealRow(path,integrationPhysicalRead(REVIEWED_SUCCESSOR_MANIFEST));
  const base=tree(INTEGRATION_BASE).get(path),expected=row?.after_sha256??base?.sha256??null,mode=row?.mode??base?.mode;
  if(!expected||integrationHash(bytes)!==expected)return bytes;
  assert.equal(integrationHash(integrationPhysicalRead(path)),expected,'INTEGRATION_CHANGED_AFTER_ADMISSION:'+path);

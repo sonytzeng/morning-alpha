@@ -7,7 +7,7 @@ import {handleVnextDaily} from '../supabase/functions/vnext-daily-research-v1/ha
 import {runDailyIntelligence,verifyDailyLock} from '../src/features/vnext/dailyIntelligence.ts';
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
 import {RECOMMENDATION_UNIVERSE} from '../supabase/functions/_shared/recommendation-stock-evidence.ts';
-import {retainedIssuerFinancials} from '../supabase/functions/_shared/retained-issuer-financials.ts';
+import {retainedIssuerFinancials,retainedIssuerFinancialReleases} from '../supabase/functions/_shared/retained-issuer-financials.ts';
 import {v2Fixture} from './helpers/recommendationV2Fixtures.mjs';
 import {v2Hash} from '../supabase/functions/_shared/recommendation-shadow-v2-engine.ts';
 import {entryInputFromV2} from '../research/entry-v2-adapter.ts';
@@ -76,6 +76,25 @@ test('SYNTHETIC future-clock worker pins eligible retained financial facts once 
  binding.expectedHash='0'.repeat(64); // A changed release cannot rewrite prior acquisition.
  await a.invoke();assert.deepEqual(a.checkpoint.acquired,pinned);assert.equal(a.locked.length,216);
  assert(a.locked.every(l=>l.body.research.state==='INSUFFICIENT'));
+});
+test('SYNTHETIC release array adds the supplement once and preserves acquired bytes on resume',async()=>{
+ const binding=structuredClone(retainedIssuerFinancialReleases);
+ const a=await runner({at:'2026-11-03T00:59:30Z',businessDate:'2026-11-03',issuerFinancials:binding});
+ assert.equal(a.result.reason,'ACQUIRED_SNAPSHOT_CONTINUATION');
+ const pinned=structuredClone(a.checkpoint.acquired);assert.equal(pinned.inputs.flatMap(i=>i.facts).length,46);
+ for(const symbol of ['2382','3443'])assert.equal(pinned.inputs.find(i=>i.symbol===symbol).facts.filter(f=>f.kind==='EPS').length,4);
+ // Each new acquisition pays the existing clone/hash cost once per release.
+ // A retained checkpoint must skip all releases, even if a later binding fails.
+ for(const release of binding)release.expectedHash='0'.repeat(64);
+ await a.invoke();assert.deepEqual(a.checkpoint.acquired,pinned);assert.equal(a.locked.length,216);
+ assert(a.locked.every(l=>l.body.research.state==='INSUFFICIENT'));
+});
+test('SYNTHETIC historical acquisition cannot receive the later supplement',async()=>{
+ const a=await runner({at:'2026-11-02T00:59:30Z',businessDate:'2026-11-02',issuerFinancials:retainedIssuerFinancialReleases});
+ assert.equal(a.result.reason,'ACQUIRED_SNAPSHOT_CONTINUATION');
+ const facts=a.checkpoint.acquired.inputs.flatMap(i=>i.facts);assert.equal(facts.length,38);
+ assert(!facts.some(f=>['2382','3443'].includes(f.symbol)));
+ assert(a.checkpoint.acquired.source_issues.some(i=>i.reason==='RETAINED_PACKET_NOT_YET_AVAILABLE'));
 });
 test('cold acquisition prioritizes latest prices across all 72 before older history, without discarding tasks',async()=>{
  const plan=await acquisitionPlan(date,companies),price=plan.filter(t=>t.kind==='PRICE');

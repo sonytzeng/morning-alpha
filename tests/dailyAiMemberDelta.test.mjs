@@ -82,3 +82,36 @@ test('FULL envelope metadata must exactly match its independently parsed complet
  }
  const p=payload('owner'),r=full(p,s);r.tier='premium';assert.throws(()=>parseDailyAiMemberDelta(r,s,null,now),code('SCOPE'));
 });
+
+// Explicit-origin fixtures are synthetic and exercise the real /stocks delta path.
+test('FULL and UNCHANGED preserve both explicit origins in every authorized tier',()=>{
+ for(const origin of ['MODEL_GENERATED','OFFLINE_REVIEWED'])for(const tier of ['free','premium','owner']){
+  const s=scope(tier),p=payload(tier);p.edition.analysis_origin=origin;
+  const data=parseDailyAiMemberDelta(full(p,s),s,null,now),c={scope:s,data};
+  assert.equal(data.edition.analysis_origin,origin);assert.equal(data.cards.length,tier==='free'?9:216);
+  assert.equal(parseDailyAiMemberDelta(unchanged(c),s,c,now),data);
+  assert.equal(data.edition.expires_at,p.edition.expires_at);
+ }
+});
+test('FULL header must match the independently validated origin presence and exact value',()=>{
+ for(const origin of ['MODEL_GENERATED','OFFLINE_REVIEWED'])for(const mutate of [
+  r=>{delete r.edition.analysis_origin;},r=>{r.edition.analysis_origin=origin==='MODEL_GENERATED'?'OFFLINE_REVIEWED':'MODEL_GENERATED';},
+  r=>{r.edition.analysis_origin=null;},r=>{r.edition.analysis_origin='UNKNOWN';},r=>{r.edition.extra='unreviewed';}
+ ]){
+  const s=scope(),p=payload();p.edition.analysis_origin=origin;
+  const r=full(p,s);r.edition=structuredClone(r.edition);mutate(r);
+  assert.throws(()=>parseDailyAiMemberDelta(r,s,null,now),code('CONTRACT'));
+ }
+ const s=scope(),r=full(payload(),s);r.edition={...r.edition,analysis_origin:'MODEL_GENERATED'};
+ assert.throws(()=>parseDailyAiMemberDelta(r,s,null,now),code('CONTRACT'));
+});
+test('UNCHANGED cannot add, drop, change or null an origin, nor add unrelated fields',()=>{
+ for(const origin of [undefined,'MODEL_GENERATED','OFFLINE_REVIEWED']){
+  const s=scope(),p=payload();if(origin!==undefined)p.edition.analysis_origin=origin;
+  const c={scope:s,data:parseDailyAiMember(p,s.requestDate,now)};
+  const mutate=[r=>{r.edition.analysis_origin=null;},r=>{r.edition.analysis_origin='UNKNOWN';},r=>{r.edition.extra='unreviewed';}];
+  if(origin===undefined)mutate.push(r=>{r.edition.analysis_origin='MODEL_GENERATED';});
+  else mutate.push(r=>{delete r.edition.analysis_origin;},r=>{r.edition.analysis_origin=origin==='MODEL_GENERATED'?'OFFLINE_REVIEWED':'MODEL_GENERATED';});
+  for(const change of mutate){const r=unchanged(c);change(r);assert.throws(()=>parseDailyAiMemberDelta(r,s,c,now),code('CACHE_MISS'));}
+ }
+});

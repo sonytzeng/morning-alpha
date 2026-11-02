@@ -11,7 +11,10 @@ export class DailyAiMemberDeltaError extends Error{
 const editionFields=Object.freeze(['id','edition_date','data_through','evidence_cutoff','prepared_at','expires_at','mode','forecast','performance_available'] as const);
 const object=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value);
 const sameEdition=(value:unknown,expected:DailyAiMemberEdition|null)=>expected===null?value===null:
- object(value)&&Object.keys(value).length===editionFields.length&&editionFields.every(key=>value[key]===expected[key]);
+ object(value)&&Object.keys(value).length===editionFields.length+(Object.hasOwn(expected,'analysis_origin')?1:0)
+ &&editionFields.every(key=>value[key]===expected[key])
+ &&Object.hasOwn(value,'analysis_origin')===Object.hasOwn(expected,'analysis_origin')
+ &&value.analysis_origin===expected.analysis_origin;
 
 export function eligibleDailyAiMemberCache(cache:DailyAiMemberCache|null,scope:DailyAiMemberReadScope,now=Date.now()):cache is DailyAiMemberCache{
  return !!cache&&Number.isFinite(now)&&!scope.signal.aborted&&!cache.scope.signal.aborted

@@ -42,8 +42,12 @@ async function quoteFor(slot, payload) {
 }
 
 function responseFor(slot) {
-  return slot.key === 'TAIEX' || slot.key === '2330'
-    ? taiwan.responses[slot.key] : capture.responses[slot.key].payload;
+  if (slot.key === 'TAIEX' || slot.key === '2330') {
+    // SYNTHETIC completed quotes for parity controls, not retained/live quotes.
+    return { ...taiwan.responses[slot.key], date:'2026-09-15',closePrice:100,previousClose:99,isClose:true,
+      lastUpdated:Date.parse('2026-09-15T13:30:00+08:00')*1000 };
+  }
+  return capture.responses[slot.key].payload;
 }
 
 async function both(slot, payload) {
@@ -127,7 +131,7 @@ test('PRECHECK_PRODUCTION_PARITY: stale, future and not-yet-formed phases never 
   }
 });
 
-test('PRECHECK_PRODUCTION_PARITY: all eight US slots reject a 30-day-old quote before the Atomic commit', async () => {
+test('PRECHECK_PRODUCTION_PARITY: old US quotes reject while synthetic completed Taiwan controls stay valid', async () => {
   const rows = [];
   for (const slot of REQUIRED_PROVIDER_CONFIG) {
     const response = structuredClone(responseFor(slot));

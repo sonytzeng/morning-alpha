@@ -36,6 +36,9 @@ export function parseInstitutional(p,{exchange,date,symbols,url},at){
  if(exchange==='TWSE'){if(p.stat!=='OK')throw Error('INSTITUTIONAL_SOURCE_EMPTY');({fields,data}=p);sourceDate=officialDate(p.date);}
  else {const t=p.tables?.find(t=>t.title==='三大法人買賣明細資訊');if(!t)throw Error('INSTITUTIONAL_SCHEMA');({fields,data}=t);sourceDate=officialDate(t.date);}
  if(sourceDate!==date||!Array.isArray(fields)||!Array.isArray(data))throw Error('INSTITUTIONAL_DATE');
+ // TPEx can return HTTP 200/stat=ok with the requested date before publishing
+ // the table. Do not pin that empty response as a successful daily revision.
+ if(data.length===0)throw Error('INSTITUTIONAL_SOURCE_EMPTY');
  const seen=new Set(),rows=[];
  for(const r of data){const symbol=String(r[0]).trim();if(!symbols.includes(symbol))continue;if(seen.has(symbol)||r.length!==fields.length)throw Error('INSTITUTIONAL_DUPLICATE_OR_COLUMNS');seen.add(symbol);
   let foreign,trust,dealer,total;

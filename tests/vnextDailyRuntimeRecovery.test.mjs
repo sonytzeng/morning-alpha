@@ -81,8 +81,15 @@ test('SYNTHETIC release array adds the supplement once and preserves acquired by
  const binding=structuredClone(retainedIssuerFinancialReleases);
  const a=await runner({at:'2026-11-03T00:59:30Z',businessDate:'2026-11-03',issuerFinancials:binding});
  assert.equal(a.result.reason,'ACQUIRED_SNAPSHOT_CONTINUATION');
- const pinned=structuredClone(a.checkpoint.acquired);assert.equal(pinned.inputs.flatMap(i=>i.facts).length,46);
+ const pinned=structuredClone(a.checkpoint.acquired);assert.equal(pinned.inputs.flatMap(i=>i.facts).length,77);
  for(const symbol of ['2382','3443'])assert.equal(pinned.inputs.find(i=>i.symbol===symbol).facts.filter(f=>f.kind==='EPS').length,4);
+ // This fixed synthetic clock is after the third release's true creation time.
+ // Its 31 partial quarters join the prior 46; this is not a natural run receipt.
+ const partial=binding[2];assert.equal(partial.expectedHash,'c2edd821e88e331ce75ca3160f5e4fb9e46b757da050632b03c7720b3d631cc3');
+ assert.equal(partial.packet.facts.length,31);assert(Date.parse(partial.packet.created_at)<Date.parse('2026-11-03T00:59:30Z'));
+ const partialIds=new Set(partial.packet.facts.map(f=>f.id)),joined=pinned.inputs.flatMap(i=>i.facts).filter(f=>partialIds.has(f.id));
+ assert.equal(joined.length,31);assert.equal(new Set(joined.map(f=>f.symbol)).size,12);
+ for(const f of partial.packet.facts)assert.deepEqual(joined.find(x=>x.id===f.id),f);
  // Each new acquisition pays the existing clone/hash cost once per release.
  // A retained checkpoint must skip all releases, even if a later binding fails.
  for(const release of binding)release.expectedHash='0'.repeat(64);

@@ -1,6 +1,7 @@
 // Server-only release binding. This is private research context, not admission.
 import packet from './retained-issuer-financials-20261030.json' with {type:'json'};
 import supplement from './retained-issuer-financials-20261102.json' with {type:'json'};
+import partial from './retained-issuer-financials-20261103-partial.json' with {type:'json'};
 import type {IssuerFinancialPacket} from '../../../src/features/vnext/issuerFinancialIntake.ts';
 export const retainedIssuerFinancials={
  // JSON is an untrusted boundary; the intake validates its pinned hash and
@@ -16,4 +17,10 @@ export const retainedIssuerFinancialSupplement={
  packet:supplement as unknown as IssuerFinancialPacket,
  expectedHash:'9cd79b7eb5cf0ecb5686afc03999e239a2fc9c927359a752b00be0d86720a629',
 };
-export const retainedIssuerFinancialReleases=[retainedIssuerFinancials,retainedIssuerFinancialSupplement] as const;
+// Only previously unbound direct basic quarters are appended. Missing quarters,
+// restatement reviews and member publication remain unapproved.
+export const retainedIssuerFinancialPartialSupplement={
+ packet:partial as unknown as IssuerFinancialPacket,
+ expectedHash:'c2edd821e88e331ce75ca3160f5e4fb9e46b757da050632b03c7720b3d631cc3',
+};
+export const retainedIssuerFinancialReleases=[retainedIssuerFinancials,retainedIssuerFinancialSupplement,retainedIssuerFinancialPartialSupplement] as const;

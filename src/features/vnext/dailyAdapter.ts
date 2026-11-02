@@ -152,6 +152,10 @@ export async function fetchSource(task:SourceTask,fetcher:typeof fetch,clock:()=
 }
 export async function assembleDaily(date:string,companies:Company[],receipts:SourceReceipt[],cutoff:string,market:EntryInput['market']=null):Promise<AcquiredResearch>{
  const dates=sessionsBefore(date),through=dates.at(-1)!;
+ // Daily research and Entry both consume the final 20 complete sessions.
+ // Keep the 250-session calendar and every original receipt/hash, while
+ // avoiding 230 unused bars per stock in every checkpoint and validation.
+ const dailyPriceDates=new Set(dates.slice(-20));
  if(day(cutoff)!==date)throw Error('CUTOFF_DATE_MISMATCH');
  const valid=receipts.filter(r=>r.status==='OK');for(const r of valid)if(Date.parse(r.available_at)>Date.parse(cutoff)||r.payload_hash!==await snapshotHash(r.payload))throw Error('SOURCE_REVISION_INVALID');
  const sourceIssues:{kind:string;key:string;reason:string}[]=[];
@@ -206,7 +210,13 @@ export async function assembleDaily(date:string,companies:Company[],receipts:Sou
    }
   }
  }
- const historyBars=[...records('PRICE'),...records('OTC_PRICE')],dailyBars=records('TWSE_PRICE_DAY'),priceKeys=new Map<string,Record<string,unknown>[]>();
+ const historicalBars=[...records('PRICE'),...records('OTC_PRICE')],originalDailyBars=records('TWSE_PRICE_DAY'),historicalDates=new Set(dates),companySymbols=new Set(companies.map(c=>c.symbol));
+ // validateAcquired used to inspect these retained prefix bars too. Preserve
+ // its point-in-time/lineage veto even though daily decisions do not use them.
+ for(const b of [...historicalBars,...originalDailyBars])if(companySymbols.has(String(b.symbol))&&historicalDates.has(String(b.date))&&!dailyPriceDates.has(String(b.date))
+  &&traceIssues(b as DailyBar,cutoff).some(reason=>['FUTURE_EVIDENCE','TIME_ORDER_INVALID','LINEAGE_INVALID'].includes(reason)))throw Error('POINT_IN_TIME_INVALID');
+ const historyBars=historicalBars.filter(b=>dailyPriceDates.has(String(b.date))),
+  dailyBars=originalDailyBars.filter(b=>dailyPriceDates.has(String(b.date))),priceKeys=new Map<string,Record<string,unknown>[]>();
  const barKey=(b:Record<string,unknown>)=>String(b.symbol)+':'+String(b.date);
  for(const b of historyBars){const k=barKey(b);priceKeys.set(k,[...(priceKeys.get(k)??[]),b]);}
  const dailyKeys=new Map<string,Record<string,unknown>[]>();for(const b of dailyBars){const k=barKey(b);dailyKeys.set(k,[...(dailyKeys.get(k)??[]),b]);}
@@ -217,9 +227,20 @@ export async function assembleDaily(date:string,companies:Company[],receipts:Sou
   }else if(!prior.length)priceKeys.set(key,rows);
  }
  const allBars=[...priceKeys.values()].flat(),facts=[...records('REVENUE'),...records('INSTITUTIONAL'),...records('FINANCIAL_YTD'),...records('CASHFLOW_YTD')];
- const inputs:FunnelInput[]=companies.map(c=>({symbol:c.symbol,company:c.company,cutoff,through,next_session:date,expected_sessions:dates,
-  bars:allBars.filter(b=>b.symbol===c.symbol&&dates.includes(String(b.date))).sort((a,b)=>String(a.date).localeCompare(String(b.date))) as DailyBar[],
-  facts:facts.filter(f=>f.symbol===c.symbol) as ResearchFact[],v1_missing:Object.fromEntries(Object.keys(HORIZONS).map(h=>[h,['INDEPENDENT_V1_NOT_EVALUATED']])) as FunnelInput['v1_missing']}));
+ const inputs:FunnelInput[]=companies.map(c=>{
+  const stockFacts=facts.filter(f=>f.symbol===c.symbol) as ResearchFact[],selected=new Set<ResearchFact>();
+  // Match the evaluator's stable period sort and slice, including duplicate
+  // periods. Financial/other kinds stay complete for newer-period/basis vetoes.
+  for(const [kind,count] of [['REVENUE',RESEARCH_RULES.medium_months],['INSTITUTIONAL',RESEARCH_RULES.medium_institutional_sessions]] as const)
+   for(const f of stockFacts.filter(f=>f.kind===kind).sort((a,b)=>(a.period??'').localeCompare(b.period??'')).slice(-count))selected.add(f);
+  const omitted=stockFacts.filter(f=>['REVENUE','INSTITUTIONAL'].includes(f.kind)&&!selected.has(f));
+  for(const f of omitted)if(traceIssues(f,cutoff).some(reason=>['FUTURE_EVIDENCE','TIME_ORDER_INVALID','LINEAGE_INVALID'].includes(reason)))throw Error('POINT_IN_TIME_INVALID');
+  const kept=stockFacts.filter(f=>!['REVENUE','INSTITUTIONAL'].includes(f.kind)||selected.has(f));
+  return {symbol:c.symbol,company:c.company,cutoff,through,next_session:date,expected_sessions:dates,
+   bars:allBars.filter(b=>b.symbol===c.symbol&&dates.includes(String(b.date))).sort((a,b)=>String(a.date).localeCompare(String(b.date))) as DailyBar[],
+   facts:kept,...(omitted.length?{omitted_fact_ids:[...new Set(omitted.map(f=>f.id))]}:{}),
+   v1_missing:Object.fromEntries(Object.keys(HORIZONS).map(h=>[h,['INDEPENDENT_V1_NOT_EVALUATED']])) as FunnelInput['v1_missing']};
+ });
  // Do not infer reviewed company events from an index, cumulative EPS from a
  // quarter, or adjusted relative/sector returns from raw prices.
  const entry:EntryInput={business_date:date,evaluation_time:cutoff,source_revision:await snapshotHash(valid.map(r=>r.payload_hash)),source_evidence_hash:await snapshotHash(inputs),market,provenance:'REAL_RETAINED',mode:'FORWARD',stocks:inputs.map(i=>{

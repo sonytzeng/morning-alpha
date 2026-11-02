@@ -7,7 +7,7 @@ import {canonical} from '../../../research/entry-opportunity.ts';
 import type {DailyBar} from './researchFunnel.ts';
 import {entryInputFromV2} from '../../../research/entry-v2-adapter.ts';
 import type {V2Input} from '../../../supabase/functions/_shared/recommendation-shadow-v2-engine.ts';
-import {mergeIssuerFinancials,type IssuerFinancialPacket} from './issuerFinancialIntake.ts';
+import {mergeIssuerFinancialBatch,type IssuerFinancialPacket} from './issuerFinancialIntake.ts';
 export type Rpc=(name:string,args:Record<string,unknown>)=>Promise<unknown>;
 export type IssuerFinancialReleaseBinding={packet:IssuerFinancialPacket;expectedHash:string};
 export type RuntimePorts={rpc:Rpc;fetcher:typeof fetch;clock:()=>string;sleep:(ms:number)=>Promise<void>;
@@ -124,8 +124,8 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   // a new acquisition is enriched; a retained checkpoint keeps its exact bytes.
   // Their private/unadmitted status and unknown publication time stay intact.
   if(p.issuerFinancials){
-   const release=structuredClone(p.issuerFinancials),releases='packet' in release?[release]:release;
-   for(const binding of releases)acquired=await mergeIssuerFinancials(acquired,binding.packet,binding.expectedHash);
+   const releases='packet' in p.issuerFinancials?[p.issuerFinancials]:p.issuerFinancials;
+   acquired=await mergeIssuerFinancialBatch(acquired,releases);
   }
   if(!('acquired' in r.checkpoint)&&lineage.evidence&&typeof lineage.hash==='string'&&acquired.entry){
    const capsule=lineage.evidence as V2Input;
@@ -156,7 +156,7 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
    // Operational CPU budget, not an evidence/selection threshold. Small
    // snapshots retain the prior lifecycle; large immutable snapshots must not
    // serialize all pre-lock checkpoints in the same Edge invocation.
-   const prelockStageLimit=new TextEncoder().encode(JSON.stringify(acquired)).byteLength>4*1024*1024?1:0;
+   const prelockStageLimit=new TextEncoder().encode(JSON.stringify(acquired)).byteLength>2*1024*1024?1:0;
    let state='key' in r.checkpoint?r.checkpoint as RunState:null;
    let savedAttempts={...state?.attempts};
    // commitLocks above already received SQL's exact-batch reconciliation. Keep

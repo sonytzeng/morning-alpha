@@ -16,7 +16,9 @@ async function acquired(at=time()){
 async function rehash(a){const {snapshot_hash,...b}=a;void snapshot_hash;a.snapshot_hash=await snapshotHash(b);return a;}
 async function mutatedPacket(change){const p=clone(packet);change(p);return [p,await snapshotHash(p)];}
 async function mergeReleases(input){
- for(const release of retainedIssuerFinancialReleases)input=await mergeIssuerFinancials(input,release.packet,release.expectedHash);
+ // These tests preserve the two original releases and their exact boundaries.
+ // The appended partial release is covered by vnextIssuerFinancialPartialIntake.
+ for(const release of [retainedIssuerFinancials,retainedIssuerFinancialSupplement])input=await mergeIssuerFinancials(input,release.packet,release.expectedHash);
  return input;
 }
 
@@ -147,7 +149,7 @@ test('release packets keep independent exact expiry and availability boundaries'
 test('worker injects the sealed server packet only into a new acquisition before its immutable checkpoint',()=>{
  const runtime=readFileSync(new URL('../src/features/vnext/dailyRuntime.ts',import.meta.url),'utf8');
  const worker=readFileSync(new URL('../supabase/functions/vnext-daily-research-v1/index.ts',import.meta.url),'utf8');
- assert(runtime.indexOf('mergeIssuerFinancials(acquired,')>runtime.indexOf('if(!acquired){'));
- assert(runtime.indexOf('mergeIssuerFinancials(acquired,')<runtime.indexOf("await rpc('CHECKPOINT',{acquired})"));
+ assert(runtime.indexOf('mergeIssuerFinancialBatch(acquired,')>runtime.indexOf('if(!acquired){'));
+ assert(runtime.indexOf('mergeIssuerFinancialBatch(acquired,')<runtime.indexOf("await rpc('CHECKPOINT',{acquired})"));
  assert(worker.includes('issuerFinancials:retainedIssuerFinancialReleases'));assert(!worker.includes('JSON.parse(req'));
 });

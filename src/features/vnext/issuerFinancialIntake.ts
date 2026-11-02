@@ -12,16 +12,31 @@ export type IssuerFinancialPacket={schema:'PRIVATE_RETAINED_ISSUER_FINANCIALS_V1
 const refuse=(ok:unknown,code:string)=>{if(!ok)throw Error('ISSUER_FINANCIAL_'+code);};
 const quarterEnd=(period:string|null)=>{const m=/^(20\d\d)-Q([1-4])$/.exec(period??'');return m?new Date(Date.UTC(Number(m[1]),Number(m[2])*3,0)).toISOString().slice(0,10):null;};
 
-export async function mergeIssuerFinancials(acquired:AcquiredResearch,packet:IssuerFinancialPacket,expectedHash:string):Promise<AcquiredResearch>{
- // Own both preimages before digest awaits; never revise a saved checkpoint.
- const input=structuredClone(acquired),p=structuredClone(packet),{snapshot_hash,...body}=input;
+export type IssuerFinancialBinding={packet:IssuerFinancialPacket;expectedHash:string};
+export async function mergeIssuerFinancialBatch(acquired:AcquiredResearch,bindings:readonly IssuerFinancialBinding[]):Promise<AcquiredResearch>{
+ // Own every preimage before the first digest await. Packets retain independent
+ // hashes, release deadlines and expiries; only the large acquired copy/hash
+ // is shared within this one call, never across invocations or checkpoints.
+ const input=structuredClone(acquired),releases=structuredClone(bindings),{snapshot_hash,...body}=input;
  refuse(hashValid(snapshot_hash)&&snapshot_hash===await snapshotHash(body),'ACQUIRED_HASH');
+ refuse(Array.isArray(releases),'RELEASE_BINDINGS_SCOPE');
+ for(const release of releases)await mergeOwnedIssuerFinancials(input,release.packet,release.expectedHash);
+ const {snapshot_hash:priorHash,...next}=input;void priorHash;
+ return {...next,snapshot_hash:await snapshotHash(next)};
+}
+export async function mergeIssuerFinancials(acquired:AcquiredResearch,packet:IssuerFinancialPacket,expectedHash:string):Promise<AcquiredResearch>{
+ return mergeIssuerFinancialBatch(acquired,[{packet,expectedHash}]);
+}
+/** Input and packet are private copies owned by mergeIssuerFinancialBatch. */
+async function mergeOwnedIssuerFinancials(input:AcquiredResearch,p:IssuerFinancialPacket,expectedHash:string):Promise<void>{
  refuse(hashValid(expectedHash)&&expectedHash===await snapshotHash(p),'PACKET_HASH');
  refuse(p.schema==='PRIVATE_RETAINED_ISSUER_FINANCIALS_V1'&&p.source_admitted===false&&p.member_publication_approved===false
   &&p.methodology_promoted===false&&p.max_age_days===7&&validObservationTime(p.created_at)&&hashValid(p.source_study_sha256)
   &&Array.isArray(p.facts)&&p.facts.length>0&&p.facts.length<=864,'PACKET_SCOPE');
  refuse(validObservationTime(input.evidence_cutoff)&&input.inputs.length===72&&new Set(input.inputs.map(i=>i.symbol)).size===72
-  &&input.inputs.every(i=>i.cutoff===input.evidence_cutoff),'INPUT_SCOPE');
+  &&input.inputs.every(i=>i.cutoff===input.evidence_cutoff&&(i.omitted_fact_ids===undefined
+   ||Array.isArray(i.omitted_fact_ids)&&i.omitted_fact_ids.every(id=>typeof id==='string'&&id.length>0)
+    &&new Set(i.omitted_fact_ids).size===i.omitted_fact_ids.length)),'INPUT_SCOPE');
  const ids=new Set<string>(),keys=new Set<string>(),bases=new Map<string,Set<string>>();
  const universe=new Set(input.inputs.map(i=>i.symbol));
  for(const f of p.facts){
@@ -66,7 +81,7 @@ export async function mergeIssuerFinancials(acquired:AcquiredResearch,packet:Iss
     const existing=i.facts.filter(f=>f.kind===fact.kind&&f.period===fact.period);
     refuse(existing.length<=1,'EXISTING_CONFLICT');
     if(existing.length){refuse(await snapshotHash(existing[0])===await snapshotHash(fact),'EXISTING_CONFLICT');continue;}
-    refuse(!i.facts.some(f=>f.id===fact.id),'EXISTING_ID_CONFLICT');
+    refuse(!i.facts.some(f=>f.id===fact.id)&&!i.omitted_fact_ids?.includes(fact.id),'EXISTING_ID_CONFLICT');
     if(fact.kind==='EPS')refuse(!i.facts.some(f=>f.kind==='EPS'&&f.basis==='SINGLE_QUARTER'
      &&(f.values.unit!==fact.values.unit||f.values.measurement_basis!==fact.values.measurement_basis)),'EPS_BASIS');
     i.facts.push(fact);
@@ -74,6 +89,5 @@ export async function mergeIssuerFinancials(acquired:AcquiredResearch,packet:Iss
    addIssue(i.symbol,'ISSUER_FACTS_PRIVATE_USAGE_AND_PUBLICATION_UNVERIFIED');
   }
  }
- const next={...body,inputs:input.inputs,...(issues.length?{source_issues:issues}:{})};
- return {...next,snapshot_hash:await snapshotHash(next)};
+ if(issues.length)input.source_issues=issues;
 }

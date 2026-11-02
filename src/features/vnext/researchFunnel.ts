@@ -13,7 +13,7 @@ export type Trace={id:string;source:string;evidence_hash:string;published_at:str
 export type DailyBar=Trace&{date:string;open:number;high:number;low:number;close:number;volume:number;amount:number;session_scope:string};
 export type ResearchFact=Trace&{kind:string;period:string|null;values:Record<string,number|string|null>;basis:string|null};
 export type FunnelInput={symbol:string;company:string;bars:DailyBar[];expected_sessions:string[];facts:ResearchFact[];
- cutoff:string;through:string;next_session:string;v1_missing:Record<Horizon,string[]>};
+ cutoff:string;through:string;next_session:string;v1_missing:Record<Horizon,string[]>;omitted_fact_ids?:string[]};
 export type ResearchState='QUALIFIED'|'REJECTED'|'INSUFFICIENT';
 export type ResearchEvaluation={symbol:string;company:string;horizon:Horizon;version:string;state:ResearchState;
  evaluated:boolean;reasons:string[];warnings:string[];used:Trace[];cutoff:string;through:string;next_review_at:string;

@@ -85,6 +85,7 @@ async function fixture(t){
  import {fileURLToPath} from 'node:url';
  import {join} from 'node:path';
  export const INTEGRATION_BASE=${JSON.stringify(tree)},INTEGRATION_MANIFEST=${JSON.stringify(SEAL)};
+ export const CURRENT_INTEGRATION_MANIFEST=INTEGRATION_MANIFEST;
  const root=fileURLToPath(new URL('../../',import.meta.url)),baseline=${JSON.stringify(baseline)};
  export const integrationHash=b=>createHash('sha256').update(b).digest('hex');
  export let admissions=0;

@@ -1,0 +1,604 @@
+{
+  "schema": "DAILY_AI_RELEASE_REVIEW_V1",
+  "created_at": "2026-10-31T04:07:19.892230+00:00",
+  "head": "0b22366434af62c11d0d5c9ea7b5953c98e1c504",
+  "origin_main": "7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3",
+  "branch": "codex/stock-delivery-20261030-verified-push",
+  "tests": {
+    "tests": 156,
+    "pass": 156,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "database_suites": 7,
+  "owner_snapshot_hash": "c450970cd6ecceb7d8fca2794df66ba6a27f2289171bc4a5845cf17bfcaeb8be",
+  "seed": {
+    "schema": "DAILY_AI_BATCH_INPUT_V1",
+    "payload_hash": "a0ba685e95157c58804a3a5ea2b94f64eff3a4bc92e980bb5d659dd3dcbd6755",
+    "bytes": 4769382,
+    "cutoff": "2026-10-31T04:03:13.935Z",
+    "through": "2026-10-30",
+    "packets": 72,
+    "evidence": 5165,
+    "published_time_unknown": 5088,
+    "model_calls": 0,
+    "production_writes": 0,
+    "member_published": false,
+    "retained_input_sha256": "78ef70107fd39b59136e1a66155081f037013284078263c2c874f6b5fc730347",
+    "supplement_input_sha256": "c35e861a5ff871efc32e6bcc1508364574bfa36b24318c57858d9191f524956d",
+    "new_us_observations": 3,
+    "retained_official_night_observations": 1,
+    "night_receipt_basis": "Conservative original file-write availability after actual successful HTTP body read, not a new fetch."
+  },
+  "migrations": [
+    {
+      "path": "research/daily-ai-batches.candidate.sql",
+      "sha256": "ba13c5cadcc233895319e58158203a0282f7e87e5681c446d421551334e692b1"
+    },
+    {
+      "path": "research/daily-ai-dispatch.candidate.sql",
+      "sha256": "4470b575958b0d0595fb3f836421c7907f2502557ebac844f5adfd03cd13e3a7"
+    },
+    {
+      "path": "research/daily-ai-handoff.candidate.sql",
+      "sha256": "dbdb3e47881dbd09af5d6b9a96b5e31ccdf55469b78cf939674a5dd93cee7561"
+    },
+    {
+      "path": "research/daily-ai-member.candidate.sql",
+      "sha256": "449145c4d8434215b40e64be443d60d1e826920eede0718896c7a45707e07d70"
+    },
+    {
+      "path": "research/daily-ai-use-review.candidate.sql",
+      "sha256": "549f9c9e05214d1f3ec999b4023a5f4fef31da89376d3ba917b222065e3e1500"
+    },
+    {
+      "path": "research/daily-ai-intake.candidate.sql",
+      "sha256": "9be2c5a3a7594ec51ecf468026c5766b5349dd320dcf6db91bcf4a5746181660"
+    },
+    {
+      "path": "research/daily-ai-intake-cron.candidate.sql",
+      "sha256": "6823d2ec164411423a551b4e38edd94307b43edd91eac82ab34fbf1cf27c35df"
+    }
+  ],
+  "deployment": {
+    "project_id": "cttfzgvhiewfckydcrci",
+    "name": "daily-stock-analysis-v1",
+    "entrypoint_path": "supabase/functions/daily-stock-analysis-v1/index.ts",
+    "verify_jwt": false,
+    "files": [
+      {
+        "name": "research/daily-ai-analysis.ts",
+        "bytes": 8518,
+        "sha256": "66ed7b6c99b9e6e01207af0e256da927de515220182701bb0919f33d87f81cd7"
+      },
+      {
+        "name": "research/daily-ai-batch.ts",
+        "bytes": 3566,
+        "sha256": "ec809fdd1fc2dfa66bd627f7b000985f5ed513bc25bbfa08595cd5f062c4f3bb"
+      },
+      {
+        "name": "research/daily-ai-global-market.ts",
+        "bytes": 17678,
+        "sha256": "060284f25577b0190f6e6b6239db72461c5c9343f957eda88e03f1f5f43151d0"
+      },
+      {
+        "name": "research/daily-ai-packets.ts",
+        "bytes": 5936,
+        "sha256": "df54d09bcdbfca414943211c6ba5d1d21588611b22df4b9008b46c8b44174584"
+      },
+      {
+        "name": "research/daily-ai-refresh.ts",
+        "bytes": 8455,
+        "sha256": "4dc5466aef695b24da06fb371c614c1a6094598d46678aa8ec66becce833fa7d"
+      },
+      {
+        "name": "research/daily-ai-seed.ts",
+        "bytes": 3755,
+        "sha256": "2a7fffe2c1d4197edf94b225c4f9ad04e5d61408096a0822292d2f5ae15add84"
+      },
+      {
+        "name": "research/entry-official-history.ts",
+        "bytes": 12531,
+        "sha256": "5d48388908b08a119ca7525d7cacf5cf6de912fda16ca44ee674a649d5c93805"
+      },
+      {
+        "name": "research/entry-opportunity.ts",
+        "bytes": 16620,
+        "sha256": "30da9e781482ab1d9222a679e2e2413b47650cf5f95efc609e0a443c0dbb3031"
+      },
+      {
+        "name": "src/features/vnext/contracts.ts",
+        "bytes": 8100,
+        "sha256": "32195b3a1cd1b060324a403c9adf2109399f0d30cdbe829d5a0493f4af8a8068"
+      },
+      {
+        "name": "src/features/vnext/projection.ts",
+        "bytes": 6768,
+        "sha256": "8a238c6eacc3972f0f3927346c4081d9e2dcb4c8613bcc4cb1825a3abaf688ae"
+      },
+      {
+        "name": "src/features/vnext/publicationReadiness.ts",
+        "bytes": 5892,
+        "sha256": "76f8d26b07c92e84cef82459b8c94bc9dbcabfbaaa6e86b67036b351c6a67058"
+      },
+      {
+        "name": "src/features/vnext/realResearch.ts",
+        "bytes": 10995,
+        "sha256": "adc05e968bce6c840c132d14bec7df076d4002b031471e0175c3a9e13346125f"
+      },
+      {
+        "name": "src/features/vnext/researchFunnel.ts",
+        "bytes": 19694,
+        "sha256": "2b8d956efdf648f735aabb23e756c84295f620db9cbda25c292b60e87baf8303"
+      },
+      {
+        "name": "src/features/vnext/stockResearch.ts",
+        "bytes": 9226,
+        "sha256": "7583c0edca56aa4c225173ab5657ce894529df34efb63d745cab28c73dc887c5"
+      },
+      {
+        "name": "supabase/functions/_shared/_fixed_c_worker_sdk/0bce189b17b39939428919945e6a261663cfa3fb43d7be83b97eef1655ffa196.mjs",
+        "bytes": 20260,
+        "sha256": "7e0f018b41f34219e619651558c019106ffccd79aa6bff76921a2c160f5fca8f"
+      },
+      {
+        "name": "supabase/functions/_shared/_fixed_c_worker_sdk/8474f19a1f21e74abb020fc7894da0ae847ad881f5684adafe32f7d0262077cf.mjs",
+        "bytes": 29607,
+        "sha256": "921c83c41a741fec993aa718ec5fd946210d709ff2ef12ae970cf5332c1f2d15"
+      },
+      {
+        "name": "supabase/functions/_shared/_fixed_c_worker_sdk/855779118b7c638eea0976ec4b331a7e741f69dd35c7e97b5be927345723dc04.mjs",
+        "bytes": 24217,
+        "sha256": "ca79b8f4411c3d3502d88791b079099825d3d3f6ceac0ff7ecbeee24cfacd1f6"
+      },
+      {
+        "name": "supabase/functions/_shared/_fixed_c_worker_sdk/9135c3f83ea833d80bfd11156d394d0ba84f2442e97e084887e406bff42f4456.mjs",
+        "bytes": 7613,
+        "sha256": "a89ecb8cf2937462a52ec455270e2bcc75069862b1932e65695b10652cc087c6"
+      },
+      {
+        "name": "supabase/functions/_shared/_fixed_c_worker_sdk/98f2f4377da15fb84145ccb88d0745c482475b7004afef619afec387d83b2653.mjs",
+        "bytes": 380,
+        "sha256": "04c3ba8ef60fd5ad9cca938c842c044869d8d6976a2faa796fb66d6d5f2056f2"
+      },
+      {
+        "name": "supabase/functions/_shared/_fixed_c_worker_sdk/9be86b9f10fafb9db714e142be218b2876d16f7a228c1cc0cd8403239abd8da3.mjs",
+        "bytes": 3003,
+        "sha256": "02d13644492c718617a2232d7217647a615e9e32ec733966066d599ceccd1afe"
+      },
+      {
+        "name": "supabase/functions/_shared/_fixed_c_worker_sdk/a0943b39916396be354a3d6b9a13dcd2b7eb9fae6d00629f2b409e518f1663dd.mjs",
+        "bytes": 3205,
+        "sha256": "238cd0743827707cbc1c2d7c2cf1027dbc536fb53ec9a3fde0ff8026a3ac5385"
+      },
+      {
+        "name": "supabase/functions/_shared/_fixed_c_worker_sdk/a67bcb8e00c067cc250bc24dd01da1277ed6452066387425b7b2cc11732e8867.mjs",
+        "bytes": 13536,
+        "sha256": "2a2bdca5bcf82e1dcd4979b20576e970d00fb00c1c84a12d0087dec4122fdf3c"
+      },
+      {
+        "name": "supabase/functions/_shared/_fixed_c_worker_sdk/b77ee1984adac5aca840baa3f11d3265a040c49f1ada99afefad72df1c43e353.mjs",
+        "bytes": 266119,
+        "sha256": "5753ec0a99414f4055f0c1f97691100f13d88e48a8443b00aebb90a512785fa2"
+      },
+      {
+        "name": "supabase/functions/_shared/_fixed_c_worker_sdk/bb93fdafb91b4dd70fa236164dbf6ce27358fe93c4c9297643576dbce326a1c8.mjs",
+        "bytes": 13538,
+        "sha256": "fe5d8033de9593f2f427d3786ceacc30e546a0b4d048f1915b5c636a70202b61"
+      },
+      {
+        "name": "supabase/functions/_shared/_fixed_c_worker_sdk/c4510bd92ebd6222ba56cabdd658d09feeb964f64a728107a089635edd6bf7de.mjs",
+        "bytes": 59703,
+        "sha256": "6a4a2baa419f90845f94c6991752c6b28e9bbd772bab96b9aa28c14daa523aaf"
+      },
+      {
+        "name": "supabase/functions/_shared/_fixed_c_worker_sdk/c769f61979cd626fc8d202ae9955a3a810ae59bd552c56e138fb1daeb7e2c99b.mjs",
+        "bytes": 226,
+        "sha256": "c5abc625b80aebdfcdc9b377e31f9df1d00381132f9771a411430287a23d7fb2"
+      },
+      {
+        "name": "supabase/functions/_shared/_fixed_c_worker_sdk/ccf2406bf8d2b9519c34c0c07dc74130ef4f7b3df582408b597e8078b222f45e.mjs",
+        "bytes": 212,
+        "sha256": "d6f81e9d4f4defe9a82eff4fbe9f0355415de7cfa3ca1b08cd1ddc7f6ae5bd66"
+      },
+      {
+        "name": "supabase/functions/_shared/_fixed_c_worker_sdk/d6476eb760b326c6efa9534e2de942be23983f472c9b8459c0effa4c263980e9.mjs",
+        "bytes": 310,
+        "sha256": "6cbe57de46220624ff4b404c5527d045f86180701d26706fce960c8a41b7746d"
+      },
+      {
+        "name": "supabase/functions/_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs",
+        "bytes": 618,
+        "sha256": "4cb4017a3cb452fd73fd38066759a897e93ab5b2819432d76da8304e73731e93"
+      },
+      {
+        "name": "supabase/functions/_shared/daily-stock-ai-auth.ts",
+        "bytes": 2066,
+        "sha256": "c96514c7ba97b148f78a15cf525b9b07590ef41bca673ca9a32924ab2d549523"
+      },
+      {
+        "name": "supabase/functions/_shared/daily-stock-ai-jobs.ts",
+        "bytes": 2717,
+        "sha256": "332fe688137bcee81cb246e03f3184127b6b8fe49b6ac0afcfa371a413a807e3"
+      },
+      {
+        "name": "supabase/functions/_shared/daily-stock-ai-news.ts",
+        "bytes": 2629,
+        "sha256": "1829d96c6b5ce82a4617cfcc874b1557fddf5b6a82b28b3a6ce849f1855d8ca6"
+      },
+      {
+        "name": "supabase/functions/_shared/daily-stock-ai-runner.ts",
+        "bytes": 1831,
+        "sha256": "df8d1b6a95a255770237dbd1d88217bf0a079b66e247a7e877e30e774fdbd0a5"
+      },
+      {
+        "name": "supabase/functions/_shared/daily-stock-ai.ts",
+        "bytes": 2607,
+        "sha256": "b53627c686030fd21ade06fe0ec6aba1d53805e2ec1baf4c6c318d5f561583f2"
+      },
+      {
+        "name": "supabase/functions/_shared/market-calendar-data.json",
+        "bytes": 1695,
+        "sha256": "18930032917a7e3695a431b57b0f53313f1289af72d61087eca3f93fff956079"
+      },
+      {
+        "name": "supabase/functions/_shared/market-session-contract.mjs",
+        "bytes": 2994,
+        "sha256": "5b41e134ffd98e8eedcff8e782b104c96b7368ad3f455ec7ac2b406e74316d44"
+      },
+      {
+        "name": "supabase/functions/_shared/us-cash-session-calendar.ts",
+        "bytes": 1609,
+        "sha256": "e648996b1c26b63e6f04f00ea06ca8a3cbef5ef49fb48b87c0b81d26979a9b78"
+      },
+      {
+        "name": "supabase/functions/daily-stock-analysis-v1/checkpoint.ts",
+        "bytes": 2058,
+        "sha256": "48786a39a52599b1f40ba8151e0dc73fe3cdc55a04bea650bdb122f5bf73b11b"
+      },
+      {
+        "name": "supabase/functions/daily-stock-analysis-v1/handler.ts",
+        "bytes": 6552,
+        "sha256": "04ec87a9e2784c11148b6d81aae01579b55552df9082d0352d6c58670560bceb"
+      },
+      {
+        "name": "supabase/functions/daily-stock-analysis-v1/index.ts",
+        "bytes": 5143,
+        "sha256": "803cda4b25ddc76d9be73b978f350b0eff9ba8e33f3421ba4dfa28b2e0809e92"
+      },
+      {
+        "name": "supabase/functions/daily-stock-analysis-v1/intake.ts",
+        "bytes": 17577,
+        "sha256": "840047ab901a8cb377a45547ccb631d3b763260d4c9dcd25447a36e99e12a40f"
+      },
+      {
+        "name": "supabase/functions/daily-stock-analysis-v1/source-handler.ts",
+        "bytes": 3534,
+        "sha256": "21a0b2250ffd574f6291904b3e61e78780dd80664105d4297b585a4a99c0be5d"
+      },
+      {
+        "name": "supabase/functions/daily-stock-analysis-v1/source.ts",
+        "bytes": 9013,
+        "sha256": "ec4b365e5ec7ede71f7b3cc813283686a0a08e37284e40a57f4b158e2ec35e0f"
+      }
+    ]
+  },
+  "commit_done": false,
+  "push_done": false,
+  "new_deployment_done": false,
+  "new_migrations_done": false,
+  "new_cron_done": false,
+  "files": [
+    {
+      "path": "docs/operations/daily-ai-delivery-20261031.md",
+      "sha256": "aabaa6cc757936ed61e76416356a143983c104012a93eac2601a01db368bd7cc",
+      "bytes": 6387
+    },
+    {
+      "path": "research/build-daily-ai-seed.mjs",
+      "sha256": "918be6cb8cf2f300e826f40d4d0b917ca86e6bf6d5cf1ba53849fe786e6faf18",
+      "bytes": 2388
+    },
+    {
+      "path": "research/daily-ai-analysis.ts",
+      "sha256": "66ed7b6c99b9e6e01207af0e256da927de515220182701bb0919f33d87f81cd7",
+      "bytes": 8518
+    },
+    {
+      "path": "research/daily-ai-batch.ts",
+      "sha256": "ec809fdd1fc2dfa66bd627f7b000985f5ed513bc25bbfa08595cd5f062c4f3bb",
+      "bytes": 3566
+    },
+    {
+      "path": "research/daily-ai-batches.candidate.sql",
+      "sha256": "ba13c5cadcc233895319e58158203a0282f7e87e5681c446d421551334e692b1",
+      "bytes": 6838
+    },
+    {
+      "path": "research/daily-ai-dispatch.candidate.sql",
+      "sha256": "4470b575958b0d0595fb3f836421c7907f2502557ebac844f5adfd03cd13e3a7",
+      "bytes": 2157
+    },
+    {
+      "path": "research/daily-ai-global-market.ts",
+      "sha256": "060284f25577b0190f6e6b6239db72461c5c9343f957eda88e03f1f5f43151d0",
+      "bytes": 17678
+    },
+    {
+      "path": "research/daily-ai-handoff.candidate.sql",
+      "sha256": "dbdb3e47881dbd09af5d6b9a96b5e31ccdf55469b78cf939674a5dd93cee7561",
+      "bytes": 15910
+    },
+    {
+      "path": "research/daily-ai-intake-cron.candidate.sql",
+      "sha256": "6823d2ec164411423a551b4e38edd94307b43edd91eac82ab34fbf1cf27c35df",
+      "bytes": 505
+    },
+    {
+      "path": "research/daily-ai-intake.candidate.sql",
+      "sha256": "9be2c5a3a7594ec51ecf468026c5766b5349dd320dcf6db91bcf4a5746181660",
+      "bytes": 34392
+    },
+    {
+      "path": "research/daily-ai-member.candidate.sql",
+      "sha256": "449145c4d8434215b40e64be443d60d1e826920eede0718896c7a45707e07d70",
+      "bytes": 26115
+    },
+    {
+      "path": "research/daily-ai-packets.ts",
+      "sha256": "df54d09bcdbfca414943211c6ba5d1d21588611b22df4b9008b46c8b44174584",
+      "bytes": 5936
+    },
+    {
+      "path": "research/daily-ai-refresh.ts",
+      "sha256": "4dc5466aef695b24da06fb371c614c1a6094598d46678aa8ec66becce833fa7d",
+      "bytes": 8455
+    },
+    {
+      "path": "research/daily-ai-seed.ts",
+      "sha256": "2a7fffe2c1d4197edf94b225c4f9ad04e5d61408096a0822292d2f5ae15add84",
+      "bytes": 3755
+    },
+    {
+      "path": "research/daily-ai-use-review.candidate.sql",
+      "sha256": "549f9c9e05214d1f3ec999b4023a5f4fef31da89376d3ba917b222065e3e1500",
+      "bytes": 8172
+    },
+    {
+      "path": "src/features/vnext/dailyAiCopy.ts",
+      "sha256": "a63f79c2a3d92b1faa4fd00aa6ebb2661abb048ab01ed42922e666593d0dff9a",
+      "bytes": 3999
+    },
+    {
+      "path": "src/features/vnext/dailyAiMember.ts",
+      "sha256": "0fa37e523b2d61527302502e3f45f8e723192eb04cb53400d184c76f922efd8d",
+      "bytes": 7155
+    },
+    {
+      "path": "src/features/vnext/dailyAiOwner.ts",
+      "sha256": "7cd371add6c39fc039e5e065d3aae4275df2e5241573f1197ea87fc8ee19743b",
+      "bytes": 7705
+    },
+    {
+      "path": "src/pages/vnext/CompletedResearch.tsx",
+      "sha256": "29ad77143382cd94650129f459fb2609a6c45b278bff6bad78149432bad697cc",
+      "bytes": 7702
+    },
+    {
+      "path": "src/pages/vnext/DailyAiMemberResearch.tsx",
+      "sha256": "80ce71952382292c4142948b45b8645ed068f533e7d5d211e0c13e128fc8fcc6",
+      "bytes": 6806
+    },
+    {
+      "path": "src/pages/vnext/MemberPage.tsx",
+      "sha256": "f949966e46e5851093d88e89369f1505266c4c881d56d42b397fdede5e79260c",
+      "bytes": 13518
+    },
+    {
+      "path": "src/pages/vnext/OwnerAiPublication.tsx",
+      "sha256": "b3b6056d8391fae4dc5d2e7b13d6eb4fbd986eee334d8b05529cf6f715a4f7f3",
+      "bytes": 10984
+    },
+    {
+      "path": "src/pages/vnext/OwnerPublication.tsx",
+      "sha256": "57f3efc53a7f3e9d39e4643ffe327175794de19ea2c1e17ec566e1e721cb5120",
+      "bytes": 4823
+    },
+    {
+      "path": "src/pages/vnext/daily-ai-member.css",
+      "sha256": "9b8fadfbf7488c513776301ba74120f613695e465be528d8ff229cff1ec8884d",
+      "bytes": 1949
+    },
+    {
+      "path": "supabase/functions/_shared/daily-stock-ai-auth.ts",
+      "sha256": "c96514c7ba97b148f78a15cf525b9b07590ef41bca673ca9a32924ab2d549523",
+      "bytes": 2066
+    },
+    {
+      "path": "supabase/functions/_shared/daily-stock-ai-jobs.ts",
+      "sha256": "332fe688137bcee81cb246e03f3184127b6b8fe49b6ac0afcfa371a413a807e3",
+      "bytes": 2717
+    },
+    {
+      "path": "supabase/functions/_shared/daily-stock-ai-news.ts",
+      "sha256": "1829d96c6b5ce82a4617cfcc874b1557fddf5b6a82b28b3a6ce849f1855d8ca6",
+      "bytes": 2629
+    },
+    {
+      "path": "supabase/functions/_shared/daily-stock-ai-runner.ts",
+      "sha256": "df8d1b6a95a255770237dbd1d88217bf0a079b66e247a7e877e30e774fdbd0a5",
+      "bytes": 1831
+    },
+    {
+      "path": "supabase/functions/_shared/daily-stock-ai.ts",
+      "sha256": "b53627c686030fd21ade06fe0ec6aba1d53805e2ec1baf4c6c318d5f561583f2",
+      "bytes": 2607
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/checkpoint.ts",
+      "sha256": "48786a39a52599b1f40ba8151e0dc73fe3cdc55a04bea650bdb122f5bf73b11b",
+      "bytes": 2058
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/handler.ts",
+      "sha256": "04ec87a9e2784c11148b6d81aae01579b55552df9082d0352d6c58670560bceb",
+      "bytes": 6552
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "sha256": "803cda4b25ddc76d9be73b978f350b0eff9ba8e33f3421ba4dfa28b2e0809e92",
+      "bytes": 5143
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/intake.ts",
+      "sha256": "840047ab901a8cb377a45547ccb631d3b763260d4c9dcd25447a36e99e12a40f",
+      "bytes": 17577
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/source-handler.ts",
+      "sha256": "21a0b2250ffd574f6291904b3e61e78780dd80664105d4297b585a4a99c0be5d",
+      "bytes": 3534
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/source.ts",
+      "sha256": "ec4b365e5ec7ede71f7b3cc813283686a0a08e37284e40a57f4b158e2ec35e0f",
+      "bytes": 9013
+    },
+    {
+      "path": "tests/completedResearch.test.mjs",
+      "sha256": "48ce049fc108755ec562e7fd59ace93cc509291cee7c4806e03ee3455eb4f68c",
+      "bytes": 3954
+    },
+    {
+      "path": "tests/dailyAiAnalysis.test.mjs",
+      "sha256": "a4ab3d4e0099972c3249b3de323fad52468c03b7f1e96a7a3e3e2a1f8285e9d7",
+      "bytes": 2885
+    },
+    {
+      "path": "tests/dailyAiBatch.test.mjs",
+      "sha256": "3d146a0a221406b7e612db791c066955a1e532feaee319d6dc213dcf3ca9946a",
+      "bytes": 4451
+    },
+    {
+      "path": "tests/dailyAiBatchesDatabase.integration.mjs",
+      "sha256": "eb84f4d04bce296900fd52ef39c172c98f73bd2287255eb1b6437d77696b2c79",
+      "bytes": 7190
+    },
+    {
+      "path": "tests/dailyAiDispatchDatabase.integration.mjs",
+      "sha256": "ef05c824b4e46adfe9e0eb1763a84163d6690c0abddf658ae495c5f01abcace4",
+      "bytes": 6403
+    },
+    {
+      "path": "tests/dailyAiGlobalMarket.test.mjs",
+      "sha256": "a1e00076cbf64d2770da1a7c29f19fc23454d4f2965d2c8a94b5c35bd27a1b0a",
+      "bytes": 12087
+    },
+    {
+      "path": "tests/dailyAiHandoffDatabase.integration.mjs",
+      "sha256": "e4265850591c78ba9812a2a88c3929fffc8c31e3e9cb7aa452a7bd0c3c255bd2",
+      "bytes": 15044
+    },
+    {
+      "path": "tests/dailyAiIntakeDatabase.integration.mjs",
+      "sha256": "0b60883682c37c026a000f64c2a39e2a15ce465e5d4420f05957748f529a7721",
+      "bytes": 24602
+    },
+    {
+      "path": "tests/dailyAiJobsDatabase.integration.mjs",
+      "sha256": "3a3cff047e530e45654fa1736f66723bee7017d635f86d76cf46808559b5a566",
+      "bytes": 8825
+    },
+    {
+      "path": "tests/dailyAiMember.test.mjs",
+      "sha256": "0b88790f80a6cde7bab8200c1144e5b795e9c524945e217003bbd0ab8d0ba794",
+      "bytes": 7213
+    },
+    {
+      "path": "tests/dailyAiMemberDatabase.integration.mjs",
+      "sha256": "b69e93bd8be9b7fe516c6448c86c11a0f56c607c2846a6f63e7a7bcb1699bc3b",
+      "bytes": 17548
+    },
+    {
+      "path": "tests/dailyAiOwner.test.mjs",
+      "sha256": "04ba2fe0eb7167eac5fc0a1df0060b7e99bfc6d8b99e55136f95d225b0100bc9",
+      "bytes": 8058
+    },
+    {
+      "path": "tests/dailyAiPackets.test.mjs",
+      "sha256": "2fb713a6693892e90a991bd61a183acc0beb695310d987cd5be07288c0a9247b",
+      "bytes": 6037
+    },
+    {
+      "path": "tests/dailyAiRefresh.test.mjs",
+      "sha256": "3d828f6fad2f53dbd0b1ae019f37d7d39778a803dfb32f60b2633438844c5418",
+      "bytes": 9990
+    },
+    {
+      "path": "tests/dailyAiSeed.test.mjs",
+      "sha256": "d01b1e28a1b8a13c39526e3641b2525efb046f1ecb3c147b5ea586927ce4ba62",
+      "bytes": 6745
+    },
+    {
+      "path": "tests/dailyAiUseReviewDatabase.integration.mjs",
+      "sha256": "08cf5cb283119abf9b062fefe7732c9155e6f192b30d0db4212b10f864585731",
+      "bytes": 13571
+    },
+    {
+      "path": "tests/dailyStockAiAuth.test.mjs",
+      "sha256": "0dcbe6116e21734f6d572369d04cebafc403482e75747950b48d25272d0bf1c2",
+      "bytes": 3281
+    },
+    {
+      "path": "tests/dailyStockAiCheckpoint.test.mjs",
+      "sha256": "18bd4be2a40c0d9513e680345e04e3bb6069cda4bacc066945c07bacc2bcb820",
+      "bytes": 3418
+    },
+    {
+      "path": "tests/dailyStockAiIntake.integration.test.mjs",
+      "sha256": "62ec7019a756b356edbab7a3fd856cdf33a22c60a260e76aab160833a06b0a70",
+      "bytes": 14796
+    },
+    {
+      "path": "tests/dailyStockAiMarketSnapshot.test.mjs",
+      "sha256": "1880f82207fef277dc91b45197c7cab31f01ac1382c2ced4bdf83b8524be5733",
+      "bytes": 5731
+    },
+    {
+      "path": "tests/dailyStockAiProvider.test.mjs",
+      "sha256": "e4ab1d67a333ff611da18b226b7ebfae95d6d4286225897dc6cb306f18800801",
+      "bytes": 2516
+    },
+    {
+      "path": "tests/dailyStockAiSource.test.mjs",
+      "sha256": "23ca630f8002af72db5cafd748b0023c74f264bf69cd72513a666b2a17d7640c",
+      "bytes": 14122
+    },
+    {
+      "path": "tests/dailyStockAiSourceHandler.test.mjs",
+      "sha256": "835b526e259b2114505cc5216d96c49d84e6895c2ea3b3db74acbb17d6bcf6ce",
+      "bytes": 6446
+    },
+    {
+      "path": "tests/dailyStockAiSourceWorker.integration.test.mjs",
+      "sha256": "05cabd44a407efcc2f1ec128c8ed96df729586a260c0e7b6c91bcc91b0d237e1",
+      "bytes": 13063
+    },
+    {
+      "path": "tests/dailyStockAiWorker.integration.test.mjs",
+      "sha256": "5406fca84f2638422916874eaa67c7717b513d7a8254c856bbe95c4de7ffd12b",
+      "bytes": 5281
+    },
+    {
+      "path": "tests/dailyStockAnalysisHandler.test.mjs",
+      "sha256": "ab0135af8bd661f13f8494a9a41dffef95e5a1316349232be405b8044a2c7871",
+      "bytes": 5188
+    },
+    {
+      "path": "tests/vnextMemberContinuity.test.mjs",
+      "sha256": "b59ae36f2a746e20c6a8e79c3f882b3818b0eb448d4fb128431365e27bed274d",
+      "bytes": 20476
+    }
+  ]
+}

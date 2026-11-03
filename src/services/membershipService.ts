@@ -1,5 +1,6 @@
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { requestWithDeadline } from './requestDeadline';
 import type { MemberAccessResponse } from '@/types/membership';
 
 const MEMBER_ACCESS_URL = 'https://cttfzgvhiewfckydcrci.supabase.co/functions/v1/member-access';
@@ -65,19 +66,29 @@ export async function fetchMemberAccess(action: 'activate' | 'status' = 'status'
   const { data, error } = await supabase.auth.getSession();
   if (error || !data.session?.access_token) throw new Error('AUTH_REQUIRED');
 
-  const response = await fetch(MEMBER_ACCESS_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${data.session.access_token}`,
-    },
-    body: JSON.stringify({ action }),
-  });
-  const json = await response.json().catch(() => null) as MemberAccessResponse | null;
-  if (!response.ok || !json?.success) {
-    throw new Error(json?.error || `MEMBER_ACCESS_FAILED_${response.status}`);
+  try {
+    return await requestWithDeadline(async (signal) => {
+      const response = await fetch(MEMBER_ACCESS_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${data.session.access_token}`,
+        },
+        body: JSON.stringify({ action }),
+        signal,
+      });
+      const json = await response.json().catch(() => null) as MemberAccessResponse | null;
+      if (!response.ok || !json?.success) {
+        throw new Error(json?.error || `MEMBER_ACCESS_FAILED_${response.status}`);
+      }
+      return json;
+    });
+  } catch (requestError) {
+    if (requestError instanceof Error && requestError.message === 'REQUEST_TIMEOUT') {
+      throw new Error('會員服務回應逾時，請稍後再試。');
+    }
+    throw requestError;
   }
-  return json;
 }
 
 export async function signOutMembership(): Promise<void> {

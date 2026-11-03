@@ -45,7 +45,7 @@ function setup(t) {
   }
   const supabase = {
     supabaseKey: publicMarker,
-    auth: { getSession() { calls.session++; return sessionReady; } },
+    auth: { getSession() { calls.session++; return sessionReady; }, onAuthStateChange: () => ({data:{subscription:{unsubscribe(){}}}}) },
   };
   const realtime = new RealtimeClient('ws://unit.invalid/realtime/v1', {
     params: { apikey: publicMarker }, transport: MemoryTransport,
@@ -70,6 +70,7 @@ function setup(t) {
   supabase.removeChannel = (...args) => SupabaseClient.prototype.removeChannel.apply(supabase, args);
   const globals = {
     supabase, refresh: () => { calls.refresh++; }, loadMorningState: () => { calls.morning++; },
+    active:{current:false},generation:{current:0},morningRequest:{current:0},isFetchingRef:{current:null},
     getAdaptiveDashboardPollMs: () => 300000,
     document: { visibilityState: 'visible', addEventListener: (_, fn) => listeners.add(fn), removeEventListener: (_, fn) => listeners.delete(fn) },
     window: { addEventListener: (_, fn) => listeners.add(fn), removeEventListener: (_, fn) => listeners.delete(fn) },

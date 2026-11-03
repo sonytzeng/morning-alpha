@@ -26,7 +26,7 @@ export const REQUIRED_PROVIDER_SLOTS = Object.freeze([
     key: 'TXF', provider: 'fugle_futopt', sourceSymbol: 'TXF1!', market: 'TW',
     endpoint: 'futopt/intraday/quote/TXF1!',
     discoveryEndpoint: 'futopt/intraday/tickers?type=FUTURE&exchange=TAIFEX&session={session}&product=TXF',
-    backup: 'same_provider_session_or_discovered_contract',
+    backup: 'same_provider_session_or_discovered_contract_then_taifex_prior_regular',
   }),
 ]);
 
@@ -56,9 +56,11 @@ const ALLOWED_MARKET_FIELDS = new Set([
   'date', 'type', 'exchange', 'market', 'symbol', 'name', 'nameEn', 'industry', 'securityType',
   'previousClose', 'referencePrice', 'openPrice', 'openTime', 'highPrice', 'highTime', 'lowPrice',
   'lowTime', 'closePrice', 'closeTime', 'avgPrice', 'change', 'changePercent', 'lastUpdated',
+  'isClose', 'isTrial',
   'lastTrade', 'total', 'trade', 'price', 'time', 'session', 'product', 'contractType', 'startDate',
   'endDate', 'settlementDate', 'data', 'c', 'd', 'dp', 'h', 'l', 'o', 'pc', 't',
   'msgArray', 'z', 'pz', 'a', 'y',
+  'source_url', 'source_sha256', 'source_bytes', 'received_at',
 ]);
 
 function sanitizeValue(value, depth) {
@@ -67,7 +69,8 @@ function sanitizeValue(value, depth) {
   if (Array.isArray(value)) return value.slice(0, 3).map(item => sanitizeValue(item, depth + 1));
   const source = record(value);
   return Object.fromEntries(Object.entries(source)
-    .filter(([key]) => ALLOWED_MARKET_FIELDS.has(key) && !SECRET_KEY.test(key))
+    .filter(([key, entry]) => ALLOWED_MARKET_FIELDS.has(key) && !SECRET_KEY.test(key) &&
+      (!['isClose', 'isTrial'].includes(key) || typeof entry === 'boolean'))
     .map(([key, entry]) => [key, sanitizeValue(entry, depth + 1)]));
 }
 

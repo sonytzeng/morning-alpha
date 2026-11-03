@@ -1,0 +1,59 @@
+{
+  "schema": "MEMBER_AI_DELTA_LIVE_BASELINE_V1",
+  "project_id": "cttfzgvhiewfckydcrci",
+  "read_only": true,
+  "functions": [
+    {
+      "schema_name": "public",
+      "proname": "is_research_owner_v1",
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.is_research_owner_v1()\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select exists (\n    select 1 from research_private.owner_access a\n    join public.profiles p on p.id = a.principal_id\n    where a.principal_id = (select auth.uid()) and a.enabled and lower(p.role) = 'admin'\n  )\n$function$\n",
+      "definition_sha256": "eaf18ce70212175aa93b60e23b266978cb631cb98bda4c74169fd2ea06fd162b",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "prosecdef": true,
+      "provolatile": "s",
+      "proconfig": [
+        "search_path=\"\""
+      ]
+    },
+    {
+      "schema_name": "academy_private",
+      "proname": "access_v11",
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION academy_private.access_v11()\n RETURNS text\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare p public.profiles%rowtype; e public.member_entitlements%rowtype; ending timestamptz;\nbegin\n if auth.uid() is null or not exists(select from auth.users u where u.id=auth.uid() and not coalesce(u.is_anonymous,false)) then return 'denied'; end if;\n if public.is_research_owner_v1() then return 'owner'; end if;\n select * into p from public.profiles where id=auth.uid();\n select * into e from public.member_entitlements where user_id=auth.uid();\n if lower(trim(p.role))='admin' or e.state='owner' then return 'premium'; end if;\n if e.user_id is null then\n  if lower(trim(p.subscription_status))='active' and (p.paid_until is null or p.paid_until>now()) then return 'premium'; end if;\n  return 'free';\n end if;\n ending:=coalesce(e.access_ends_at,e.current_period_end);\n if (e.state in ('beta_full','paid_active') and (ending is null or ending>now()))\n or (e.state='trialing' and e.trial_ends_at>now())\n or (e.state='canceled' and ending>now()) then return 'premium'; end if;\n return 'free';\nend $function$\n",
+      "definition_sha256": "6a3d6865188b13c70e37f23e4235e18c83ba993b1e619ba8e7536038088cd135",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "prosecdef": true,
+      "provolatile": "s",
+      "proconfig": [
+        "search_path=\"\""
+      ]
+    },
+    {
+      "schema_name": "vnext_private",
+      "proname": "ai_edition_rights_v1",
+      "arguments": "p_id text, p_now timestamp with time zone",
+      "definition": "CREATE OR REPLACE FUNCTION vnext_private.ai_edition_rights_v1(p_id text, p_now timestamp with time zone)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n select coalesce((select case when latest.id is not null then\n   latest.snapshot_hash=e.id and latest.use_scope='OWN_ANALYSIS_ONLY' and not latest.raw_redistribution\n   and latest.quality='PASS' and latest.reviewed_at<=p_now and latest.recorded_at<=p_now and latest.expires_at>p_now\n   and latest.documents_ready\n  else not exists(select from jsonb_array_elements_text(e.payload->'source_urls')requested(source) where not exists(\n   select from vnext_private.source_licenses l where l.source=requested.source\n    and l.storage_allowed and l.derived_allowed and l.commercial_allowed\n    and l.reviewed_at<=p_now and (l.expires_at is null or l.expires_at>p_now)\n    and l.document_url like 'https://%' and length(btrim(l.attribution))>0)) end\n  from vnext_private.ai_research_editions e left join lateral(\n   select r.* from vnext_private.ai_research_use_reviews r where r.edition_id=e.id\n   order by r.recorded_at desc,r.id desc limit 1)latest on true\n  where e.id=p_id and isfinite(p_now) and e.created_at<=p_now and e.expires_at>p_now),false);\n$function$\n",
+      "definition_sha256": "a1d17f43ddc8c19103d436f84aed6cd59710da9e6e96a4de09efdd714101a054",
+      "acl": "{postgres=X/postgres}",
+      "prosecdef": true,
+      "provolatile": "s",
+      "proconfig": [
+        "search_path=\"\""
+      ]
+    },
+    {
+      "schema_name": "public",
+      "proname": "get_daily_ai_member_research_v1",
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.get_daily_ai_member_research_v1()\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare tier text;e vnext_private.ai_research_editions;cards jsonb:='[]';edition jsonb:=null;\nbegin\n tier:=academy_private.access_v11();\n if auth.uid() is null or tier is null or tier not in('free','premium','owner') then raise exception 'MEMBER_REQUIRED' using errcode='42501';end if;\n select x.* into e from vnext_private.ai_research_editions x\n join lateral(select * from vnext_private.ai_research_publication_events a where a.edition_id=x.id order by a.id desc limit 1)a on true\n join lateral(select * from vnext_private.ai_research_reviews r where r.edition_id=x.id order by r.recorded_at desc,r.id desc limit 1)r on true\n where a.action='APPROVE' and a.review_id=r.id and r.quality='PASS' and r.time_status='PASS' and r.licensing='PASS'\n  and r.snapshot_hash=x.id and r.expires_at>now() and x.expires_at>now() and x.created_at<=now()\n  and (tier<>'free' or a.audience='free') and vnext_private.ai_edition_rights_v1(x.id,now())\n order by x.created_at desc,x.id limit 1;\n if found then\n  edition:=jsonb_build_object('id',e.id,'edition_date',e.business_date,'data_through',e.through,'evidence_cutoff',e.cutoff,\n   'prepared_at',e.created_at,'expires_at',e.expires_at,'mode','AS_OF_RESEARCH','forecast',false,'performance_available',false);\n  select coalesce(jsonb_agg(case when tier='free' then c-'sources'-'counter_evidence' else c end order by c->>'symbol',c->>'horizon'),'[]') into cards\n   from jsonb_array_elements(e.payload->'cards')c where tier<>'free' or c->>'symbol' in(\n    select distinct q->>'symbol' from jsonb_array_elements(e.payload->'cards')q order by q->>'symbol' limit 3);\n end if;\n return jsonb_build_object('schema','VNEXT_AI_MEMBER_EDITION_V1','tier',tier,'business_date',(now() at time zone 'Asia/Taipei')::date,\n  'research_only',true,'edition',edition,'cards',cards);\nend $function$\n",
+      "definition_sha256": "75f25f11361c83e33297f4f7386339cdb959d02f4431a9571681eda59717cbc8",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "prosecdef": true,
+      "provolatile": "s",
+      "proconfig": [
+        "search_path=\"\""
+      ]
+    }
+  ]
+}

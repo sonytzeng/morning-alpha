@@ -22,6 +22,7 @@ import {
   resolveFugle2330Provider,
   resolveFugleTaiexProvider,
 } from './fugle-taiex-provider.mjs';
+import { normalizeTaifexRegularPayload } from './taifex-regular-fallback.mjs';
 import { MARKET_CALENDAR_VERSION } from './market-session-contract.mjs';
 import { classifyCanonicalFailure, FAILURE_CONTRACT_VERSION } from './provider-failure-contract.mjs';
 
@@ -102,7 +103,7 @@ function endpointAdapterKind(providerKey, provider, endpoint) {
   if (providerKey === 'TAIEX' || providerKey === '2330') {
     return ['twse', 'twse_mis'].includes(provider) || /twse|stock\/api\/getStockInfo/.test(String(endpoint)) ? 'TWSE_MIS_QUOTE' : 'FUGLE_TAIWAN_CORE';
   }
-  if (providerKey === 'TXF') return 'FUGLE_FUTOPT_QUOTE';
+  if (providerKey === 'TXF') return provider === 'taifex_open_data' ? 'TAIFEX_PRIOR_REGULAR' : 'FUGLE_FUTOPT_QUOTE';
   return String(endpoint || '').includes('twse') ? 'TWSE_MIS_QUOTE' : 'NORMALIZED_QUOTE';
 }
 
@@ -234,6 +235,9 @@ async function replayQuote(replay, row) {
       observedAt: evidenceInput.observedAt,
     });
     return {quote:normalizeRequiredTaiwanCoreQuote(result, providerKey), adapter_error:result.ok ? null : result.failureCode || null};
+  }
+  if (replay.adapter_kind === 'TAIFEX_PRIOR_REGULAR') {
+    return {quote:normalizeTaifexRegularPayload(payload, evidenceInput),adapter_error:null};
   }
   if (replay.adapter_kind === 'FUGLE_FUTOPT_QUOTE') {
     const resolved = await resolveRequiredTxfQuote(async requestedEndpoint => responseFor(requestedEndpoint), {

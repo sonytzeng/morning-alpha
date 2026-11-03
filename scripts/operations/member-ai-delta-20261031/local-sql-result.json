@@ -1,0 +1,15 @@
+{
+  "schema": "MEMBER_AI_DELTA_LOCAL_SQL_RESULT_V1",
+  "result": "PASS",
+  "checks": 97,
+  "server_version": "17.5",
+  "full_json_bytes": 1279888,
+  "unchanged_json_bytes": 516,
+  "production_used": false,
+  "production_capacity_proven": false,
+  "db_cpu_reduction_claimed": false,
+  "current_entitlement_and_rights_checked_every_call": true,
+  "original_readers_modified": false,
+  "source_grants_written": false,
+  "candidate_sql_sha256": "eaa3a954c29f4825c23362aa0b5e5dfbcec7b615d38ef57081f62e4f72c4ddb7"
+}

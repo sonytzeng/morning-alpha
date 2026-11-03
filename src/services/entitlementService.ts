@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { requestWithDeadline } from './requestDeadline';
 import type { FeatureKey, ServerReportHistoryResponse, ServerReportPayloadResponse, SubscriptionTier, UserEntitlement } from '@/types/subscription';
 
 const GET_REPORT_PAYLOAD_URL = 'https://cttfzgvhiewfckydcrci.supabase.co/functions/v1/get-report-payload';
@@ -8,6 +9,14 @@ const PUBLIC_CACHE_TTL_MS = 30_000;
 type CacheEntry = { expiresAt: number; value: unknown };
 const responseCache = new Map<string, CacheEntry>();
 const inflightRequests = new Map<string, Promise<unknown>>();
+let cacheEpoch = 0;
+
+/** Auth changes must not reuse or later cache a prior entitlement response. */
+export function invalidateReportRequestCache(): void {
+  cacheEpoch++;
+  responseCache.clear();
+  inflightRequests.clear();
+}
 
 async function cachedRequest<T>(key: string, ttlMs: number, request: () => Promise<T>): Promise<T> {
   const cached = responseCache.get(key);
@@ -17,13 +26,14 @@ async function cachedRequest<T>(key: string, ttlMs: number, request: () => Promi
   const inflight = inflightRequests.get(key);
   if (inflight) return inflight as Promise<T>;
 
+  const epoch = cacheEpoch;
   const promise = request()
     .then((value) => {
-      responseCache.set(key, { expiresAt: Date.now() + ttlMs, value });
+      if (epoch === cacheEpoch) responseCache.set(key, { expiresAt: Date.now() + ttlMs, value });
       return value;
     })
     .finally(() => {
-      inflightRequests.delete(key);
+      if (inflightRequests.get(key) === promise) inflightRequests.delete(key);
     });
   inflightRequests.set(key, promise);
   return promise;
@@ -94,7 +104,9 @@ export function getTierLabel(tier: SubscriptionTier): string {
 export async function callGetReportPayload(params: {
   reportDate?: string | null;
 } = {}): Promise<ServerReportPayloadResponse> {
+  const epoch = cacheEpoch;
   const { data: sessionData } = await supabase.auth.getSession();
+  if (epoch !== cacheEpoch) throw new Error('AUTH_CHANGED');
   const accessToken = sessionData.session?.access_token || '';
   const userId = sessionData.session?.user.id || 'anonymous';
   const cacheKey = `report-payload:${userId}:${params.reportDate || 'latest'}`;
@@ -110,11 +122,12 @@ export async function callGetReportPayload(params: {
     headers.Authorization = `Bearer ${accessToken}`;
   }
 
-  return cachedRequest<ServerReportPayloadResponse>(cacheKey, cacheTtlMs, async () => {
+  return cachedRequest<ServerReportPayloadResponse>(cacheKey, cacheTtlMs, () => requestWithDeadline(async (signal) => {
     const response = await fetch(GET_REPORT_PAYLOAD_URL, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
+      signal,
     });
 
     const json = await response.json().catch(() => null) as ServerReportPayloadResponse | null;
@@ -122,11 +135,13 @@ export async function callGetReportPayload(params: {
       throw new Error(json?.error || `get-report-payload failed: ${response.status}`);
     }
     return json;
-  });
+  }));
 }
 
 export async function callGetReportHistory(limit = 30): Promise<ServerReportHistoryResponse> {
+  const epoch = cacheEpoch;
   const { data: sessionData } = await supabase.auth.getSession();
+  if (epoch !== cacheEpoch) throw new Error('AUTH_CHANGED');
   const accessToken = sessionData.session?.access_token || '';
   const userId = sessionData.session?.user.id || 'anonymous';
   const normalizedLimit = Math.min(30, Math.max(1, Math.trunc(limit) || 30));
@@ -135,16 +150,17 @@ export async function callGetReportHistory(limit = 30): Promise<ServerReportHist
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
-  return cachedRequest<ServerReportHistoryResponse>(cacheKey, cacheTtlMs, async () => {
+  return cachedRequest<ServerReportHistoryResponse>(cacheKey, cacheTtlMs, () => requestWithDeadline(async (signal) => {
     const response = await fetch(GET_REPORT_PAYLOAD_URL, {
       method: 'POST',
       headers,
       body: JSON.stringify({ history_limit: normalizedLimit }),
+      signal,
     });
     const json = await response.json().catch(() => null) as ServerReportHistoryResponse | null;
     if (!response.ok || !json) {
       throw new Error(json?.error || `get-report-history failed: ${response.status}`);
     }
     return json;
-  });
+  }));
 }

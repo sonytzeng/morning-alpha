@@ -1,0 +1,838 @@
+{
+  "schema": "V1_SOURCE_UNION_R12_NATIVE_QUARTER_AND_JSONB_INCREMENT_1",
+  "as_of": "2026-10-21T11:11:10.251Z",
+  "purpose": "原V1資料接線候選；不是正式推薦、資料准入、研究公開或整包部署核准",
+  "git": {
+    "head": "3f8ad958105973d64cc7e34ae9391b2804e8ea44",
+    "origin_main": "7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3",
+    "local_branch": "codex/v1-source-integration-20261020",
+    "remote_branch": "codex/official-source-wiring-20261020",
+    "pr": 284,
+    "draft": true,
+    "merged": false,
+    "ahead": 32,
+    "behind": 0
+  },
+  "prior_root": {
+    "path": "docs/operations/evidence/core-member-integration-20261021-v1-source-union-r11.json",
+    "sha256": "99f045102c0e148164b0b97ad2e568e7e2865905fc54fa8f9fe1c85dde0cd269",
+    "unchanged": true
+  },
+  "increment": {
+    "paths_excluding_self": [
+      {
+        "path": "docs/operations/PRODUCT_DELIVERY_MASTER.md",
+        "before_sha256": "16f174d068847e23373940aea72bac6d10ec4c374664964ad751be1708d533a8",
+        "after_sha256": "4744662a54d0edf96194ebc617345b2a7b4c71ed80bb1a79e8bde9800037d28c"
+      },
+      {
+        "path": "research/issuer-actual-v1-input.ts",
+        "before_sha256": "bcace17dab7b9df097826f9c78971c37d73513bc05919dfcb7906f03cd630eeb",
+        "after_sha256": "9859a908e507f05f9e242ed177f91f6fd2f0a5e8989b55eac7f61937b42b75fe"
+      },
+      {
+        "path": "research/recommendation-official-source-join.ts",
+        "before_sha256": "0432c38c5e6e52011a231b1618f7ddd1741bf92f9f6ce6544830d98d7195c4e2",
+        "after_sha256": "a83b147d8f63f056fd808064eb9bc8dbadb6718be2ddeb49e0c8a6a12df36560"
+      },
+      {
+        "path": "scripts/official-actuals/issuer-pdf-descriptor.py",
+        "before_sha256": "7bd1404ddebe07ee270710cfe0b1ca28beca265df41c427508a836dc9be6f023",
+        "after_sha256": "b966b63723c65f3fdb103fd05ec026381a0e467be436ae49ca60db5a4914de20"
+      },
+      {
+        "path": "tests/officialV1SourceJoin.test.mjs",
+        "before_sha256": "6b1aae738db148b5ca121cc12c550b792ad2939fdf40b84e918b26508451dbb9",
+        "after_sha256": "a96472c706b13f4acc2c2d4c132f04ee4d186ce9cff709dfde61557a9460990c"
+      },
+      {
+        "path": "tests/officialV1SourceJoinJsonb.integration.mjs",
+        "before_sha256": null,
+        "after_sha256": "94bc7d7a30bd77c3f118f663cbbfea94b09d328eee9ed1fc4c0dbae94f33f7d6"
+      },
+      {
+        "path": "tests/retainedIssuerActuals.test.mjs",
+        "before_sha256": "e8066eb81292f4295f883711d3698e112f5e99b326d48ca77235bd1cec420302",
+        "after_sha256": "a60472a9fcc678bbc58c559104e3d764eda7d3fd0a19188aa0d401e7a896b4a6"
+      },
+      {
+        "path": "tests/test_issuer_pdf_descriptor.py",
+        "before_sha256": "8cf96a4b157d2793456484e1b79283312585e51c42048f0ba26946edac3381eb",
+        "after_sha256": "5a9e0b70584a6f8cdc952eadfc50270da45152baa99d542f390f3b6a34a5c46a"
+      }
+    ],
+    "root_self": "docs/operations/evidence/core-member-integration-20261021-v1-source-union-r12.json",
+    "total_paths_including_root": 9,
+    "code_and_test_paths": 7,
+    "documents_added_after_scan": 2,
+    "commit_authorized": false,
+    "push_authorized": false,
+    "production_authorized": false
+  },
+  "complete_pr_snapshot": {
+    "base": "7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3",
+    "base_head": "3f8ad958105973d64cc7e34ae9391b2804e8ea44",
+    "paths_excluding_root": [
+      {
+        "path": ".github/workflows/continuous-research-lifecycle.yml",
+        "sha256": "b8b12fb00b21205b1e8fb5ad6ca4b7e4424f2fcc00e467348789916f837f90e9"
+      },
+      {
+        "path": ".github/workflows/core-member-integration.yml",
+        "sha256": "4c05de1bfd5dd83fa8556a6cb7c93e9947b394cb01f51807248733c89b66c9f5"
+      },
+      {
+        "path": ".github/workflows/official-public-source.yml",
+        "sha256": "8dd3998cd2c1ba44ab62e67973f7012276448bd90a44ac999eacf693c5deef0a"
+      },
+      {
+        "path": ".github/workflows/original-observation-ingress.yml",
+        "sha256": "8c12f2d3ca2f3b763102eb9e05c95099b9a45e15f29fd58dd23b7285347cdc12"
+      },
+      {
+        "path": ".github/workflows/v1-actual-canonical.yml",
+        "sha256": "397764b55e03076299679515c29e3ff31fad5c70a36931b4ce985eeb9956a2d9"
+      },
+      {
+        "path": ".github/workflows/v1-source-integration.yml",
+        "sha256": "174f58a695d811dc5d78790a6e400941fe7916b73e0bc00ef70b649df91ce5b8"
+      },
+      {
+        "path": ".github/workflows/validate-release.yml",
+        "sha256": "ac3741322f0081969b0a19f04903a984d8aff7422d4e935f5a1ac047a9c7e9f7"
+      },
+      {
+        "path": "docs/operations/PRODUCT_DELIVERY_MASTER.md",
+        "sha256": "4744662a54d0edf96194ebc617345b2a7b4c71ed80bb1a79e8bde9800037d28c"
+      },
+      {
+        "path": "docs/operations/continuous-research-lifecycle-20261020.md",
+        "sha256": "5b0eb98f1bc3baab71c6c6472d0797b9f96fb51f60b03e648079eaa9231fb14d"
+      },
+      {
+        "path": "docs/operations/evidence/continuous-research-lifecycle-20261020.json",
+        "sha256": "b137c0ca553aba682c5c7f46902bc53394f1691cebe775aedd76f1f3c7e9c511"
+      },
+      {
+        "path": "docs/operations/evidence/core-member-integration-20261019-original-ingress.json",
+        "sha256": "569df2eb8c767b3eac8c307ff2d5b5b9a17b5a6f17efce5a12418ef6b4a13694"
+      },
+      {
+        "path": "docs/operations/evidence/core-member-integration-20261020-continuous-lifecycle.json",
+        "sha256": "ecd5c5781f02a911c56a069ca5bdbb7835fe2d59f052601f4e9f542feb3be9c5"
+      },
+      {
+        "path": "docs/operations/evidence/core-member-integration-20261020-official-public.json",
+        "sha256": "f20d8bf15b4a30016756f309cfae5ec9249b4e31b0f0ffb612cc1bc845f3f0d8"
+      },
+      {
+        "path": "docs/operations/evidence/core-member-integration-20261020-registry-ingress.json",
+        "sha256": "0fe3ec91a03ebeeec1ac8d3fa00e44aa295bf74dbe25c6a620d55b4e3ea35c06"
+      },
+      {
+        "path": "docs/operations/evidence/core-member-integration-20261020-v1-actual-canonical.json",
+        "sha256": "c23aa84a894faf51c536d34d51586a3cca6dd24a6c3d44026a7f5fcb9f54d1ee"
+      },
+      {
+        "path": "docs/operations/evidence/core-member-integration-20261020-v1-source-union-normalizer-r2.json",
+        "sha256": "d9252d66bf79c19cc1074bd4817a894dea97339927f286a1bf3554e24bf1ec1a"
+      },
+      {
+        "path": "docs/operations/evidence/core-member-integration-20261020-v1-source-union-normalizer.json",
+        "sha256": "ac75c13d9314a90cdeb28fb361bb7cc3543946848126a4339d003b7cb9fb97d8"
+      },
+      {
+        "path": "docs/operations/evidence/core-member-integration-20261020-v1-source-union-r3.json",
+        "sha256": "0bed00b3d21f3776dc875d505eef45e31e2af546e5cbfa0e798f13e8f1258f56"
+      },
+      {
+        "path": "docs/operations/evidence/core-member-integration-20261020-v1-source-union.json",
+        "sha256": "b9869544786b66e75c38e390550494307dabef4c549745a66f84bd79a1b74d0f"
+      },
+      {
+        "path": "docs/operations/evidence/core-member-integration-20261021-v1-source-union-r10.json",
+        "sha256": "f97d3d429b3b93839522a6c8c8fdecda0ba2daa7a95fed0644143e5d1984d904"
+      },
+      {
+        "path": "docs/operations/evidence/core-member-integration-20261021-v1-source-union-r11.json",
+        "sha256": "99f045102c0e148164b0b97ad2e568e7e2865905fc54fa8f9fe1c85dde0cd269"
+      },
+      {
+        "path": "docs/operations/evidence/core-member-integration-20261021-v1-source-union-r4.json",
+        "sha256": "0ca370d03f4453f410c295880f074acaf703da10912cd1a7a1af874539b69fb4"
+      },
+      {
+        "path": "docs/operations/evidence/core-member-integration-20261021-v1-source-union-r5.json",
+        "sha256": "70ca483c3f20a695adb4d49913a8f98b40b96c091ae07b4f8d653f986efa7ca3"
+      },
+      {
+        "path": "docs/operations/evidence/core-member-integration-20261021-v1-source-union-r6.json",
+        "sha256": "561f245b3494020bf1ba6c9aea67adaa08ada8459d10a6ca4316a2d6c0a3a64d"
+      },
+      {
+        "path": "docs/operations/evidence/core-member-integration-20261021-v1-source-union-r7.json",
+        "sha256": "e64bcc91568afa112ab31bc3d68a5426291cd90dd2a177e4a2352a717b1b9916"
+      },
+      {
+        "path": "docs/operations/evidence/core-member-integration-20261021-v1-source-union-r8.json",
+        "sha256": "b773a7050a97ffc37fa2cfacf7da03cc9d855972998d1418bcae5fd92406d787"
+      },
+      {
+        "path": "docs/operations/evidence/core-member-integration-20261021-v1-source-union-r9.json",
+        "sha256": "54cda51cf63f6d0c3dd2eb2729ebe6c5deb2722905cf368d140c1ec962ad8869"
+      },
+      {
+        "path": "docs/operations/evidence/forward-cutoff-acceptance-20261020.json",
+        "sha256": "a5285fd54e64f1c4ef47d0ffdba5761dc8f255e0dd12bc9771d87bc26540de5d"
+      },
+      {
+        "path": "docs/operations/evidence/issuer-financial-pdf-20261020.json",
+        "sha256": "3a6bffd0de20a78a712877bdab0f5807a2b45198d7c6593e9e42b747b7732854"
+      },
+      {
+        "path": "docs/operations/evidence/learning-v17-exact-readback-20261020.json",
+        "sha256": "ccb5cbe0b155f881c0470619bcedae18e78fbcef6fa939ff4b015d3d861a41d3"
+      },
+      {
+        "path": "docs/operations/evidence/official-public-source-results-20261020.json",
+        "sha256": "559e31386b3004b37c90ab849515d4bcc958c73e9c5339d906c8c387840a9b7b"
+      },
+      {
+        "path": "docs/operations/evidence/v1-source-gap-matrix-20261021.json",
+        "sha256": "8be43eef0c4b88d46847eb4ff13d063241debb46d3e3f42fa091adb38a147e8a"
+      },
+      {
+        "path": "docs/operations/evidence/worker4-exact-readback-20261020.json",
+        "sha256": "7d01ded5896cfaecd3f7b41b1f54f2c9b5284f14a9ef3150f6b4112a1edec1e8"
+      },
+      {
+        "path": "docs/operations/forward-cutoff-20261020.md",
+        "sha256": "be36331d9bc502662d3d2ed3a349302a3089c96f081f41042607fe99e54beab4"
+      },
+      {
+        "path": "docs/operations/official-public-source-wiring-20261020.md",
+        "sha256": "0c07cb2ea5256465fe77aab369d4f12f05fa9097197ca6326f491591110d4c98"
+      },
+      {
+        "path": "docs/operations/original-observation-ingress-20261019.md",
+        "sha256": "4ef8af9d6f4089b1d51dde3122386a7bd737b3ac7ebef8e0b0884604dc64077e"
+      },
+      {
+        "path": "docs/operations/original-registry-ingress-20261020.md",
+        "sha256": "dead00783a6737ddcef76a0e0a933215afcc76f7bcb139384e7e01965fd2934f"
+      },
+      {
+        "path": "docs/operations/v1-actual-canonical-20261020.md",
+        "sha256": "43dfff5615fe7f688be6546335b5885e997f66465cdd0052ac20ee5bb52bb64c"
+      },
+      {
+        "path": "research/issuer-actual-canonical-intake.ts",
+        "sha256": "d969282264342e6609221ed27fdf772c339d8cad8d3805756ef0b5861c3b796a"
+      },
+      {
+        "path": "research/issuer-actual-v1-input.ts",
+        "sha256": "9859a908e507f05f9e242ed177f91f6fd2f0a5e8989b55eac7f61937b42b75fe"
+      },
+      {
+        "path": "research/official-daily-open-data-candidate.ts",
+        "sha256": "f977314e13191bd3f3be0f36e78b0f60e4acfeb0247e3653bfd9153350ca843f"
+      },
+      {
+        "path": "research/recommendation-official-source-join.ts",
+        "sha256": "a83b147d8f63f056fd808064eb9bc8dbadb6718be2ddeb49e0c8a6a12df36560"
+      },
+      {
+        "path": "scripts/official-actuals/acquire-public-evidence.mjs",
+        "sha256": "ce64bd6c204ac1641f86acd3a235f2ae2e880f1fa00e17fa6d781ec1a7ada377"
+      },
+      {
+        "path": "scripts/official-actuals/evaluate-public-v1.mjs",
+        "sha256": "d16e251b61308d13a433bcbd7fc1e853902a0414cbc6e91161cab9326878a78c"
+      },
+      {
+        "path": "scripts/official-actuals/issuer-financial-pdf.py",
+        "sha256": "875d63ef15d04cef5480510e01e9b8c8eb1d7c147dec7bd4f7d565b1d5258564"
+      },
+      {
+        "path": "scripts/official-actuals/issuer-pdf-descriptor.py",
+        "sha256": "b966b63723c65f3fdb103fd05ec026381a0e467be436ae49ca60db5a4914de20"
+      },
+      {
+        "path": "scripts/operations/continuous-learning-20261020/materialize.mjs",
+        "sha256": "78ba456439da4740339e316092638910137c737bf5b78e0028cc4a9ac3aadbe2"
+      },
+      {
+        "path": "scripts/operations/continuous-learning-20261020/release-catalog.json",
+        "sha256": "f4deb3e733e63a55c711520791d4305c7431c921a799dffe654be5ac7f1642f8"
+      },
+      {
+        "path": "scripts/operations/financial-response-period-20261020/materialize.mjs",
+        "sha256": "b37b569f00a2113c2ad2369bab4c9be277ef7fcd8f41bd23dfd1eaea8f320a10"
+      },
+      {
+        "path": "scripts/operations/financial-response-period-20261020/release-catalog.json",
+        "sha256": "1071bb23211b7afb61d6d51c03359dfe7f11113af3f3b05459060e1d8faf8c91"
+      },
+      {
+        "path": "scripts/operations/forward-cutoff-20261020/materialize.mjs",
+        "sha256": "c67272a2b24f774bc313a2628284dd3a95c0fae5811491b38a3650df02290ef3"
+      },
+      {
+        "path": "scripts/operations/forward-cutoff-20261020/release-catalog.json",
+        "sha256": "393c22f2b6a042b80b03552651a6dae2cebebbaaa263e9f31f3f43fcad88f748"
+      },
+      {
+        "path": "scripts/operations/member-capacity-20261020.mjs",
+        "sha256": "419fd0c889ab586cc295ad4b04d2a216c73c5242340a10063b0091c836e6cca9"
+      },
+      {
+        "path": "scripts/vnext/event-alignment-refresh.mjs",
+        "sha256": "919954f7fdbf5fee3b7ff446733c70c79112db9be42d4e70ad1157d032894060"
+      },
+      {
+        "path": "scripts/vnext/stock-evidence.mjs",
+        "sha256": "aebcb44ea183b7d6866f2a4a71a2652c60aa88a2547fc875056cc0efa20013f3"
+      },
+      {
+        "path": "src/features/vnext/contracts.ts",
+        "sha256": "475e7bfc07ccc46c8b66c4f7e2e54bae1b99686df71b4b0a749276c41b2c0d73"
+      },
+      {
+        "path": "src/features/vnext/dailyAdapter.ts",
+        "sha256": "8596a858c0b645519ae0b8631dbfab978ff677bf6f33248c2157ba63e958c229"
+      },
+      {
+        "path": "src/features/vnext/dailyIntelligence.ts",
+        "sha256": "ac379cf85344567f5ea7a863caf7378f6578bb8368a2cec758678c7ec9e22790"
+      },
+      {
+        "path": "src/features/vnext/dailyParsers.mjs",
+        "sha256": "2593386f7d8be30e757a4c5d93715363f58f031d6681f4af750e348989a59800"
+      },
+      {
+        "path": "src/features/vnext/dailyRuntime.ts",
+        "sha256": "01fe2480681368465530cb2feeb039161931051ac55e6f4ea1284a95fe47a2bf"
+      },
+      {
+        "path": "src/features/vnext/engine.ts",
+        "sha256": "5c843968e182d65f3136fcf4387d2064b85c871fa8bb7aad33fc9dfbb613dee3"
+      },
+      {
+        "path": "src/features/vnext/originalIngress.ts",
+        "sha256": "5157a68e7359e5332af5f737745669168ba99d8c36009a69744ccc32b62f5d3f"
+      },
+      {
+        "path": "src/features/vnext/originalRegistryIngress.candidate.sql",
+        "sha256": "41df5e0d55d8c31b707743cec99f229a83695cb2faf5c084fcbc5343407c4933"
+      },
+      {
+        "path": "src/features/vnext/originalRegistryIngress.ts",
+        "sha256": "5552df72566401bc82738bb22eea82095bf78965b5844dc03824f120905943ad"
+      },
+      {
+        "path": "src/features/vnext/publicationClearance.ts",
+        "sha256": "b0da2fab1b3a35de623ac712247129d58588174c1eb21e286eac57546bd6273b"
+      },
+      {
+        "path": "src/features/vnext/v1ActualCanonical.ts",
+        "sha256": "f1803634501b21d72cbd7309d06cfff7058af27da387edf4284663a244ac9936"
+      },
+      {
+        "path": "supabase/functions/_shared/continuous-learning-core.mjs",
+        "sha256": "4aff6e40c9a6b44bcdd15b6bfa34adba3da8c9c674b5137f6192b0f8d93eba17"
+      },
+      {
+        "path": "supabase/functions/_shared/continuous-learning-fixed-sdk.d.ts",
+        "sha256": "83f76773531527a788d0bb3c1c0b1fd4c7c6154117eeec75196aa9e5760f4726"
+      },
+      {
+        "path": "supabase/functions/_shared/decision-v1-data.ts",
+        "sha256": "f6704e447004cb510276f950ab871bbbf987adc51dbcacf8501968bf630d33e8"
+      },
+      {
+        "path": "supabase/functions/_shared/decision-v1-evidence.ts",
+        "sha256": "4bfd1f30c216669a623f22fce573885ce8001d5bffcd3d74443a6b0c67834aa0"
+      },
+      {
+        "path": "supabase/functions/_shared/recommendation-company-events.ts",
+        "sha256": "2504d8198dc5a52da99e17f85463d02bd7fa9cff9add8bfb89b5ce5ef7245e4b"
+      },
+      {
+        "path": "supabase/functions/continuous-learning-engine/index.ts",
+        "sha256": "347a9dd5aca98f53a57df44f54893ae7fce3bc79e857ea041af740d450cd2805"
+      },
+      {
+        "path": "supabase/migrations/20261019123345_original_observation_ingress_candidate_v1.sql",
+        "sha256": "bfad8fd235716f89f3e81c4bae8783428ebfeaf3fc8cf6bcc54b8bae3501e973"
+      },
+      {
+        "path": "supabase/migrations/20261020070000_v1_actual_canonical_candidate.sql",
+        "sha256": "da7b7a5afa16d2b86ed67c2111f7fbaca7b049fddef95c7d863c72171e0d2797"
+      },
+      {
+        "path": "tests/coldSourcePriorityAdmission.test.mjs",
+        "sha256": "6f7ad394425be9179b0a08fe2b0612fec9d66e29d095c04bd1151a6a59840a51"
+      },
+      {
+        "path": "tests/continuousLearningRelease.test.mjs",
+        "sha256": "b2cfc1789eb3a5c3a6d3ca295fc571f215f30ff31965699843e04cae83058604"
+      },
+      {
+        "path": "tests/continuousLearningTemporal.test.mjs",
+        "sha256": "97f49557de94749a5058680f656cd86e60e46c2403b94e1c9e5a2c7f4ce0f607"
+      },
+      {
+        "path": "tests/eventAlignmentRefresh.test.mjs",
+        "sha256": "e9408c5533ca9d747cb36275c5026bddd90675219b31e6d65af97ff6a6e57462"
+      },
+      {
+        "path": "tests/fixtures/issuerPdfActual.mjs",
+        "sha256": "1b58faf57dd2b75c3b86465768c8b5da638bca0816573871d5078c90db05f156"
+      },
+      {
+        "path": "tests/fixtures/originalRegistryIngress.mjs",
+        "sha256": "9abf53dd5396f362b105a3133a286b62c0b020b623ff0fc0915b18464c68964f"
+      },
+      {
+        "path": "tests/fixtures/v1ActualCanonical-synthetic.sql",
+        "sha256": "4345b9b0b424befa64acc3bd7649e6d94389d2031dfc52e64bb64de3b69393b1"
+      },
+      {
+        "path": "tests/forwardCutoffAdmission.test.mjs",
+        "sha256": "4d64bd76b71fb46dc7035a09eb8345dca05de88b401c20489e9aae78ab84e72b"
+      },
+      {
+        "path": "tests/helpers/clockedPsql.mjs",
+        "sha256": "2c70ef8e56f138e614bb79087e94e05e5958891acfb3b9f0441307651b44384f"
+      },
+      {
+        "path": "tests/helpers/integrationAdmission.mjs",
+        "sha256": "da199b76aa8af20a947814321f10aa32e8ff6eea53f7c7e706c2eeaabc18388a"
+      },
+      {
+        "path": "tests/issuerActualCanonicalIntake.test.mjs",
+        "sha256": "55277333b768f8ac0a43c6d86750c29deefded1e162936d41fa25163d84e8d81"
+      },
+      {
+        "path": "tests/memberCapacityModel.test.mjs",
+        "sha256": "c8a338b6cfcf2128ddf2857b02e51fab3338bae800206e4e48abcb03bf9fb5e7"
+      },
+      {
+        "path": "tests/officialDailyLicenseScope.test.mjs",
+        "sha256": "af404dc51f8331c345168958b21641308cc62ea94b4f93d7ea85aef37a00f76c"
+      },
+      {
+        "path": "tests/officialDailyOpenDataCandidate.test.mjs",
+        "sha256": "eeb49963a2be6a19a300603db57eae22bfd7f49fcb5e09ff7c2634cdc56d52f8"
+      },
+      {
+        "path": "tests/officialPublicAcquisition.test.mjs",
+        "sha256": "2a9c37ee7c88eb2f1866e460584fdaaf157f8739a113db184240c2d6a196b8e0"
+      },
+      {
+        "path": "tests/officialPublicAdmission.test.mjs",
+        "sha256": "bd9181a0eba987ff1cc42813832678362ded85f4eec1860aa05fc13741417420"
+      },
+      {
+        "path": "tests/officialPublicV1Evaluation.test.mjs",
+        "sha256": "e78448d9fab8bfb361c2d986c53dad039dddc8148766e4ba775c9a5730f66121"
+      },
+      {
+        "path": "tests/officialV1SourceJoin.test.mjs",
+        "sha256": "a96472c706b13f4acc2c2d4c132f04ee4d186ce9cff709dfde61557a9460990c"
+      },
+      {
+        "path": "tests/officialV1SourceJoinJsonb.integration.mjs",
+        "sha256": "94bc7d7a30bd77c3f118f663cbbfea94b09d328eee9ed1fc4c0dbae94f33f7d6"
+      },
+      {
+        "path": "tests/originalIngressAdmission.test.mjs",
+        "sha256": "5034e987a8665d9a159708b3cb2e741ca21fd5e3847e7fd52d98be044dca38be"
+      },
+      {
+        "path": "tests/r10FunctionalSourceClosure.test.mjs",
+        "sha256": "a13d0394bba2b9e22d7e217b9a434eb29333c6d6103e4b9ac9649e2abad0d331"
+      },
+      {
+        "path": "tests/recommendationCompanyEventContract.test.mjs",
+        "sha256": "93719393e732a22b2be449da3c2667842133cc6b9cd260295a1bc6b4a025f2b9"
+      },
+      {
+        "path": "tests/retainedIssuerActuals.test.mjs",
+        "sha256": "a60472a9fcc678bbc58c559104e3d764eda7d3fd0a19188aa0d401e7a896b4a6"
+      },
+      {
+        "path": "tests/test_issuer_financial_pdf.py",
+        "sha256": "a892c53558b57db0730f2d2cbdf867acbdb399b75bf0a340ba571a74fe404f3e"
+      },
+      {
+        "path": "tests/test_issuer_pdf_descriptor.py",
+        "sha256": "5a9e0b70584a6f8cdc952eadfc50270da45152baa99d542f390f3b6a34a5c46a"
+      },
+      {
+        "path": "tests/v1ActualCanonical.test.mjs",
+        "sha256": "8ca0885f8d0d8a08232cc5597777b39b91380c001c636789587e970774bd3f6a"
+      },
+      {
+        "path": "tests/v1ActualCanonicalSql.integration.mjs",
+        "sha256": "646c3cca990bcb943a0f70e9c706ffbdd8d577c9c153333a1f7717621b9d1338"
+      },
+      {
+        "path": "tests/v1EarningsMetadataRead.test.mjs",
+        "sha256": "10ea5dfdbbf0ed48284adb51a433846a52a7fb665c9d65d7a49cc8031fb5e9a0"
+      },
+      {
+        "path": "tests/v1FinancialPeriodRelease.test.mjs",
+        "sha256": "106e0cbf7f21e126eb544f4b8f8049833b51c36aa80663f1a005add4932e2384"
+      },
+      {
+        "path": "tests/v1FundamentalRevisionDatabase.integration.mjs",
+        "sha256": "c9b681def92aab2574415fdbac925b7eaae013700ca50eb21f451ab48bc4f04d"
+      },
+      {
+        "path": "tests/v1FundamentalRevisionSelection.test.mjs",
+        "sha256": "dc03cb448fb2328de9476c9936060da20838df24fdbb61d4e30ec3fd51feb985"
+      },
+      {
+        "path": "tests/vnextColdSourcePriority.test.mjs",
+        "sha256": "c21e115e0b2e8cb0cda0b36bddff58c4d403e6dba2ae29ec9bff8ab9e547e02f"
+      },
+      {
+        "path": "tests/vnextContinuousUpdate.test.mjs",
+        "sha256": "42e3bc08556d3f09a4b8d2eec2471b0ddfe6fd3641c1e66be2c1c3e0136f4e09"
+      },
+      {
+        "path": "tests/vnextContracts.test.mjs",
+        "sha256": "8a4dd0adf7e32131c97d5e2b23be71f546c0c24f8e4bc125d2cb72ab46d110f1"
+      },
+      {
+        "path": "tests/vnextDailyWiring.test.mjs",
+        "sha256": "981626e95b23c9888fd27baec06eaf62c2d028f7da1029e0b2d041577ccaae7c"
+      },
+      {
+        "path": "tests/vnextFinancialResponsePeriod.test.mjs",
+        "sha256": "b2d922da0fef31a2c4e0c4a7bb2d8df9fa244e923e7d4363e71f500c1845a70b"
+      },
+      {
+        "path": "tests/vnextForwardCutoffRuntime.test.mjs",
+        "sha256": "cb0ef310499dd03d237afb9c3f49679d8050098b367d2de877d3d0d3ea638581"
+      },
+      {
+        "path": "tests/vnextOriginalIngress.test.mjs",
+        "sha256": "bbfda0bc0b0eb47e3183ed54e6a518942d892124f78129d0b71d74ca85a43401"
+      },
+      {
+        "path": "tests/vnextOriginalIngressDatabase.integration.mjs",
+        "sha256": "d5c25f646f6d41caa12761b081a7d3c5f37b8d77c9a475e931e955fb1c926c8b"
+      },
+      {
+        "path": "tests/vnextOriginalRegistryIngress.test.mjs",
+        "sha256": "cac6a73292fc7f4a5c6d1bd7737481f2d8fbe91b43ffe71bc97acd52bc29f9e9"
+      },
+      {
+        "path": "tests/vnextOriginalRegistryIngressDatabase.integration.mjs",
+        "sha256": "c472a08c30223ab0a833d9a7c0b0a461855474718349e3e45a3d0b508b316d2b"
+      },
+      {
+        "path": "tests/vnextOriginalTimestamp.test.ts",
+        "sha256": "29bc32dd6f125099a711cbb3c44b602e38bae618df8ea34ce55144358b41725c"
+      },
+      {
+        "path": "tests/vnextOutcomeCacheRecovery.test.mjs",
+        "sha256": "195bca07ac19193de48d0e12de0bc42e14caace0c0ab834def43ee532df037a5"
+      },
+      {
+        "path": "tests/vnextStockResearch.test.mjs",
+        "sha256": "4b30ac596ff037c4a4087cabc18f6323c7c49222269f877e1b5b0af28fb6d52d"
+      }
+    ],
+    "changed_paths_including_root": 119,
+    "paths_list_sha256_excluding_root": "efa243ee2fe7f5191819352baedc792b0d6be98b5f17efc247118cca99b45572",
+    "not_deployment_scope": true,
+    "notes": "既有完整PR117檔；新增integration及本根，共119檔。此處只保存路徑與bytes雜湊，不宣稱整包已獲發布核准。"
+  },
+  "root_causes_fixed": [
+    {
+      "path": "scripts/official-actuals/issuer-pdf-descriptor.py",
+      "cause": "既有單一POST收據/英文季度/股別註記口徑不能忠實承接可見連結的原生PDF；原生文字串流與字型拆段會拒絕真實單季。",
+      "fix": "獨立版本化receipt/descriptor dialect，不偽造HTTP或原公告；native stream與有界touching decimal token合併。"
+    },
+    {
+      "path": "scripts/official-actuals/issuer-pdf-descriptor.py",
+      "cause": "原interim current-year區間可能把同季百分比欄當作營收AMOUNT。",
+      "fix": "依原生AMOUNT與%欄頭新增Revenue邊界；EPS另以原生普通股註記核對，不推算值。"
+    },
+    {
+      "path": "research/recommendation-official-source-join.ts",
+      "cause": "JSON.stringify全列比較把JSONB重排鍵視為財報/事件source conflict。",
+      "fix": "使用既有snapshotHash完整canonical等值；所有數值、時間、來源、陣列與准入欄位仍綁定，拒絕真實變更。",
+      "red_controls_failed": 2,
+      "green_unit_suite_pass": 14
+    }
+  ],
+  "actual_sources": [
+    {
+      "symbol": "2379",
+      "period": "2026-Q2",
+      "official_index": "https://www.realtek.com/InvestorRelations/FinancialStatements?lang=en-GB&menu_id=705",
+      "url": "https://wwwfile.realtek.com/images/cqfs/_.2026.FS.AllReport.ENG.IFRS.20260630.pdf",
+      "sha256": "f2fdab872fd8c67f5220788635b5b82acf2863afde8130c400ad7aa65c32f806",
+      "bytes": 1233619,
+      "first_seen_at": "2026-10-21T10:38:19.401019+00:00",
+      "available_at": "2026-10-21T10:57:55.193983+00:00",
+      "http_status": null,
+      "capture_kind": "BROWSER_PUBLIC_LINK_DOWNLOAD_RECEIPT_V1",
+      "original_published_at": null,
+      "official_version": null,
+      "rights_approval": null
+    },
+    {
+      "symbol": "2379",
+      "period": "2026-Q1",
+      "official_index": "https://www.realtek.com/InvestorRelations/FinancialStatements?lang=en-GB&menu_id=705",
+      "url": "https://wwwfile.realtek.com/images/cqfs/_.2026.FS.AllReport.ENG.IFRS.pdf",
+      "sha256": "5e4c1d09f514d5c2f2583a7218b41ad9755b3608178f5f00641424112dc4f290",
+      "bytes": 1190340,
+      "first_seen_at": "2026-10-21T10:49:56Z",
+      "available_at": "2026-10-21T10:57:55.721862+00:00",
+      "http_status": 200,
+      "capture_kind": "HTTP_RESPONSE_RECEIPT",
+      "tls_verified": true,
+      "original_published_at": null,
+      "official_version": null,
+      "rights_approval": null
+    }
+  ],
+  "real_original_replay": {
+    "safe_proof_sha256": "a31b1d57f8f92a3e65d998338998011093aa8204135a52e9a5c4bbb4b197d0d9",
+    "cutoff": "2026-10-21T11:11:10.251Z",
+    "existing_2454_pdf_files_reused": 4,
+    "new_2379_pdf_files": 2,
+    "verified_pdf_hashes": 6,
+    "native_measurements_from_those_pdfs": 12,
+    "with_existing_2330_private_quarter_rows": 10,
+    "private_symbols": 3,
+    "new_2379_quarters": 2,
+    "new_2379_measurements": 4,
+    "complete_four_quarters_for_2379": false,
+    "canonical_intakes_prepared": 2,
+    "canonical_writes": 0,
+    "production_writes": 0,
+    "http_requests_in_replay": 0,
+    "second_cutoff_new_rows": 0,
+    "original_input_unchanged": true,
+    "source_admission": false,
+    "quality_authority_installed": false,
+    "rights_approval": null,
+    "forward": 0,
+    "outcome": 0,
+    "member_publication": false,
+    "market_base": "EMPTY_EVIDENCE_PLUS_OBSERVED_FIXED_72_UNIVERSE",
+    "is_formal_72_stock_evaluation": false,
+    "notes": "此回放不含完整行情底稿，不把它較多的缺口分布當作正式五類原因。新資料可用在當日盤前之後，不倒填。"
+  },
+  "independent_extraction_review": {
+    "status": "EXTRACTION_VERIFIED",
+    "reviewed_at": "2026-10-21T11:16:08Z",
+    "receipt_sha256": "0e5b21987c5ed1c7f36fe57d69a947091f5f5a6314d7f9d7db2cc392894abb9a",
+    "quarter_count": 2,
+    "measurement_count": 4,
+    "reviewed_full_pages": 11,
+    "match_checks": 80,
+    "all_match": true,
+    "author_parser_used": false,
+    "denominator_support_is_additional_measurement": false,
+    "chinese_original_compared": false,
+    "formal_quality_authority": false,
+    "source_admission": false,
+    "rights_approval": null,
+    "member_publication": false
+  },
+  "validation": {
+    "python_descriptor": {
+      "pass": 77,
+      "fail": 0,
+      "skip": 0
+    },
+    "node_retained_intake_official_join": {
+      "pass": 39,
+      "fail": 0,
+      "skip": 0
+    },
+    "fresh_jsonb": {
+      "postgres": "17.11",
+      "actual_postgresql": true,
+      "pass": 1,
+      "fail": 0,
+      "skip": 0,
+      "inputs": "SYNTHETIC_CONTRACT_CONTROLS",
+      "transport": "DEDICATED_UNIX_SOCKET_ONLY",
+      "tcp_listeners": 0,
+      "public_business_tables": 0,
+      "cluster_stopped": true,
+      "no_server_confirmed": true,
+      "socket_and_directory_removed": true,
+      "other_test_containers_changed": false,
+      "production_rls_test": false
+    },
+    "unchanged_financial_optional_suite": {
+      "pass": 15,
+      "skip": 4,
+      "fail": 0,
+      "skip_reason": "既有可選local original replay未啟用；不計PASS"
+    },
+    "type_check": "PASS",
+    "lint": "PASS",
+    "build": "PASS",
+    "deno_no_remote_check": "PASS",
+    "diff_check": "PASS",
+    "production_e2e": "NOT_RUN",
+    "new_head_ci": "NOT_AVAILABLE_UNCOMMITTED",
+    "resolved_environment_failures": [
+      "First local init/client attempts blocked by sandbox shared-memory/Unix-socket permission; the same dedicated local-only scope executed through approved escalation. Failed attempts are not functional PASS.",
+      "Initial bounded credential-free Node source transport failed without HTTP. Existing permitted public link download succeeded, HTTP for that route stays null. No access restriction bypass."
+    ],
+    "base_head_ci": {
+      "head": "3f8ad958105973d64cc7e34ae9391b2804e8ea44",
+      "success": 21,
+      "conditional_skipped": 1,
+      "fail": 0,
+      "running": 0,
+      "read_backend": "CODE_REVIEW"
+    }
+  },
+  "security": {
+    "status": "COMPLETE_READ_BACK",
+    "scan_id": "07fc8f2f-546b-4816-bc90-4bc7d7898569",
+    "snapshot": "9ce8bc036a66fb52759573c050527e0c8f0f11bbd11893b33eba3c9180f2ac8d",
+    "managed_sources": 3,
+    "support_tests": 4,
+    "reportable_findings": 0,
+    "deferred": 0,
+    "exact_four_file_reuse_scan": "dd166a4b-b3ef-47c5-90d0-4f2a34d8f8c5",
+    "review_receipt": "artifacts/02_discovery/r12_complete_diff_review.md",
+    "does_not_cover_whole_pr_or_production": true,
+    "documents_added_after_scan": "本根與Master只有非執行證據補充，未宣稱包含在七檔程式掃描。",
+    "old_line_scan": "INCOMPLETE_HOLD_UNCHANGED",
+    "measured_usage": {
+      "source": "codex_rollout",
+      "coverage": "partial",
+      "total_tokens": 1527880,
+      "cached_input_tokens": 1472000,
+      "missing_thread_count": 24,
+      "not_incremental_bill_or_full_usage": true
+    }
+  },
+  "production": {
+    "metadata_verified_only_this_turn": true,
+    "worker": {
+      "version": 5,
+      "status": "ACTIVE",
+      "jwt": true,
+      "eszip": "e9653e5901cd76f9779cc5af7f4ed75c4dec866f9ec71fae05cd24abfa763917"
+    },
+    "producer": {
+      "version": 17,
+      "status": "ACTIVE",
+      "jwt": true,
+      "eszip": "497d4af0fd97e76c43d123165532db0f30fec21ca12c0ea30d755b4835c60a57"
+    },
+    "caller": 4,
+    "reader": 57,
+    "line": 71,
+    "owner_lab": 9,
+    "modified": false,
+    "last_saved_v1_business_evidence": {
+      "observed_at": "2026-10-21T00:51:06.160302+00:00",
+      "business_date": "2026-10-21",
+      "universe": 72,
+      "evaluated": 0,
+      "blocked": 72,
+      "ready": 0,
+      "watch": 0,
+      "none": 0,
+      "short": 0,
+      "medium": 0,
+      "long": 0,
+      "not_requeried_this_turn": true,
+      "overlapping_reasons": {
+        "THREE_INSTITUTIONS_MISSING": 72,
+        "MARKET_REQUIRED_INSTITUTIONAL": 72,
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING": 72,
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING": 72,
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING": 72
+      }
+    }
+  },
+  "remaining_blockers": [
+    {
+      "id": "NATIVE_TWD",
+      "classification": "RAW_REQUIRED_VALUE_NOT_PROVEN",
+      "scope": "72股外資/投信/自營商原始buy/sell/net TWD；現有股數不替代。市場原生TWD候選的自動取得/用途另審。",
+      "next": "依既有未寄問題核對精確欄位/時段/上市櫃覆蓋/方案權利，費用UNKNOWN；不購買。"
+    },
+    {
+      "id": "ACTUAL",
+      "classification": "NORMALIZED_PRIVATE_NOT_ADMITTED_PLUS_REMAINING_RAW_GAPS",
+      "scope": "2379新增2季；2454/2330既有私有Actual保留。全72股四季、原公告/版次、會計/股別及用途/獨立品質尚未閉合。",
+      "next": "逐股重用已保存原件；先完成明確證明，不把Board授權或下載時間當公告。"
+    },
+    {
+      "id": "EXPECTATIONS",
+      "classification": "HISTORICAL_SOURCE_CAPABILITY_NOT_PROVEN",
+      "scope": "公告前Consensus的as-of vintage與合法用途；Guidance有2454已驗原生事實，但未完成全Universe可比較映射。",
+      "next": "核對既有方案欄位/歷史版本，官方財測不當市場Consensus；不預設付費、不暗改方法。"
+    },
+    {
+      "id": "EVENT_AND_PRICE",
+      "classification": "UNREVIEWED_OR_UNADMITTED",
+      "scope": "原事件索引/原件及數字行情覆蓋不等於經審核因果/同cutoff正式Source。",
+      "next": "現有company-event及issuer-review入口不重建；需原始時間/公司關係/反證/失效/獨立審查。"
+    },
+    {
+      "id": "CONDITION_PRODUCER",
+      "classification": "APPROVED_SEMANTIC_CONTRACT_MISSING",
+      "scope": "原Condition僅text/state/evidence_ids；現有原子入口只接受UNKNOWN。未找到已核定的逐條evidence-to-CONFIRMED predicate。",
+      "next": "取得原規格的具體方法核定；不能自造數值、由C QUALIFIED升級或空部署PR281。"
+    },
+    {
+      "id": "MEMBER_AND_NATURAL",
+      "classification": "NOT_PROVEN_IN_PRODUCTION",
+      "scope": "正式Free/Premium/Legacy身分、合法Published projection、自然Forward與成熟Outcome及五日尚未通過。",
+      "next": "保留既有10/22 Worker5/Producer17 monitor；不Owner冒充，不人工補跑。"
+    }
+  ],
+  "approval_needed_now": {
+    "action": "僅R12九檔Commit/Push到既有PR284；維持Draft",
+    "files": [
+      "docs/operations/PRODUCT_DELIVERY_MASTER.md",
+      "research/issuer-actual-v1-input.ts",
+      "research/recommendation-official-source-join.ts",
+      "scripts/official-actuals/issuer-pdf-descriptor.py",
+      "tests/officialV1SourceJoin.test.mjs",
+      "tests/officialV1SourceJoinJsonb.integration.mjs",
+      "tests/retainedIssuerActuals.test.mjs",
+      "tests/test_issuer_pdf_descriptor.py",
+      "docs/operations/evidence/core-member-integration-20261021-v1-source-union-r12.json"
+    ],
+    "scope": "不含Merge/Deploy/SQL/資料准入/公開/會員政策/對外信件；任一hash漂移停止。R11已消耗授權不能覆用。"
+  },
+  "rollback": {
+    "unreleased_candidate": "不動Production；保留受限原件隔離。若後續核准提交，回復以另行核准的新revert commit處理，不reset/force push或刪原件。",
+    "production_changes_this_turn": [],
+    "reader_warning": "新private receipt保存後不得退原Reader55；既有Reader57 strip-only固定SDK功能等效回復另行核准，不冒稱舊ESZIP逐位元一致。",
+    "existing_worker_producer_not_redeployed": true
+  },
+  "operational": {
+    "natural_monitor": "morning-alpha-worker5",
+    "windows": "2026-10-22 Asia/Taipei09:35或15:35，既有唯讀規則；未人工觸發",
+    "commercial_stability": "0/5",
+    "payment": "DISABLED",
+    "free_premium_legacy_real_e2e": "NOT_PROVEN",
+    "capacity_10000": "NOT_READY",
+    "background_engineering_after_turn": false
+  },
+  "stock_recommendation_delivered": "NO",
+  "morning_alpha_product_delivered": "NO",
+  "commercial_ready": "NO"
+}

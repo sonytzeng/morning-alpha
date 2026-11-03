@@ -1,0 +1,108 @@
+{
+  "schema": "FORWARD_CUTOFF_CANDIDATE_ACCEPTANCE_V1",
+  "generated_on": "2026-10-20",
+  "base": "7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3",
+  "runtime_sha256": "629489cba95fa427eb5049460fa07148692649fca2714fc9dd4cd99e48eb8201",
+  "timing_test_sha256": "cb0ef310499dd03d237afb9c3f49679d8050098b367d2de877d3d0d3ea638581",
+  "partial_checkpoint_recovery": "First attempt-before-work checkpoint persists the exact assembled acquired snapshot; next authorized claim keeps key/hash/revision and increments rather than resets attempts. Legacy key-only state safely refuses CHECKPOINT_ACQUIRED_MISSING.",
+  "independent_slow_digest_reproduction": {
+    "scope": "Isolated real engine and cryptographic digests; elapsed clock controlled, NOT Provider latency or natural history",
+    "result": "PASS",
+    "baseline": "08:56:06.130 COMPLETE 216",
+    "candidate_first": "08:56:05.805 QUEUED; acquired pinned; ACQUISITION attempt1 not yet completed",
+    "candidate_second": "08:56:09.155 COMPLETE 216; attempt2; exact same acquired/key/request_hash/source_revision",
+    "invalid_future_still_denied": true
+  },
+  "current_tree_controls": { "runtime_admission_regression": { "pass": 93, "fail": 0, "skip": 0 }, "dynamic_timing_controls": 22, "source_flow_controls": { "pass": 32, "fail": 0, "skip": 0 } },
+  "production_natural_observation": {
+    "v1": {
+      "none": 0,
+      "ready": 0,
+      "watch": 0,
+      "cutoff": "2026-10-19T23:06:45.170Z",
+      "status": "BLOCKED",
+      "blocked": 72,
+      "universe": 72,
+      "evaluated": 0,
+      "created_at": "2026-10-19T23:06:46.866989+00:00",
+      "report_date": "2026-10-20",
+      "reason_counts": {
+        "MARKET_REQUIRED_CATALYST": 72,
+        "THREE_INSTITUTIONS_MISSING": 72,
+        "MARKET_REQUIRED_INSTITUTIONAL": 72,
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING": 72,
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING": 72,
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING": 72
+      }
+    },
+    "runtime": [
+      {
+        "state": "EXPIRED",
+        "cursor": 1358,
+        "created_at": "2026-10-19T23:00:13.469503+00:00",
+        "plan_count": 1358,
+        "updated_at": "2026-10-20T01:00:44.52989+00:00",
+        "invocations": 152,
+        "lease_until": null,
+        "reason_class": "LATE_ACQUISITION_NOT_FORWARD",
+        "actionable_at": "2026-10-20T01:00:00+00:00",
+        "source_revision": null
+      }
+    ],
+    "read_only": true,
+    "observed_at": "2026-10-20T01:37:09.938209+00:00",
+    "business_date": "2026-10-20",
+    "outcome_count": 0,
+    "source_counts": {
+      "saved": 1358,
+      "tasks": 1360,
+      "attempts": 1148
+    },
+    "prediction_counts": null
+  },
+  "natural_classification": "FAIL_NO_FORWARD_LOCK",
+  "per_run_worker_version": "UNKNOWN_NOT_QUERIED_IN_ACCEPTED_SAFE_AGGREGATE",
+  "readback_ref": "docs/operations/evidence/worker4-exact-readback-20261020.json",
+  "readback_proof": "44/44 exact source contents and inventory matched pinned Worker4 candidate payload",
+  "prediction_count": 0,
+  "prediction_count_derivation": "Accepted SQL has one current-date run and no prediction horizon groups (jsonb_agg=null), so zero linked prediction rows; not a generic null-to-zero conversion",
+  "remaining_unsaved_source_tasks": 2,
+  "unsaved_source_reasons": "UNKNOWN_NOT_RETURNED_BY_ACCEPTED_MINIMAL_QUERY",
+  "reachable_failure_control": "Dynamic time proves aggregation/lock work can cross the cutoff. This does not identify the actual slow stage in the152-invocation natural run.",
+  "isolated_real_sql_http": {
+    "result": "PASS",
+    "scope": "Disposable PostgreSQL17/PostgREST with controlled dates and synthetic identities, NOT Production member Auth or investment performance",
+    "checks": [
+      "Exact Runtime migration applied,8 FORCE RLS tables",
+      "Owner RPC allow; anonymous/Free/Premium raw/worker writes denied",
+      "Concurrent claims,100s lease recovery,stale fencing",
+      "Canonical same-cutoff publication and future rejection",
+      "Permanent403 one-attempt classification without fake source or access bypass",
+      "Whole-batch last-row rollback and late Forward denial",
+      "Crash before commit0; exact recovery216; lost response with interrupted FINISH reconciles immutable locks",
+      "HTTP Worker transactional idempotency",
+      "Append-only sources/predictions/publication",
+      "Forged JWT/logout deny",
+      "Independent prior matured Outcome sweep",
+      "1D/5D maturity not starved by future long horizon",
+      "No fake P&L; Outcome append/idempotency/three attempts",
+      "Rollback revokes only new writer in isolated DB while forensic fingerprints remain"
+    ],
+    "resources_cleaned": true
+  },
+  "normal_blocked_reply_loss_limitation": "The new dynamic control models the next authorized same-day Lifecycle claim. BLOCKED return has continue=false; no immediate auto-continuation is claimed. Exact SQL FreshDB interrupted-FINISH scenario is a separate proof.",
+  "real_retained_assembly_benchmark": "NOT_RUN",
+  "new_natural_forward": "NOT_RUN_NOT_DEPLOYED",
+  "production_mutations_by_this_candidate": 0,
+  "production_merge": false,
+  "production_deploy": false,
+  "production_migration": false,
+  "cron_change": false,
+  "secret_read": false,
+  "auth_rls_change": false,
+  "member_entitlement_change": false,
+  "publication": false,
+  "payment": "DISABLED",
+  "commercial_stability": "0/5_NOT_AUTO_CREDITED",
+  "stock_recommendation_delivered": false
+}

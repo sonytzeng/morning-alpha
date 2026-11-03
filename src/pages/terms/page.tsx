@@ -58,6 +58,11 @@ export default function TermsPage() {
               <h3 className="text-white font-semibold text-sm md:text-base mb-2">資料來源與延遲</h3>
               <p className="text-white/50 text-sm leading-relaxed">
                 本站可能使用公開資料、第三方資料、API 資料與自行整理資料。不同資料來源可能存在延遲、缺漏或更新時間不一致。若資料不足，本站會盡量標示資料可信度。
+                期交所開放資料來源：臺灣期貨交易所／金融監督管理委員會證券期貨局。
+                本站使用之<a href="https://data.gov.tw/dataset/11319" target="_blank" rel="noreferrer" className="underline">期貨每日行情</a>與
+                <a href="https://data.gov.tw/dataset/20668" target="_blank" rel="noreferrer" className="underline">期貨交易明細</a>，
+                依<a href="https://data.gov.tw/license" target="_blank" rel="noreferrer" className="underline">政府資料開放授權條款第1版</a>利用；
+                本站之分析與判讀不代表資料提供機關立場。
               </p>
             </div>
 

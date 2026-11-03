@@ -114,12 +114,14 @@ test('invalid TXF can never become a partial or mixed Atomic batch', () => {
   });
 });
 
-test('Edge and Preflight pass identical trading-date and observation identity into the shared TXF adapter', () => {
+test('Edge and Preflight pass identical date identity into the same explicitly gated TXF fallback adapter', () => {
   const fetch = read('supabase/functions/fetch-market-data-v10/index.ts');
   const preflight = read('supabase/functions/market-readiness-preflight/index.ts');
   assert.match(fetch, /\{ phase, tradingDate, observedAt \}/);
   assert.match(preflight, /\{ phase: 'premarket', tradingDate, observedAt: String\(evidenceInput\.observedAt \|\| ''\) \}/);
-  for (const source of [fetch, preflight]) assert.match(source, /resolveRequiredTxfQuote/);
+  for (const source of [fetch, preflight]) {
+    assert.match(source, /resolveTxfQuoteWithFallback\([\s\S]*?resolveTaifexRegularQuote,\s*\)/);
+  }
 });
 
 test('runtime orchestration never advances to report generation after an Atomic market refresh failure', async () => {

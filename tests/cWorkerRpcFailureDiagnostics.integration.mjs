@@ -17,7 +17,10 @@ const historical=(ref,name)=>execFileSync('git',['--no-replace-objects','show',r
  env:{PATH:'/usr/bin:/bin',LC_ALL:'C',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_NO_LAZY_FETCH:'1',GIT_TERMINAL_PROMPT:'0'},maxBuffer:8*1024*1024});
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const baseline=new Map(readReleaseCatalog().files.map(row=>{
- const bytes=row.source==='APPROVED_HISTORICAL_LOGIC'?historical(APPROVED_LOGIC_COMMIT,row.name):row.name===entryName?historical(base,row.name):read(row.name);
+ // The historical catalog binds its entire original import closure. The VM
+ // replaces only the entrypoint below; current runtime deltas have their own
+ // admission pins and must not be mistaken for this frozen SDK packet.
+ const bytes=historical(row.source==='APPROVED_HISTORICAL_LOGIC'?APPROVED_LOGIC_COMMIT:base,row.name);
  assert.equal(bytes.length,row.bytes);assert.equal(sha(bytes),row.sha256);
  return [row.name,bytes.toString()];
 }));
@@ -94,7 +97,7 @@ test('actual SDK SQLSTATE and PGRST errors log fixed codes and exclude all error
 });
 test('every known RPC and runtime operation logs only a fixed vocabulary',async()=>{
  const h=await harness();h.setReply(()=>Response.json({code:'P0001',message:secrets},{status:400}));
- const ops=['PLAN','SOURCE_BEGIN','SOURCE_SAVE','SOURCE_FAIL','CURSOR','ENTRY_SOURCE','SOURCES','CHECKPOINT','PREDICTIONS','DUE_OUTCOMES','OUTCOME','OUTCOME_CHECKED','FINISH'];
+ const ops=['PLAN','SOURCE_BEGIN','SOURCE_SAVE','SOURCE_FAIL','CURSOR','ENTRY_SOURCE','SOURCES','CHECKPOINT','CHECKPOINT_STATE','PREDICTIONS','DUE_OUTCOMES','OUTCOME','OUTCOME_CHECKED','FINISH'];
  for(const op of ops){await expectFailure(h,'vnext_daily_runtime_v1',op);assert.equal(h.warnings.at(-1)[2],op);}
  for(const name of ['enqueue_vnext_daily_research_v1','claim_vnext_daily_research_v1']){
   await expectFailure(h,name,secrets);assert.deepEqual(h.warnings.at(-1).slice(1,3),[name,'NOT_APPLICABLE']);

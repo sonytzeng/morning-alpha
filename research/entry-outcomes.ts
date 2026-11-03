@@ -72,7 +72,7 @@ export async function evaluateEntryOutcome(lock:EntryLock,evidence:OutcomeEviden
   const unknown=(reason:string)=>({...base,state:'UNCONFIRMED',reason,net_return:null,mfe:null,mae:null});
   if(!['FORWARD','HISTORICAL_REPLAY'].includes(lock.mode)||!['REAL_RETAINED','SYNTHETIC_TEST'].includes(lock.provenance)||
     !(HORIZONS as readonly number[]).includes(horizon)||!p||!plan||p.symbol!==lock.symbol||p.strategy_version!==lock.strategy_version||
-    p.strategy_version!==p.strategy+'_1.0.0'||JSON.stringify(p.horizons)!==JSON.stringify(HORIZONS)||
+    ![p.strategy+'_1.0.0',p.strategy+'_1.1.0'].includes(p.strategy_version)||JSON.stringify(p.horizons)!==JSON.stringify(HORIZONS)||
     !hash(lock.evidence_hash)||!hash(lock.lock_sha256)||await entryLockHash(lock)!==lock.lock_sha256||!validCosts(lock.costs)||
     !Number.isFinite(observed)||![lock.evidence_cutoff,lock.evaluation_time,lock.locked_at].every(t=>Number.isFinite(stamp(t)))||
     stamp(lock.evidence_cutoff)>stamp(lock.evaluation_time)||stamp(lock.evaluation_time)>stamp(lock.locked_at))return unavailable('LOCK_INVALID');
@@ -80,7 +80,10 @@ export async function evaluateEntryOutcome(lock:EntryLock,evidence:OutcomeEviden
   if(!isMarketTradingDate('TW',plan.not_before)||plan.expires_on!==plan.not_before||
     ![plan.trigger,plan.stop,plan.target,...plan.reference_range].every(v=>Number.isFinite(v)&&v>0)||
     plan.reference_range[0]!==plan.trigger||plan.stop>=plan.trigger||plan.reference_range[1]<plan.trigger||plan.target<=plan.reference_range[1])return unavailable('PLAN_INVALID');
-  if(day(lock.evaluation_time)>=plan.not_before||stamp(lock.locked_at)>=stamp(plan.not_before+'T09:00:00+08:00'))return unavailable('NOT_PROSPECTIVE');
+  const premarket=p.strategy_version===p.strategy+'_1.1.0';
+  if((premarket?day(lock.evaluation_time)!==plan.not_before:day(lock.evaluation_time)>=plan.not_before)
+    ||stamp(lock.evaluation_time)>=stamp(plan.not_before+'T09:00:00+08:00')
+    ||stamp(lock.locked_at)>=stamp(plan.not_before+'T09:00:00+08:00'))return unavailable('NOT_PROSPECTIVE');
   const dates=[plan.not_before];while(dates.length<horizon)dates.push(nextEntrySession(dates.at(-1)!));
   if(observed<stamp(dates.at(-1)!+'T13:30:00+08:00'))return unavailable('NOT_MATURED');
   if(!evidence.source_ref)return unavailable('OUTCOME_SOURCE_MISSING');

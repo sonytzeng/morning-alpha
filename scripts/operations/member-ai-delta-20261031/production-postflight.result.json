@@ -1,0 +1,48 @@
+{
+  "schema": "MEMBER_AI_DELTA_PRODUCTION_READONLY_POSTFLIGHT_V1",
+  "recorded_at": "2026-10-31T10:43:31.414Z",
+  "project_id": "cttfzgvhiewfckydcrci",
+  "read_only": true,
+  "member_impersonation": false,
+  "member_rpc_called": false,
+  "production_load_test": false,
+  "migration_performed_by_this_audit": false,
+  "new_acl": "{postgres=X/postgres,authenticated=X/postgres}",
+  "anon_execute": false,
+  "reader_checks": [
+    {
+      "signature": "academy_private.access_v11()",
+      "acl_matches": true,
+      "hash_matches": true,
+      "metadata_matches": true
+    },
+    {
+      "signature": "public.get_daily_ai_member_research_v1()",
+      "acl_matches": true,
+      "hash_matches": true,
+      "metadata_matches": true
+    },
+    {
+      "signature": "public.is_research_owner_v1()",
+      "acl_matches": true,
+      "hash_matches": true,
+      "metadata_matches": true
+    },
+    {
+      "signature": "vnext_private.ai_edition_rights_v1(text,timestamptz)",
+      "acl_matches": true,
+      "hash_matches": true,
+      "metadata_matches": true
+    }
+  ],
+  "wrapper_matches": true,
+  "auth_uid_execute": true,
+  "auth_schema_usage": true,
+  "edition_immutable": true,
+  "old_readers_match": true,
+  "new_security_definer": false,
+  "service_role_execute": false,
+  "authenticated_execute": true,
+  "new_definition_sha256": "a23ac838e94bc1d5d244bd9b9577082a16817a31aa4557a2f24bd445d033ec78",
+  "postdeploy_metadata_pass": true
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "DAILY_AI_429_PAUSE_PRODUCTION_V1",
+  "recorded_at": "2026-10-31T10:56:16.068584+00:00",
+  "migration": "daily_stock_ai_provider_rate_limit_pause_v1",
+  "candidate_sql_sha256": "3602d8313272e391672fd52aa92e558ce6c7e72cf422d3c0c9af60ccb843cbbe",
+  "before_definition_sha256": "436ec37a8a6d32169bd1bab60ebf9bc4338845588f19efac7de78a4384387db3",
+  "after_definition_sha256": "d0c3395e030c92b8cd55cedb53882fbb86cc07b37ac57c0d4b007db623467878",
+  "actual_postflight_definition_and_acl_match": true,
+  "isolated_postgres_checks": 215,
+  "independent_postgres_checks": 215,
+  "actual_guard_response": {
+    "state": "BLOCKED_PROVIDER_RATE_LIMIT",
+    "batch_id": "0524783a79af043a70be593d2e019c435bc067f168a5b2567a831e32d78b4ddc",
+    "member_published": false
+  },
+  "affected_batch_observation": {
+    "complete_jobs": 18,
+    "failed_http429_jobs": 54,
+    "failed_jobs_attempts": 3
+  },
+  "immutable_jobs_reset": false,
+  "results_replaced": false,
+  "secrets_changed": false,
+  "grants_changed": false,
+  "cron_changed": false,
+  "limitations": [
+    "Existing requests already queued or running are not canceled.",
+    "Only the common normal dispatcher is paused; dedicated citation repair remains separately fenced.",
+    "Provider 429 is observed; the original provider error detail was not retained, so temporary rate limit versus account quota is not established.",
+    "A separate audited recovery path is required; this migration does not reenable the affected batch."
+  ]
+}

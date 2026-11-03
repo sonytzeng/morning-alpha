@@ -1,0 +1,1069 @@
+{
+  "schema": "DOCUMENTED_REVIEW_V2_EXACT_WORKER_CANDIDATE",
+  "live_version": 16,
+  "live_ezbr_sha256": "6e51f2d2b4ef2917ef7b7f5eb567e54aa6b39b7bec752cced5689b527abd9fd9",
+  "live_index_sha256": "7d2f3105136411fa480d64bbf0f9155e93553610fdc9666d1e9f0d88a7170e75",
+  "candidate_index_sha256": "f3d221e45f03ee586bac619a4f2ac02df9d32227ea5d10b60b9e9d05360429d1",
+  "unchanged_live_files": 45,
+  "modified_live_files": [
+    "supabase/functions/daily-stock-analysis-v1/index.ts",
+    "research/daily-ai-global-market.ts",
+    "research/daily-ai-refresh.ts"
+  ],
+  "added_files": [
+    "research/documented-review-replay-v2.candidate.ts",
+    "research/documented-review-v2-contract.candidate.ts",
+    "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-handler.ts",
+    "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-runner.ts"
+  ],
+  "files": 52,
+  "candidate_index_changes": [
+    "V2 adapter import",
+    "Financial port strips reviews before unchanged V1 refresh",
+    "Final SOURCE RPC applies active reviews after the fresh-price merge"
+  ],
+  "deployment_args_sha256": "32341f02927c4b29555083f3c86a9851ce2969b3da845860628a26df1adfa838",
+  "file_catalog_sha256": "6a6e75bc8a64b1c60c4480d2d6528315ee3ee2dc77f3c285ae071853c310afd2",
+  "catalog": [
+    {
+      "name": "research/daily-ai-analysis.ts",
+      "bytes": 8803,
+      "sha256": "9f42eb4a14da53132fe3fdf84fbf11cf2d5ab7ffdf7114ea842c8436f10285e2"
+    },
+    {
+      "name": "research/daily-ai-batch.ts",
+      "bytes": 3877,
+      "sha256": "c0fcd1c3caaf354f18924d8058cae891d9716b10cf4f69157397364f59d99db9"
+    },
+    {
+      "name": "research/daily-ai-financial-refresh.ts",
+      "bytes": 21477,
+      "sha256": "56f1558a54452914caf78f5817abacf2a3f5c9d7b784bd164ace918e169cd920"
+    },
+    {
+      "name": "research/daily-ai-global-market.ts",
+      "bytes": 19523,
+      "sha256": "a6b9138e359a47a77a803e7c11af1fc461dad3a4fd52193ca615dc587363a094"
+    },
+    {
+      "name": "research/daily-ai-official-news.ts",
+      "bytes": 14259,
+      "sha256": "1039b9c2e2f694ffd28a1121e98ff7423b5f3fbc97b2587abe542d3b7464f270"
+    },
+    {
+      "name": "research/daily-ai-packets.ts",
+      "bytes": 6002,
+      "sha256": "5dfaf5c3aa0b5a6ace8c5d92d6ce072a58253b4f3f39769c7f62093639f3d034"
+    },
+    {
+      "name": "research/daily-ai-refresh.ts",
+      "bytes": 8471,
+      "sha256": "bd79d2b1c6f3517e51e5ac547df8b10cbb3bfc68818adacbace3e595315084a8"
+    },
+    {
+      "name": "research/daily-ai-seed.ts",
+      "bytes": 3755,
+      "sha256": "2a7fffe2c1d4197edf94b225c4f9ad04e5d61408096a0822292d2f5ae15add84"
+    },
+    {
+      "name": "research/daily-ai-semantics.ts",
+      "bytes": 23184,
+      "sha256": "6029b7ddf31e5784478dc7a7b2e18e8e7e87a036d73534b3eb74fe404cf881b6"
+    },
+    {
+      "name": "research/documented-review-replay-v2.candidate.ts",
+      "bytes": 10081,
+      "sha256": "bab11b0e55b8a32ca73add4cb1180ebc6a22b72aaa7467fa6e9c5372f3e3c1bf"
+    },
+    {
+      "name": "research/documented-review-v2-contract.candidate.ts",
+      "bytes": 1390,
+      "sha256": "54868b08952c9f8d623b1a16ced6621b3b365ba1b9a8007ccc8909999de7378f"
+    },
+    {
+      "name": "research/entry-official-history.ts",
+      "bytes": 12531,
+      "sha256": "5d48388908b08a119ca7525d7cacf5cf6de912fda16ca44ee674a649d5c93805"
+    },
+    {
+      "name": "research/entry-opportunity.ts",
+      "bytes": 16620,
+      "sha256": "30da9e781482ab1d9222a679e2e2413b47650cf5f95efc609e0a443c0dbb3031"
+    },
+    {
+      "name": "research/sec-daily-financial-replay.candidate.ts",
+      "bytes": 7179,
+      "sha256": "594648561c1dec020b6e34ece24f0bf3cbee2c504fcb4039eb2c64db17486048"
+    },
+    {
+      "name": "research/sec-quarter-financials.ts",
+      "bytes": 8081,
+      "sha256": "f170d6ee2c1ced84f0c77db9079cd8cabdd0d76e0f3bc07737b077d07bd78ac0"
+    },
+    {
+      "name": "src/features/vnext/contracts.ts",
+      "bytes": 8100,
+      "sha256": "32195b3a1cd1b060324a403c9adf2109399f0d30cdbe829d5a0493f4af8a8068"
+    },
+    {
+      "name": "src/features/vnext/projection.ts",
+      "bytes": 6768,
+      "sha256": "8a238c6eacc3972f0f3927346c4081d9e2dcb4c8613bcc4cb1825a3abaf688ae"
+    },
+    {
+      "name": "src/features/vnext/publicationReadiness.ts",
+      "bytes": 5892,
+      "sha256": "76f8d26b07c92e84cef82459b8c94bc9dbcabfbaaa6e86b67036b351c6a67058"
+    },
+    {
+      "name": "src/features/vnext/realResearch.ts",
+      "bytes": 10995,
+      "sha256": "adc05e968bce6c840c132d14bec7df076d4002b031471e0175c3a9e13346125f"
+    },
+    {
+      "name": "src/features/vnext/researchFunnel.ts",
+      "bytes": 19694,
+      "sha256": "2b8d956efdf648f735aabb23e756c84295f620db9cbda25c292b60e87baf8303"
+    },
+    {
+      "name": "src/features/vnext/stockResearch.ts",
+      "bytes": 9226,
+      "sha256": "7583c0edca56aa4c225173ab5657ce894529df34efb63d745cab28c73dc887c5"
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/0bce189b17b39939428919945e6a261663cfa3fb43d7be83b97eef1655ffa196.mjs",
+      "bytes": 20260,
+      "sha256": "7e0f018b41f34219e619651558c019106ffccd79aa6bff76921a2c160f5fca8f"
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/8474f19a1f21e74abb020fc7894da0ae847ad881f5684adafe32f7d0262077cf.mjs",
+      "bytes": 29607,
+      "sha256": "921c83c41a741fec993aa718ec5fd946210d709ff2ef12ae970cf5332c1f2d15"
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/855779118b7c638eea0976ec4b331a7e741f69dd35c7e97b5be927345723dc04.mjs",
+      "bytes": 24217,
+      "sha256": "ca79b8f4411c3d3502d88791b079099825d3d3f6ceac0ff7ecbeee24cfacd1f6"
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/9135c3f83ea833d80bfd11156d394d0ba84f2442e97e084887e406bff42f4456.mjs",
+      "bytes": 7613,
+      "sha256": "a89ecb8cf2937462a52ec455270e2bcc75069862b1932e65695b10652cc087c6"
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/98f2f4377da15fb84145ccb88d0745c482475b7004afef619afec387d83b2653.mjs",
+      "bytes": 380,
+      "sha256": "04c3ba8ef60fd5ad9cca938c842c044869d8d6976a2faa796fb66d6d5f2056f2"
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/9be86b9f10fafb9db714e142be218b2876d16f7a228c1cc0cd8403239abd8da3.mjs",
+      "bytes": 3003,
+      "sha256": "02d13644492c718617a2232d7217647a615e9e32ec733966066d599ceccd1afe"
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/a0943b39916396be354a3d6b9a13dcd2b7eb9fae6d00629f2b409e518f1663dd.mjs",
+      "bytes": 3205,
+      "sha256": "238cd0743827707cbc1c2d7c2cf1027dbc536fb53ec9a3fde0ff8026a3ac5385"
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/a67bcb8e00c067cc250bc24dd01da1277ed6452066387425b7b2cc11732e8867.mjs",
+      "bytes": 13536,
+      "sha256": "2a2bdca5bcf82e1dcd4979b20576e970d00fb00c1c84a12d0087dec4122fdf3c"
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/b77ee1984adac5aca840baa3f11d3265a040c49f1ada99afefad72df1c43e353.mjs",
+      "bytes": 266119,
+      "sha256": "5753ec0a99414f4055f0c1f97691100f13d88e48a8443b00aebb90a512785fa2"
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/bb93fdafb91b4dd70fa236164dbf6ce27358fe93c4c9297643576dbce326a1c8.mjs",
+      "bytes": 13538,
+      "sha256": "fe5d8033de9593f2f427d3786ceacc30e546a0b4d048f1915b5c636a70202b61"
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/c4510bd92ebd6222ba56cabdd658d09feeb964f64a728107a089635edd6bf7de.mjs",
+      "bytes": 59703,
+      "sha256": "6a4a2baa419f90845f94c6991752c6b28e9bbd772bab96b9aa28c14daa523aaf"
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/c769f61979cd626fc8d202ae9955a3a810ae59bd552c56e138fb1daeb7e2c99b.mjs",
+      "bytes": 226,
+      "sha256": "c5abc625b80aebdfcdc9b377e31f9df1d00381132f9771a411430287a23d7fb2"
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/ccf2406bf8d2b9519c34c0c07dc74130ef4f7b3df582408b597e8078b222f45e.mjs",
+      "bytes": 212,
+      "sha256": "d6f81e9d4f4defe9a82eff4fbe9f0355415de7cfa3ca1b08cd1ddc7f6ae5bd66"
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/d6476eb760b326c6efa9534e2de942be23983f472c9b8459c0effa4c263980e9.mjs",
+      "bytes": 310,
+      "sha256": "6cbe57de46220624ff4b404c5527d045f86180701d26706fce960c8a41b7746d"
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs",
+      "bytes": 618,
+      "sha256": "4cb4017a3cb452fd73fd38066759a897e93ab5b2819432d76da8304e73731e93"
+    },
+    {
+      "name": "supabase/functions/_shared/daily-stock-ai-auth.ts",
+      "bytes": 2066,
+      "sha256": "c96514c7ba97b148f78a15cf525b9b07590ef41bca673ca9a32924ab2d549523"
+    },
+    {
+      "name": "supabase/functions/_shared/daily-stock-ai-jobs.ts",
+      "bytes": 2717,
+      "sha256": "332fe688137bcee81cb246e03f3184127b6b8fe49b6ac0afcfa371a413a807e3"
+    },
+    {
+      "name": "supabase/functions/_shared/daily-stock-ai-runner.ts",
+      "bytes": 3647,
+      "sha256": "e90e6db1d5a272a85cc1df710b085dda315beefdf6aaa1e0c0526d992eb15b23"
+    },
+    {
+      "name": "supabase/functions/_shared/daily-stock-ai.ts",
+      "bytes": 9524,
+      "sha256": "01d3a00857b14374280a98a6110c55135615e3af154d8853363a9a88c754f2be"
+    },
+    {
+      "name": "supabase/functions/_shared/market-calendar-data.json",
+      "bytes": 1695,
+      "sha256": "18930032917a7e3695a431b57b0f53313f1289af72d61087eca3f93fff956079"
+    },
+    {
+      "name": "supabase/functions/_shared/market-session-contract.mjs",
+      "bytes": 2994,
+      "sha256": "5b41e134ffd98e8eedcff8e782b104c96b7368ad3f455ec7ac2b406e74316d44"
+    },
+    {
+      "name": "supabase/functions/_shared/us-cash-session-calendar.ts",
+      "bytes": 1609,
+      "sha256": "e648996b1c26b63e6f04f00ea06ca8a3cbef5ef49fb48b87c0b81d26979a9b78"
+    },
+    {
+      "name": "supabase/functions/daily-stock-analysis-v1/checkpoint.ts",
+      "bytes": 2058,
+      "sha256": "48786a39a52599b1f40ba8151e0dc73fe3cdc55a04bea650bdb122f5bf73b11b"
+    },
+    {
+      "name": "supabase/functions/daily-stock-analysis-v1/handler.ts",
+      "bytes": 6552,
+      "sha256": "04ec87a9e2784c11148b6d81aae01579b55552df9082d0352d6c58670560bceb"
+    },
+    {
+      "name": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "bytes": 10179,
+      "sha256": "f3d221e45f03ee586bac619a4f2ac02df9d32227ea5d10b60b9e9d05360429d1"
+    },
+    {
+      "name": "supabase/functions/daily-stock-analysis-v1/intake.ts",
+      "bytes": 29517,
+      "sha256": "dbd65de0497deff78419dfcbdeff069acb09daea775f3a2bc146059771198836"
+    },
+    {
+      "name": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-handler.ts",
+      "bytes": 6241,
+      "sha256": "b55eb61650fc5a5765eb8c2cfe48edb07256e87e68f23330cda3854db3928898"
+    },
+    {
+      "name": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-runner.ts",
+      "bytes": 2050,
+      "sha256": "5b5cd9d5f2a40135294e710281b34196bfe0bc789bbffa2665d04f71108aa18f"
+    },
+    {
+      "name": "supabase/functions/daily-stock-analysis-v1/repair-handler.ts",
+      "bytes": 7460,
+      "sha256": "4a9d94c5f49dcad660c8f5860bb9633a501d5e520638238096d6a0cad5e94beb"
+    },
+    {
+      "name": "supabase/functions/daily-stock-analysis-v1/source-handler.ts",
+      "bytes": 3534,
+      "sha256": "21a0b2250ffd574f6291904b3e61e78780dd80664105d4297b585a4a99c0be5d"
+    },
+    {
+      "name": "supabase/functions/daily-stock-analysis-v1/source.ts",
+      "bytes": 14275,
+      "sha256": "499c90a74cebc3333bd1337306dc3e4c0fe7cafa70ff619efc4bf7c1ea17218b"
+    }
+  ],
+  "import_edges": [
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs",
+      "specifier": "../_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "to": "supabase/functions/daily-stock-analysis-v1/handler.ts",
+      "specifier": "./handler.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "to": "supabase/functions/_shared/daily-stock-ai-runner.ts",
+      "specifier": "../_shared/daily-stock-ai-runner.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "to": "supabase/functions/_shared/daily-stock-ai-auth.ts",
+      "specifier": "../_shared/daily-stock-ai-auth.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "to": "supabase/functions/daily-stock-analysis-v1/checkpoint.ts",
+      "specifier": "./checkpoint.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "to": "supabase/functions/daily-stock-analysis-v1/intake.ts",
+      "specifier": "./intake.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "to": "supabase/functions/daily-stock-analysis-v1/source-handler.ts",
+      "specifier": "./source-handler.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "to": "supabase/functions/daily-stock-analysis-v1/source.ts",
+      "specifier": "./source.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "to": "research/daily-ai-official-news.ts",
+      "specifier": "../../../research/daily-ai-official-news.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "to": "research/daily-ai-global-market.ts",
+      "specifier": "../../../research/daily-ai-global-market.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "to": "research/daily-ai-financial-refresh.ts",
+      "specifier": "../../../research/daily-ai-financial-refresh.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "to": "research/sec-daily-financial-replay.candidate.ts",
+      "specifier": "../../../research/sec-daily-financial-replay.candidate.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "to": "research/documented-review-replay-v2.candidate.ts",
+      "specifier": "../../../research/documented-review-replay-v2.candidate.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "to": "supabase/functions/daily-stock-analysis-v1/repair-handler.ts",
+      "specifier": "./repair-handler.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "to": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-handler.ts",
+      "specifier": "./rate-limit-recovery-handler.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "to": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-runner.ts",
+      "specifier": "./rate-limit-recovery-runner.ts"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/c4510bd92ebd6222ba56cabdd658d09feeb964f64a728107a089635edd6bf7de.mjs",
+      "specifier": "./c4510bd92ebd6222ba56cabdd658d09feeb964f64a728107a089635edd6bf7de.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/9be86b9f10fafb9db714e142be218b2876d16f7a228c1cc0cd8403239abd8da3.mjs",
+      "specifier": "./9be86b9f10fafb9db714e142be218b2876d16f7a228c1cc0cd8403239abd8da3.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/0bce189b17b39939428919945e6a261663cfa3fb43d7be83b97eef1655ffa196.mjs",
+      "specifier": "./0bce189b17b39939428919945e6a261663cfa3fb43d7be83b97eef1655ffa196.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/a67bcb8e00c067cc250bc24dd01da1277ed6452066387425b7b2cc11732e8867.mjs",
+      "specifier": "./a67bcb8e00c067cc250bc24dd01da1277ed6452066387425b7b2cc11732e8867.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/8474f19a1f21e74abb020fc7894da0ae847ad881f5684adafe32f7d0262077cf.mjs",
+      "specifier": "./8474f19a1f21e74abb020fc7894da0ae847ad881f5684adafe32f7d0262077cf.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/bb93fdafb91b4dd70fa236164dbf6ce27358fe93c4c9297643576dbce326a1c8.mjs",
+      "specifier": "./bb93fdafb91b4dd70fa236164dbf6ce27358fe93c4c9297643576dbce326a1c8.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/9135c3f83ea833d80bfd11156d394d0ba84f2442e97e084887e406bff42f4456.mjs",
+      "specifier": "./9135c3f83ea833d80bfd11156d394d0ba84f2442e97e084887e406bff42f4456.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/c4510bd92ebd6222ba56cabdd658d09feeb964f64a728107a089635edd6bf7de.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/d6476eb760b326c6efa9534e2de942be23983f472c9b8459c0effa4c263980e9.mjs",
+      "specifier": "./d6476eb760b326c6efa9534e2de942be23983f472c9b8459c0effa4c263980e9.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/9be86b9f10fafb9db714e142be218b2876d16f7a228c1cc0cd8403239abd8da3.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/d6476eb760b326c6efa9534e2de942be23983f472c9b8459c0effa4c263980e9.mjs",
+      "specifier": "./d6476eb760b326c6efa9534e2de942be23983f472c9b8459c0effa4c263980e9.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/0bce189b17b39939428919945e6a261663cfa3fb43d7be83b97eef1655ffa196.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/98f2f4377da15fb84145ccb88d0745c482475b7004afef619afec387d83b2653.mjs",
+      "specifier": "./98f2f4377da15fb84145ccb88d0745c482475b7004afef619afec387d83b2653.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/98f2f4377da15fb84145ccb88d0745c482475b7004afef619afec387d83b2653.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/ccf2406bf8d2b9519c34c0c07dc74130ef4f7b3df582408b597e8078b222f45e.mjs",
+      "specifier": "./ccf2406bf8d2b9519c34c0c07dc74130ef4f7b3df582408b597e8078b222f45e.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/98f2f4377da15fb84145ccb88d0745c482475b7004afef619afec387d83b2653.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/c769f61979cd626fc8d202ae9955a3a810ae59bd552c56e138fb1daeb7e2c99b.mjs",
+      "specifier": "./c769f61979cd626fc8d202ae9955a3a810ae59bd552c56e138fb1daeb7e2c99b.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/98f2f4377da15fb84145ccb88d0745c482475b7004afef619afec387d83b2653.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/855779118b7c638eea0976ec4b331a7e741f69dd35c7e97b5be927345723dc04.mjs",
+      "specifier": "./855779118b7c638eea0976ec4b331a7e741f69dd35c7e97b5be927345723dc04.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/ccf2406bf8d2b9519c34c0c07dc74130ef4f7b3df582408b597e8078b222f45e.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/b77ee1984adac5aca840baa3f11d3265a040c49f1ada99afefad72df1c43e353.mjs",
+      "specifier": "./b77ee1984adac5aca840baa3f11d3265a040c49f1ada99afefad72df1c43e353.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/c769f61979cd626fc8d202ae9955a3a810ae59bd552c56e138fb1daeb7e2c99b.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/a0943b39916396be354a3d6b9a13dcd2b7eb9fae6d00629f2b409e518f1663dd.mjs",
+      "specifier": "./a0943b39916396be354a3d6b9a13dcd2b7eb9fae6d00629f2b409e518f1663dd.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/855779118b7c638eea0976ec4b331a7e741f69dd35c7e97b5be927345723dc04.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/c769f61979cd626fc8d202ae9955a3a810ae59bd552c56e138fb1daeb7e2c99b.mjs",
+      "specifier": "./c769f61979cd626fc8d202ae9955a3a810ae59bd552c56e138fb1daeb7e2c99b.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/855779118b7c638eea0976ec4b331a7e741f69dd35c7e97b5be927345723dc04.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/ccf2406bf8d2b9519c34c0c07dc74130ef4f7b3df582408b597e8078b222f45e.mjs",
+      "specifier": "./ccf2406bf8d2b9519c34c0c07dc74130ef4f7b3df582408b597e8078b222f45e.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/a67bcb8e00c067cc250bc24dd01da1277ed6452066387425b7b2cc11732e8867.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/d6476eb760b326c6efa9534e2de942be23983f472c9b8459c0effa4c263980e9.mjs",
+      "specifier": "./d6476eb760b326c6efa9534e2de942be23983f472c9b8459c0effa4c263980e9.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/d6476eb760b326c6efa9534e2de942be23983f472c9b8459c0effa4c263980e9.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/98f2f4377da15fb84145ccb88d0745c482475b7004afef619afec387d83b2653.mjs",
+      "specifier": "./98f2f4377da15fb84145ccb88d0745c482475b7004afef619afec387d83b2653.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/d6476eb760b326c6efa9534e2de942be23983f472c9b8459c0effa4c263980e9.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/0bce189b17b39939428919945e6a261663cfa3fb43d7be83b97eef1655ffa196.mjs",
+      "specifier": "./0bce189b17b39939428919945e6a261663cfa3fb43d7be83b97eef1655ffa196.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/8474f19a1f21e74abb020fc7894da0ae847ad881f5684adafe32f7d0262077cf.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/d6476eb760b326c6efa9534e2de942be23983f472c9b8459c0effa4c263980e9.mjs",
+      "specifier": "./d6476eb760b326c6efa9534e2de942be23983f472c9b8459c0effa4c263980e9.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/bb93fdafb91b4dd70fa236164dbf6ce27358fe93c4c9297643576dbce326a1c8.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/d6476eb760b326c6efa9534e2de942be23983f472c9b8459c0effa4c263980e9.mjs",
+      "specifier": "./d6476eb760b326c6efa9534e2de942be23983f472c9b8459c0effa4c263980e9.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/9135c3f83ea833d80bfd11156d394d0ba84f2442e97e084887e406bff42f4456.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/9be86b9f10fafb9db714e142be218b2876d16f7a228c1cc0cd8403239abd8da3.mjs",
+      "specifier": "./9be86b9f10fafb9db714e142be218b2876d16f7a228c1cc0cd8403239abd8da3.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/9135c3f83ea833d80bfd11156d394d0ba84f2442e97e084887e406bff42f4456.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/a67bcb8e00c067cc250bc24dd01da1277ed6452066387425b7b2cc11732e8867.mjs",
+      "specifier": "./a67bcb8e00c067cc250bc24dd01da1277ed6452066387425b7b2cc11732e8867.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/9135c3f83ea833d80bfd11156d394d0ba84f2442e97e084887e406bff42f4456.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/8474f19a1f21e74abb020fc7894da0ae847ad881f5684adafe32f7d0262077cf.mjs",
+      "specifier": "./8474f19a1f21e74abb020fc7894da0ae847ad881f5684adafe32f7d0262077cf.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/9135c3f83ea833d80bfd11156d394d0ba84f2442e97e084887e406bff42f4456.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/bb93fdafb91b4dd70fa236164dbf6ce27358fe93c4c9297643576dbce326a1c8.mjs",
+      "specifier": "./bb93fdafb91b4dd70fa236164dbf6ce27358fe93c4c9297643576dbce326a1c8.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/9135c3f83ea833d80bfd11156d394d0ba84f2442e97e084887e406bff42f4456.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/0bce189b17b39939428919945e6a261663cfa3fb43d7be83b97eef1655ffa196.mjs",
+      "specifier": "./0bce189b17b39939428919945e6a261663cfa3fb43d7be83b97eef1655ffa196.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/_fixed_c_worker_sdk/9135c3f83ea833d80bfd11156d394d0ba84f2442e97e084887e406bff42f4456.mjs",
+      "to": "supabase/functions/_shared/_fixed_c_worker_sdk/c4510bd92ebd6222ba56cabdd658d09feeb964f64a728107a089635edd6bf7de.mjs",
+      "specifier": "./c4510bd92ebd6222ba56cabdd658d09feeb964f64a728107a089635edd6bf7de.mjs"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/handler.ts",
+      "to": "research/daily-ai-analysis.ts",
+      "specifier": "../../../research/daily-ai-analysis.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/handler.ts",
+      "to": "research/daily-ai-batch.ts",
+      "specifier": "../../../research/daily-ai-batch.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/handler.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../../../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "research/daily-ai-analysis.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "research/daily-ai-analysis.ts",
+      "to": "research/daily-ai-semantics.ts",
+      "specifier": "./daily-ai-semantics.ts"
+    },
+    {
+      "from": "research/daily-ai-semantics.ts",
+      "to": "research/daily-ai-analysis.ts",
+      "specifier": "./daily-ai-analysis.ts"
+    },
+    {
+      "from": "supabase/functions/_shared/daily-stock-ai-runner.ts",
+      "to": "research/daily-ai-batch.ts",
+      "specifier": "../../../research/daily-ai-batch.ts"
+    },
+    {
+      "from": "supabase/functions/_shared/daily-stock-ai-runner.ts",
+      "to": "research/daily-ai-analysis.ts",
+      "specifier": "../../../research/daily-ai-analysis.ts"
+    },
+    {
+      "from": "supabase/functions/_shared/daily-stock-ai-runner.ts",
+      "to": "supabase/functions/_shared/daily-stock-ai.ts",
+      "specifier": "./daily-stock-ai.ts"
+    },
+    {
+      "from": "supabase/functions/_shared/daily-stock-ai-runner.ts",
+      "to": "supabase/functions/_shared/daily-stock-ai-jobs.ts",
+      "specifier": "./daily-stock-ai-jobs.ts"
+    },
+    {
+      "from": "supabase/functions/_shared/daily-stock-ai-runner.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../../../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "research/daily-ai-batch.ts",
+      "to": "research/daily-ai-analysis.ts",
+      "specifier": "./daily-ai-analysis.ts"
+    },
+    {
+      "from": "research/daily-ai-batch.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "supabase/functions/_shared/daily-stock-ai.ts",
+      "to": "research/daily-ai-analysis.ts",
+      "specifier": "../../../research/daily-ai-analysis.ts"
+    },
+    {
+      "from": "supabase/functions/_shared/daily-stock-ai.ts",
+      "to": "research/daily-ai-semantics.ts",
+      "specifier": "../../../research/daily-ai-semantics.ts"
+    },
+    {
+      "from": "supabase/functions/_shared/daily-stock-ai.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../../../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "supabase/functions/_shared/daily-stock-ai-jobs.ts",
+      "to": "research/daily-ai-batch.ts",
+      "specifier": "../../../research/daily-ai-batch.ts"
+    },
+    {
+      "from": "supabase/functions/_shared/daily-stock-ai-jobs.ts",
+      "to": "research/entry-opportunity.ts",
+      "specifier": "../../../research/entry-opportunity.ts"
+    },
+    {
+      "from": "research/entry-opportunity.ts",
+      "to": "supabase/functions/_shared/market-session-contract.mjs",
+      "specifier": "../supabase/functions/_shared/market-session-contract.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/market-session-contract.mjs",
+      "to": "supabase/functions/_shared/market-calendar-data.json",
+      "specifier": "./market-calendar-data.json"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/checkpoint.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../../../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/checkpoint.ts",
+      "to": "supabase/functions/daily-stock-analysis-v1/handler.ts",
+      "specifier": "./handler.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/intake.ts",
+      "to": "research/daily-ai-seed.ts",
+      "specifier": "../../../research/daily-ai-seed.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/intake.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../../../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/intake.ts",
+      "to": "research/daily-ai-analysis.ts",
+      "specifier": "../../../research/daily-ai-analysis.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/intake.ts",
+      "to": "src/features/vnext/researchFunnel.ts",
+      "specifier": "../../../src/features/vnext/researchFunnel.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/intake.ts",
+      "to": "supabase/functions/daily-stock-analysis-v1/handler.ts",
+      "specifier": "./handler.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/intake.ts",
+      "to": "supabase/functions/_shared/market-session-contract.mjs",
+      "specifier": "../_shared/market-session-contract.mjs"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/intake.ts",
+      "to": "research/daily-ai-global-market.ts",
+      "specifier": "../../../research/daily-ai-global-market.ts"
+    },
+    {
+      "from": "research/daily-ai-seed.ts",
+      "to": "research/daily-ai-packets.ts",
+      "specifier": "./daily-ai-packets.ts"
+    },
+    {
+      "from": "research/daily-ai-seed.ts",
+      "to": "research/daily-ai-analysis.ts",
+      "specifier": "./daily-ai-analysis.ts"
+    },
+    {
+      "from": "research/daily-ai-seed.ts",
+      "to": "src/features/vnext/researchFunnel.ts",
+      "specifier": "../src/features/vnext/researchFunnel.ts"
+    },
+    {
+      "from": "research/daily-ai-seed.ts",
+      "to": "research/entry-opportunity.ts",
+      "specifier": "./entry-opportunity.ts"
+    },
+    {
+      "from": "research/daily-ai-seed.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "research/daily-ai-packets.ts",
+      "to": "research/daily-ai-analysis.ts",
+      "specifier": "./daily-ai-analysis.ts"
+    },
+    {
+      "from": "research/daily-ai-packets.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "research/daily-ai-packets.ts",
+      "to": "src/features/vnext/researchFunnel.ts",
+      "specifier": "../src/features/vnext/researchFunnel.ts"
+    },
+    {
+      "from": "research/daily-ai-global-market.ts",
+      "to": "research/daily-ai-analysis.ts",
+      "specifier": "./daily-ai-analysis.ts"
+    },
+    {
+      "from": "research/daily-ai-global-market.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "research/daily-ai-global-market.ts",
+      "to": "supabase/functions/_shared/us-cash-session-calendar.ts",
+      "specifier": "../supabase/functions/_shared/us-cash-session-calendar.ts"
+    },
+    {
+      "from": "research/daily-ai-global-market.ts",
+      "to": "supabase/functions/_shared/market-session-contract.mjs",
+      "specifier": "../supabase/functions/_shared/market-session-contract.mjs"
+    },
+    {
+      "from": "supabase/functions/_shared/us-cash-session-calendar.ts",
+      "to": "supabase/functions/_shared/market-session-contract.mjs",
+      "specifier": "./market-session-contract.mjs"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/source-handler.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../../../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/source-handler.ts",
+      "to": "supabase/functions/daily-stock-analysis-v1/intake.ts",
+      "specifier": "./intake.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/source-handler.ts",
+      "to": "supabase/functions/daily-stock-analysis-v1/handler.ts",
+      "specifier": "./handler.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/source.ts",
+      "to": "research/daily-ai-seed.ts",
+      "specifier": "../../../research/daily-ai-seed.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/source.ts",
+      "to": "research/daily-ai-refresh.ts",
+      "specifier": "../../../research/daily-ai-refresh.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/source.ts",
+      "to": "research/daily-ai-financial-refresh.ts",
+      "specifier": "../../../research/daily-ai-financial-refresh.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/source.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../../../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/source.ts",
+      "to": "src/features/vnext/researchFunnel.ts",
+      "specifier": "../../../src/features/vnext/researchFunnel.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/source.ts",
+      "to": "research/daily-ai-analysis.ts",
+      "specifier": "../../../research/daily-ai-analysis.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/source.ts",
+      "to": "supabase/functions/daily-stock-analysis-v1/intake.ts",
+      "specifier": "./intake.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/source.ts",
+      "to": "supabase/functions/daily-stock-analysis-v1/source-handler.ts",
+      "specifier": "./source-handler.ts"
+    },
+    {
+      "from": "research/daily-ai-refresh.ts",
+      "to": "research/entry-official-history.ts",
+      "specifier": "./entry-official-history.ts"
+    },
+    {
+      "from": "research/daily-ai-refresh.ts",
+      "to": "supabase/functions/_shared/market-session-contract.mjs",
+      "specifier": "../supabase/functions/_shared/market-session-contract.mjs"
+    },
+    {
+      "from": "research/daily-ai-refresh.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "research/daily-ai-refresh.ts",
+      "to": "src/features/vnext/researchFunnel.ts",
+      "specifier": "../src/features/vnext/researchFunnel.ts"
+    },
+    {
+      "from": "research/entry-official-history.ts",
+      "to": "research/entry-opportunity.ts",
+      "specifier": "./entry-opportunity.ts"
+    },
+    {
+      "from": "research/daily-ai-financial-refresh.ts",
+      "to": "research/entry-opportunity.ts",
+      "specifier": "./entry-opportunity.ts"
+    },
+    {
+      "from": "research/daily-ai-financial-refresh.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "research/daily-ai-financial-refresh.ts",
+      "to": "src/features/vnext/researchFunnel.ts",
+      "specifier": "../src/features/vnext/researchFunnel.ts"
+    },
+    {
+      "from": "research/daily-ai-official-news.ts",
+      "to": "research/entry-opportunity.ts",
+      "specifier": "./entry-opportunity.ts"
+    },
+    {
+      "from": "research/daily-ai-official-news.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "research/daily-ai-official-news.ts",
+      "to": "research/daily-ai-analysis.ts",
+      "specifier": "./daily-ai-analysis.ts"
+    },
+    {
+      "from": "research/sec-daily-financial-replay.candidate.ts",
+      "to": "research/entry-opportunity.ts",
+      "specifier": "./entry-opportunity.ts"
+    },
+    {
+      "from": "research/sec-daily-financial-replay.candidate.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "research/sec-daily-financial-replay.candidate.ts",
+      "to": "src/features/vnext/researchFunnel.ts",
+      "specifier": "../src/features/vnext/researchFunnel.ts"
+    },
+    {
+      "from": "research/sec-daily-financial-replay.candidate.ts",
+      "to": "research/daily-ai-financial-refresh.ts",
+      "specifier": "./daily-ai-financial-refresh.ts"
+    },
+    {
+      "from": "research/sec-daily-financial-replay.candidate.ts",
+      "to": "research/sec-quarter-financials.ts",
+      "specifier": "./sec-quarter-financials.ts"
+    },
+    {
+      "from": "research/sec-quarter-financials.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "research/sec-quarter-financials.ts",
+      "to": "src/features/vnext/researchFunnel.ts",
+      "specifier": "../src/features/vnext/researchFunnel.ts"
+    },
+    {
+      "from": "research/sec-quarter-financials.ts",
+      "to": "src/features/vnext/stockResearch.ts",
+      "specifier": "../src/features/vnext/stockResearch.ts"
+    },
+    {
+      "from": "src/features/vnext/researchFunnel.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "./contracts.ts"
+    },
+    {
+      "from": "src/features/vnext/researchFunnel.ts",
+      "to": "src/features/vnext/projection.ts",
+      "specifier": "./projection.ts"
+    },
+    {
+      "from": "src/features/vnext/researchFunnel.ts",
+      "to": "src/features/vnext/publicationReadiness.ts",
+      "specifier": "./publicationReadiness.ts"
+    },
+    {
+      "from": "src/features/vnext/researchFunnel.ts",
+      "to": "src/features/vnext/stockResearch.ts",
+      "specifier": "./stockResearch.ts"
+    },
+    {
+      "from": "src/features/vnext/projection.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "./contracts.ts"
+    },
+    {
+      "from": "src/features/vnext/publicationReadiness.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "./contracts.ts"
+    },
+    {
+      "from": "src/features/vnext/publicationReadiness.ts",
+      "to": "src/features/vnext/realResearch.ts",
+      "specifier": "./realResearch.ts"
+    },
+    {
+      "from": "src/features/vnext/publicationReadiness.ts",
+      "to": "src/features/vnext/projection.ts",
+      "specifier": "./projection.ts"
+    },
+    {
+      "from": "src/features/vnext/realResearch.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "./contracts.ts"
+    },
+    {
+      "from": "src/features/vnext/realResearch.ts",
+      "to": "src/features/vnext/projection.ts",
+      "specifier": "./projection.ts"
+    },
+    {
+      "from": "src/features/vnext/stockResearch.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "./contracts.ts"
+    },
+    {
+      "from": "src/features/vnext/stockResearch.ts",
+      "to": "src/features/vnext/researchFunnel.ts",
+      "specifier": "./researchFunnel.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/repair-handler.ts",
+      "to": "supabase/functions/daily-stock-analysis-v1/handler.ts",
+      "specifier": "./handler.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/repair-handler.ts",
+      "to": "supabase/functions/_shared/daily-stock-ai-runner.ts",
+      "specifier": "../_shared/daily-stock-ai-runner.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/repair-handler.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../../../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/repair-handler.ts",
+      "to": "research/daily-ai-analysis.ts",
+      "specifier": "../../../research/daily-ai-analysis.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/repair-handler.ts",
+      "to": "research/daily-ai-batch.ts",
+      "specifier": "../../../research/daily-ai-batch.ts"
+    },
+    {
+      "from": "research/documented-review-replay-v2.candidate.ts",
+      "to": "research/entry-opportunity.ts",
+      "specifier": "./entry-opportunity.ts"
+    },
+    {
+      "from": "research/documented-review-replay-v2.candidate.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "research/documented-review-replay-v2.candidate.ts",
+      "to": "src/features/vnext/researchFunnel.ts",
+      "specifier": "../src/features/vnext/researchFunnel.ts"
+    },
+    {
+      "from": "research/documented-review-replay-v2.candidate.ts",
+      "to": "research/daily-ai-financial-refresh.ts",
+      "specifier": "./daily-ai-financial-refresh.ts"
+    },
+    {
+      "from": "research/documented-review-replay-v2.candidate.ts",
+      "to": "research/documented-review-v2-contract.candidate.ts",
+      "specifier": "./documented-review-v2-contract.candidate.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-handler.ts",
+      "to": "supabase/functions/daily-stock-analysis-v1/handler.ts",
+      "specifier": "./handler.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-handler.ts",
+      "to": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-runner.ts",
+      "specifier": "./rate-limit-recovery-runner.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-handler.ts",
+      "to": "src/features/vnext/contracts.ts",
+      "specifier": "../../../src/features/vnext/contracts.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-handler.ts",
+      "to": "research/daily-ai-analysis.ts",
+      "specifier": "../../../research/daily-ai-analysis.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-handler.ts",
+      "to": "research/daily-ai-batch.ts",
+      "specifier": "../../../research/daily-ai-batch.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-runner.ts",
+      "to": "research/daily-ai-batch.ts",
+      "specifier": "../../../research/daily-ai-batch.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-runner.ts",
+      "to": "research/daily-ai-analysis.ts",
+      "specifier": "../../../research/daily-ai-analysis.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-runner.ts",
+      "to": "supabase/functions/_shared/daily-stock-ai.ts",
+      "specifier": "../_shared/daily-stock-ai.ts"
+    },
+    {
+      "from": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-runner.ts",
+      "to": "supabase/functions/_shared/daily-stock-ai-jobs.ts",
+      "specifier": "../_shared/daily-stock-ai-jobs.ts"
+    }
+  ],
+  "type_assertion_erasures": [
+    {
+      "name": "research/daily-ai-global-market.ts",
+      "original_sha256": "bfe75553300a1e0d9dc1871d78336524ccfd31e05e939bf4e8fd3e8f4944bf70",
+      "candidate_sha256": "a6b9138e359a47a77a803e7c11af1fc461dad3a4fd52193ca615dc587363a094",
+      "emitted_js_sha256": "722d386e3e91f6b8d41a1b967652a9bcfaac0a8c803fa7eb0b3e3237228ad034",
+      "emitted_js_byte_identical": true
+    },
+    {
+      "name": "research/daily-ai-refresh.ts",
+      "original_sha256": "4dc5466aef695b24da06fb371c614c1a6094598d46678aa8ec66becce833fa7d",
+      "candidate_sha256": "bd79d2b1c6f3517e51e5ac547df8b10cbb3bfc68818adacbace3e595315084a8",
+      "emitted_js_sha256": "5fbe04e554a8f66efa2951d0bd75fdb8a415499da0b9768c6110f49cd965a95f",
+      "emitted_js_byte_identical": true
+    }
+  ],
+  "recovery_patch": {
+    "schema": "DAILY_AI_RATE_LIMIT_RECOVERY_EDGE_PATCH_V1",
+    "base_index_sha256": "bfe8f7c5602132c5ee3c198f478bf5017dff0f81b0b873ead851fea2b0cbdd06",
+    "candidate_index_sha256": "f3d221e45f03ee586bac619a4f2ac02df9d32227ea5d10b60b9e9d05360429d1",
+    "changes": [
+      "Two new recovery module imports",
+      "One early server-only recovery route before citation repair",
+      "Normal autoContinue requires one actual COMPLETE"
+    ],
+    "fixed_model": "gpt-6-astra",
+    "fixed_prompt": "prompt-7:reasoning-low",
+    "recovery_model_revision": "gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low:recovery-1",
+    "recovery_auto_continue": false,
+    "original_complete_rewritten": false,
+    "job_attempts_reset": false,
+    "publication_granted": false,
+    "full_integration_admission": false,
+    "production_change_performed": false,
+    "additional_source_files": [
+      "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-handler.ts",
+      "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-runner.ts"
+    ]
+  },
+  "provider_archive_hash": "AVAILABLE_ONLY_AFTER_DEPLOYMENT",
+  "model_calls": 0,
+  "production_writes": 0,
+  "deploy": false
+}

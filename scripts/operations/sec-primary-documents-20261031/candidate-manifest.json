@@ -1,0 +1,21 @@
+{
+  "schema": "EXACT_SEC_PRIMARY_DOCUMENTS_CANDIDATE_V1",
+  "signature": "vnext_private.ai_use_primary_documents_v1(text,text[],text[])",
+  "live_definition_sha256": "615d822ecd384d65e92cc9232a373af3a91610b5fdbd9d52a75236b57a2493a9",
+  "candidate_definition_sha256": "93f4623a2f17ad952f049804c2e2b1ca640d712ea7f92a0842aed9292a92737a",
+  "exact_additional_documents": [
+    "https://www.sec.gov/about/webmaster-frequently-asked-questions",
+    "https://www.sec.gov/about/privacy-information",
+    "https://www.sec.gov/search-filings/edgar-application-programming-interfaces"
+  ],
+  "function_body_delta": "Replace only the existing Federal Reserve exact-URL exception predicate with the same exception plus these three exact strings. All other bytes remain unchanged.",
+  "url_domain_wildcard_added": false,
+  "source_use_automatically_authorized": false,
+  "basis_rules_changed": false,
+  "function_acl_changed": false,
+  "function_security_changed": false,
+  "business_data_written": false,
+  "production_change_performed": false,
+  "candidate_sql_sha256": "17e77864fb1cdf52e779e0248d8471abc918585268ed74cb87a149a2ad7f0c83",
+  "rollback_sql_sha256": "bbaa9e68e45f9d82832c778a5ba6e65a4158bce82f52cd826a1ce12af6143294"
+}

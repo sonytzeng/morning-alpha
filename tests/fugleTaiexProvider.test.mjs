@@ -68,6 +68,15 @@ const officialTicker = {
   closeTime: '13:30:00',
 };
 
+// Explicit synthetic quote controls. These are not new live Fugle captures;
+// the original real fixture bodies and source hashes below remain unchanged.
+function syntheticCompletedQuote(symbol, date, closePrice = 100, previousClose = 99) {
+  return { date, symbol: symbol === 'TAIEX' ? 'IX0001' : '2330',
+    type: symbol === 'TAIEX' ? 'INDEX' : 'EQUITY', exchange: 'TWSE', market: 'TSE',
+    closePrice, previousClose, isClose: true,
+    lastUpdated: Date.parse(`${date}T13:30:00+08:00`) * 1000 };
+}
+
 function evidenceRows(includeTaiex) {
   return CHECKPOINT_PROVIDER_KEYS.filter(key => includeTaiex || key !== 'TAIEX').map((key, index) => ({
     provider_key: key,
@@ -109,28 +118,32 @@ test('official INDEX mapping is GET IX0001 and is startup-testable', () => {
   assert.equal(validateFugleTaiexTicker(officialTicker, '2026-09-14').valid, true);
 });
 
-test('official symbol discovery then latest-completed-session ticker succeeds for premarket', async () => {
+test('synthetic completed prior-session quote succeeds for premarket with original time and measured change', async () => {
   const calls = [];
-  const completedSessionTicker = { ...officialTicker, date: '2026-09-11' };
+  const completedQuote = syntheticCompletedQuote('TAIEX', '2026-09-11');
   const result = await resolveFugleTaiexProvider(async request => {
     calls.push(request);
     return request.endpoint.includes('tickers?')
       ? { status: 200, payload: officialDiscovery }
-      : { status: 200, payload: completedSessionTicker };
+      : { status: 200, payload: completedQuote };
   }, { tradingDate: '2026-09-14', phase: 'premarket', observedAt: '2026-09-14T07:00:00+08:00' });
   assert.equal(result.ok, true);
   assert.equal(result.symbol, 'IX0001');
-  assert.equal(result.priceBasis, 'CURRENT_SESSION_REFERENCE_PRICE');
-  assert.equal(result.referencePrice, 46184.85);
+  assert.equal(result.priceBasis, 'CURRENT_SESSION_QUOTE');
+  const normalized = normalizeFugleTaiwanCoreResult(result, 'TAIEX');
+  assert.equal(normalized.value, 100);
+  assert.equal(normalized.change, 1);
+  assert.equal(normalized.changePercent, 1 / 99 * 100);
+  assert.equal(normalized.capturedAt, '2026-09-11T05:30:00.000Z');
   assert.deepEqual(calls.map(call => call.endpoint), [
-    'stock/intraday/ticker/IX0001',
+    'stock/intraday/quote/IX0001',
     'stock/intraday/tickers?type=INDEX&exchange=TWSE',
   ]);
   assert.ok(calls.every(call => call.requestType === 'GET'));
   assert.doesNotMatch(calls.map(call => call.endpoint).join(' '), /quote\/TAIEX|tse_t00|api\.twse|previous/i);
 });
 
-test('premarket ticker accepts the prior completed session as the opening reference', async () => {
+test('ticker metadata can be a reference but cannot stand for a completed premarket quote', async () => {
   const captured = {
     date: '2026-09-14', name: '發行量加權股價指數', type: 'INDEX', market: 'TSE',
     symbol: 'IX0001', exchange: 'TWSE', openTime: '0900', closeTime: '1330', previousClose: 45862.52,
@@ -149,12 +162,12 @@ test('premarket ticker accepts the prior completed session as the opening refere
     : { status: 200, payload: captured }, {
     tradingDate: '2026-09-15', phase: 'premarket', observedAt: '2026-09-15T07:00:00+08:00',
   });
-  assert.equal(result.ok, true);
-  assert.equal(result.referencePrice, 45862.52);
-  assert.equal(result.priceBasis, 'CURRENT_SESSION_PREVIOUS_CLOSE_REFERENCE');
+  assert.equal(result.ok, false);
+  assert.equal(result.failureCode, 'PROVIDER_RESPONSE_CONTRACT_INVALID');
+  assert.equal(result.rejectedField, 'completed_close');
 });
 
-test('9/16 current-date ticker envelope maps previousClose to the latest completed session', async () => {
+test('unchanged real 9/16 ticker capture reproduces the former basis ambiguity and is now rejected', async () => {
   const direct = capture.responses.TAIEX;
   const discovery = failureCapture.responses.TAIEX_DISCOVERY;
   assert.equal(capture.real_production_capture, true);
@@ -166,10 +179,9 @@ test('9/16 current-date ticker envelope maps previousClose to the latest complet
     : { status: direct.http_status, payload: direct.payload }, {
     tradingDate: '2026-09-16', phase: 'premarket', observedAt: '2026-09-16T07:00:00+08:00',
   });
-  assert.equal(currentEnvelope.ok, true);
-  assert.equal(currentEnvelope.validation.provider_envelope_date, '2026-09-16');
-  assert.equal(currentEnvelope.validation.evidence_session_date, '2026-09-15');
-  assert.equal(currentEnvelope.validation.session_contract.provider_session_date, '2026-09-15');
+  assert.equal(currentEnvelope.ok, false);
+  assert.equal(currentEnvelope.failureCode, 'PROVIDER_RESPONSE_CONTRACT_INVALID');
+  assert.equal(currentEnvelope.rejectedField, 'completed_close');
 
   assert.equal(phaseFixture.fixture_type, 'SYNTHETIC_CONTRACT_FIXTURE');
   const calls = [];
@@ -179,17 +191,31 @@ test('9/16 current-date ticker envelope maps previousClose to the latest complet
       ? { status: discovery.http_status, payload: discovery.payload }
       : { status: 200, payload: phaseFixture.responses.TAIEX };
   }, { tradingDate: '2026-09-16', phase: 'premarket', observedAt: '2026-09-16T07:00:00+08:00' });
+  assert.equal(result.ok, false);
+  assert.equal(result.rejectedField, 'completed_close');
+  assert.deepEqual(calls, [FUGLE_TAIEX_CONTRACT.quoteEndpoint]);
+  assert.equal(normalizeFugleTaiwanCoreResult(result, 'TAIEX'), null);
+});
+
+test('synthetic completed quote preserves advisory empty discovery without restoring ticker fallback', async () => {
+  const calls = [];
+  const result = await resolveFugleTaiexProvider(async request => {
+    calls.push(request.endpoint);
+    return request.endpoint.includes('tickers?')
+      ? { status: 200, payload: { type: 'INDEX', exchange: 'TWSE', data: [] } }
+      : { status: 200, payload: syntheticCompletedQuote('TAIEX', '2026-09-15') };
+  }, { tradingDate: '2026-09-16', phase: 'premarket', observedAt: '2026-09-16T07:00:00+08:00' });
   assert.equal(result.ok, true);
   assert.equal(result.discoveryStatus, 'EMPTY_PHASE_VARIANT_DIRECT_RESOURCE_VALID');
-  assert.deepEqual(calls, [FUGLE_TAIEX_CONTRACT.tickerEndpoint, FUGLE_TAIEX_CONTRACT.discoveryEndpoint]);
+  assert.deepEqual(calls, [FUGLE_TAIEX_CONTRACT.quoteEndpoint, FUGLE_TAIEX_CONTRACT.discoveryEndpoint]);
   const normalized = normalizeFugleTaiwanCoreResult(result, 'TAIEX');
   assert.equal(normalized.sourceSymbol, 'IX0001');
-  assert.equal(normalized.value, 45000);
+  assert.equal(normalized.value, 100);
   assert.equal(normalized.raw.date, '2026-09-15');
   assert.equal(normalized.raw.evidence_session_date, '2026-09-15');
 });
 
-test('2330 uses ticker before open, quote intraday, and rejects stale or malformed contracts', async () => {
+test('2330 requires a completed quote before open, retains quote intraday, and rejects ticker-only data', async () => {
   assert.equal(validateFugle2330AdapterMapping().valid, true);
   assert.deepEqual(FUGLE_2330_CONTRACT, {
     provider: 'fugle', displaySymbol: '2330', symbol: '2330', type: 'EQUITY',
@@ -205,9 +231,15 @@ test('2330 uses ticker before open, quote intraday, and rejects stale or malform
     premarketCalls.push(request.endpoint);
     return { status: 200, payload: ticker };
   }, { tradingDate: '2026-09-16', phase: 'premarket', observedAt: '2026-09-16T07:00:00+08:00' });
-  assert.equal(premarket.ok, true);
-  assert.deepEqual(premarketCalls, [FUGLE_2330_CONTRACT.tickerEndpoint]);
-  assert.equal(normalizeFugleTaiwanCoreResult(premarket, '2330').value, 2385);
+  assert.equal(premarket.ok, false);
+  assert.deepEqual(premarketCalls, [FUGLE_2330_CONTRACT.quoteEndpoint]);
+  assert.equal(normalizeFugleTaiwanCoreResult(premarket, '2330'), null);
+  const synthetic = await resolveFugle2330Provider(async () => ({status:200,
+    payload:syntheticCompletedQuote('2330','2026-09-15',2400,2385)}),
+  {tradingDate:'2026-09-16',phase:'premarket',observedAt:'2026-09-16T07:00:00+08:00'});
+  assert.equal(synthetic.ok,true);
+  assert.equal(normalizeFugleTaiwanCoreResult(synthetic,'2330').value,2400);
+  assert.equal(normalizeFugleTaiwanCoreResult(synthetic,'2330').change,15);
 
   const quote = capture.responses['2330'];
   assert.equal(responseHash(quote.payload), quote.source_hash);
@@ -219,6 +251,29 @@ test('2330 uses ticker before open, quote intraday, and rejects stale or malform
   assert.equal(intraday.endpoint, FUGLE_2330_CONTRACT.quoteEndpoint);
   assert.equal(validateFugle2330Ticker({ ...ticker, date: '2026-09-15' }, '2026-09-16').failure_code, 'STALE_PROVIDER_DATA');
   assert.equal(validateFugle2330Ticker({ ...ticker, referencePrice: 0, previousClose: null }, '2026-09-15').failure_code, 'PROVIDER_RESPONSE_CONTRACT_INVALID');
+});
+
+test('premarket completed quote cannot fall back from missing previousClose to referencePrice', async () => {
+  for (const symbol of ['TAIEX','2330']) {
+    const resolver=symbol==='TAIEX'?resolveFugleTaiexProvider:resolveFugle2330Provider;
+    for (const previousClose of [undefined, null, true, 0, -1]) {
+      const payload={...syntheticCompletedQuote(symbol,'2026-09-15'),referencePrice:95,previousClose};
+      const result=await resolver(async()=>({status:200,payload}),
+        {tradingDate:'2026-09-16',phase:'premarket',observedAt:'2026-09-16T07:00:00+08:00'});
+      assert.equal(result.ok,false);assert.equal(result.rejectedField,'completed_close');
+    }
+  }
+});
+
+test('premarket rejects missing, trial, conflicting or not-yet-completed quote proof but retains a true flat close', async () => {
+  const options={tradingDate:'2026-09-16',phase:'premarket',observedAt:'2026-09-16T07:00:00+08:00'};
+  for (const mutate of [p=>delete p.isClose,p=>p.isTrial=true,p=>p.price=110,
+    p=>p.lastUpdated=Date.parse('2026-09-15T13:00:00+08:00')*1000,p=>delete p.lastUpdated]) {
+    const payload=syntheticCompletedQuote('2330','2026-09-15');mutate(payload);
+    assert.equal((await resolveFugle2330Provider(async()=>({status:200,payload}),options)).ok,false);
+  }
+  const result=await resolveFugle2330Provider(async()=>({status:200,payload:syntheticCompletedQuote('2330','2026-09-15',100,100)}),options);
+  assert.equal(result.ok,true);assert.equal(normalizeFugleTaiwanCoreResult(result,'2330').changePercent,0);
 });
 
 test('missing/zero current-session reference fields fail closed without stale fallback', () => {

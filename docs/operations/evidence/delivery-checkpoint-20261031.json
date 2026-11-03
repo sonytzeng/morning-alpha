@@ -1,0 +1,117 @@
+{
+  "schema": "MORNING_ALPHA_DELIVERY_CHECKPOINT_V1",
+  "recorded_at": "2026-10-31T11:24:02.621386+00:00",
+  "goal": "Complete evidence-based short/mid/long stock research and inspect the site toward10000 verified paid subscriptions.",
+  "goal_fully_complete": false,
+  "actual_changes": [
+    "Live frontend723 with auth transport deadline, member Delta reads, polling continuity, exact expiry and clearer source/review limitations.",
+    "Home and plan page entries lead to stock research.",
+    "Live daily-stock-analysis-v1 V17 with retained SEC/review activation and a bounded recovery route.",
+    "Six guarded database migrations applied with isolated and independent validation."
+  ],
+  "modified_source_files": [
+    "src/lib/supabase.ts",
+    "src/lib/supabaseAuthFetch.ts",
+    "src/pages/academy/useAcademyAccess.ts",
+    "src/features/vnext/dailyAiMemberDelta.ts",
+    "src/features/vnext/dailyAiCopy.ts",
+    "src/pages/vnext/MemberPage.tsx",
+    "src/pages/vnext/DailyAiMemberResearch.tsx",
+    "src/pages/home/page.tsx",
+    "src/pages/pricing/Pricing.tsx",
+    "research/documented-review-replay-v2.candidate.ts",
+    "research/documented-review-v2-contract.candidate.ts",
+    "research/daily-ai-global-market.ts",
+    "research/daily-ai-refresh.ts",
+    "supabase/functions/daily-stock-analysis-v1/index.ts",
+    "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-handler.ts",
+    "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-runner.ts"
+  ],
+  "verification": {
+    "type_check": "PASS",
+    "build": "PASS",
+    "lint": "PASS",
+    "diff_check": "PASS",
+    "related_member_tests": 166,
+    "final_member_expiry_pricing_tests": 15,
+    "auth_transport_tests": 14,
+    "full_deno52": "PASS",
+    "database_checks": {
+      "retained_sec_v1": 56,
+      "exact_primary_documents": 532,
+      "member_delta": 97,
+      "429_pause": 215,
+      "recovery": 418,
+      "documented_reviews_v2": 52
+    },
+    "counts_overlap_and_are_not_added": true,
+    "full_historical_admission_suite": "Not claimed: earlier interrupted run450PASS/47FAIL/exit130 with historical sealed-fixture/SDK drift; unchanged fixtures were not rewritten."
+  },
+  "git": {
+    "branch": "codex/stock-delivery-20261030-verified-push",
+    "implementation_head": "21ad1f551ce210a8640d84fdb2bc0681feab155c",
+    "implementation_tree": "8a81b12eb79f8c83c1390ded0feca2da6fd8c0e8",
+    "remote_equivalent_implementation_commit": "d6d05c9a35feca36f3792df4cf61123d4d156deb",
+    "origin_main": "7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3",
+    "main_changed": false,
+    "committed": true,
+    "pushed": true,
+    "note": "Local and provider-created commits have different parent histories but exact same source trees. This metadata checkpoint is committed separately."
+  },
+  "deploy": {
+    "frontend_live": 723,
+    "edge_live": 17,
+    "edge_files_exact": 52
+  },
+  "migrations_applied": [
+    "retained_sec_daily_financials_v1",
+    "allow_exact_sec_primary_policy_documents_v1",
+    "member_ai_research_delta_v1",
+    "daily_stock_ai_provider_rate_limit_pause_v1",
+    "daily_stock_ai_rate_limit_recovery_v1",
+    "daily_stock_ai_documented_review_replay_v2"
+  ],
+  "cron_changed": false,
+  "new_batch": {
+    "id": "0524783a79af043a70be593d2e019c435bc067f168a5b2567a831e32d78b4ddc",
+    "original_complete": 18,
+    "original_failed_http429_attempt3": 54,
+    "recovery_calls": 1,
+    "recovery_complete": 0,
+    "recovery_failed_http429_attempt1": 1,
+    "next_dispatches_performed": false,
+    "edition_created": false,
+    "published": false,
+    "original_rows_unchanged_sha256": "34c6292275e246c088ed5dec1856b5cf95ff546a2836a45354ce38ede8df729e",
+    "independent_blocked_receipt_sha256": "d581324f434dff7e51ff5a7f38a4252cd6fe8d4d44e568b76c3f8705f514d8ff",
+    "pending_targeted_repairs": [
+      "1605: PB ratio compared to book-value amount",
+      "2049: missing comparison-price citation",
+      "2303: missing prior institutional-flow citation",
+      "2308: missing prior foreign-flow citation"
+    ]
+  },
+  "financial_research_limitations": {
+    "current_live_long_insufficient": 72,
+    "new_2330_three_horizon_pilot": "PASS: SHORT WAIT, MEDIUM WATCH, LONG conditional WAIT; draft only.",
+    "other_new_completed_long": 17,
+    "other_new_completed_long_status": "INSUFFICIENT",
+    "valuation_policy_expires_at": "2026-11-02T05:30:00Z",
+    "valuation_is_own_analysis_not_sec_verdict": true
+  },
+  "paid_goal": {
+    "target": 10000,
+    "payment_evidence_backed_subscriptions_observed": 0,
+    "external_payment_provider_reconciliation": false,
+    "billing_enabled": false,
+    "capacity_proven": false
+  },
+  "remaining_risks": [
+    "Provider still returns429; transient rate limit versus account quota is not established because provider error detail was not retained.",
+    "New72-stock batch and four targeted repairs remain incomplete; current approved edition stays live.",
+    "A later recovery requires review of actual provider availability and the preserved stop policy; never reset immutable attempts or remint old completed results.",
+    "Real new free/paying-user Auth and successful payment flows have not been verified.",
+    "10000 paid users and production concurrency capacity have not been achieved or proven.",
+    "V2 next-day source behavior was isolated-tested, not observed on a natural future trading-day run."
+  ]
+}

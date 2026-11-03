@@ -4,6 +4,7 @@
 import type { DecisionIdentity, EvidenceData, Row } from './decision-v1-data.ts';
 import { previousMarketTradingDate, isMarketTradingDate } from './market-session-contract.mjs';
 import { evaluationPhase } from './recommendation-phase.ts';
+import { compareTime, validObservationTime } from '../../../src/features/vnext/contracts.ts';
 
 export const MARKET_FLOW_CONTRACT = 'TWSE_BFI82U_MARKET_TWD_CANDIDATE_V1';
 const ENDPOINT = 'https://www.twse.com.tw/rwd/zh/fund/BFI82U';
@@ -12,6 +13,25 @@ const SHA = /^[a-f0-9]{64}$/;
 const timestamp = (value: unknown) => typeof value === 'string' && /(?:Z|[+-]\d{2}:\d{2})$/.test(value) ? Date.parse(value) : NaN;
 const object = (value: unknown): Row => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Row : {};
 const digest = async (value: unknown) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value)))), b => b.toString(16).padStart(2, '0')).join('');
+// A retained row may round-trip through JSONB with reordered object keys.
+// Compare every JSON value, not insertion order. This grants no source rights;
+// changed amounts, dates, lineage, arrays and unknown flags still conflict.
+function sameJsonRow(left: unknown, right: unknown): boolean {
+  const encode = (value: unknown, ancestors: Set<object>): string => {
+    if (value === null || typeof value === 'string' || typeof value === 'boolean') return JSON.stringify(value);
+    if (typeof value === 'number' && Number.isFinite(value)) return JSON.stringify(value);
+    if (!value || typeof value !== 'object' || ancestors.has(value)
+      || !Array.isArray(value) && ![Object.prototype, null].includes(Object.getPrototypeOf(value))) throw Error('INVALID_JSON_ROW');
+    ancestors.add(value);
+    const result = Array.isArray(value)
+      ? '[' + Array.from(value, v => encode(v, ancestors)).join(',') + ']'
+      : '{' + Object.keys(value).sort().map(k => JSON.stringify(k) + ':' + encode((value as Row)[k], ancestors)).join(',') + '}';
+    ancestors.delete(value);
+    return result;
+  };
+  try { return encode(left, new Set()) === encode(right, new Set()); }
+  catch { return false; }
+}
 const labels = ['自營商(自行買賣)', '自營商(避險)', '投信', '外資及陸資(不含外資自營商)', '外資自營商', '合計'];
 type Amounts = { buy: number; sell: number; net: number };
 export type MarketFlowCapture = {
@@ -113,9 +133,17 @@ export async function acquireMarketInstitutionalTwd(options: { date: string; fet
 export async function withMarketInstitutionalEvidence(data: EvidenceData, identity: DecisionIdentity, capture: MarketFlowCapture): Promise<EvidenceData> {
   const fail = (reason: string): EvidenceData => ({ ...data, failures: [...data.failures, reason] });
   if (!capture || typeof capture !== 'object' || !Array.isArray(capture.rows) || capture.rows.some(r => !r || typeof r !== 'object' || Array.isArray(r))) return fail('MARKET_FLOW_INVALID');
+  // Own the source/time/data snapshot before the first digest await. A caller
+  // cannot mutate a reconciled capture while its revision is being verified.
+  try { data = structuredClone(data); identity = structuredClone(identity); capture = structuredClone(capture); }
+  catch { return fail('MARKET_FLOW_INVALID'); }
   const cutoff = timestamp(identity.generated_at), available = timestamp(capture.available_at);
   const expected = previousMarketTradingDate('TW', identity.report_date);
+  // PostgreSQL receipts preserve six fractional digits. Date.parse truncates
+  // them, so it cannot authorize evidence at the same millisecond as cutoff.
   if (evaluationPhase(identity.generated_at) !== 'PREMARKET' || !identity.is_trading_day || !Number.isFinite(cutoff)
+    || !validObservationTime(identity.generated_at) || !validObservationTime(capture.available_at)
+    || compareTime(capture.available_at, identity.generated_at) > 0
     || capture.status !== 'PASS' || capture.contract !== MARKET_FLOW_CONTRACT || capture.trading_date !== expected
     || !Number.isFinite(available) || available > cutoff || capture.first_seen_at !== capture.available_at
     || capture.source !== marketFlowSource(capture.trading_date) || !SHA.test(capture.source_revision ?? '') || capture.rows.length !== 3) return fail('MARKET_FLOW_NOT_ADMISSIBLE');
@@ -129,7 +157,7 @@ export async function withMarketInstitutionalEvidence(data: EvidenceData, identi
     || Number(r.buy_amount) < 0 || Number(r.sell_amount) < 0 || Number(r.buy_amount) - Number(r.sell_amount) !== Number(r.net_amount)
     || r.id !== `bfi82u:${capture.source_revision}:${r.institution_type}`
     || data.flows.some(old => old.symbol === 'TAIEX' && old.trading_date === r.trading_date && old.institution_type === r.institution_type
-      && JSON.stringify(old) !== JSON.stringify(r)));
+      && !sameJsonRow(old, r)));
   if (conflict) return fail('MARKET_FLOW_CONFLICT');
   return { ...data, flows: [...data.flows, ...capture.rows.filter(r => !data.flows.some(old => old.id === r.id))] };
 }

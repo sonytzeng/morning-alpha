@@ -80,6 +80,39 @@ test('old cutoffs, pack construction after cutoff, invalid clocks and unsupporte
  for(const cutoff of ['2026-10-16T00:00:00Z','2026-10-18T23:59:59Z',new Date(Date.parse(at)-1).toISOString(),'2027-01-01T00:00:00Z','invalid'])await assert.rejects(()=>retainedQuarterFinancialFacts(cutoff));
 });
 
+test('PostgreSQL microsecond cutoff accepts the existing pack without rewriting source timestamps',async()=>{
+ const cutoff='2026-10-28T00:42:35.086465+00:00',before=structuredClone(pack);
+ const facts=await retainedQuarterFinancialFacts(cutoff);
+ assert.equal(facts.length,12);assert.deepEqual(pack,before);
+ assert(facts.every(f=>f.available_at===pack.created_at&&f.first_seen_at===pack.rows[0].source.first_seen_at));
+});
+
+test('pack availability one microsecond after cutoff is rejected, equal instants in other offsets are accepted',async()=>{
+ const candidate=structuredClone(pack);candidate.created_at='2026-10-19T09:08:23.667465Z';
+ const candidateSeal={...seal,source_pack_sha256:await snapshotHash(candidate)};
+ await assert.rejects(()=>normalizeFacts('2026-10-19T09:08:23.667464Z',candidate,candidateSeal),/CUTOFF_INVALID/);
+ const facts=await normalizeFacts('2026-10-19T17:08:23.667465+08:00',candidate,candidateSeal);
+ assert(facts.every(f=>f.available_at===candidate.created_at));
+});
+
+test('receipt and first-seen ordering is exact within a millisecond',async()=>{
+ const candidate=structuredClone(pack);candidate.created_at='2026-10-19T09:08:23.667465Z';
+ for(const row of candidate.rows){row.source.received_at=candidate.created_at;row.source.first_seen_at='2026-10-19T17:08:23.667465+08:00';}
+ const exactSeal={...seal,source_pack_sha256:await snapshotHash(candidate)};
+ assert.equal((await normalizeFacts(candidate.created_at,candidate,exactSeal)).length,12);
+ candidate.rows[0].source.first_seen_at='2026-10-19T09:08:23.667464Z';
+ const mismatchedSeal={...seal,source_pack_sha256:await snapshotHash(candidate)};
+ await assert.rejects(()=>normalizeFacts(candidate.created_at,candidate,mismatchedSeal),/SOURCE_INVALID/);
+ candidate.rows[0].source.received_at='2026-10-19T09:08:23.667466Z';candidate.rows[0].source.first_seen_at=candidate.rows[0].source.received_at;
+ const futureSeal={...seal,source_pack_sha256:await snapshotHash(candidate)};
+ await assert.rejects(()=>normalizeFacts(candidate.created_at,candidate,futureSeal),/SOURCE_INVALID/);
+});
+
+test('microsecond support still rejects excess precision and invalid calendar timestamps',async()=>{
+ for(const cutoff of ['2026-10-28T00:42:35.0864651Z','2026-02-30T00:00:00.123456Z','2026-10-28T24:00:00.000001Z'])
+  await assert.rejects(()=>retainedQuarterFinancialFacts(cutoff),/SOURCE_INVALID/);
+});
+
 test('changed source, shares, units, periods, amounts, receipt, publication or admission cannot be legitimized by a caller',async()=>{
  for(const change of [p=>p.rows[0].source.sha256='0'.repeat(64),p=>p.rows[0].source.url='https://example.test/other',p=>p.rows[0].source.received_at='2026-10-01T00:00:00Z',
   p=>p.rows[0].source.published_at=p.created_at,p=>p.rows[0].eps.basis='BASIC',p=>p.rows[0].eps.unit='USD_PER_ADR',p=>p.rows[0].eps.reported_decimal='99.00',

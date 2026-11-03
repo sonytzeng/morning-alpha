@@ -44,6 +44,12 @@ async function resolveTaiwan(key, payload) {
   });
 }
 
+function syntheticCompletedQuote(key) {
+  return { ...fixture.contract_payloads[key], date:'2026-09-22',
+    closePrice:100,previousClose:99,isClose:true,
+    lastUpdated:Date.parse('2026-09-22T13:30:00+08:00')*1000 };
+}
+
 test('9/23 retained Production evidence reproduces the exact 06:50 PASS to 07:00 date rejection', () => {
   assert.equal(fixture.fixture_type, 'REAL_PRODUCTION_PREDICATE_RECONSTRUCTION');
   assert.equal(fixture.real_raw_0700_payload_retained, false);
@@ -77,22 +83,28 @@ test('9/23 database candidate pins the deployed predecessor and changes only the
   assert.doesNotMatch(migration, /create table|alter table|insert into|update |delete from|grant |revoke |08:45|07:30/i);
 });
 
-test('9/23 current ticker envelope preserves the prior completed session lineage for both Taiwan providers', async () => {
+test('unchanged 9/23 ticker reconstruction is reference evidence and fails the new completed-quote requirement', async () => {
   for (const key of ['TAIEX', '2330']) {
     const result = await resolveTaiwan(key, fixture.contract_payloads[key]);
-    assert.equal(result.ok, true, key);
-    assert.equal(result.validation.provider_envelope_date, '2026-09-23', key);
-    assert.equal(result.validation.evidence_session_date, '2026-09-22', key);
-    assert.equal(result.validation.session_contract.provider_session_date, '2026-09-22', key);
-    const normalized = normalizeFugleTaiwanCoreResult(result, key);
-    assert.equal(normalized.value, fixture.immutable_session_lineage[key].close, key);
-    assert.equal(normalized.raw.provider_envelope_date, '2026-09-23', key);
-    assert.equal(normalized.raw.evidence_session_date, '2026-09-22', key);
+    assert.equal(result.ok, false, key);
+    assert.equal(result.rejectedField, 'completed_close', key);
+    assert.equal(normalizeFugleTaiwanCoreResult(result, key), null);
+  }
+});
+
+test('synthetic 9/23 completed quote control preserves the actual prior-session update time', async () => {
+  for (const key of ['TAIEX','2330']) {
+    const result=await resolveTaiwan(key,syntheticCompletedQuote(key));
+    assert.equal(result.ok,true,key);
+    const normalized=normalizeFugleTaiwanCoreResult(result,key);
+    assert.equal(normalized.value,100,key);assert.equal(normalized.change,1,key);
+    assert.equal(normalized.capturedAt,'2026-09-22T05:30:00.000Z',key);
+    assert.equal(normalized.raw.evidence_session_date,'2026-09-22',key);
     const slot = REQUIRED_PROVIDER_CONFIG.find(item => item.key === key);
     const evidence = validateRequiredProviderEvidence(slot, normalized, input);
     assert.equal(evidence.valid, true, `${key}:${evidence.error || 'invalid'}`);
     assert.equal(evidence.row.raw.tw_cash_provider_session_date, '2026-09-22', key);
-    assert.equal(evidence.row.raw.source_raw.response_date, '2026-09-23', key);
+    assert.equal(evidence.row.raw.source_raw.date, '2026-09-22', key);
   }
 });
 
@@ -121,7 +133,7 @@ test('9/23 parity fix remains fail-closed for stale/future premarket and prior-s
   }
 });
 
-test('9/23 Taiwan evidence completes one 11-row Atomic contract without changing the other nine slots', async () => {
+test('synthetic completed cash quote controls complete one 11-row Atomic contract with unchanged other nine slots', async () => {
   const rows = CHECKPOINT_PROVIDER_KEYS.map((key, index) => ({
     provider_key: key,
     checkpoint: 'PREMARKET',
@@ -147,7 +159,7 @@ test('9/23 Taiwan evidence completes one 11-row Atomic contract without changing
     },
   }));
   for (const key of ['TAIEX', '2330']) {
-    const result = await resolveTaiwan(key, fixture.contract_payloads[key]);
+    const result = await resolveTaiwan(key, syntheticCompletedQuote(key));
     const normalized = normalizeFugleTaiwanCoreResult(result, key);
     const slot = REQUIRED_PROVIDER_CONFIG.find(item => item.key === key);
     const evidence = validateRequiredProviderEvidence(slot, normalized, input);

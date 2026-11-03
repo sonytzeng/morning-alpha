@@ -6,7 +6,7 @@ import {execFileSync} from 'node:child_process';
 import {resolve,dirname,relative,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {isAsyncFunction,isGeneratorFunction} from 'node:util/types';
-import {INTEGRATION_BASE,INTEGRATION_MANIFEST,integrationHash,
+import {INTEGRATION_BASE,CURRENT_INTEGRATION_MANIFEST as INTEGRATION_MANIFEST,integrationHash,
  verifyIntegrationCandidate} from './integrationAdmission.mjs';
 import {forwardAwareReader} from './recommendationV2ForwardIntegrity.mjs';
 import {readRecommendationPredecessor} from './recommendationPhaseIntegrity.mjs';

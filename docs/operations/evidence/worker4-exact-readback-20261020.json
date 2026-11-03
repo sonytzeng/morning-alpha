@@ -1,0 +1,279 @@
+{
+  "schema": "WORKER4_EXACT_READBACK_SAFE_V1",
+  "version": 4,
+  "status": "ACTIVE",
+  "verify_jwt": true,
+  "import_map": false,
+  "eszip": "91bf73939e5dfde0740f7ba1ebf43830789d08b46cc1f8885583e451764501db",
+  "updated_at": 1792412666697,
+  "baseline_payload_sha": "34a0fe4a0b17dc56a72c43d7687738047b59d695ae1bbda676b85f321d9c0762",
+  "runtime_files": 44,
+  "matched": 44,
+  "exact_inventory": true,
+  "files": [
+    {
+      "name": "supabase/functions/vnext-daily-research-v1/index.ts",
+      "sha256": "fbc591c736dbc15913feeec381c14433b96004c4f03cce38ae21673af4c6c89d",
+      "bytes": 2993,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs",
+      "sha256": "4cb4017a3cb452fd73fd38066759a897e93ab5b2819432d76da8304e73731e93",
+      "bytes": 618,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/c4510bd92ebd6222ba56cabdd658d09feeb964f64a728107a089635edd6bf7de.mjs",
+      "sha256": "6a4a2baa419f90845f94c6991752c6b28e9bbd772bab96b9aa28c14daa523aaf",
+      "bytes": 59703,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/9be86b9f10fafb9db714e142be218b2876d16f7a228c1cc0cd8403239abd8da3.mjs",
+      "sha256": "02d13644492c718617a2232d7217647a615e9e32ec733966066d599ceccd1afe",
+      "bytes": 3003,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/0bce189b17b39939428919945e6a261663cfa3fb43d7be83b97eef1655ffa196.mjs",
+      "sha256": "7e0f018b41f34219e619651558c019106ffccd79aa6bff76921a2c160f5fca8f",
+      "bytes": 20260,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/98f2f4377da15fb84145ccb88d0745c482475b7004afef619afec387d83b2653.mjs",
+      "sha256": "04c3ba8ef60fd5ad9cca938c842c044869d8d6976a2faa796fb66d6d5f2056f2",
+      "bytes": 380,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/ccf2406bf8d2b9519c34c0c07dc74130ef4f7b3df582408b597e8078b222f45e.mjs",
+      "sha256": "d6f81e9d4f4defe9a82eff4fbe9f0355415de7cfa3ca1b08cd1ddc7f6ae5bd66",
+      "bytes": 212,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/b77ee1984adac5aca840baa3f11d3265a040c49f1ada99afefad72df1c43e353.mjs",
+      "sha256": "5753ec0a99414f4055f0c1f97691100f13d88e48a8443b00aebb90a512785fa2",
+      "bytes": 266119,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/c769f61979cd626fc8d202ae9955a3a810ae59bd552c56e138fb1daeb7e2c99b.mjs",
+      "sha256": "c5abc625b80aebdfcdc9b377e31f9df1d00381132f9771a411430287a23d7fb2",
+      "bytes": 226,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/a0943b39916396be354a3d6b9a13dcd2b7eb9fae6d00629f2b409e518f1663dd.mjs",
+      "sha256": "238cd0743827707cbc1c2d7c2cf1027dbc536fb53ec9a3fde0ff8026a3ac5385",
+      "bytes": 3205,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/855779118b7c638eea0976ec4b331a7e741f69dd35c7e97b5be927345723dc04.mjs",
+      "sha256": "ca79b8f4411c3d3502d88791b079099825d3d3f6ceac0ff7ecbeee24cfacd1f6",
+      "bytes": 24217,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/a67bcb8e00c067cc250bc24dd01da1277ed6452066387425b7b2cc11732e8867.mjs",
+      "sha256": "2a2bdca5bcf82e1dcd4979b20576e970d00fb00c1c84a12d0087dec4122fdf3c",
+      "bytes": 13536,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/d6476eb760b326c6efa9534e2de942be23983f472c9b8459c0effa4c263980e9.mjs",
+      "sha256": "6cbe57de46220624ff4b404c5527d045f86180701d26706fce960c8a41b7746d",
+      "bytes": 310,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/8474f19a1f21e74abb020fc7894da0ae847ad881f5684adafe32f7d0262077cf.mjs",
+      "sha256": "921c83c41a741fec993aa718ec5fd946210d709ff2ef12ae970cf5332c1f2d15",
+      "bytes": 29607,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/bb93fdafb91b4dd70fa236164dbf6ce27358fe93c4c9297643576dbce326a1c8.mjs",
+      "sha256": "fe5d8033de9593f2f427d3786ceacc30e546a0b4d048f1915b5c636a70202b61",
+      "bytes": 13538,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_c_worker_sdk/9135c3f83ea833d80bfd11156d394d0ba84f2442e97e084887e406bff42f4456.mjs",
+      "sha256": "a89ecb8cf2937462a52ec455270e2bcc75069862b1932e65695b10652cc087c6",
+      "bytes": 7613,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/vnext-daily-research-v1/handler.ts",
+      "sha256": "ea4ceab840aac823ad130e052477dce346a455ce700606c4f80db990c05a4954",
+      "bytes": 3703,
+      "equal": true
+    },
+    {
+      "name": "src/features/vnext/dailyRuntime.ts",
+      "sha256": "c3c3fc74881831295c4cf19970ba77b77182b6c171e5dde1f3db6610666cea48",
+      "bytes": 11492,
+      "equal": true
+    },
+    {
+      "name": "src/features/vnext/contracts.ts",
+      "sha256": "0a89f96f209c9c235416a4b060c85b38bb6d6799ad3234ef16156537fd50d579",
+      "bytes": 5344,
+      "equal": true
+    },
+    {
+      "name": "src/features/vnext/dailyAdapter.ts",
+      "sha256": "31f8648b4be3119a420cb25781e37643860a8e05fc5e16f99162dc72e18ad794",
+      "bytes": 16749,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/market-session-contract.mjs",
+      "sha256": "5b41e134ffd98e8eedcff8e782b104c96b7368ad3f455ec7ac2b406e74316d44",
+      "bytes": 2994,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/market-calendar-data.json",
+      "sha256": "6585353538e81881b3cecdfa5d982eb70ead06da177e449ec86c385a7ab6d232",
+      "bytes": 1671,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-stock-evidence.ts",
+      "sha256": "86be1e626de3bf5c746aa10d5abcfb99dbb8b86c7ab2e6dbb7151335170c47d1",
+      "bytes": 20000,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/decision-v1-evidence.ts",
+      "sha256": "2ef106edc162fb28b7579322dff9b89057b184a2166f51ce57ed31781190d848",
+      "bytes": 37102,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-phase.ts",
+      "sha256": "d517fb094ea41a8e70c16c132ca7dc9d48bb5c63efc7d7f36760502697a8e5d6",
+      "bytes": 8256,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/txf-session-contract.mjs",
+      "sha256": "e2fd629da470099a4a4436e8b52aaf097ca22422f95cc6f283d004e8eb646a1e",
+      "bytes": 2857,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/market-status.ts",
+      "sha256": "d285910516d5ae5e0f55d8ee4314da7b7e21214b766d20cda2853fa775af0737",
+      "bytes": 4766,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-official-actuals.ts",
+      "sha256": "ac1457eb889466931f14f4e9c5a44c3a6000a54a6657cd1c977cb4916714eea5",
+      "bytes": 7627,
+      "equal": true
+    },
+    {
+      "name": "research/entry-official-history.ts",
+      "sha256": "b0dd603063b1e5487cbad4ff4feb98859445903f1381c8ea20dc00d566819e38",
+      "bytes": 9416,
+      "equal": true
+    },
+    {
+      "name": "src/features/vnext/dailyParsers.mjs",
+      "sha256": "e6b1ad234ab7b0036223416776eba2809588ad7adb2f8255e9472003abd3e6f5",
+      "bytes": 14134,
+      "equal": true
+    },
+    {
+      "name": "src/features/vnext/researchFunnel.ts",
+      "sha256": "26e0e7e06002834bf7a853d0971147e7e1de40b3daae0cd9c8c10911e1c524c5",
+      "bytes": 19185,
+      "equal": true
+    },
+    {
+      "name": "src/features/vnext/projection.ts",
+      "sha256": "8a238c6eacc3972f0f3927346c4081d9e2dcb4c8613bcc4cb1825a3abaf688ae",
+      "bytes": 6768,
+      "equal": true
+    },
+    {
+      "name": "src/features/vnext/publicationReadiness.ts",
+      "sha256": "76f8d26b07c92e84cef82459b8c94bc9dbcabfbaaa6e86b67036b351c6a67058",
+      "bytes": 5892,
+      "equal": true
+    },
+    {
+      "name": "src/features/vnext/realResearch.ts",
+      "sha256": "adc05e968bce6c840c132d14bec7df076d4002b031471e0175c3a9e13346125f",
+      "bytes": 10995,
+      "equal": true
+    },
+    {
+      "name": "src/features/vnext/stockResearch.ts",
+      "sha256": "7583c0edca56aa4c225173ab5657ce894529df34efb63d745cab28c73dc887c5",
+      "bytes": 9226,
+      "equal": true
+    },
+    {
+      "name": "src/features/vnext/dailyOutcome.ts",
+      "sha256": "9cadb241bf73ed54e09dd8df9504c8d1798068c5bcf0ae38bc256548169fa373",
+      "bytes": 5930,
+      "equal": true
+    },
+    {
+      "name": "src/features/vnext/dailyIntelligence.ts",
+      "sha256": "22bdb3d495ec6c06fd6b2382524ef1727d6078d457fec3a2f724f15a6fc8528b",
+      "bytes": 15041,
+      "equal": true
+    },
+    {
+      "name": "research/entry-opportunity.ts",
+      "sha256": "c52ed2ce4f2d31010e295765eecea765a03856183e9a3db66854bacc47fde95a",
+      "bytes": 13799,
+      "equal": true
+    },
+    {
+      "name": "research/entry-v2-adapter.ts",
+      "sha256": "0f984a7610533fca1b1b266ce0e0888457174b68ba3609881ed3234ef834c041",
+      "bytes": 3631,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-shadow-v2-engine.ts",
+      "sha256": "5d934bb7c2be21ff66a0043a945b0d91edcbeb2a57166882715e8813da31766e",
+      "bytes": 16267,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-shadow-v2-sources.ts",
+      "sha256": "98475003460d215e764bf011aba5fae7a603ba3455e54be547dba75e79e23708",
+      "bytes": 24276,
+      "equal": true
+    },
+    {
+      "name": "src/features/research/recommendation-shadow-v2-summary.ts",
+      "sha256": "8ff6744d5b456fbef51191186b87a88b30ccd970e35bf2e11574766560cb3d2d",
+      "bytes": 4680,
+      "equal": true
+    },
+    {
+      "name": "src/features/research/recommendation-v2-forward.ts",
+      "sha256": "cc56810a11ce5f09ba82418a9079457abadee8ee9147cb204ffccec3fe7ac1ee",
+      "bytes": 7132,
+      "equal": true
+    },
+    {
+      "name": "supabase/functions/_shared/vnext-daily-hook.ts",
+      "sha256": "3903460c835d9fb0df749ebf050409bff56144aafbc6423bf1ac58dfc2a6bea0",
+      "bytes": 1622,
+      "equal": true
+    }
+  ]
+}

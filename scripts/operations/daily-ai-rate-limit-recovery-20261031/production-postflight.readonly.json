@@ -1,0 +1,225 @@
+{
+  "schema": "DAILY_AI_RATE_LIMIT_RECOVERY_PRODUCTION_READONLY_POSTFLIGHT_V1",
+  "recorded_at": "2026-10-31T11:08:42.460Z",
+  "project_id": "cttfzgvhiewfckydcrci",
+  "migration_applied_by": "root",
+  "candidate_sql_sha256": "eabfd2e637f095fbfc5ea3ec2ce10bb80303a23b47ff967813a4e581232efb3c",
+  "query_file": "scripts/operations/daily-ai-rate-limit-recovery-20261031/postflight.readonly.sql",
+  "status": "PASS",
+  "read_only": true,
+  "dispatch_executed": false,
+  "provider_calls": 0,
+  "models_executed": 0,
+  "recovery_route_deployed_by_this_agent": false,
+  "postflight": {
+    "phase": "AFTER_RECOVERY_BEFORE_V2_STAGE",
+    "progress": {
+      "counts": {
+        "remaining": 54,
+        "original_complete": 18,
+        "recovery_complete": 0
+      },
+      "schema": "DAILY_AI_RATE_LIMIT_RECOVERY_PROGRESS_V1",
+      "batch_id": "0524783a79af043a70be593d2e019c435bc067f168a5b2567a831e32d78b4ddc",
+      "complete": false,
+      "job_keys": [
+        "ee69eac89d9a9fe8449fe96dcd7a39552dec2a33c8729864dcf98e669d14eaa8",
+        "974a744d3d5b0023ae89a74fcf073ec0bf2949783dfc98ecd18b4a48d365132d",
+        "33fd6e8188d9e8fd9c1e63a81aa7c8d27c273bbce96b5d10f6120dd74d17a7f9",
+        "294d99d34c1401804d9fec4b384a0da1a593726baf8e5696c06a657dee8e7ac4",
+        "de3257c4659a97363d78f5a294af4e7e48d3727ed61c66ac57c7ea22799933a9",
+        "6f3b2866a3d0c92053bef5d47a4b128f36406eb8e42410ebb2626ffd04f7b83d",
+        "21eca5bfe5d0216cf1331aecb19413d1b46f3883ae6e796c7bbf18580a8a651e",
+        "c82774a3769bcf1553e8608b604b1187bb6f5bf5f6c621cd268aab36a5a00b8d",
+        "3a5e54af20b427a9dc71644a637ef132d835c1b7cc93e18f1bb312f202cf1dfd",
+        "eb75091c2e91a7ba99c14b2fe80b02e68d3c251cd4a30cd03b151a95a9a3d6b7",
+        "6eac6419658422463e67edd5d79dab43e5f3c821262d58a21f9d9de225eff149",
+        "66f89468f1c56876efe16353771fb694d8c88f1bd65efa75d9bf1106fbf6f3f0",
+        "81957ea6b05215eea747b69413945809f2591c46c66cb5f05678c3006553ffb3",
+        "cbf52bf044f679b50eaa27ab8d32f28de25536d41aa597bc177198b5963f96fd",
+        "7cf209f2c9f2940ef8d2b56733f173a0c73c33bae3b0479b0c04ff7dbc597419",
+        "bc51535c5ad3e9fdb91e410f6ba71d37c279b982673d9a0f50f36351e8244d49",
+        "52ffafdc53efecbe91282b525c78945a68ab4f1615947f31d9de5a93e8ea1129",
+        "0b78e66aa04245d73e28536ec1661e064b9f821e5dacd984b7af98143efdb87c"
+      ],
+      "member_published": false,
+      "original_model_revision": "gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low",
+      "recovery_model_revision": "gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low:recovery-1"
+    },
+    "functions": [
+      {
+        "owner": "postgres",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "prosecdef": true,
+        "signature": "public.daily_stock_ai_job_v1(text,text,text,jsonb,jsonb,uuid,text)",
+        "actual_acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "acl_matches": true,
+        "provolatile": "v",
+        "expected_acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "actual_sha256": "2a055e4746a570d3a4ab3c9324b5f7272d4798ca80164249252a53ce71662e98",
+        "expected_sha256": "2a055e4746a570d3a4ab3c9324b5f7272d4798ca80164249252a53ce71662e98",
+        "definition_matches": true
+      },
+      {
+        "owner": "postgres",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "prosecdef": true,
+        "signature": "public.daily_stock_ai_rate_limit_recovery_job_v1(text, text, text, text, text, text, jsonb, jsonb, uuid, text)",
+        "actual_acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "acl_matches": true,
+        "provolatile": "v",
+        "expected_acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "actual_sha256": "fcec571f097c18bb102b766dd2a84800874d8e07965d8a23e369b4add7048fb2",
+        "expected_sha256": "fcec571f097c18bb102b766dd2a84800874d8e07965d8a23e369b4add7048fb2",
+        "definition_matches": true
+      },
+      {
+        "owner": "postgres",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "prosecdef": true,
+        "signature": "public.dispatch_daily_stock_ai_batch_v1(text)",
+        "actual_acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "acl_matches": true,
+        "provolatile": "v",
+        "expected_acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "actual_sha256": "d0c3395e030c92b8cd55cedb53882fbb86cc07b37ac57c0d4b007db623467878",
+        "expected_sha256": "d0c3395e030c92b8cd55cedb53882fbb86cc07b37ac57c0d4b007db623467878",
+        "definition_matches": true
+      },
+      {
+        "owner": "postgres",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "prosecdef": true,
+        "signature": "public.dispatch_daily_stock_ai_rate_limit_recovery_v1(text, text, text)",
+        "actual_acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "acl_matches": true,
+        "provolatile": "v",
+        "expected_acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "actual_sha256": "32ca0f32baccaccbc70d988b35e2ebe00243e7a953a5ff11b883dfc0f397571d",
+        "expected_sha256": "32ca0f32baccaccbc70d988b35e2ebe00243e7a953a5ff11b883dfc0f397571d",
+        "definition_matches": true
+      },
+      {
+        "owner": "postgres",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "prosecdef": true,
+        "signature": "public.load_daily_stock_ai_rate_limit_recovery_progress_v1(text)",
+        "actual_acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "acl_matches": true,
+        "provolatile": "s",
+        "expected_acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "actual_sha256": "8c31eb5e297108a7bef1d71c5fd3022563201768098517bd19809800832d1c0a",
+        "expected_sha256": "8c31eb5e297108a7bef1d71c5fd3022563201768098517bd19809800832d1c0a",
+        "definition_matches": true
+      },
+      {
+        "owner": "postgres",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "prosecdef": true,
+        "signature": "public.load_daily_stock_ai_rate_limit_recovery_v1(text, text, text)",
+        "actual_acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "acl_matches": true,
+        "provolatile": "s",
+        "expected_acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "actual_sha256": "b2c30483420d9c420cc4ab831df4c049c57d447ebe1089a2c907edf5ec28e0ad",
+        "expected_sha256": "b2c30483420d9c420cc4ab831df4c049c57d447ebe1089a2c907edf5ec28e0ad",
+        "definition_matches": true
+      },
+      {
+        "owner": "postgres",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "prosecdef": true,
+        "signature": "public.stage_daily_ai_research_edition_v1(text,text[],timestamptz)",
+        "actual_acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "acl_matches": true,
+        "provolatile": "v",
+        "expected_acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "actual_sha256": "651467f9f66872cd17d1eaa9855e789f35a0b88ad8836bd0a04acff8a9f35efb",
+        "expected_sha256": "651467f9f66872cd17d1eaa9855e789f35a0b88ad8836bd0a04acff8a9f35efb",
+        "definition_matches": true
+      },
+      {
+        "owner": "postgres",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "prosecdef": true,
+        "signature": "vnext_runtime.daily_stock_ai_rate_limit_recovery_context_v1(text, text)",
+        "actual_acl": "{postgres=X/postgres}",
+        "acl_matches": true,
+        "provolatile": "s",
+        "expected_acl": "{postgres=X/postgres}",
+        "actual_sha256": "43ebb34cf9afacf435b452e22a71cb823f8bd8125548d720eb38da335256ae4b",
+        "expected_sha256": "43ebb34cf9afacf435b452e22a71cb823f8bd8125548d720eb38da335256ae4b",
+        "definition_matches": true
+      },
+      {
+        "owner": "postgres",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "prosecdef": false,
+        "signature": "vnext_runtime.seal_daily_stock_ai_rate_limit_recovery_receipt_v1()",
+        "actual_acl": "{postgres=X/postgres}",
+        "acl_matches": true,
+        "provolatile": "v",
+        "expected_acl": "{postgres=X/postgres}",
+        "actual_sha256": "2cd3a0e54a061311c0ff5d3eeab2f2db576e0ecddd6e2578f9b891afe9bfa8d8",
+        "expected_sha256": "2cd3a0e54a061311c0ff5d3eeab2f2db576e0ecddd6e2578f9b891afe9bfa8d8",
+        "definition_matches": true
+      }
+    ],
+    "original_jobs": {
+      "total": 72,
+      "running": 0,
+      "complete": 18,
+      "rowset_sha256": "34c6292275e246c088ed5dec1856b5cf95ff546a2836a45354ce38ede8df729e",
+      "failed_429_attempt3": 54
+    },
+    "receipt_table": {
+      "acl": "{postgres=arwdDxtm/postgres}",
+      "triggers": [
+        "CREATE TRIGGER immutable BEFORE DELETE OR UPDATE ON vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 FOR EACH ROW EXECUTE FUNCTION vnext_runtime.seal_daily_stock_ai_rate_limit_recovery_receipt_v1()",
+        "CREATE TRIGGER immutable_truncate BEFORE TRUNCATE ON vnext_runtime.ai_stock_rate_limit_recovery_receipts_v1 FOR EACH STATEMENT EXECUTE FUNCTION vnext_runtime.seal_daily_stock_ai_rate_limit_recovery_receipt_v1()"
+      ],
+      "raw_roles": [
+        {
+          "role": "anon",
+          "has_any_raw_privilege": false
+        },
+        {
+          "role": "authenticated",
+          "has_any_raw_privilege": false
+        },
+        {
+          "role": "service_role",
+          "has_any_raw_privilege": false
+        }
+      ],
+      "relrowsecurity": true,
+      "relforcerowsecurity": true
+    },
+    "recovery_jobs": 0,
+    "recovery_receipts": 0,
+    "current_batch_editions": 0
+  },
+  "validation_limits": [
+    "Postflight proves current database definitions, core metadata/ACL and row state; it is not a live recovery-provider or production concurrency test.",
+    "Local PostgreSQL418checks used the exact retained seed and synthetic analyses.",
+    "The separate V2 stage migration will intentionally change its old6514function fingerprint after this ordered postflight."
+  ]
+}

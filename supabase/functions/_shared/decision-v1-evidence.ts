@@ -28,6 +28,74 @@ function referenceValues(v: unknown): string[] {
   if (Array.isArray(v)) return v.flatMap(referenceValues);
   const r = obj(v); return ['id', 'source_ref', 'source_url', 'url', 'news_event_id'].flatMap(k => typeof r[k] === 'string' ? [String(r[k])] : []);
 }
+/** JSONB preserves values, not object insertion order. Compare the ENTIRE
+ * payload, including unknown metadata and authority flags; array order and
+ * value types remain significant. Non-JSON values/cycles fail closed. This is
+ * representation equality, never source equivalence or approval. */
+function sameJsonPayload(left: unknown, right: unknown): boolean {
+  const encode = (value: unknown, ancestors: Set<object>): string => {
+    if (value === null || typeof value === 'string' || typeof value === 'boolean') return JSON.stringify(value);
+    if (typeof value === 'number' && Number.isFinite(value)) return JSON.stringify(value);
+    if (!value || typeof value !== 'object' || ancestors.has(value)
+      || !Array.isArray(value) && ![Object.prototype, null].includes(Object.getPrototypeOf(value))) throw Error('INVALID_JSON_PAYLOAD');
+    ancestors.add(value);
+    const encoded = Array.isArray(value)
+      ? '[' + Array.from(value, v => encode(v, ancestors)).join(',') + ']'
+      : '{' + Object.keys(value).sort().map(k => JSON.stringify(k) + ':' + encode((value as Row)[k], ancestors)).join(',') + '}';
+    ancestors.delete(value);
+    return encoded;
+  };
+  try { return encode(left ?? null, new Set()) === encode(right ?? null, new Set()); }
+  catch { return false; }
+}
+/** Validate explicitly retained measurement identities, not investment quality.
+ * Legacy rows without this metadata retain their old contract; absence is NOT
+ * proof of BASIC, consolidated accounts, a source license, or a single quarter.
+ * Do not compare whole payloads across quarters: dates/values/source IDs differ. */
+function fundamentalMeasurementIssue(rows: Row[]): string | null {
+  const dimensions = new Map<string, Set<string>>();
+  const allowed: Record<string, readonly string[]> = {
+    accounting_basis: ['IFRS_AS_REPORTED'], consolidation: ['CONSOLIDATED', 'INDIVIDUAL'],
+    currency: ['TWD'], revenue_unit: ['TWD'], share_class: ['COMMON_SHARE'],
+    eps_basis: ['BASIC', 'DILUTED'], eps_unit: ['TWD_PER_COMMON_SHARE'],
+  };
+  for (const row of rows) {
+    const raw = obj(row.raw_payload), value = raw.measurement;
+    if (value === undefined || value === null) continue;
+    if (typeof value !== 'object' || Array.isArray(value)) return 'FUNDAMENTAL_MEASUREMENT_BASIS_UNPROVEN';
+    const m = obj(value), has = (key: string) => m[key] !== undefined && m[key] !== null;
+    const [, year, quarter] = str(row.fiscal_period).match(/^(\d{4})-?Q([1-4])$/)!;
+    const start = new Date(Date.UTC(Number(year), (Number(quarter) - 1) * 3, 1)).toISOString().slice(0, 10);
+    const end = new Date(Date.UTC(Number(year), Number(quarter) * 3, 0)).toISOString().slice(0, 10);
+    if (has('period_basis') && m.period_basis !== 'DIRECT_STANDALONE_QUARTER') return 'FUNDAMENTAL_PERIOD_BASIS_UNPROVEN';
+    if (has('symbol') && sym(m.symbol) !== sym(row.symbol)
+      || has('fiscal_year') && finite(m.fiscal_year) !== Number(year)
+      || has('fiscal_quarter') && finite(m.fiscal_quarter) !== Number(quarter)
+      || has('period_start') && m.period_start !== start || has('period_end') && m.period_end !== end) {
+      return 'FUNDAMENTAL_PERIOD_IDENTITY_MISMATCH';
+    }
+    if ((has('period_end') || m.period_basis === 'DIRECT_STANDALONE_QUARTER')
+      && time(row.announced_at) < time(`${end}T00:00:00+08:00`) + DAY) {
+      return 'FUNDAMENTAL_ANNOUNCEMENT_BEFORE_PERIOD_END';
+    }
+    // The existing canonical writer deliberately holds financial net revenue
+    // for a separately reviewed financial-Consensus policy. A Reader cannot
+    // silently turn it into generic nonfinancial revenue.
+    if (has('profile') && m.profile !== 'NONFINANCIAL_IFRS'
+      || has('revenue_definition') && m.revenue_definition !== 'IFRS_REVENUE') return 'FUNDAMENTAL_PROFILE_METHOD_REVIEW_REQUIRED';
+    if (has('revenue_scale') && finite(m.revenue_scale) !== 1) return 'FUNDAMENTAL_MEASUREMENT_BASIS_UNPROVEN';
+    for (const [key, values] of Object.entries(allowed)) {
+      if (!has(key)) continue;
+      if (typeof m[key] !== 'string' || !values.includes(m[key] as string)) return 'FUNDAMENTAL_MEASUREMENT_BASIS_UNPROVEN';
+      const seen = dimensions.get(key) ?? new Set<string>(); seen.add(m[key] as string); dimensions.set(key, seen);
+      if (seen.size > 1) return 'FUNDAMENTAL_MEASUREMENT_BASIS_CONFLICT';
+    }
+    for (const key of ['revenue_actual', 'eps_actual']) {
+      if (has(key) && (finite(m[key]) === null || finite(m[key]) !== finite(row[key]))) return 'FUNDAMENTAL_MEASUREMENT_VALUE_MISMATCH';
+    }
+  }
+  return null;
+}
 export function unavailableDecision(identity: DecisionIdentity, issue = 'INSUFFICIENT_EVIDENCE'): Decision {
   return { schema_version: 'decision-evidence-v1', calibration_status: 'INSUFFICIENT_HISTORY', ...identity,
     market_direction: null, market_regime: null, direction_probability: null, direction_evidence_score: null,
@@ -157,19 +225,63 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
     return factor((selected.reduce((s, r) => s + Number(r.net_amount), 0) / gross + 1) / 2, ids, '(sum(net_amount)/sum(buy_amount+sell_amount)+1)/2; same date/currency, all three institutions');
   };
   const totalFlow = flowsFor('TAIEX', str(taiwan[0]?.row.trading_date));
+  const fundamentalSelectionIssues = new Map<string, string>();
   const fundamentals = (symbol: string) => {
+    // Select the observed quarter/version universe BEFORE testing expectation
+    // completeness. Otherwise a newer Actual-only revision disappears here and
+    // an older optimistic full row silently becomes the current assessment.
     const rs = data.earnings.filter(r => sym(r.symbol) === symbol && known(r, 'announced_at', 'created_at') && str(r.source_ref) && str(r.provider)
-      && asOf - time(r.announced_at) <= 550 * DAY && [r.revenue_actual, r.revenue_consensus, r.eps_actual, r.eps_consensus].every(v => finite(v) !== null))
-      .sort((a, b) => time(b.announced_at) - time(a.announced_at));
-    const quarters = rs.slice(0, 4).map(r => str(r.fiscal_period).match(/^(\d{4})-?Q([1-4])$/)).map(m => m ? Number(m[1]) * 4 + Number(m[2]) : NaN);
-    if (rs.length < 4 || quarters.some((q, i) => !Number.isFinite(q) || i > 0 && quarters[i - 1] - q !== 1)
-      || rs.slice(0, 4).some(r => !url(r.source_ref) || Number(r.revenue_actual) < 0 || Number(r.revenue_consensus) <= 0)
-      || asOf - time(rs[0].announced_at) > 120 * DAY) return null;
-    const four = rs.slice(0, 4), latestRow = four[0];
+      && asOf - time(r.announced_at) <= 550 * DAY);
+    const groups = new Map<number, Row[]>(), identities = new Map<string, Row>();
+    for (const row of rs) {
+      const prior = identities.get(str(row.id));
+      if (prior && (time(prior.created_at) !== time(row.created_at)
+        || prior.provider !== row.provider || prior.source_ref !== row.source_ref
+        || prior.announced_at !== row.announced_at || prior.fiscal_period !== row.fiscal_period
+        || ['revenue_actual','revenue_consensus','eps_actual','eps_consensus','guidance_direction'].some(k => prior[k] !== row[k])
+        || !sameJsonPayload(prior.raw_payload, row.raw_payload))) {
+        fundamentalSelectionIssues.set(symbol, 'FUNDAMENTAL_ROW_ID_CONFLICT'); return null;
+      }
+      // A reread of the exact canonical identity is not a second observation.
+      // Distinct IDs remain separate evidence; conflicts above still fail closed.
+      if (prior) continue;
+      identities.set(str(row.id), row);
+      const period = str(row.fiscal_period).match(/^(\d{4})-?Q([1-4])$/);
+      if (!period) return null;
+      const ordinal = Number(period[1]) * 4 + Number(period[2]);
+      groups.set(ordinal, [...(groups.get(ordinal) ?? []), row]);
+    }
+    const quarters = [...groups.keys()].sort((a, b) => b - a).slice(0, 4);
+    if (quarters.length < 4 || quarters.some((q, i) => i > 0 && quarters[i - 1] - q !== 1)) return null;
+    const selected = quarters.map(q => groups.get(q)!.slice().sort((a, b) => str(a.id).localeCompare(str(b.id))));
+    for (const rows of selected) {
+      const first = rows[0];
+      // The legacy read contract has no supersession/measurement authority.
+      // Coalesce only identical projections of the SAME source and release;
+      // equal numbers from different providers/URLs are not equivalence proof.
+      // Revisions with changed values or missing fields must be reconciled by
+      // the independent source producer, never blended inside this evaluator.
+      if (rows.some(r => r.provider !== first.provider || url(r.source_ref) !== url(first.source_ref)
+        || time(r.announced_at) !== time(first.announced_at))) {
+        fundamentalSelectionIssues.set(symbol, 'FUNDAMENTAL_SOURCE_EQUIVALENCE_UNPROVEN'); return null;
+      }
+      const numeric = ['revenue_actual', 'revenue_consensus', 'eps_actual', 'eps_consensus'] as const;
+      if (rows.some(r => numeric.some(k => finite(r[k]) !== finite(first[k]))
+        || str(r.guidance_direction) !== str(first.guidance_direction)
+        || !sameJsonPayload(r.raw_payload, first.raw_payload))) {
+        fundamentalSelectionIssues.set(symbol, 'FUNDAMENTAL_REVISION_UNRESOLVED'); return null;
+      }
+      if (rows.some(r => !str(r.id) || !url(r.source_ref) || numeric.some(k => finite(r[k]) === null)
+        || Number(r.revenue_actual) < 0 || Number(r.revenue_consensus) <= 0)) return null;
+    }
+    const four = selected.map(rows => rows[0]), latestRow = four[0];
+    const measurementIssue = fundamentalMeasurementIssue(four);
+    if (measurementIssue) { fundamentalSelectionIssues.set(symbol, measurementIssue); return null; }
+    if (asOf - time(latestRow.announced_at) > 120 * DAY) return null;
     if (!['up', 'stable', 'down'].includes(str(latestRow.guidance_direction))) return null;
-    const ids = four.map(r => add('earnings_events', r, str(r.provider), str(r.announced_at), str(r.created_at), 'fundamental',
+    const ids = selected.flatMap(rows => rows.map(r => add('earnings_events', r, str(r.provider), str(r.announced_at), str(r.created_at), 'fundamental',
       `${symbol} ${str(r.fiscal_period)} 營收 ${Number(r.revenue_actual)}／預期 ${Number(r.revenue_consensus)}，EPS ${Number(r.eps_actual)}／預期 ${Number(r.eps_consensus)}`,
-      { revenue_actual: Number(r.revenue_actual), revenue_consensus: Number(r.revenue_consensus), eps_actual: Number(r.eps_actual), eps_consensus: Number(r.eps_consensus), guidance: str(r.guidance_direction) }, url(r.source_ref)));
+      { revenue_actual: Number(r.revenue_actual), revenue_consensus: Number(r.revenue_consensus), eps_actual: Number(r.eps_actual), eps_consensus: Number(r.eps_consensus), guidance: str(r.guidance_direction) }, url(r.source_ref))));
     const damaged = latestRow.guidance_direction === 'down' || (Number(latestRow.revenue_actual) < Number(latestRow.revenue_consensus) && Number(latestRow.eps_actual) < Number(latestRow.eps_consensus));
     const intact = four.every(r => Number(r.revenue_actual) >= Number(r.revenue_consensus) && Number(r.eps_actual) >= Number(r.eps_consensus)) && latestRow.guidance_direction !== 'down';
     return { damaged, intact, ids, latest: latestRow };
@@ -185,7 +297,10 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
     if (series.slice(-20).some(p => p.volume === null || p.volume <= 0) || series.length < 20) reasons.push('20_DAILY_VOLUMES_MISSING');
     const inst = flowsFor(symbol, str(q?.row.trading_date));
     if (!inst) reasons.push('THREE_INSTITUTIONS_MISSING');
-    if (!f) reasons.push('FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING');
+    if (!f) {
+      reasons.push('FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING');
+      const issue = fundamentalSelectionIssues.get(symbol); if (issue) reasons.push(issue);
+    }
     const mapping = data.mappings.filter(m => sym(m.stock_symbol) === symbol && known(m, 'created_at', 'created_at')).find(m => {
       const c = data.catalysts.find(c => c.id === m.catalyst_id && known(c, 'event_at', 'created_at'));
       return c && news.some(n => referenceValues(c.source_refs).some(ref => ref === n.row.id || ref === n.row.source_url))

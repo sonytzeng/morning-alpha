@@ -23,7 +23,8 @@ import {
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 import BeginnerTodayView from './BeginnerTodayView';
 import { canUseProductFeature, PRODUCT_FEATURE_FLAGS } from '@/config/productFeatures';
-import { getCurrentEntitlement } from '@/services/entitlementService';
+import { getCurrentEntitlement, invalidateReportRequestCache } from '@/services/entitlementService';
+import { supabase } from '@/lib/supabase';
 import { canShowBeginnerRecommendations } from '@/features/learning/beginnerReportContract';
 import { useReportDisplayMode } from '@/features/learning/useReportDisplayMode';
 import type { UserEntitlement } from '@/types/subscription';
@@ -267,8 +268,16 @@ function TodayReportContent() {
     trackPageView('/report/today');
     trackEngagementEvent('view_report_today');
 
-    async function load() {
+    let active = true, generation = 0;
+    const clear = () => {
+      setReport(null); setIdentity({ report_date: '', revision_id: null, generated_at: null });
+      setReportSnapshotRadar(null); setDisplayState(null); setEntitlement(null);
+      setIsHistoricalFallback(false); setFallbackReportDate(null); setError(null); setLoading(true);
+    };
+    async function load(request: number) {
+      const current = () => active && request === generation;
       try {
+        if (!current()) return;
         setLoading(true);
         setError(null);
 
@@ -278,6 +287,7 @@ function TodayReportContent() {
             ? getCurrentEntitlement().catch(() => null)
             : Promise.resolve(null),
         ]);
+        if (!current()) return;
         setEntitlement(currentEntitlement);
         const finalReport = resolved.rawRow
           ? mapRowToReport(resolved.rawRow as unknown as Record<string, unknown>)
@@ -301,13 +311,21 @@ function TodayReportContent() {
           radarFromReport as unknown as Record<string, unknown> | null,
         ));
       } catch {
-        setError('最新判斷暫時無法取得，請稍後重新載入。');
+        if (current()) setError('最新判斷暫時無法取得，請稍後重新載入。');
       } finally {
-        setLoading(false);
+        if (current()) setLoading(false);
       }
     }
 
-    load();
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (!active || !['SIGNED_OUT', 'SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED', 'PASSWORD_RECOVERY'].includes(event)) return;
+      const request = ++generation;
+      invalidateReportRequestCache();
+      clear();
+      queueMicrotask(() => { if (active && request === generation) void load(request); });
+    });
+    void load(generation);
+    return () => { active = false; generation++; authListener.subscription.unsubscribe(); };
   }, []);
 
 

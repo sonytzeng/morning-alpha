@@ -1,0 +1,153 @@
+{
+  "schema": "PRIVATE_RETAINED_ISSUER_FINANCIALS_V1",
+  "created_at": "2026-11-03T00:35:15.395Z",
+  "source_study_sha256": "ba5ebf1fdfdf0ead45c5911f74aec0e0b9cf73e41b26f0f38679fc318ddd2a2d",
+  "source_admitted": false,
+  "member_publication_approved": false,
+  "methodology_promoted": false,
+  "facts": [
+    {
+      "symbol": "2303",
+      "kind": "CAPEX",
+      "period": "2025-Q4",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 501.0,
+        "unit": "USD_MILLION",
+        "measurement_basis": "DIRECTLY_REPORTED_CAPEX_SPENDING_USD",
+        "consolidation": "CONSOLIDATED",
+        "currency": "USD",
+        "scale": 1000000,
+        "conversion_to_twd": "NOT_PERFORMED",
+        "scope": "ACTUAL_QUARTER_SPENDING_NOT_ANNUAL_BUDGET_OR_PPE"
+      },
+      "source": "https://www.umc.com/upload/media/08_Investors/Financials/Quarterly_Results/Quarterly_2020-2029_English_pdf/2025/Q4_2025/UMC25Q4_report.pdf",
+      "source_sha256": "f073538f637e15a287a5403efcf6f5651be099b7ba97c86ebdb54fe42e46f6eb",
+      "source_bytes": 477085,
+      "published_at": null,
+      "first_seen_at": "2026-11-01T13:33:08.416456+00:00",
+      "available_at": "2026-11-01T13:33:08.416456+00:00",
+      "source_received_at": "2026-11-01T13:33:08.416456+00:00",
+      "as_of": "2025-12-31T23:59:59+08:00",
+      "source_locator": {
+        "page": 9,
+        "row": "CAPEX spending in 4Q25 totaled US$... million",
+        "column": "CURRENT_QUARTER_SPENDING_SENTENCE_NOT_BUDGET"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "PDF_REEXTRACTED_DIRECT_QUARTER_RECEIPT_ONLY_USE_REVIEW_REQUIRED",
+      "normalizer_version": "UMC_IR_DIRECT_FINANCIALS_V1",
+      "id": "umc-ir-direct:2303:2025-Q4:CAPEX:f073538f637e15a287a5403efcf6f5651be099b7ba97c86ebdb54fe42e46f6eb",
+      "evidence_hash": "08a6d6691251cd89053419d06d00ec8e37e422afbd9dda99c8695bb1980e4ce1"
+    },
+    {
+      "symbol": "2303",
+      "kind": "CAPEX",
+      "period": "2026-Q1",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 416.0,
+        "unit": "USD_MILLION",
+        "measurement_basis": "DIRECTLY_REPORTED_CAPEX_SPENDING_USD",
+        "consolidation": "CONSOLIDATED",
+        "currency": "USD",
+        "scale": 1000000,
+        "conversion_to_twd": "NOT_PERFORMED",
+        "scope": "ACTUAL_QUARTER_SPENDING_NOT_ANNUAL_BUDGET_OR_PPE"
+      },
+      "source": "https://www.umc.com/upload/media/08_Investors/Financials/Quarterly_Results/Quarterly_2020-2029_English_pdf/2026/Q1_2026/UMC26Q1_report.pdf",
+      "source_sha256": "581067d6e0d732b508687cd3510beef0403391e25298c992cb1c960de1f5407a",
+      "source_bytes": 449427,
+      "published_at": null,
+      "first_seen_at": "2026-11-01T13:33:07.648540+00:00",
+      "available_at": "2026-11-01T13:33:07.648540+00:00",
+      "source_received_at": "2026-11-01T13:33:07.648540+00:00",
+      "as_of": "2026-03-31T23:59:59+08:00",
+      "source_locator": {
+        "page": 9,
+        "row": "CAPEX spending in 1Q26 totaled US$... million",
+        "column": "CURRENT_QUARTER_SPENDING_SENTENCE_NOT_BUDGET"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "PDF_REEXTRACTED_DIRECT_QUARTER_RECEIPT_ONLY_USE_REVIEW_REQUIRED",
+      "normalizer_version": "UMC_IR_DIRECT_FINANCIALS_V1",
+      "id": "umc-ir-direct:2303:2026-Q1:CAPEX:581067d6e0d732b508687cd3510beef0403391e25298c992cb1c960de1f5407a",
+      "evidence_hash": "5118ed42b0eed386fd3c3c89cda06ff8160c0c633c1fe8272f9618a73f5b1d29"
+    },
+    {
+      "symbol": "2303",
+      "kind": "CAPEX",
+      "period": "2026-Q2",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 308.0,
+        "unit": "USD_MILLION",
+        "measurement_basis": "DIRECTLY_REPORTED_CAPEX_SPENDING_USD",
+        "consolidation": "CONSOLIDATED",
+        "currency": "USD",
+        "scale": 1000000,
+        "conversion_to_twd": "NOT_PERFORMED",
+        "scope": "ACTUAL_QUARTER_SPENDING_NOT_ANNUAL_BUDGET_OR_PPE"
+      },
+      "source": "https://www.umc.com/upload/media/08_Investors/Financials/Quarterly_Results/Quarterly_2020-2029_English_pdf/2026/Q2_2026/UMC26Q2_report.pdf",
+      "source_sha256": "ef386e01fa185bc2c4ae506442250bb2aecae7bf4663b1d73ae34cd1e2625f46",
+      "source_bytes": 451192,
+      "published_at": null,
+      "first_seen_at": "2026-11-01T13:32:22.360647+00:00",
+      "available_at": "2026-11-01T13:32:22.360647+00:00",
+      "source_received_at": "2026-11-01T13:32:22.360647+00:00",
+      "as_of": "2026-06-30T23:59:59+08:00",
+      "source_locator": {
+        "page": 9,
+        "row": "CAPEX spending in 2Q26 totaled US$... million",
+        "column": "CURRENT_QUARTER_SPENDING_SENTENCE_NOT_BUDGET"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "PDF_REEXTRACTED_DIRECT_QUARTER_RECEIPT_ONLY_USE_REVIEW_REQUIRED",
+      "normalizer_version": "UMC_IR_DIRECT_FINANCIALS_V1",
+      "id": "umc-ir-direct:2303:2026-Q2:CAPEX:ef386e01fa185bc2c4ae506442250bb2aecae7bf4663b1d73ae34cd1e2625f46",
+      "evidence_hash": "d130b7e5108148a574bc0522f4bd7de350a724b8f59ec596e654cfd83cfacc0e"
+    },
+    {
+      "symbol": "2303",
+      "kind": "CAPEX",
+      "period": "2026-Q3",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 373.0,
+        "unit": "USD_MILLION",
+        "measurement_basis": "DIRECTLY_REPORTED_CAPEX_SPENDING_USD",
+        "consolidation": "CONSOLIDATED",
+        "currency": "USD",
+        "scale": 1000000,
+        "conversion_to_twd": "NOT_PERFORMED",
+        "scope": "ACTUAL_QUARTER_SPENDING_NOT_ANNUAL_BUDGET_OR_PPE"
+      },
+      "source": "https://www.umc.com/upload/media/08_Investors/Financials/Quarterly_Results/Quarterly_2020-2029_English_pdf/2026/Q3_2026/UMC26Q3_report.pdf",
+      "source_sha256": "0e96abbedc0b781ba0b4a794d82a1b02438091132b4b1356eed05ab73e977b0d",
+      "source_bytes": 447460,
+      "published_at": null,
+      "first_seen_at": "2026-11-01T13:33:13.921030+00:00",
+      "available_at": "2026-11-01T13:33:13.921030+00:00",
+      "source_received_at": "2026-11-01T13:33:13.921030+00:00",
+      "as_of": "2026-09-30T23:59:59+08:00",
+      "source_locator": {
+        "page": 9,
+        "row": "CAPEX spending in 3Q26 totaled US$... million",
+        "column": "CURRENT_QUARTER_SPENDING_SENTENCE_NOT_BUDGET"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "PDF_REEXTRACTED_DIRECT_QUARTER_RECEIPT_ONLY_USE_REVIEW_REQUIRED",
+      "normalizer_version": "UMC_IR_DIRECT_FINANCIALS_V1",
+      "id": "umc-ir-direct:2303:2026-Q3:CAPEX:0e96abbedc0b781ba0b4a794d82a1b02438091132b4b1356eed05ab73e977b0d",
+      "evidence_hash": "15cf646dc2da5fadd53931d3e6b9acc3adae9d16a2ae29c33a03d0f598dbb842"
+    }
+  ],
+  "known_release_deadlines": {},
+  "release_deadline_sources": {},
+  "max_age_days": 7
+}

@@ -2,11 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { snapshotHash } from '../src/features/vnext/contracts.ts';
 import { emptyEvidenceData } from '../supabase/functions/_shared/decision-v1-data.ts';
 import { buildEvidenceDecision } from '../supabase/functions/_shared/decision-v1-evidence.ts';
 import { prepareIssuerEventReview, previewIssuerEventReview } from '../research/recommendation-issuer-event-review-candidate.ts';
-import { verifyIntegrationCandidate, integrationHistoricalRead } from './helpers/integrationAdmission.mjs';
+import { verifyIntegrationCandidate, integrationHistoricalRead, integrationPhysicalRead } from './helpers/integrationAdmission.mjs';
 
 // This pins the reviewed fact projection, not original issuer response bytes.
 const HASH = '65eaa00f1d741ae4decffd567ff35e41156d01116eef9ba3bb21c12fde20e121';
@@ -16,6 +17,29 @@ const clone = () => structuredClone(fixture);
 const hash = f => snapshotHash({ facts: f.facts, draft: f.draft });
 const run = async (f = clone(), at = cutoff, expected) =>
   prepareIssuerEventReview(f.facts, f.draft, f.policy, expected ?? await hash(f), at);
+// This adapter did not exist in the original core parent. Its one admitted
+// historical source is the exact existing 7bfc Git blob, not a refreshed hash.
+function admittedIssuerHistoricalRead(file, bytes) {
+  const adapter = 'research/recommendation-event-alignment-candidate.ts';
+  if (file !== adapter) {
+    assert.equal(file, 'supabase/functions/_shared/decision-v1-evidence.ts', 'unknown issuer historical source');
+    return integrationHistoricalRead('core', file, bytes);
+  }
+  const admitted = verifyIntegrationCandidate(), row = admitted.files.find(r => r.path === adapter);
+  assert(row); assert.equal(row.mode, '100644');
+  const sha = b => createHash('sha256').update(b).digest('hex');
+  if (sha(bytes) !== row.after_sha256) { verifyIntegrationCandidate(); return bytes; }
+  assert.equal(sha(integrationPhysicalRead(adapter)), row.after_sha256, 'adapter changed after admission');
+  const options = { cwd: new URL('../', import.meta.url) };
+  const tree = execFileSync('git', ['--no-replace-objects', 'ls-tree', '-z',
+    '7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3', '--', adapter], options).toString();
+  assert.equal(tree, '100644 blob b8e2355c6cb48c34be1b09b327a42b44e64a8590\t' + adapter + '\0');
+  const original = execFileSync('git', ['--no-replace-objects', 'cat-file', 'blob',
+    'b8e2355c6cb48c34be1b09b327a42b44e64a8590'], options);
+  assert.equal(sha(original), '9e6513ed982f1f6aa6fd158af37344e0a3978cceab23c1d7e93f70ec4ca7be28');
+  verifyIntegrationCandidate();
+  return original;
+}
 async function invalid(mutate) {
   const f = clone(); mutate(f);
   await assert.rejects(run(f), /ISSUER_REVIEW_CONTRACT_INVALID/);
@@ -201,11 +225,17 @@ test('candidate is detached and original R9 evaluator/event adapter bytes remain
     ['../research/recommendation-event-alignment-candidate.ts', '9e6513ed982f1f6aa6fd158af37344e0a3978cceab23c1d7e93f70ec4ca7be28'],
   ]) {
     const bytes = readFileSync(path(file));
-    // Current evaluator behavior is tested independently. This assertion binds
-    // the older candidate's source, after fresh complete current admission.
+    // Current evaluator and adapter behavior are tested independently. These
+    // two exact older source identities follow fresh complete current admission.
     verifyIntegrationCandidate();
-    const original = file === '../supabase/functions/_shared/decision-v1-evidence.ts'
-      ? integrationHistoricalRead('core', file.slice(3), bytes) : bytes;
+    const original = admittedIssuerHistoricalRead(file.slice(3), bytes);
     assert.equal(createHash('sha256').update(original).digest('hex'), expected);
+    const injected = Buffer.concat([bytes, Buffer.from('\nUNREVIEWED_ISSUER_EVENT_SOURCE')]);
+    assert.deepEqual(admittedIssuerHistoricalRead(file.slice(3), injected), injected,
+      'the admitted historical view never erases injected current bytes');
+    assert.throws(() => verifyIntegrationCandidate(p => p === file.slice(3) ? injected : integrationPhysicalRead(p)),
+      /SOURCE_DRIFT/, 'fresh full current admission still rejects changed evaluator/adapter bytes');
   }
+  assert.throws(() => admittedIssuerHistoricalRead('research/unreviewed-source.ts', Buffer.from('unreviewed')),
+    /unknown issuer historical source/);
 });

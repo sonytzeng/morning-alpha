@@ -227,7 +227,7 @@ export async function assembleDaily(date:string,companies:Company[],receipts:Sou
   }else if(!prior.length)priceKeys.set(key,rows);
  }
  const allBars=[...priceKeys.values()].flat(),facts=[...records('REVENUE'),...records('INSTITUTIONAL'),...records('FINANCIAL_YTD'),...records('CASHFLOW_YTD')];
- const inputs:FunnelInput[]=companies.map(c=>{
+ const inputs:AcquiredResearch['inputs']=companies.map(c=>{
   const stockFacts=facts.filter(f=>f.symbol===c.symbol) as ResearchFact[],selected=new Set<ResearchFact>();
   // Match the evaluator's stable period sort and slice, including duplicate
   // periods. Financial/other kinds stay complete for newer-period/basis vetoes.

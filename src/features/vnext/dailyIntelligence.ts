@@ -12,7 +12,9 @@ export type DailyRequest = {
  provenance: 'RETAINED_REAL_EVIDENCE' | 'SYNTHETIC_CONTROL'; core_ready: boolean; core_busy: boolean;
  source_revision: string; source_hash: string; actionable_at: string;
 };
-export type AcquiredResearch = {inputs: FunnelInput[]; entry: EntryInput | null; evidence_cutoff: string; snapshot_hash: string;
+// Projection lineage belongs to the acquired snapshot. Keep the frozen research
+// evaluator contract unchanged; omitted IDs still travel in the hashed input.
+export type AcquiredResearch = {inputs: (FunnelInput & {omitted_fact_ids?: string[]})[]; entry: EntryInput | null; evidence_cutoff: string; snapshot_hash: string;
  source_issues?:{kind:string;key:string;reason:string}[];entry_version?:typeof ENTRY_PREMARKET_VERSION};
 export type DailyLock = {
  id: string; business_date: string; mode: DailyRequest['mode']; provenance: DailyRequest['provenance'];

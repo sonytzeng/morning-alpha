@@ -1,7 +1,7 @@
 /** Candidate only: no timer, HTTP endpoint, credential, Production writer or promotion. */
 import {HORIZONS, hashValid, snapshotHash, inputSnapshotHashes, validTime, type Horizon} from './contracts.ts';
 import {evaluateResearch, RESEARCH_FUNNEL_VERSION, traceIssues, publicationEligibility, type PublicationPolicy, type FunnelInput, type ResearchEvaluation} from './researchFunnel.ts';
-import {evaluateEntry, ENTRY_VERSION, type EntryInput, type EntryEvaluation} from '../../../research/entry-opportunity.ts';
+import {evaluateEntry, evaluatePremarketEntry, ENTRY_VERSION, ENTRY_PREMARKET_VERSION, STRATEGIES, type EntryInput, type EntryEvaluation} from '../../../research/entry-opportunity.ts';
 import {coveredCalendarDate, isMarketTradingDate, MARKET_CALENDAR_VERSION, previousMarketTradingDate} from '../../../supabase/functions/_shared/market-session-contract.mjs';
 
 export const DAILY_INTELLIGENCE_VERSION = 'DAILY_STOCK_INTELLIGENCE_CANDIDATE_1';
@@ -13,7 +13,7 @@ export type DailyRequest = {
  source_revision: string; source_hash: string; actionable_at: string;
 };
 export type AcquiredResearch = {inputs: FunnelInput[]; entry: EntryInput | null; evidence_cutoff: string; snapshot_hash: string;
- source_issues?:{kind:string;key:string;reason:string}[]};
+ source_issues?:{kind:string;key:string;reason:string}[];entry_version?:typeof ENTRY_PREMARKET_VERSION};
 export type DailyLock = {
  id: string; business_date: string; mode: DailyRequest['mode']; provenance: DailyRequest['provenance'];
  symbol: string; company: string; horizon: Horizon; strategy_version: string; entry_version: string;
@@ -51,7 +51,7 @@ const fail = (code: string): never => {throw new CandidateFailure(code);};
 export async function verifyDailyLock(lock: DailyLock) {
  const {lock_hash, ...body} = lock;
  return hashValid(lock_hash) && lock_hash === await snapshotHash(body)
-  && lock.strategy_version === RESEARCH_FUNNEL_VERSION && lock.entry_version === ENTRY_VERSION
+  && lock.strategy_version === RESEARCH_FUNNEL_VERSION && [ENTRY_VERSION,ENTRY_PREMARKET_VERSION].includes(lock.entry_version)
   && ['RETAINED_REAL_EVIDENCE', 'SYNTHETIC_CONTROL'].includes(lock.provenance)
   && lock.symbol === lock.research.symbol && lock.horizon === lock.research.horizon
   && lock.confirmation === lock.research.confirmation && lock.invalidation === lock.research.invalidation
@@ -60,7 +60,14 @@ export async function verifyDailyLock(lock: DailyLock) {
   && [lock.generated_at, lock.locked_at, lock.evidence_cutoff, lock.actionable_at, lock.next_review_at].every(validTime)
   && day(lock.actionable_at) === lock.business_date
   && Date.parse(lock.evidence_cutoff) <= Date.parse(lock.generated_at) && Date.parse(lock.generated_at) <= Date.parse(lock.locked_at)
-  && (lock.mode === 'HISTORICAL_REPLAY' || lock.mode === 'FORWARD_SHADOW' && Date.parse(lock.locked_at) < Date.parse(lock.actionable_at));
+  && (lock.mode === 'HISTORICAL_REPLAY' || lock.mode === 'FORWARD_SHADOW' && Date.parse(lock.locked_at) < Date.parse(lock.actionable_at))
+  && (lock.entry_version!==ENTRY_PREMARKET_VERSION||lock.entry_gap===null&&Array.isArray(lock.entry)&&lock.entry.length===3
+   &&new Set(lock.entry.map(e=>e.strategy)).size===3
+   &&lock.entry.every(e=>e.symbol===lock.symbol&&STRATEGIES.includes(e.strategy)&&e.strategy_version===e.strategy+'_1.1.0'
+    &&['ENTRY_READY','WAIT_CONFIRMATION','AVOID_ENTRY','INSUFFICIENT_EVIDENCE'].includes(e.status)
+    &&(e.plan===null||!!e.plan&&e.plan.not_before===lock.business_date&&e.plan.expires_on===lock.business_date))
+   &&day(lock.evidence_cutoff)===lock.business_date&&Date.parse(lock.locked_at)<Date.parse(lock.business_date+'T09:00:00+08:00')
+   &&lock.actionable_at!==''&&Date.parse(lock.actionable_at)===Date.parse(lock.business_date+'T09:00:00+08:00'));
 }
 async function bounded<T>(work: (s: AbortSignal) => Promise<T>, ms: number): Promise<T> {
  const controller = new AbortController(); let timer: ReturnType<typeof setTimeout>;
@@ -71,6 +78,8 @@ async function validateAcquired(a: AcquiredResearch, request: DailyRequest, now:
  const {snapshot_hash, ...body} = a;
  if (!hashValid(snapshot_hash) || snapshot_hash !== request.source_hash || snapshot_hash !== await snapshotHash(body)) fail('ACQUISITION_HASH_MISMATCH');
  if (!validTime(a.evidence_cutoff) || Date.parse(a.evidence_cutoff) > Date.parse(now)) fail('FUTURE_CUTOFF');
+ if(a.entry_version!==undefined&&a.entry_version!==ENTRY_PREMARKET_VERSION)fail('ENTRY_VERSION_UNSUPPORTED');
+ if(a.entry_version===ENTRY_PREMARKET_VERSION&&(!a.entry||Date.parse(a.evidence_cutoff)>=Date.parse(request.business_date+'T09:00:00+08:00')))fail('ENTRY_PREMARKET_WINDOW_INVALID');
  if (a.inputs.length !== 72 || new Set(a.inputs.map(i => i.symbol)).size !== 72) fail('UNIVERSE_NOT_72');
  for (const i of a.inputs) {
   if (i.cutoff !== a.evidence_cutoff || i.next_session !== request.business_date || i.through !== previousMarketTradingDate('TW', request.business_date)) fail('SOURCE_SESSION_MISMATCH');
@@ -140,7 +149,7 @@ export async function runDailyIntelligence(request: DailyRequest, store: DailySt
      } else if (stage === 'RESEARCH') {
       state.research = state.acquired!.inputs.flatMap(i => (Object.keys(HORIZONS) as Horizon[]).map(h => evaluateResearch(i, h)));
      } else if (stage === 'ENTRY') {
-      state.entry = state.acquired!.entry ? await evaluateEntry(state.acquired!.entry) : null;
+      state.entry = state.acquired!.entry ? await (state.acquired!.entry_version===ENTRY_PREMARKET_VERSION?evaluatePremarketEntry:evaluateEntry)(state.acquired!.entry) : null;
      } else if (stage === 'PREDICTION_LOCK') {
       if (state.locks) {
        // A persisted attempt save may cross cutoff. Without a read-only commit
@@ -169,7 +178,7 @@ export async function runDailyIntelligence(request: DailyRequest, store: DailySt
       for (const r of state.research!) {
        const evidenceHash = evidenceHashes.get(r.symbol)!;
        const body = {id: key + ':' + r.symbol + ':' + r.horizon, business_date: request.business_date, mode: request.mode, provenance: request.provenance,
-        symbol: r.symbol, company: r.company, horizon: r.horizon, strategy_version: r.version, entry_version: ENTRY_VERSION,
+        symbol: r.symbol, company: r.company, horizon: r.horizon, strategy_version: r.version, entry_version: state.entry?.version??state.acquired!.entry_version??ENTRY_VERSION,
         generated_at: now, locked_at: now, evidence_cutoff: acquired.evidence_cutoff,
         evidence_hash: evidenceHash, actionable_at: request.actionable_at,
         target_sessions: HORIZONS[r.horizon].outcomes, research: r, entry: state.entry?.candidates.filter(c => c.symbol === r.symbol) ?? [],

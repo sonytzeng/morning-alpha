@@ -170,3 +170,15 @@ test('a changed caller object cannot replace a future horizon after the first di
 test('Owner UI reads natural locks through the existing Owner RPC and retains auth/date cancellation',()=>{
  const ui=read('src/pages/admin/analysis/OwnerCockpit.tsx');assert(ui.includes("rpc('get_owner_vnext_daily_v1',{p_date:requestDate})"));assert(ui.includes("d.error?.code==='42501'"));assert(ui.includes('taipeiToday()!==requestDate'));assert(ui.includes('dailyLockedEntry(d.data,requestDate)'));assert(!ui.includes("rpc('vnext_daily_runtime_v1'"));
 });
+
+test('Owner cockpit reads new same-session 1.1 locks alongside its unchanged 1.0 reader',async()=>{
+ const data=await naturalFixture();
+ for(const row of data.predictions){row.entry_version='ENTRY_OPPORTUNITY_1.1.0';
+  row.entry.forEach(e=>{e.strategy_version=e.strategy+'_1.1.0';});
+  const {lock_hash,...body}=row;void lock_hash;row.lock_hash=await contracts.snapshotHash(body);}
+ const result=await m.dailyLockedEntry(data,'2026-10-29',naturalNow);
+ assert.equal(result.candidates.length,216);assert(result.candidates.every(e=>e.strategy_version.endsWith('_1.1.0')));
+ const wrong=structuredClone(data);wrong.predictions[0].entry[0].strategy_version='OVERSOLD_REVERSAL_1.0.0';
+ const {lock_hash,...body}=wrong.predictions[0];void lock_hash;wrong.predictions[0].lock_hash=await contracts.snapshotHash(body);
+ await assert.rejects(()=>m.dailyLockedEntry(wrong,'2026-10-29',naturalNow),/DAILY_ENTRY_RESULT/);
+});

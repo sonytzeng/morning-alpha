@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {acquisitionPlan,directoryPlan,outcomePlan,assembleDaily,normalizeSource} from '../src/features/vnext/dailyAdapter.ts';
 import {workDailyRun} from '../src/features/vnext/dailyRuntime.ts';
+import {ENTRY_VERSION,ENTRY_PREMARKET_VERSION} from '../research/entry-opportunity.ts';
 import {handleVnextDaily} from '../supabase/functions/vnext-daily-research-v1/handler.ts';
 import {runDailyIntelligence,verifyDailyLock} from '../src/features/vnext/dailyIntelligence.ts';
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
@@ -26,7 +27,7 @@ async function checkpoint(){
  assert.equal(state.locks.length,216);assert(await verifyDailyLock(state.locks[0]));return state;
 }
 async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,lockError=null,throughHandler=false,providerWaitSeconds=0,providerStatus=200,
- leaseUntil,finishError=null,onFinish=()=>{},advanceSleep=()=>{},continuationError=null,claimStatus='ACQUIRED',claimError=null,onClaim=()=>{},rpcErrorOp=null,clock=()=>at,businessDate=date,issuerFinancials,additionalSources=[],entryLineage={}}={}){
+ leaseUntil,finishError=null,onFinish=()=>{},advanceSleep=()=>{},continuationError=null,claimStatus='ACQUIRED',claimError=null,onClaim=()=>{},rpcErrorOp=null,clock=()=>at,businessDate=date,issuerFinancials,additionalSources=[],entryLineage={},entryVersion}={}){
  const dirs=await directoryPlan(businessDate),cache=new Map(await Promise.all(dirs.map(async t=>[t.key,await receipt(t,at,{rows:t.exchange==='TWSE'?companies:[]})])));
  const calls=[],http=[],stored=[],locked=[],sources=[...cache.values(),...additionalSources];let pending=due,checkpointState=saved,run={id:'isolated-run',business_date:businessDate,
   actionable_at:businessDate+'T09:00:00+08:00',lease:'isolated-lease',...(leaseUntil===undefined?{}:{lease_until:leaseUntil}),fence:2,plan,cursor,checkpoint:checkpointState};
@@ -55,7 +56,7 @@ async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,loc
   return Response.json({stat:'OK',date:month+'01',title:' '+symbol+' 合成隔離控制',fields:symbol?
    ['日期','成交股數','成交金額','開盤價','最高價','最低價','收盤價']:['日期','開盤指數','最高指數','最低指數','收盤指數'],data:[]});
  };
- const ports={rpc,fetcher,clock,sleep:async()=>{},...(issuerFinancials?{issuerFinancials}:{})};
+ const ports={rpc,fetcher,clock,sleep:async()=>{},...(issuerFinancials?{issuerFinancials}:{}),...(entryVersion?{entryVersion}:{})};
  const sleeps=[],continuations=[];let result;
  if(throughHandler){
   run.id='11111111-1111-4111-8111-111111111111';const tasks=[];
@@ -81,10 +82,10 @@ test('SYNTHETIC release array adds the supplement once and preserves acquired by
  const binding=structuredClone(retainedIssuerFinancialReleases);
  const a=await runner({at:'2026-11-03T00:59:30Z',businessDate:'2026-11-03',issuerFinancials:binding});
  assert.equal(a.result.reason,'ACQUIRED_SNAPSHOT_CONTINUATION');
- const pinned=structuredClone(a.checkpoint.acquired);assert.equal(pinned.inputs.flatMap(i=>i.facts).length,325);
+ const pinned=structuredClone(a.checkpoint.acquired);assert.equal(pinned.inputs.flatMap(i=>i.facts).length,329);
  for(const symbol of ['2382','3443'])assert.equal(pinned.inputs.find(i=>i.symbol===symbol).facts.filter(f=>f.kind==='EPS').length,4);
- // This fixed synthetic clock is after the fifth release's original creation.
- // The31 partial,12 basic and236 margin facts join46; not a natural receipt.
+ // This fixed synthetic clock is after the six release reviews. The31 partial,
+ // 12 basic,236 margin and4 source-native CAPEX facts join46; not a natural receipt.
  const partial=binding[2];assert.equal(partial.expectedHash,'c2edd821e88e331ce75ca3160f5e4fb9e46b757da050632b03c7720b3d631cc3');
  assert.equal(partial.packet.facts.length,31);assert(Date.parse(partial.packet.created_at)<Date.parse('2026-11-03T00:59:30Z'));
  const partialIds=new Set(partial.packet.facts.map(f=>f.id)),joined=pinned.inputs.flatMap(i=>i.facts).filter(f=>partialIds.has(f.id));
@@ -97,6 +98,8 @@ test('SYNTHETIC release array adds the supplement once and preserves acquired by
  const margin=binding[4];assert.equal(margin.expectedHash,'6464fc192100e38265605b5dd5b98042a6c8300238ac3389716cca7b3a8c1745');
  assert.equal(margin.packet.facts.length,236);assert(Date.parse(margin.packet.created_at)<Date.parse('2026-11-03T00:59:30Z'));
  for(const f of margin.packet.facts)assert.deepEqual(pinned.inputs.find(i=>i.symbol===f.symbol).facts.find(x=>x.id===f.id),f);
+ const capex=binding[5];assert.equal(capex.packet.facts.length,4);assert(Date.parse(capex.packet.created_at)<Date.parse('2026-11-03T00:59:30Z'));
+ for(const f of capex.packet.facts)assert.deepEqual(pinned.inputs.find(i=>i.symbol===f.symbol).facts.find(x=>x.id===f.id),f);
  // Each new acquisition pays the existing clone/hash cost once per release.
  // A retained checkpoint must skip all releases, even if a later binding fails.
  for(const release of binding)release.expectedHash='0'.repeat(64);
@@ -527,4 +530,27 @@ test('worker never hides invalid, conflicting or future V2 quotes behind the off
   assert.equal(a.result.reason,'ACQUIRED_SNAPSHOT_CONTINUATION');assert.equal(a.checkpoint.acquired.entry.market,null);
   assert.equal(a.locked.length,0);
  }
+});
+
+// Additive 1.1 runtime admission controls; existing acquired bytes remain authoritative.
+test('1.1 runtime refuses an unprepared database before pinning new acquisition or predictions',async()=>{
+ const r=await runner({entryVersion:ENTRY_PREMARKET_VERSION});
+ assert.equal(r.result.status,'BLOCKED');assert.equal(r.result.reason,'ENTRY_VERSION_DATABASE_NOT_READY');
+ assert.equal(r.locked.length,0);assert(!r.calls.some(c=>c.op==='CHECKPOINT'||c.op==='PREDICTIONS'));
+});
+test('1.1 capability pins the version inside the acquired hash and resumes it into 216 current-version locks',async()=>{
+ const r=await runner({at:'2026-10-12T00:59:30Z',entryVersion:ENTRY_PREMARKET_VERSION,entryLineage:{entry_versions:[ENTRY_VERSION,ENTRY_PREMARKET_VERSION]}});
+ assert.equal(r.result.reason,'ACQUIRED_SNAPSHOT_CONTINUATION');
+ const pinned=structuredClone(r.checkpoint.acquired);assert.equal(pinned.entry_version,ENTRY_PREMARKET_VERSION);
+ const {snapshot_hash,...body}=pinned;assert.equal(snapshot_hash,await snapshotHash(body));
+ await r.invoke();assert.deepEqual(r.checkpoint.acquired,pinned);assert.equal(r.locked.length,216);
+ for(const {body:lock} of r.locked){assert.equal(lock.entry_version,ENTRY_PREMARKET_VERSION);assert(await verifyDailyLock(lock));
+  assert(lock.entry.every(e=>e.strategy_version===e.strategy+'_1.1.0'));}
+});
+test('deploying 1.1 cannot rewrite an already acquired legacy capsule or upgrade its eventual locks',async()=>{
+ const old=await runner({at:'2026-10-12T00:59:30Z'});assert.equal(old.result.reason,'ACQUIRED_SNAPSHOT_CONTINUATION');
+ const pinned=structuredClone(old.checkpoint.acquired);assert.equal(pinned.entry_version,undefined);
+ const next=await runner({at:'2026-10-12T00:59:30Z',saved:old.checkpoint,entryVersion:ENTRY_PREMARKET_VERSION});
+ assert.equal(next.locked.length,216);assert.deepEqual(next.checkpoint.acquired,pinned);
+ assert(next.locked.every(row=>row.body.entry_version===ENTRY_VERSION));assert(!next.calls.some(c=>c.op==='ENTRY_SOURCE'));
 });

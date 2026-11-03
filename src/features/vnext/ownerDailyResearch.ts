@@ -2,6 +2,52 @@ import {HORIZONS,sourceSafe,type Horizon} from './contracts.ts';
 import {verifyDailyLock,type DailyLock} from './dailyIntelligence.ts';
 import {memberTaipeiDate} from './member.ts';
 import {previousMarketTradingDate} from '../../../supabase/functions/_shared/market-session-contract.mjs';
+import {ENTRY_POLICY,ENTRY_PREMARKET_VERSION} from '../../../research/entry-opportunity.ts';
+
+const entryStrategies=[['OVERSOLD_REVERSAL','超跌反轉'],['PULLBACK_ENTRY','趨勢回檔'],['BREAKOUT_CONTINUATION','突破延續']] as const;
+export const OWNER_ENTRY_LABELS={ENTRY_READY:'研究條件符合',WAIT_CONFIRMATION:'等待條件確認',AVOID_ENTRY:'不適合進場',INSUFFICIENT_EVIDENCE:'進場資料不足'} as const;
+type OwnerEntryState=keyof typeof OWNER_ENTRY_LABELS;
+export type OwnerDailyEntry={strategy:string;label:string;status:OwnerEntryState;reasons:string[];sources:string[];
+ plan_state:'AVAILABLE'|'NOT_APPLICABLE'|'MISSING'|'DATE_MISMATCH'|'EXPIRED'|'INVALID';
+ plan:null|{range:readonly [number,number];wait_above:number;stop:number;scenario:number;reward_risk:number;valid_from:string;valid_until:string};
+ trigger:string|null;invalidation:string|null};
+const entryObject=(v:unknown):Record<string,unknown>|null=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:null;
+const positive=(v:unknown):v is number=>typeof v==='number'&&Number.isFinite(v)&&v>0;
+
+/** These are the saved stock's three shared short-term entry models, not
+ * three independent horizon valuations or approved member price plans. */
+export function ownerDailyEntryResults(lock:DailyLock,now=Date.now()):OwnerDailyEntry[]{
+ const entries=Array.isArray(lock.entry)?lock.entry:[];
+ return entryStrategies.map(([strategy,label])=>{
+  const matches=entries.map(entryObject).filter(e=>e?.strategy===strategy),entry=lock.entry_gap===null&&matches.length===1?matches[0]:null;
+  const accepted=entry?.symbol===lock.symbol&&typeof entry.status==='string'&&Object.hasOwn(OWNER_ENTRY_LABELS,entry.status)
+   &&Array.isArray(entry.reasons)&&entry.reasons.length<=100&&entry.reasons.every(r=>typeof r==='string'&&r.trim().length>0&&r.length<=3000);
+  const status:OwnerEntryState=accepted?entry!.status as OwnerEntryState:'INSUFFICIENT_EVIDENCE';
+  const result:OwnerDailyEntry={strategy,label,status,reasons:accepted?entry!.reasons as string[]:['尚未取得本次同時點的完整進場判斷與理由。'],
+   sources:accepted&&Array.isArray(entry!.evidence_refs)?[...new Set(entry!.evidence_refs.filter((ref):ref is string=>typeof ref==='string'&&sourceSafe(ref)))]:[],
+   plan_state:'NOT_APPLICABLE',plan:null,trigger:null,invalidation:null};
+  if(!accepted||!['ENTRY_READY','WAIT_CONFIRMATION'].includes(status))return result;
+  const p=entryObject(entry!.plan);if(!p){result.plan_state='MISSING';return result;}
+  if(p.not_before!==lock.business_date||p.expires_on!==lock.business_date){result.plan_state='DATE_MISMATCH';return result;}
+  const open=Date.parse(lock.business_date+'T09:00:00+08:00'),close=Date.parse(lock.business_date+'T13:30:00+08:00');
+  if(!Number.isFinite(now)||!Number.isFinite(open)||!Number.isFinite(close)||!Number.isFinite(Date.parse(lock.evidence_cutoff))
+   ||Date.parse(lock.evidence_cutoff)>=open||Date.parse(lock.locked_at)>=open||now<Date.parse(lock.locked_at)){
+   result.plan_state='INVALID';return result;
+  }
+  if(now>=close){result.plan_state='EXPIRED';return result;}
+  const range=p.reference_range;
+  if(!Array.isArray(range)||range.length!==2||!range.every(positive)||!positive(p.trigger)||!positive(p.stop)||!positive(p.target)
+   ||!positive(p.reward_risk)||range[0]!==p.trigger||range[1]<range[0]||p.stop>=range[0]||p.target<=range[1]
+   ||p.reward_risk<ENTRY_POLICY.minRewardRisk||!positive(p.risk_distance)||!positive(p.reward_space)||p.max_risk!==ENTRY_POLICY.maxRisk||p.risk_distance/range[1]>ENTRY_POLICY.maxRisk
+   ||Math.abs(p.reward_space/p.risk_distance-p.reward_risk)>1e-8||lock.entry_version!==ENTRY_PREMARKET_VERSION||entry!.strategy_version!==strategy+'_1.1.0'
+   ||typeof entry!.entry_trigger!=='string'||!entry!.entry_trigger.trim()||typeof entry!.invalidation!=='string'||!entry!.invalidation.trim()){
+   result.plan_state='INVALID';return result;
+  }
+  result.plan_state='AVAILABLE';result.plan={range:[range[0],range[1]],wait_above:range[1],stop:p.stop,scenario:p.target,
+   reward_risk:p.reward_risk,valid_from:lock.business_date+'T09:00:00+08:00',valid_until:lock.business_date+'T13:30:00+08:00'};
+  result.trigger=entry!.entry_trigger as string;result.invalidation=entry!.invalidation as string;return result;
+ });
+}
 
 export const OWNER_DAILY_STATES=['NOT_OBSERVED','QUEUED','RUNNING','COMPLETE','BLOCKED','EXPIRED'] as const;
 export type OwnerDailyResearch={business_date:string;state:typeof OWNER_DAILY_STATES[number];reason:string|null;source_count:number;
@@ -22,8 +68,8 @@ export async function parseOwnerDailyResearch(value:unknown,requestDate:string,n
   ||p.reason!==null&&(!text(p.reason,200)||!/^[A-Z0-9_:.-]+$/.test(String(p.reason)))
   ||!Array.isArray(p.predictions)||p.predictions.length!==0&&p.predictions.length!==216)throw Error('OWNER_DAILY_SCOPE');
  const rows=p.predictions as DailyLock[],seen=new Set<string>(),ids=new Set<string>();
- let through:string|null=null,cutoff:string|null=null,lockedAt:string|null=null,runKey:string|null=null;
- const stocks=new Map<string,{company:string;evidence_hash:string}>();
+ let through:string|null=null,cutoff:string|null=null,lockedAt:string|null=null,runKey:string|null=null,entryVersion:string|null=null;
+ const stocks=new Map<string,{company:string;evidence_hash:string;entry:string;entry_gap:unknown}>();
  for(const candidate of rows){
   const l=object(candidate),r=object(l.research);
   if(!text(l.id,200)||!text(l.symbol,6)||!/^\d{4,6}$/.test(String(l.symbol))||!text(l.company,100)
@@ -31,7 +77,7 @@ export async function parseOwnerDailyResearch(value:unknown,requestDate:string,n
    ||!Object.hasOwn(HORIZONS,String(l.horizon))||!['QUALIFIED','REJECTED','INSUFFICIENT'].includes(String(r.state))
    ||r.evaluated!==(r.state!=='INSUFFICIENT')||r.mode!=='RETAINED_SNAPSHOT_REVIEW_NOT_FORWARD'
    ||['reason','confirmation','invalidation','risk'].some(k=>!text(r[k]))||r.company!==l.company
-   ||!Array.isArray(r.reasons)||r.reasons.length>100||r.reasons.some(v=>!text(v,300))
+   ||!Array.isArray(l.entry)||!Array.isArray(r.reasons)||r.reasons.length>100||r.reasons.some(v=>!text(v,300))
    ||!Array.isArray(r.used)||r.used.length>500||r.used.some(v=>!sourceSafe(String(object(v).source)))
    ||r.state==='QUALIFIED'&&(r.reasons.length!==0||r.used.length===0)||r.state!=='QUALIFIED'&&r.reasons.length===0
    ||r.cutoff!==l.evidence_cutoff||r.next_review_at!==l.next_review_at||r.version!==l.strategy_version
@@ -40,11 +86,12 @@ export async function parseOwnerDailyResearch(value:unknown,requestDate:string,n
    ||!await verifyDailyLock(candidate))throw Error('OWNER_DAILY_LOCK');
   const key=String(l.symbol)+':'+String(l.horizon),id=String(l.id),suffix=':'+key;
   if(!id.endsWith(suffix)||ids.has(id)||seen.has(key))throw Error('OWNER_DAILY_UNIVERSE');
-  const prefix=id.slice(0,-suffix.length),prior=stocks.get(String(l.symbol));
+  const prefix=id.slice(0,-suffix.length),prior=stocks.get(String(l.symbol)),entry=JSON.stringify(l.entry);
   if(runKey!==null&&runKey!==prefix||cutoff!==null&&cutoff!==l.evidence_cutoff||lockedAt!==null&&lockedAt!==l.locked_at
-   ||prior&&(prior.company!==l.company||prior.evidence_hash!==l.evidence_hash))throw Error('OWNER_DAILY_MIXED_BATCH');
-  runKey=prefix;cutoff=String(l.evidence_cutoff);lockedAt=String(l.locked_at);through=String(r.through);
-  stocks.set(String(l.symbol),{company:String(l.company),evidence_hash:String(l.evidence_hash)});ids.add(id);seen.add(key);
+   ||entryVersion!==null&&entryVersion!==l.entry_version
+   ||prior&&(prior.company!==l.company||prior.evidence_hash!==l.evidence_hash||prior.entry!==entry||prior.entry_gap!==l.entry_gap))throw Error('OWNER_DAILY_MIXED_BATCH');
+  runKey=prefix;cutoff=String(l.evidence_cutoff);lockedAt=String(l.locked_at);through=String(r.through);entryVersion=String(l.entry_version);
+  stocks.set(String(l.symbol),{company:String(l.company),evidence_hash:String(l.evidence_hash),entry,entry_gap:l.entry_gap});ids.add(id);seen.add(key);
  }
  if(rows.length&&(stocks.size!==72||Object.keys(HORIZONS).some(h=>rows.filter(l=>l.horizon===h).length!==72))
   ||p.state==='NOT_OBSERVED'&&rows.length)throw Error('OWNER_DAILY_UNIVERSE');

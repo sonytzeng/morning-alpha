@@ -4,6 +4,7 @@ import supplement from './retained-issuer-financials-20261102.json' with {type:'
 import partial from './retained-issuer-financials-20261103-partial.json' with {type:'json'};
 import basic from './retained-issuer-financials-20261103-basic.json' with {type:'json'};
 import margin from './retained-issuer-financials-20261103-margin.json' with {type:'json'};
+import umcCapex from './retained-issuer-financials-20261103-umc-capex.json' with {type:'json'};
 import type {IssuerFinancialPacket} from '../../../src/features/vnext/issuerFinancialIntake.ts';
 export const retainedIssuerFinancials={
  // JSON is an untrusted boundary; the intake validates its pinned hash and
@@ -37,4 +38,10 @@ export const retainedIssuerFinancialMarginSupplement={
  packet:margin as unknown as IssuerFinancialPacket,
  expectedHash:'6464fc192100e38265605b5dd5b98042a6c8300238ac3389716cca7b3a8c1745',
 };
-export const retainedIssuerFinancialReleases=[retainedIssuerFinancials,retainedIssuerFinancialSupplement,retainedIssuerFinancialPartialSupplement,retainedIssuerFinancialBasicSupplement,retainedIssuerFinancialMarginSupplement] as const;
+// Fresh byte/page re-verification of the four original quarterly USD spending
+// sentences. Original facts/receipt times survive; no exchange conversion.
+export const retainedIssuerFinancialUmcCapexSupplement={
+ packet:umcCapex as unknown as IssuerFinancialPacket,
+ expectedHash:'d6f079a49d2693ab73f83e05029a714a93627ace09170f0ee87077f97b20ab7e',
+};
+export const retainedIssuerFinancialReleases=[retainedIssuerFinancials,retainedIssuerFinancialSupplement,retainedIssuerFinancialPartialSupplement,retainedIssuerFinancialBasicSupplement,retainedIssuerFinancialMarginSupplement,retainedIssuerFinancialUmcCapexSupplement] as const;

@@ -3,16 +3,19 @@ import {snapshotHash,hashValid,validTime} from './contracts.ts';
 import {ADAPTER_VERSION,directoryPlan,classifyCompanies,acquisitionPlan,outcomePlan,fetchSource,assembleDaily,type SourceReceipt,type SourceTask} from './dailyAdapter.ts';
 import {runDailyIntelligence,dailyPublication,verifyDailyLock,type DailyLock,type RunState,type DailyStore} from './dailyIntelligence.ts';
 import {researchOutcome,type OutcomeSource} from './dailyOutcome.ts';
-import {canonical} from '../../../research/entry-opportunity.ts';
+import {canonical,ENTRY_VERSION,ENTRY_PREMARKET_VERSION} from '../../../research/entry-opportunity.ts';
 import type {DailyBar} from './researchFunnel.ts';
 import {entryInputFromV2} from '../../../research/entry-v2-adapter.ts';
 import type {V2Input} from '../../../supabase/functions/_shared/recommendation-shadow-v2-engine.ts';
 import {mergeIssuerFinancialBatch,type IssuerFinancialPacket} from './issuerFinancialIntake.ts';
+import {mergeIssuerDocumentedReviews,type IssuerDocumentedReviewBinding} from './issuerDocumentedReviewIntake.ts';
 import {previousMarketTradingDate} from '../../../supabase/functions/_shared/market-session-contract.mjs';
 export type Rpc=(name:string,args:Record<string,unknown>)=>Promise<unknown>;
 export type IssuerFinancialReleaseBinding={packet:IssuerFinancialPacket;expectedHash:string};
 export type RuntimePorts={rpc:Rpc;fetcher:typeof fetch;clock:()=>string;sleep:(ms:number)=>Promise<void>;
- issuerFinancials?:IssuerFinancialReleaseBinding|readonly IssuerFinancialReleaseBinding[]};
+ issuerFinancials?:IssuerFinancialReleaseBinding|readonly IssuerFinancialReleaseBinding[];
+ issuerDocumentedReviews?:IssuerDocumentedReviewBinding;
+ entryVersion?:typeof ENTRY_VERSION|typeof ENTRY_PREMARKET_VERSION};
 type ClaimedRun={id:string;business_date:string;actionable_at:string;lease:string;lease_until?:string;fence:number;plan:SourceTask[];checkpoint:RunState|Record<string,never>;cursor:number};
 export type LeaseRecoveryPending={status:'LEASE_RECOVERY_PENDING';continue:true;reason:'FINISH_COMMIT_UNCONFIRMED';lease_until:string;not_before:string};
 const object=(v:unknown):Record<string,unknown>=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
@@ -117,6 +120,12 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   // Only actual same-cutoff retained market/Entry capsules may enrich this run.
   const evaluationCutoff=p.clock();
   const lineage=object(await rpc('ENTRY_SOURCE',{cutoff:evaluationCutoff}));const market=lineage.market??null;
+  const entryVersion=p.entryVersion??ENTRY_VERSION;
+  if(![ENTRY_VERSION,ENTRY_PREMARKET_VERSION].includes(entryVersion))throw Error('ENTRY_VERSION_UNSUPPORTED');
+  // The new runtime must never feed a new version into an unprepared database.
+  // This capability comes from the existing fenced server RPC, not a browser.
+  if(entryVersion===ENTRY_PREMARKET_VERSION&&(!Array.isArray(lineage.entry_versions)
+   ||!lineage.entry_versions.includes(ENTRY_PREMARKET_VERSION)))throw Error('ENTRY_VERSION_DATABASE_NOT_READY');
   // Keep the original Canonical wait: early scheduling must not permanently
   // freeze a missing market that may become available before the last minute.
   if(!market&&Date.parse(p.clock())<actionable-60000){retryAfter=30;return finish('QUEUED','CANONICAL_PUBLICATION_PENDING');}
@@ -127,6 +136,12 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   if(p.issuerFinancials){
    const releases='packet' in p.issuerFinancials?[p.issuerFinancials]:p.issuerFinancials;
    acquired=await mergeIssuerFinancialBatch(acquired,releases);
+  }
+  if(p.issuerDocumentedReviews){
+   // Reprice the fixed, freshly reviewed policy only for this unpinned input.
+   // Its actual computation clock advances the cutoff; saved snapshots keep
+   // their original facts, cutoff and version on every continuation.
+   acquired=await mergeIssuerDocumentedReviews(acquired,p.issuerDocumentedReviews,p.clock);
   }
   if(!('acquired' in r.checkpoint)&&lineage.evidence&&typeof lineage.hash==='string'&&acquired.entry){
    const capsule=lineage.evidence as V2Input;
@@ -145,6 +160,10 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
    });
    if(entry.market||marketObservationInScope)acquired.entry.market=entry.market;
    for(const stock of acquired.entry.stocks){const prior=entry.stocks.find(s=>s.symbol===stock.symbol);if(prior){stock.relative_strength=prior.relative_strength;stock.sector_return=prior.sector_return;stock.events_reviewed=prior.events_reviewed;stock.v2_status=prior.v2_status;}}
+   const {snapshot_hash,...body}=acquired;void snapshot_hash;acquired.snapshot_hash=await snapshotHash(body);
+  }
+  if(entryVersion===ENTRY_PREMARKET_VERSION){
+   acquired.entry_version=ENTRY_PREMARKET_VERSION;
    const {snapshot_hash,...body}=acquired;void snapshot_hash;acquired.snapshot_hash=await snapshotHash(body);
   }
   // Assembly and its first durable pin can already consume most of an Edge

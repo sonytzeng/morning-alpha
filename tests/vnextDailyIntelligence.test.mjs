@@ -136,3 +136,21 @@ test('daily UI treats absent, duplicate and unknown strategy statuses as unavail
   assert(!html.includes('合成反轉觸發條件'));assert(!html.includes('UNRECOGNIZED'));
  }
 });
+
+test('persisted 1.1 acquisition selects current-session engine and binds all three strategy identities in every lock',async()=>{
+ const f=await fixture(),base=await entryFixture();
+ f.acquired.entry={...base,business_date:f.request.business_date,evaluation_time:now,mode:'FORWARD',
+  stocks:f.acquired.inputs.map(i=>({...base.stocks[0],symbol:i.symbol,bars:[]}))};
+ f.acquired.entry_version='ENTRY_OPPORTUNITY_1.1.0';
+ const {snapshot_hash,...body}=f.acquired;void snapshot_hash;f.acquired.snapshot_hash=await snapshotHash(body);f.request.source_hash=f.acquired.snapshot_hash;
+ const result=await runDailyIntelligence(f.request,f.store,f.ports);assert.equal(result.state,'COMPLETE');
+ assert.equal(result.checkpoint.entry.version,'ENTRY_OPPORTUNITY_1.1.0');
+ for(const row of result.checkpoint.locks){assert.equal(row.entry_version,'ENTRY_OPPORTUNITY_1.1.0');assert(await verifyDailyLock(row));}
+ for(const mutate of [l=>l.entry=[],l=>l.entry.pop(),l=>l.entry[1]=structuredClone(l.entry[0]),
+  l=>l.entry[0].symbol='9999',l=>l.entry[0].strategy_version=l.entry[0].strategy+'_1.0.0',
+  l=>l.entry[0].plan={not_before:'2026-10-13',expires_on:'2026-10-13'},l=>delete l.entry[0].plan]){
+  const lock=structuredClone(result.checkpoint.locks[0]);mutate(lock);
+  const {lock_hash,...payload}=lock;void lock_hash;lock.lock_hash=await snapshotHash(payload);
+  assert.equal(await verifyDailyLock(lock),false);
+ }
+});

@@ -12,6 +12,22 @@ export type IssuerFinancialPacket={schema:'PRIVATE_RETAINED_ISSUER_FINANCIALS_V1
 const refuse=(ok:unknown,code:string)=>{if(!ok)throw Error('ISSUER_FINANCIAL_'+code);};
 const quarterEnd=(period:string|null)=>{const m=/^(20\d\d)-Q([1-4])$/.exec(period??'');return m?new Date(Date.UTC(Number(m[1]),Number(m[2])*3,0)).toISOString().slice(0,10):null;};
 
+// Four independently re-extracted issuer sentences report actual quarterly USD
+// spending. Pin their original facts; this is not a generic FX/CAPEX adapter.
+const umcCapexHashes:Readonly<Record<string,string>>=Object.freeze({
+ '2025-Q4':'08a6d6691251cd89053419d06d00ec8e37e422afbd9dda99c8695bb1980e4ce1',
+ '2026-Q1':'5118ed42b0eed386fd3c3c89cda06ff8160c0c633c1fe8272f9618a73f5b1d29',
+ '2026-Q2':'d130b7e5108148a574bc0522f4bd7de350a724b8f59ec596e654cfd83cfacc0e',
+ '2026-Q3':'15cf646dc2da5fadd53931d3e6b9acc3adae9d16a2ae29c33a03d0f598dbb842',
+});
+function verifiedUmcUsdCapex(f:IssuerFact):boolean{
+ return f.symbol==='2303'&&f.kind==='CAPEX'&&f.period!==null&&f.evidence_hash===umcCapexHashes[f.period]
+  &&f.values.unit==='USD_MILLION'&&f.values.currency==='USD'&&f.values.scale===1000000
+  &&f.values.conversion_to_twd==='NOT_PERFORMED'
+  &&f.values.measurement_basis==='DIRECTLY_REPORTED_CAPEX_SPENDING_USD'
+  &&f.values.scope==='ACTUAL_QUARTER_SPENDING_NOT_ANNUAL_BUDGET_OR_PPE';
+}
+
 /** A portal JSON point has an axis locator, never an invented PDF page. The
  * pinned packet still binds the inspected original and its source study. */
 function validOriginalLocator(f:IssuerFact,reviewedAt:string):boolean{
@@ -93,8 +109,8 @@ async function mergeOwnedIssuerFinancials(input:AcquiredResearch,p:IssuerFinanci
    refuse(f.values.unit==='TWD_PER_COMMON_SHARE'&&['BASIC','DILUTED'].includes(String(f.values.measurement_basis)),'EPS_UNIT');
    const bs=bases.get(f.symbol)??new Set<string>();bs.add(String(f.values.measurement_basis));bases.set(f.symbol,bs);refuse(bs.size===1,'EPS_BASIS');
   }else if(f.kind==='MARGIN')refuse(f.values.unit==='PERCENT'&&value<=100,'MARGIN_UNIT');
-  else refuse(['TWD','TWD_MILLION'].includes(String(f.values.unit))&&value>=0
-   &&['EXPENDITURE_MAGNITUDE_NOT_CASH_INFLOW','ISSUER_REPORTED_CASH_OUTFLOW_MAGNITUDE'].includes(String(f.values.measurement_basis)),'CAPEX_UNIT');
+  else refuse(value>=0&&(verifiedUmcUsdCapex(f)||['TWD','TWD_MILLION'].includes(String(f.values.unit))
+   &&['EXPENDITURE_MAGNITUDE_NOT_CASH_INFLOW','ISSUER_REPORTED_CASH_OUTFLOW_MAGNITUDE'].includes(String(f.values.measurement_basis))),'CAPEX_UNIT');
  }
  refuse(p.known_release_deadlines&&p.release_deadline_sources
   &&Object.keys(p.known_release_deadlines).sort().join('|')===Object.keys(p.release_deadline_sources).sort().join('|'),'RELEASE_SCOPE');
@@ -110,7 +126,7 @@ async function mergeOwnedIssuerFinancials(input:AcquiredResearch,p:IssuerFinanci
    const release=p.known_release_deadlines[i.symbol];
    if(release&&compareTime(input.evidence_cutoff,release)>=0){addIssue(i.symbol,'NEW_ISSUER_RELEASE_REQUIRES_REVIEW');continue;}
    // A newer reported quarter cannot be concealed by the retained series.
-   const latest=facts.filter(f=>f.kind==='EPS').map(f=>f.period!).sort().at(-1);
+   const latest=facts.filter(f=>f.kind==='EPS'||f.kind==='CAPEX').map(f=>f.period!).sort().at(-1);
    if(i.facts.some(f=>['EPS','FINANCIAL_YTD'].includes(f.kind)&&quarterEnd(f.period)&&latest&&f.period!>latest)){
     addIssue(i.symbol,'NEWER_FINANCIAL_PERIOD_REQUIRES_REVIEW');continue;
    }
@@ -118,6 +134,10 @@ async function mergeOwnedIssuerFinancials(input:AcquiredResearch,p:IssuerFinanci
     refuse(traceIssues(fact,input.evidence_cutoff).length===0,'FUTURE_FACT');
     const existing=i.facts.filter(f=>f.kind===fact.kind&&f.period===fact.period);
     refuse(existing.length<=1,'EXISTING_CONFLICT');
+    // Source-native USD remains USD. Check repeated intake as well: an exact
+    // quarter cannot hide a conflicting currency elsewhere in the series.
+    if(fact.kind==='CAPEX')refuse(!i.facts.some(f=>f.kind==='CAPEX'&&f.basis==='SINGLE_QUARTER'
+     &&['unit','currency','scale'].some(key=>f.values[key]!==fact.values[key])),'CAPEX_BASIS');
     if(existing.length){refuse(await snapshotHash(existing[0])===await snapshotHash(fact),'EXISTING_CONFLICT');continue;}
     refuse(!i.facts.some(f=>f.id===fact.id)&&!i.omitted_fact_ids?.includes(fact.id),'EXISTING_ID_CONFLICT');
     if(fact.kind==='EPS')refuse(!i.facts.some(f=>f.kind==='EPS'&&f.basis==='SINGLE_QUARTER'

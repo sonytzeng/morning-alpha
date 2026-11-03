@@ -26,7 +26,7 @@ test('batch output is deeply identical to ordered single calls at independent av
   assert.equal(batch.snapshot_hash,await snapshotHash(Object.fromEntries(Object.entries(batch).filter(([k])=>k!=='snapshot_hash'))));
  }
  const live=await mergeIssuerFinancialBatch(await acquired(),releases);
- assert.equal(live.inputs.flatMap(i=>i.facts).length,325);
+ assert.equal(live.inputs.flatMap(i=>i.facts).length,329);
  assert(live.inputs.every(i=>i.facts.every(f=>f.source_admitted===false&&f.member_publication_approved===false)));
 });
 

@@ -75,7 +75,7 @@ export async function dailyLockedEntry(value:unknown,today:string,now=Date.now()
    ||typeof lock.id!=='string'||!lock.id||ids.has(lock.id)||seen.has(key)||!/^\d{4,6}$/.test(symbol)
    ||!['SHORT','MEDIUM','LONG'].includes(horizon)||lock.business_date!==today||lock.mode!=='FORWARD_SHADOW'
    ||lock.provenance!=='RETAINED_REAL_EVIDENCE'||lock.strategy_version!=='VNEXT_OBSERVATION_HYPOTHESIS_2.0.0'
-   ||lock.entry_version!=='ENTRY_OPPORTUNITY_1.0.0'||research.symbol!==symbol||research.horizon!==horizon
+   ||!['ENTRY_OPPORTUNITY_1.0.0','ENTRY_OPPORTUNITY_1.1.0'].includes(String(lock.entry_version))||research.symbol!==symbol||research.horizon!==horizon
    ||lock.confirmation!==research.confirmation||lock.invalidation!==research.invalidation
    ||!Number.isFinite(at)||!Number.isFinite(generated)||!Number.isFinite(locked)||!Number.isFinite(actionable)
    ||at>generated||generated>locked||locked>now||locked>=actionable||actionable!==Date.parse(today+'T09:00:00+08:00')
@@ -86,7 +86,7 @@ export async function dailyLockedEntry(value:unknown,today:string,now=Date.now()
   for(const rawEntry of lock.entry){
    const e=object(rawEntry),strategy=String(e.strategy),status=String(e.status);
    if(e.symbol!==symbol||!Object.hasOwn(strategyNames,strategy)||!Object.hasOwn(entryNames,status)||strategies.has(strategy)
-    ||e.strategy_version!==strategy+'_1.0.0'||!Array.isArray(e.reasons)||!e.reasons.every(r=>typeof r==='string')
+    ||e.strategy_version!==strategy+(lock.entry_version==='ENTRY_OPPORTUNITY_1.1.0'?'_1.1.0':'_1.0.0')||!Array.isArray(e.reasons)||!e.reasons.every(r=>typeof r==='string')
     ||!Array.isArray(e.evidence_refs)||!e.evidence_refs.every(r=>typeof r==='string')
     ||e.entry_trigger!==null&&typeof e.entry_trigger!=='string'||e.invalidation!==null&&typeof e.invalidation!=='string')throw Error('DAILY_ENTRY_RESULT');
    strategies.add(strategy);
@@ -95,7 +95,7 @@ export async function dailyLockedEntry(value:unknown,today:string,now=Date.now()
      ||![...range,p.trigger,p.stop,p.target,p.risk_distance,p.max_risk].every(n=>typeof n==='number'&&Number.isFinite(n)&&n>0)
      ||![p.reward_space,p.reward_risk].every(n=>typeof n==='number'&&Number.isFinite(n))
      ||range[0]!==p.trigger||range[0]>range[1]||Number(p.stop)>=Number(p.trigger)||Number(p.target)<=range[1]
-     ||typeof p.not_before!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(p.not_before)||p.expires_on!==p.not_before||p.not_before<today)throw Error('DAILY_ENTRY_PLAN');
+     ||typeof p.not_before!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(p.not_before)||p.expires_on!==p.not_before||p.not_before<today||lock.entry_version==='ENTRY_OPPORTUNITY_1.1.0'&&p.not_before!==today)throw Error('DAILY_ENTRY_PLAN');
    }
   }
   const digest=await snapshotHash(lock.entry),prior=stocks.get(symbol);

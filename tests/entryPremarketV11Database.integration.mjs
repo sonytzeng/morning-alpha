@@ -10,7 +10,7 @@ const moduleName=process.env.MA_PGLITE_MODULE??'@electric-sql/pglite';
 const {PGlite}=await import(moduleName.startsWith('/')?pathToFileURL(moduleName).href:moduleName);
 const db=new PGlite();const checks=[];
 const read=name=>readFileSync(new URL('../'+name,import.meta.url),'utf8');
-const migration=read('supabase/migrations/20261103003744_vnext_premarket_entry_v11.sql');
+const migration=read('supabase/migrations/20261103005841_vnext_premarket_entry_v11.sql');
 const query=async sql=>(await db.query(sql)).rows;
 const rejected=async(sql,pattern)=>{await assert.rejects(()=>db.exec(sql),pattern);await db.exec('rollback;');};
 try{

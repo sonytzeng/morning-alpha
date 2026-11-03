@@ -66,7 +66,7 @@ test('1.1 Outcome accepts same-day strictly-before-open locks without inventing 
  assert.equal((await evaluateEntryOutcome(otherDay,evidence,1)).reason,'NOT_PROSPECTIVE');
 });
 test('candidate database upgrade is baseline/ACL guarded and accepts 1.1 only from a pinned current-session acquisition',()=>{
- const sql=readFileSync(new URL('../supabase/migrations/20261103003744_vnext_premarket_entry_v11.sql',import.meta.url),'utf8');
+ const sql=readFileSync(new URL('../supabase/migrations/20261103005841_vnext_premarket_entry_v11.sql',import.meta.url),'utf8');
  for(const marker of ['ENTRY_V11_RUNTIME_BASELINE_DRIFT','ENTRY_V11_RUNTIME_PRIVILEGE_DRIFT','9600c4606c026bef9cab27d7dbdba5320c1fc0d01bd0c9c7774a86b0cceb289f',
   "r.checkpoint#>>'{acquired,entry_version}'","e#>>'{plan,not_before}' is distinct from r.business_date::text",'PREDICTION_PREMARKET_ENTRY_SCOPE',
   "jsonb_build_object('entry_versions'","'{postgres=X/postgres,service_role=X/postgres}'"])assert(sql.includes(marker),marker);

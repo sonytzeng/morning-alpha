@@ -3,7 +3,23 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {resolveEffectiveMemberAccess} from '../supabase/functions/_shared/member-entitlement.ts';
+import {verifyIntegrationCandidate,integrationHash} from './helpers/integrationAdmission.mjs';
+import {REVIEWED_SUCCESSOR_BASE,REVIEWED_SUCCESSOR_HEAD,REVIEWED_SUCCESSOR_CATALOG} from './helpers/reviewedSourceSuccessor.mjs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
+const pricingPath='src/pages/pricing/Pricing.tsx';
+// This assertion predates the already sealed stock-research copy. Restore only
+// its exact Git predecessor after complete live admission; actual trial/payment
+// assertions below continue to inspect the current copy, never this view.
+function originalPricingCopy(current){
+ verifyIntegrationCandidate();
+ const catalog=JSON.parse(read(REVIEWED_SUCCESSOR_CATALOG)),row=catalog.files.find(r=>r.path===pricingPath);assert(row);
+ const original=revision=>execFileSync('git',['--no-replace-objects','show',revision+':'+pricingPath],{cwd:new URL('../',import.meta.url)});
+ const before=original(REVIEWED_SUCCESSOR_BASE),after=original(REVIEWED_SUCCESSOR_HEAD);
+ assert.equal(row.before_mode,'100644');assert.equal(row.mode,'100644');
+ assert.equal(integrationHash(before),row.before_sha256);assert.equal(integrationHash(after),row.after_sha256);
+ assert.equal(current,after.toString('utf8'),'PRICING_CURRENT_COPY_DRIFT');assert.equal(read(pricingPath),current,'PRICING_CHANGED_DURING_ASSERTION');
+ verifyIntegrationCandidate();return before.toString('utf8');
+}
 export const membershipMigration='supabase/migrations/20261013045054_membership_legacy_policy_candidate.sql';
 test('candidate migration never activates a policy or rewrites existing canonical grants on installation',()=>{
  const sql=read(membershipMigration);
@@ -52,8 +68,12 @@ test('member copy does not promise automatic trial or a live checkout',()=>{
  const card=read('src/components/membership/MembershipStatusCard.tsx'),pricing=read('src/pages/pricing/Pricing.tsx');
  assert.match(card,/原有權益不變/);assert.match(card,/legacyReviewRequired/);assert.match(card,/SIGNED_OUT/);
  assert.doesNotMatch(pricing,/正式啟用後，才開始計算完整 14 天試用|前 14 天完整試用。/);
- assert.equal(pricing,execFileSync('git',['show','9da487db73055eb983379ca2879822ebeb8f8906:src/pages/pricing/Pricing.tsx'],{encoding:'utf8'}));
+ assert.equal(originalPricingCopy(pricing),execFileSync('git',['show','9da487db73055eb983379ca2879822ebeb8f8906:src/pages/pricing/Pricing.tsx'],{encoding:'utf8'}));
  assert.match(pricing,/目前尚未啟用付款/);assert.match(pricing,/NT\$199/);
+});
+test('historical pricing assertion rejects changed current text instead of replacing it with a good predecessor',()=>{
+ const current=read(pricingPath);
+ for(const text of [current+'\nUNREVIEWED',current.replace('目前尚未啟用付款','付款已啟用')])assert.throws(()=>originalPricingCopy(text),/PRICING_CURRENT_COPY_DRIFT/);
 });
 test('isolated Preview uses the runtime loopback endpoints, never a stale hardcoded Auth or REST port',()=>{
  const preview=read('scripts/vnext/membership-preview.mjs');

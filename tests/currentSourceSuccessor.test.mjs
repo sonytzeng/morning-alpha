@@ -27,7 +27,7 @@ test('every newly admitted source rejects a changed live body even after termina
  for(const row of [...c.files,...c.local_support_patch]){const f=fixture();f.bytes.set(row.path,Buffer.concat([f.read(row.path),Buffer.from('\nUNREVIEWED_CURRENT_SOURCE')]));f.mirror(row.path);assert.throws(f.verify,/SOURCE_DRIFT/,'live '+row.path);}
 });
 test('CI patch keeps every previous control and only appends both successor test suites',()=>{
- const c=currentSourceDefinition(),patch=c.local_support_patch[0];assert.equal(c.local_support_patch.length,7);
+ const c=currentSourceDefinition(),patch=c.local_support_patch[0];assert.equal(c.local_support_patch.length,8);
  const before=execFileSync('git',['--no-replace-objects','cat-file','blob',patch.before.oid]).toString(),after=physical(patch.path).toString();
  assert.equal(after.replace(' tests/currentSourceSuccessor.test.mjs tests/reviewedSourceSuccessor.test.mjs',''),before);
  assert.equal(integrationHash(physical(patch.path)),patch.after.sha256);

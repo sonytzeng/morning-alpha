@@ -745,6 +745,29 @@
           "after": "        env:\n          NODE_OPTIONS: --experimental-strip-types\n        run: npm ci --ignore-scripts\n      - name: Current Owner publication replay and completed research controls\n        env:\n          NODE_OPTIONS: --experimental-strip-types\n        run: node --experimental-strip-types --test --test-concurrency=1 tests/ownerLegacyPublication.test.mjs tests/completedResearch.test.mjs tests/entryCompletedSession.test.mjs\n      - name: Check out the immutable Worker packaging baseline only\n        uses: actions/checkout@v4\n        with:\n"
         }
       ]
+    },
+    {
+      "path": "tests/membershipPolicy.test.mjs",
+      "purpose": "PRESERVE_ORIGINAL_PRICING_FINGERPRINT_THROUGH_ALREADY_SEALED_GIT_SUCCESSOR_WHILE_CHECKING_CURRENT_TRIAL_AND_PAYMENT_COPY",
+      "before": {
+        "oid": "2e02e4926ba800bf26f8a5aa65af28f556c78f8f",
+        "mode": "100644",
+        "sha256": "63a3e5cdfb57297818aca4b14cc37ef2e9cc41c68a90248a622dd4e186e56b31"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "6bd83737a50376ec244fcb63fae8c8ab2c69f1608893f88b28a8476a2e25bd55"
+      },
+      "exact_edits": [
+        {
+          "before": "import {readFileSync} from 'node:fs';\nimport {execFileSync} from 'node:child_process';\nimport {resolveEffectiveMemberAccess} from '../supabase/functions/_shared/member-entitlement.ts';\nconst read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');\nexport const membershipMigration='supabase/migrations/20261013045054_membership_legacy_policy_candidate.sql';\ntest('candidate migration never activates a policy or rewrites existing canonical grants on installation',()=>{\n const sql=read(membershipMigration);\n",
+          "after": "import {readFileSync} from 'node:fs';\nimport {execFileSync} from 'node:child_process';\nimport {resolveEffectiveMemberAccess} from '../supabase/functions/_shared/member-entitlement.ts';\nimport {verifyIntegrationCandidate,integrationHash} from './helpers/integrationAdmission.mjs';\nimport {REVIEWED_SUCCESSOR_BASE,REVIEWED_SUCCESSOR_HEAD,REVIEWED_SUCCESSOR_CATALOG} from './helpers/reviewedSourceSuccessor.mjs';\nconst read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');\nconst pricingPath='src/pages/pricing/Pricing.tsx';\n// This assertion predates the already sealed stock-research copy. Restore only\n// its exact Git predecessor after complete live admission; actual trial/payment\n// assertions below continue to inspect the current copy, never this view.\nfunction originalPricingCopy(current){\n verifyIntegrationCandidate();\n const catalog=JSON.parse(read(REVIEWED_SUCCESSOR_CATALOG)),row=catalog.files.find(r=>r.path===pricingPath);assert(row);\n const original=revision=>execFileSync('git',['--no-replace-objects','show',revision+':'+pricingPath],{cwd:new URL('../',import.meta.url)});\n const before=original(REVIEWED_SUCCESSOR_BASE),after=original(REVIEWED_SUCCESSOR_HEAD);\n assert.equal(row.before_mode,'100644');assert.equal(row.mode,'100644');\n assert.equal(integrationHash(before),row.before_sha256);assert.equal(integrationHash(after),row.after_sha256);\n assert.equal(current,after.toString('utf8'),'PRICING_CURRENT_COPY_DRIFT');assert.equal(read(pricingPath),current,'PRICING_CHANGED_DURING_ASSERTION');\n verifyIntegrationCandidate();return before.toString('utf8');\n}\nexport const membershipMigration='supabase/migrations/20261013045054_membership_legacy_policy_candidate.sql';\ntest('candidate migration never activates a policy or rewrites existing canonical grants on installation',()=>{\n const sql=read(membershipMigration);\n"
+        },
+        {
+          "before": " const card=read('src/components/membership/MembershipStatusCard.tsx'),pricing=read('src/pages/pricing/Pricing.tsx');\n assert.match(card,/原有權益不變/);assert.match(card,/legacyReviewRequired/);assert.match(card,/SIGNED_OUT/);\n assert.doesNotMatch(pricing,/正式啟用後，才開始計算完整 14 天試用|前 14 天完整試用。/);\n assert.equal(pricing,execFileSync('git',['show','9da487db73055eb983379ca2879822ebeb8f8906:src/pages/pricing/Pricing.tsx'],{encoding:'utf8'}));\n assert.match(pricing,/目前尚未啟用付款/);assert.match(pricing,/NT\\$199/);\n});\ntest('isolated Preview uses the runtime loopback endpoints, never a stale hardcoded Auth or REST port',()=>{\n const preview=read('scripts/vnext/membership-preview.mjs');\n",
+          "after": " const card=read('src/components/membership/MembershipStatusCard.tsx'),pricing=read('src/pages/pricing/Pricing.tsx');\n assert.match(card,/原有權益不變/);assert.match(card,/legacyReviewRequired/);assert.match(card,/SIGNED_OUT/);\n assert.doesNotMatch(pricing,/正式啟用後，才開始計算完整 14 天試用|前 14 天完整試用。/);\n assert.equal(originalPricingCopy(pricing),execFileSync('git',['show','9da487db73055eb983379ca2879822ebeb8f8906:src/pages/pricing/Pricing.tsx'],{encoding:'utf8'}));\n assert.match(pricing,/目前尚未啟用付款/);assert.match(pricing,/NT\\$199/);\n});\ntest('historical pricing assertion rejects changed current text instead of replacing it with a good predecessor',()=>{\n const current=read(pricingPath);\n for(const text of [current+'\\nUNREVIEWED',current.replace('目前尚未啟用付款','付款已啟用')])assert.throws(()=>originalPricingCopy(text),/PRICING_CURRENT_COPY_DRIFT/);\n});\ntest('isolated Preview uses the runtime loopback endpoints, never a stale hardcoded Auth or REST port',()=>{\n const preview=read('scripts/vnext/membership-preview.mjs');\n"
+        }
+      ]
     }
   ]
 }

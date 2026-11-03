@@ -2,7 +2,7 @@ import {createClient} from "../_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75
 import {handleVnextDaily} from './handler.ts';
 import {continueVnextRun} from '../_shared/vnext-daily-hook.ts';
 import {ENTRY_PREMARKET_VERSION} from '../../../research/entry-opportunity.ts';
-import {retainedIssuerFinancialReleases} from '../_shared/retained-issuer-financials.ts';
+import {retainedIssuerFinancialReleases} from '../_shared/retained-issuer-financials-current.ts';
 import {retainedIssuerDocumentedReviews} from '../_shared/retained-documented-reviews.ts';
 const url=Deno.env.get('SUPABASE_URL')??'',service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')??'';
 const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:(u:Parameters<typeof fetch>[0],i?:Parameters<typeof fetch>[1])=>fetch(u,{...i,signal:AbortSignal.timeout(8000)})}});

@@ -1,0 +1,133 @@
+{
+  "schema": "NOVATEK_FINANCIAL_ORIGINAL_REVIEW_V1",
+  "reviewed_at": "2026-11-03T12:11:13.535Z",
+  "symbol": "3034",
+  "source_index": "https://www.novatek.com.tw/en-global/Download/ir_quarterlyreport",
+  "observations": [
+    {
+      "url": "https://www.novatek.com.tw/upload/website/_2025 Q3 Consolidated Financial Report_e_25112611_951.pdf",
+      "received_at": "2026-11-03T12:05:39.992755+00:00",
+      "sha256": "9231678ae7a1e510be284fd7efba2784389bd01512d6ae3d4a76b10033ed92c0",
+      "bytes": 1587535,
+      "local_file": "3034_2025Q3_official.pdf",
+      "period": "2025-Q3",
+      "page": 6,
+      "page_size": [
+        841.92004,
+        595.32001
+      ],
+      "row": "Basic earnings per share",
+      "cell_bbox": [
+        465,
+        521.50135169,
+        491,
+        530.82106669
+      ],
+      "cell_text": "6.01",
+      "value": 6.01,
+      "basis": "BASIC",
+      "scope": "CONSOLIDATED",
+      "period_basis": "DIRECT_SINGLE_QUARTER",
+      "column": "FIRST_CURRENT_YEAR_THREE_MONTH_COLUMN",
+      "checked_by": [
+        "PDFPLUMBER_BOUND_CELL",
+        "POPPLER_LAYOUT_TEXT",
+        "RENDERED_PAGE_VISUAL_REVIEW"
+      ]
+    },
+    {
+      "url": "https://www.novatek.com.tw/upload/website/_2026 Q1 Consolidated Financial Report_e_26052515_666.pdf",
+      "received_at": "2026-11-03T12:05:41.319365+00:00",
+      "sha256": "b07ecd931e3fa9073dd3c99cc82c78bb7dd9f104b0b5333218ba9c6d9702c124",
+      "bytes": 1652561,
+      "local_file": "3034_2026Q1_official.pdf",
+      "period": "2026-Q1",
+      "page": 6,
+      "page_size": [
+        595.32001,
+        841.92004
+      ],
+      "row": "Basic earnings per share",
+      "cell_bbox": [
+        410,
+        712.11269905,
+        435,
+        721.67299905
+      ],
+      "cell_text": "6 .19",
+      "value": 6.19,
+      "basis": "BASIC",
+      "scope": "CONSOLIDATED",
+      "period_basis": "DIRECT_SINGLE_QUARTER",
+      "column": "FIRST_CURRENT_YEAR_THREE_MONTH_COLUMN",
+      "checked_by": [
+        "PDFPLUMBER_BOUND_CELL",
+        "POPPLER_LAYOUT_TEXT",
+        "RENDERED_PAGE_VISUAL_REVIEW"
+      ]
+    },
+    {
+      "url": "https://www.novatek.com.tw/upload/website/_2026 Q2 Consolidated Financial Report_e_26082611_155.pdf",
+      "received_at": "2026-11-03T12:04:11.564496+00:00",
+      "sha256": "378477f94d31b506c5017ff40a4c6e93b652ccb28d494ad38d6b0c2ec6b2aad7",
+      "bytes": 1688771,
+      "local_file": "3034_2026Q2_official.pdf",
+      "period": "2026-Q2",
+      "page": 6,
+      "page_size": [
+        841.92,
+        595.32
+      ],
+      "row": "Basic earnings per share",
+      "cell_bbox": [
+        465,
+        521.50134169,
+        491,
+        530.82105669
+      ],
+      "cell_text": "10.40",
+      "value": 10.4,
+      "basis": "BASIC",
+      "scope": "CONSOLIDATED",
+      "period_basis": "DIRECT_SINGLE_QUARTER",
+      "column": "FIRST_CURRENT_YEAR_THREE_MONTH_COLUMN",
+      "checked_by": [
+        "PDFPLUMBER_BOUND_CELL",
+        "POPPLER_LAYOUT_TEXT",
+        "RENDERED_PAGE_VISUAL_REVIEW"
+      ]
+    }
+  ],
+  "held_out": [
+    {
+      "url": "https://www.novatek.com.tw/upload/website/_2025 Q4 Consolidated Financial Report_e_26033010_240.pdf",
+      "received_at": "2026-11-03T12:05:40.587861+00:00",
+      "sha256": "d35c44eec5bd7dbdfa103893769b3d6b22834b3c97448d367930c17abbe31be8",
+      "bytes": 291398,
+      "local_file": "3034_2025FY_official.pdf",
+      "reason": "ANNUAL_TOTAL_NOT_DIRECT_Q4_BASIC_EPS",
+      "admitted": false
+    },
+    {
+      "url": "https://www.novatek.com.tw/upload/website/_FIN2025Q4_e_26020909_536.pdf",
+      "received_at": "2026-11-03T12:06:30.823311+00:00",
+      "sha256": "53da77a3c7418a5c4c328e4f7c1bb0b6a21872104939eb91a23fd7f14ab27778",
+      "bytes": 151648,
+      "local_file": "3034_2025Q4_earnings.pdf",
+      "reason": "EPS_BASIS_NOT_EXPLICIT_BASIC_OR_DILUTED",
+      "admitted": false
+    }
+  ],
+  "four_quarter_basic_series_complete": false,
+  "remaining_quarter": "2025-Q4",
+  "annual_subtraction_performed": false,
+  "source_admitted": false,
+  "member_publication_approved": false,
+  "methodology_promoted": false,
+  "next_release": {
+    "source": "https://www.novatek.com.tw/en-global/Download/ir_event/Index/analyst_meeting",
+    "announced_date": "2026-11-06",
+    "known_release_deadline": "2026-11-06T00:00:00+08:00",
+    "deadline_basis": "CONSERVATIVE_START_OF_EVENT_DATE_TIME_NOT_ANNOUNCED"
+  }
+}

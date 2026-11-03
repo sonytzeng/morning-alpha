@@ -637,12 +637,12 @@
       },
       "after": {
         "mode": "100644",
-        "sha256": "e9bab12ee19d0b59245dc43e3dbe7fa512586da131946781c0ccba463334c141"
+        "sha256": "a9d7cd352abf59c884e4af08024985f8813bd50e9fe55d18ce369ee7503248de"
       },
       "exact_edits": [
         {
           "before": " integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHash,\n createSourceUnionComposition,verifyIntegrationCandidate,sourceUnionLineage,sourceUnionParentRead,reuseSourceUnionPinnedProof,\n} from './helpers/integrationAdmission.mjs';\nimport {reviewedSuccessorPaths,reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';\nconst frozenRuntime=JSON.parse(integrationPhysicalRead(FROZEN_RUNTIME_INTEGRATION_MANIFEST));\nconst frozenRuntimePaths=new Set(frozenRuntime.files.map(row=>row.path));\nconst successorAdded=reviewedSuccessorPaths().filter(path=>!frozenRuntimePaths.has(path));\n",
-          "after": " integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHash,\n createSourceUnionComposition,verifyIntegrationCandidate,sourceUnionLineage,sourceUnionParentRead,reuseSourceUnionPinnedProof,\n} from './helpers/integrationAdmission.mjs';\nimport {reviewedSuccessorPaths} from './helpers/currentSourceSuccessor.mjs';\nimport {reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';\nconst frozenRuntime=JSON.parse(integrationPhysicalRead(FROZEN_RUNTIME_INTEGRATION_MANIFEST));\nconst frozenRuntimePaths=new Set(frozenRuntime.files.map(row=>row.path));\nconst successorAdded=reviewedSuccessorPaths().filter(path=>!frozenRuntimePaths.has(path));\n"
+          "after": " integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHash,\n createSourceUnionComposition,verifyIntegrationCandidate,sourceUnionLineage,sourceUnionParentRead,reuseSourceUnionPinnedProof,\n} from './helpers/integrationAdmission.mjs';\nimport {reviewedSuccessorPaths} from './helpers/currentSourceSuccessor.mjs';\nimport {reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';\nimport {currentSourceHash} from './helpers/currentSourceCatalog.mjs';\nconst frozenRuntime=JSON.parse(integrationPhysicalRead(FROZEN_RUNTIME_INTEGRATION_MANIFEST));\nconst frozenRuntimePaths=new Set(frozenRuntime.files.map(row=>row.path));\nconst successorAdded=reviewedSuccessorPaths().filter(path=>!frozenRuntimePaths.has(path));\n"
         },
         {
           "before": "const R4_ASSERTION_FILE_BEFORE_SHA='c70d1ae15d1c88547f61454fdbb3069775e43d3cebadf1aceb01d4d7e9e1815e';\nconst R4_ASSERTION_BEFORE_SHA='7a7414c56c596d7f22a3745b485281f4a2fdf5cccb7a5090af09e7cc56881992';\nconst R4_ASSERTION_CURRENT_SHA='eb62f37aac7a219d77b0dec89067b6ff7b5fbeb6ef4ccbc0780bde5a6df6cb3e';\nfunction assertionFunctionSpan(text,title){\n const starts=[...text.matchAll(/^test\\('([^']+)'/gm)],matches=starts.map((row,index)=>({row,index})).filter(({row})=>row[1]===title);\n if(matches.length!==1)return null;\n",
@@ -657,8 +657,73 @@
           "after": "test('R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',()=>{\n const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);\n assert.equal(FROZEN_RUNTIME_INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261022-runtime-integrity.json');\n assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261103-current-source.json');\n assert.equal(frozenRuntime.files.length,586);\n assert.equal(FROZEN_SOURCE_UNION_R7,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r7.json');\n assert.equal(FROZEN_SOURCE_UNION,'docs/operations/evidence/core-member-integration-20261020-v1-source-union.json');\n"
         },
         {
+          "before": " assert.deepEqual(m.files.map(f=>f.path),[...prior.files.map(f=>f.path),FROZEN_SOURCE_UNION_R15,...runtimeAdded,...successorAdded].sort());\n assert.deepEqual(r,runtimeIntegrityLineage());assert.equal(r.base,RUNTIME_INTEGRITY_BASE);\n for(const [key,value]of Object.entries(prior.source_union))assert.deepEqual(m.source_union[key],value);\n for(const row of RUNTIME_INTEGRITY_FILES){assert.equal(integrationHash(execFileSync('git',['--no-replace-objects','show','56b2d638819b8ef6e17385d3a7cfc19f0591c14e:'+row.path],{cwd:new URL('../',import.meta.url)})),row.after_sha256,'original runtime source remains pinned');assert.equal(integrationHash(integrationPhysicalRead(row.path)),reviewedSuccessorSourceHash(row.path,row.after_sha256));assert.equal(integrationPhysicalMode(row.path),row.mode);}\n const workflow=integrationPhysicalRead('.github/workflows/vnext-candidate.yml').toString();\n const block=workflow.split('      - name: Exact current hash ownership, strict Canonical receipt and acquisition trace controls')[1]?.split('      - name:')[0];\n assert(block);for(const p of ['vnextPredictionHashBudget','v1ActualCanonicalReceiptStatus','vnextTraceValidationBudget'])assert(block.includes('tests/'+p+'.test.mjs'));\n",
+          "after": " assert.deepEqual(m.files.map(f=>f.path),[...prior.files.map(f=>f.path),FROZEN_SOURCE_UNION_R15,...runtimeAdded,...successorAdded].sort());\n assert.deepEqual(r,runtimeIntegrityLineage());assert.equal(r.base,RUNTIME_INTEGRITY_BASE);\n for(const [key,value]of Object.entries(prior.source_union))assert.deepEqual(m.source_union[key],value);\n for(const row of RUNTIME_INTEGRITY_FILES){assert.equal(integrationHash(execFileSync('git',['--no-replace-objects','show','56b2d638819b8ef6e17385d3a7cfc19f0591c14e:'+row.path],{cwd:new URL('../',import.meta.url)})),row.after_sha256,'original runtime source remains pinned');assert.equal(integrationHash(integrationPhysicalRead(row.path)),currentSourceHash(row.path)??reviewedSuccessorSourceHash(row.path,row.after_sha256));assert.equal(integrationPhysicalMode(row.path),row.mode);}\n const workflow=integrationPhysicalRead('.github/workflows/vnext-candidate.yml').toString();\n const block=workflow.split('      - name: Exact current hash ownership, strict Canonical receipt and acquisition trace controls')[1]?.split('      - name:')[0];\n assert(block);for(const p of ['vnextPredictionHashBudget','v1ActualCanonicalReceiptStatus','vnextTraceValidationBudget'])assert(block.includes('tests/'+p+'.test.mjs'));\n"
+        },
+        {
           "before": "\ntest('successor assertion source restores exactly one reviewed R4 body while raw current execution and injected bytes remain current',()=>{\n const raw=integrationPhysicalRead(R4_ASSERTION_PATH).toString(),current=assertionFunctionSpan(raw,R4_ASSERTION_TITLE);assert(current);\n assert.equal(integrationHash(Buffer.from(current.body)),R4_ASSERTION_CURRENT_SHA);\n const restored=reviewedSuccessorAssertionSource(R4_ASSERTION_PATH,raw),before=assertionFunctionSpan(restored,R4_ASSERTION_TITLE);assert(before);\n assert.equal(integrationHash(Buffer.from(before.body)),R4_ASSERTION_BEFORE_SHA);assert.notEqual(raw,restored);\n",
           "after": "\ntest('successor assertion source restores exactly one reviewed R4 body while raw current execution and injected bytes remain current',()=>{\n const raw=integrationPhysicalRead(R4_ASSERTION_PATH).toString(),current=assertionFunctionSpan(raw,R4_ASSERTION_TITLE);assert(current);\n const checkCompatibility=text=>assert.equal(integrationHash(Buffer.from(priorAssertionCompatibilitySource(text))),R4_ASSERTION_FILE_CURRENT_SHA);\n checkCompatibility(raw);\n for(const changed of [raw+'\\nUNREVIEWED',raw.replace(\"from './helpers/currentSourceSuccessor.mjs'\",\"from './helpers/unknown.mjs'\"),raw.replace('src/features/vnext/dailyParsers.mjs','src/features/vnext/unknown.mjs')])assert.throws(()=>checkCompatibility(changed));\n assert.equal(integrationHash(Buffer.from(current.body)),R4_ASSERTION_CURRENT_SHA);\n const restored=reviewedSuccessorAssertionSource(R4_ASSERTION_PATH,raw),before=assertionFunctionSpan(restored,R4_ASSERTION_TITLE);assert(before);\n assert.equal(integrationHash(Buffer.from(before.body)),R4_ASSERTION_BEFORE_SHA);assert.notEqual(raw,restored);\n"
+        }
+      ]
+    },
+    {
+      "path": "tests/helpers/recommendationHistoricalBatch.mjs",
+      "purpose": "BIND_CHECKED_HISTORICAL_BATCH_TO_CURRENT_TERMINAL_RECEIPT",
+      "before": {
+        "oid": "32b3a85f1f2cf08ce3f5ae72275345cc26c39580",
+        "mode": "100644",
+        "sha256": "d067c8cd77745bdd2d64af6a002f6df192e5d7e955d9581e502bd692a047f653"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "3d51044d7dfab1334c2cbcb1c94f0a3625767579e63ae4f39430741e4dcd75ae"
+      },
+      "exact_edits": [
+        {
+          "before": "import {resolve,dirname,relative,sep} from 'node:path';\nimport {fileURLToPath} from 'node:url';\nimport {isAsyncFunction,isGeneratorFunction} from 'node:util/types';\nimport {INTEGRATION_BASE,INTEGRATION_MANIFEST,integrationHash,\n verifyIntegrationCandidate} from './integrationAdmission.mjs';\nimport {forwardAwareReader} from './recommendationV2ForwardIntegrity.mjs';\nimport {readRecommendationPredecessor} from './recommendationPhaseIntegrity.mjs';\n",
+          "after": "import {resolve,dirname,relative,sep} from 'node:path';\nimport {fileURLToPath} from 'node:url';\nimport {isAsyncFunction,isGeneratorFunction} from 'node:util/types';\nimport {INTEGRATION_BASE,CURRENT_INTEGRATION_MANIFEST as INTEGRATION_MANIFEST,integrationHash,\n verifyIntegrationCandidate} from './integrationAdmission.mjs';\nimport {forwardAwareReader} from './recommendationV2ForwardIntegrity.mjs';\nimport {readRecommendationPredecessor} from './recommendationPhaseIntegrity.mjs';\n"
+        }
+      ]
+    },
+    {
+      "path": "tests/recommendationHistoricalBatch.test.mjs",
+      "purpose": "PRESERVE_SYNTHETIC_GATE_EXPORT_FOR_CURRENT_RECEIPT_BINDING",
+      "before": {
+        "oid": "1117a71331327d68e2aaeb2a083a17fa99a11500",
+        "mode": "100644",
+        "sha256": "ae891de8db7be948dc897a1e4625976bf5ebd903ba957eec7e8543e07f2ad443"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "9937a8be7756970359a7fec3abfa1bfc59a89bf26fc389da26e1671f3fb8fe8c"
+      },
+      "exact_edits": [
+        {
+          "before": " import {fileURLToPath} from 'node:url';\n import {join} from 'node:path';\n export const INTEGRATION_BASE=${JSON.stringify(tree)},INTEGRATION_MANIFEST=${JSON.stringify(SEAL)};\n const root=fileURLToPath(new URL('../../',import.meta.url)),baseline=${JSON.stringify(baseline)};\n export const integrationHash=b=>createHash('sha256').update(b).digest('hex');\n export let admissions=0;\n",
+          "after": " import {fileURLToPath} from 'node:url';\n import {join} from 'node:path';\n export const INTEGRATION_BASE=${JSON.stringify(tree)},INTEGRATION_MANIFEST=${JSON.stringify(SEAL)};\n export const CURRENT_INTEGRATION_MANIFEST=INTEGRATION_MANIFEST;\n const root=fileURLToPath(new URL('../../',import.meta.url)),baseline=${JSON.stringify(baseline)};\n export const integrationHash=b=>createHash('sha256').update(b).digest('hex');\n export let admissions=0;\n"
+        }
+      ]
+    },
+    {
+      "path": "tests/sixBugDatabase.integration.mjs",
+      "purpose": "VERIFY_FROZEN_SIX_BUG_DATABASE_WITH_ITS_OWN_IMMUTABLE_CALENDAR_PAIR",
+      "before": {
+        "oid": "8a6d89025d724c81995418e38f24e212968cf302",
+        "mode": "100644",
+        "sha256": "9af3f43412ff9be97c5a29f8a9abab531a54b0674a575c7496f51dfd553fad05"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "1433225302547880b94431aa755c6af3318bfa78cf51ae5b2b7044110ed3a0aa"
+      },
+      "exact_edits": [
+        {
+          "before": "// Fresh isolation only. No URL, Production credential, network dispatch, Cron\n// or business backfill. The exact schema-only predecessor is hash-pinned.\nimport assert from 'node:assert/strict';\nimport {readFileSync} from 'node:fs';\nimport {execFileSync} from 'node:child_process';\nimport {createHash} from 'node:crypto';\nimport calendar from '../supabase/functions/_shared/market-calendar-data.json' with {type:'json'};\nimport {previousMarketTradingDate,validateGlobal8Session} from '../supabase/functions/_shared/market-session-contract.mjs';\nconst root=new URL('../',import.meta.url),read=p=>readFileSync(new URL(p,root),'utf8');\nconst db=process.env.MA_ISOLATED_TEST_DB,container=process.env.MA_TEST_DOCKER_CONTAINER;\nassert.equal(process.env.MA_LOCAL_SCOPE,'ma-six-bug-preventive-20260930');\n",
+          "after": "// Fresh isolation only. No URL, Production credential, network dispatch, Cron\n// or business backfill. The exact schema-only predecessor is hash-pinned.\nimport assert from 'node:assert/strict';\nimport {readFileSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs';\nimport {execFileSync} from 'node:child_process';\nimport {createHash} from 'node:crypto';\nimport {tmpdir} from 'node:os';\nimport {join} from 'node:path';\nimport {pathToFileURL} from 'node:url';\nconst root=new URL('../',import.meta.url),read=p=>readFileSync(new URL(p,root),'utf8');\nconst db=process.env.MA_ISOLATED_TEST_DB,container=process.env.MA_TEST_DOCKER_CONTAINER;\nassert.equal(process.env.MA_LOCAL_SCOPE,'ma-six-bug-preventive-20260930');\n"
+        },
+        {
+          "before": " console.log(JSON.stringify({fresh_database:db,bootstrap:'PASS',business_rows:0,production_writes:0}));\n process.exit(0);\n}\nassert.deepEqual(JSON.parse(sql('select public.authoritative_market_calendar_v1()')),calendar);\nlet checks=1;\nfor(const day of ['2026-09-30','2026-09-21','2026-09-29','2026-10-27','2026-05-04','2026-02-23','2026-01-02']){\n",
+          "after": " console.log(JSON.stringify({fresh_database:db,bootstrap:'PASS',business_rows:0,production_writes:0}));\n process.exit(0);\n}\n// This database applies the frozen September migration. Test its exact shared\n// calendar/session pair from the accepted immutable parent, after current-tree\n// admission. A later operational exception must not rewrite this old proof.\nconst {INTEGRATION_BASE,verifyIntegrationCandidate}=await import('./helpers/integrationAdmission.mjs');\nverifyIntegrationCandidate();\nconst bundle=JSON.parse(read('docs/operations/evidence/six-bug-release-bundles-20260930.json'));\nconst pair=['market-calendar-data.json','market-session-contract.mjs'],dir=mkdtempSync(join(tmpdir(),'ma-six-bug-frozen-calendar-'));\nlet calendar,previousMarketTradingDate,validateGlobal8Session;\ntry{\n for(const name of pair){\n  const path='supabase/functions/_shared/'+name;\n  const bytes=execFileSync('git',['--no-replace-objects','show',INTEGRATION_BASE+':'+path],{cwd:root,env:{PATH:process.env.PATH,LC_ALL:'C',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_NO_LAZY_FETCH:'1',GIT_TERMINAL_PROMPT:'0'},maxBuffer:1e6});\n  assert.equal(createHash('sha256').update(bytes).digest('hex'),bundle.files[path],'SIX_BUG_FROZEN_SHARED_SOURCE:'+path);\n  writeFileSync(join(dir,name),bytes);\n  if(name.endsWith('.json'))calendar=JSON.parse(bytes);\n }\n ({previousMarketTradingDate,validateGlobal8Session}=await import(pathToFileURL(join(dir,pair[1])).href));\n}finally{rmSync(dir,{recursive:true,force:true});}\nassert.equal(calendar.version,'OFFICIAL_MARKET_CALENDAR_20260930_V1');\nassert.deepEqual(JSON.parse(sql('select public.authoritative_market_calendar_v1()')),calendar);\nlet checks=1;\nfor(const day of ['2026-09-30','2026-09-21','2026-09-29','2026-10-27','2026-05-04','2026-02-23','2026-01-02']){\n"
         }
       ]
     }

@@ -6,7 +6,7 @@ import {readFileSync,lstatSync} from 'node:fs';
 export const CURRENT_SOURCE_BASE='da0e07dd23aee62f31cd669d0d090d948e6d1171';
 export const CURRENT_SOURCE_HEAD='8c405008cdcc9f70b070da42743bcfe837a08dfa';
 export const CURRENT_SOURCE_CATALOG='docs/operations/evidence/current-source-successor-20261103-catalog.json';
-export const CURRENT_SOURCE_CATALOG_SHA256='74d116631ddac2116688d239521b93956ecbb3516cfe81e453a0852d0e4ba896';
+export const CURRENT_SOURCE_CATALOG_SHA256='dac88d049274bb47ccaf0cdaa2e0dd6e3cc9c7f3e9d6bae51f86f565c13f4864';
 export const CURRENT_SOURCE_MANIFEST='docs/operations/evidence/core-member-integration-20261103-current-source.json';
 const root=new URL('../../',import.meta.url),hash=b=>createHash('sha256').update(b).digest('hex');
 const git=args=>execFileSync('git',['--no-replace-objects',...args],{cwd:root,maxBuffer:32e6});
@@ -42,7 +42,7 @@ export function currentSourceDefinition(bytes){
    assert.deepEqual(row.before,original(c.base,row.path),'CURRENT_SOURCE_BEFORE:'+row.path);
    assert.deepEqual(row.after,original(c.head,row.path),'CURRENT_SOURCE_AFTER:'+row.path);assert(row.after,'CURRENT_SOURCE_DELETE_FORBIDDEN');
   }
-  assert.deepEqual(c.local_support_patch.map(r=>r.path),[workflow,'tests/officialPublicAdmission.test.mjs','tests/originalIngressAdmission.test.mjs'],'CURRENT_SOURCE_EXACT_SUPPORT_PATCH');
+  assert.deepEqual(c.local_support_patch.map(r=>r.path),[workflow,'tests/officialPublicAdmission.test.mjs','tests/originalIngressAdmission.test.mjs','tests/helpers/recommendationHistoricalBatch.mjs','tests/recommendationHistoricalBatch.test.mjs','tests/sixBugDatabase.integration.mjs'],'CURRENT_SOURCE_EXACT_SUPPORT_PATCH');
   for(const row of c.local_support_patch){
    assert(!paths.includes(row.path),'CURRENT_SOURCE_SUPPORT_NOT_IN_GIT_DELTA');
    assert.deepEqual(row.before,original(c.head,row.path),'CURRENT_SOURCE_SUPPORT_BEFORE:'+row.path);
@@ -63,8 +63,12 @@ export function currentSourceDefinition(bytes){
  // Only immutable Git metadata is cached; never a mutable read, mode or PASS.
  return immutable;
 }
-export function currentSourceHash(path){return currentSourceDefinition().files.find(r=>r.path===path)?.after.sha256;}
+export function currentSourceHash(path){const c=currentSourceDefinition();return [...c.files,...c.local_support_patch].find(r=>r.path===path)?.after.sha256;}
+const priorPatchBytes=new Map();
 export function currentSourcePriorPatch(path){
  const row=currentSourceDefinition().local_support_patch.find(r=>r.path===path);assert(row,'CURRENT_SOURCE_EXACT_PRIOR_PATCH');
- const bytes=git(['cat-file','blob',row.before.oid]);assert.equal(hash(bytes),row.before.sha256);return bytes;
+ // Immutable Git blobs only. Return an owned copy; the live reader and mode
+ // are still checked on every call by the wrapping admission boundary.
+ if(!priorPatchBytes.has(path)){const bytes=git(['cat-file','blob',row.before.oid]);assert.equal(hash(bytes),row.before.sha256);priorPatchBytes.set(path,bytes);}
+ return Buffer.from(priorPatchBytes.get(path));
 }

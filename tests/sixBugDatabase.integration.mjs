@@ -1,11 +1,12 @@
 // Fresh isolation only. No URL, Production credential, network dispatch, Cron
 // or business backfill. The exact schema-only predecessor is hash-pinned.
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import calendar from '../supabase/functions/_shared/market-calendar-data.json' with {type:'json'};
-import {previousMarketTradingDate,validateGlobal8Session} from '../supabase/functions/_shared/market-session-contract.mjs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
 const root=new URL('../',import.meta.url),read=p=>readFileSync(new URL(p,root),'utf8');
 const db=process.env.MA_ISOLATED_TEST_DB,container=process.env.MA_TEST_DOCKER_CONTAINER;
 assert.equal(process.env.MA_LOCAL_SCOPE,'ma-six-bug-preventive-20260930');
@@ -49,6 +50,25 @@ if(process.argv.includes('--bootstrap-only')){
  console.log(JSON.stringify({fresh_database:db,bootstrap:'PASS',business_rows:0,production_writes:0}));
  process.exit(0);
 }
+// This database applies the frozen September migration. Test its exact shared
+// calendar/session pair from the accepted immutable parent, after current-tree
+// admission. A later operational exception must not rewrite this old proof.
+const {INTEGRATION_BASE,verifyIntegrationCandidate}=await import('./helpers/integrationAdmission.mjs');
+verifyIntegrationCandidate();
+const bundle=JSON.parse(read('docs/operations/evidence/six-bug-release-bundles-20260930.json'));
+const pair=['market-calendar-data.json','market-session-contract.mjs'],dir=mkdtempSync(join(tmpdir(),'ma-six-bug-frozen-calendar-'));
+let calendar,previousMarketTradingDate,validateGlobal8Session;
+try{
+ for(const name of pair){
+  const path='supabase/functions/_shared/'+name;
+  const bytes=execFileSync('git',['--no-replace-objects','show',INTEGRATION_BASE+':'+path],{cwd:root,env:{PATH:process.env.PATH,LC_ALL:'C',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_NO_LAZY_FETCH:'1',GIT_TERMINAL_PROMPT:'0'},maxBuffer:1e6});
+  assert.equal(createHash('sha256').update(bytes).digest('hex'),bundle.files[path],'SIX_BUG_FROZEN_SHARED_SOURCE:'+path);
+  writeFileSync(join(dir,name),bytes);
+  if(name.endsWith('.json'))calendar=JSON.parse(bytes);
+ }
+ ({previousMarketTradingDate,validateGlobal8Session}=await import(pathToFileURL(join(dir,pair[1])).href));
+}finally{rmSync(dir,{recursive:true,force:true});}
+assert.equal(calendar.version,'OFFICIAL_MARKET_CALENDAR_20260930_V1');
 assert.deepEqual(JSON.parse(sql('select public.authoritative_market_calendar_v1()')),calendar);
 let checks=1;
 for(const day of ['2026-09-30','2026-09-21','2026-09-29','2026-10-27','2026-05-04','2026-02-23','2026-01-02']){

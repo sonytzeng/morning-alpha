@@ -26,6 +26,7 @@ import {
 } from './helpers/integrationAdmission.mjs';
 import {reviewedSuccessorPaths} from './helpers/currentSourceSuccessor.mjs';
 import {reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';
+import {currentSourceHash} from './helpers/currentSourceCatalog.mjs';
 const frozenRuntime=JSON.parse(integrationPhysicalRead(FROZEN_RUNTIME_INTEGRATION_MANIFEST));
 const frozenRuntimePaths=new Set(frozenRuntime.files.map(row=>row.path));
 const successorAdded=reviewedSuccessorPaths().filter(path=>!frozenRuntimePaths.has(path));
@@ -1240,7 +1241,7 @@ test('runtime candidate binds the complete prior root, exact CPU/RPC changes and
  assert.deepEqual(m.files.map(f=>f.path),[...prior.files.map(f=>f.path),FROZEN_SOURCE_UNION_R15,...runtimeAdded,...successorAdded].sort());
  assert.deepEqual(r,runtimeIntegrityLineage());assert.equal(r.base,RUNTIME_INTEGRITY_BASE);
  for(const [key,value]of Object.entries(prior.source_union))assert.deepEqual(m.source_union[key],value);
- for(const row of RUNTIME_INTEGRITY_FILES){assert.equal(integrationHash(execFileSync('git',['--no-replace-objects','show','56b2d638819b8ef6e17385d3a7cfc19f0591c14e:'+row.path],{cwd:new URL('../',import.meta.url)})),row.after_sha256,'original runtime source remains pinned');assert.equal(integrationHash(integrationPhysicalRead(row.path)),reviewedSuccessorSourceHash(row.path,row.after_sha256));assert.equal(integrationPhysicalMode(row.path),row.mode);}
+ for(const row of RUNTIME_INTEGRITY_FILES){assert.equal(integrationHash(execFileSync('git',['--no-replace-objects','show','56b2d638819b8ef6e17385d3a7cfc19f0591c14e:'+row.path],{cwd:new URL('../',import.meta.url)})),row.after_sha256,'original runtime source remains pinned');assert.equal(integrationHash(integrationPhysicalRead(row.path)),currentSourceHash(row.path)??reviewedSuccessorSourceHash(row.path,row.after_sha256));assert.equal(integrationPhysicalMode(row.path),row.mode);}
  const workflow=integrationPhysicalRead('.github/workflows/vnext-candidate.yml').toString();
  const block=workflow.split('      - name: Exact current hash ownership, strict Canonical receipt and acquisition trace controls')[1]?.split('      - name:')[0];
  assert(block);for(const p of ['vnextPredictionHashBudget','v1ActualCanonicalReceiptStatus','vnextTraceValidationBudget'])assert(block.includes('tests/'+p+'.test.mjs'));

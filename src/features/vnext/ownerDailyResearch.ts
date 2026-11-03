@@ -1,8 +1,7 @@
 import {HORIZONS,sourceSafe,type Horizon} from './contracts.ts';
-import {verifyDailyLock,type DailyLock} from './dailyIntelligence.ts';
+import type {DailyLock} from './dailyIntelligence.ts';
+import {verifyDailyLock,previousMarketTradingDate,ENTRY_POLICY,ENTRY_PREMARKET_VERSION} from './browserDailyLock.ts';
 import {memberTaipeiDate} from './member.ts';
-import {previousMarketTradingDate} from '../../../supabase/functions/_shared/market-session-contract.mjs';
-import {ENTRY_POLICY,ENTRY_PREMARKET_VERSION} from '../../../research/entry-opportunity.ts';
 
 const entryStrategies=[['OVERSOLD_REVERSAL','超跌反轉'],['PULLBACK_ENTRY','趨勢回檔'],['BREAKOUT_CONTINUATION','突破延續']] as const;
 export const OWNER_ENTRY_LABELS={ENTRY_READY:'研究條件符合',WAIT_CONFIRMATION:'等待條件確認',AVOID_ENTRY:'不適合進場',INSUFFICIENT_EVIDENCE:'進場資料不足'} as const;

@@ -22,8 +22,12 @@ export function verifyReviewedSuccessorCatalog(read,mode){
  assert.equal(mode(c.prior_manifest.path),'100644','CURRENT_SOURCE_PRIOR_MODE');
  for(const path of CURRENT_SOURCE_SUPPORT)assert.equal(mode(path),'100644','CURRENT_SOURCE_SUPPORT_MODE');
 }
+let immutablePaths;
 export function reviewedSuccessorPaths(){
- const c=currentSourceDefinition();return [...new Set([...prior.reviewedSuccessorPaths(),...c.files.map(r=>r.path),...c.local_support_patch.map(r=>r.path),c.prior_manifest.path,CURRENT_SOURCE_CATALOG,...CURRENT_SOURCE_SUPPORT])].sort();
+ if(!immutablePaths){const c=currentSourceDefinition();immutablePaths=Object.freeze([...new Set([...prior.reviewedSuccessorPaths(),...c.files.map(r=>r.path),...c.local_support_patch.map(r=>r.path),c.prior_manifest.path,CURRENT_SOURCE_CATALOG,...CURRENT_SOURCE_SUPPORT])].sort());}
+ // Only immutable path metadata is retained. Live catalogs, source bytes,
+ // modes and inventories are still verified by every admission invocation.
+ return [...immutablePaths];
 }
 export function reviewedSuccessorLineage(){
  const c=currentSourceDefinition();return {...prior.reviewedSuccessorLineage(),current_git_successor:{base:CURRENT_SOURCE_BASE,head:CURRENT_SOURCE_HEAD,

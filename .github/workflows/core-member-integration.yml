@@ -124,11 +124,10 @@ jobs:
         env:
           NODE_OPTIONS: --experimental-strip-types
         run: npm ci --ignore-scripts
-      - name: Historical a360 B24 and Owner-copy source assertions including type-only runtime equivalence
-        working-directory: build/owner-regime-historical-base
+      - name: Current Owner publication replay and completed research controls
         env:
           NODE_OPTIONS: --experimental-strip-types
-        run: node --experimental-strip-types --test tests/ownerLegacyPublication.test.mjs tests/completedResearch.test.mjs tests/entryCompletedSession.test.mjs
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/ownerLegacyPublication.test.mjs tests/completedResearch.test.mjs tests/entryCompletedSession.test.mjs
       - name: Check out the immutable Worker packaging baseline only
         uses: actions/checkout@v4
         with:

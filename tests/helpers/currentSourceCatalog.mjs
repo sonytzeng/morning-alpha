@@ -6,7 +6,7 @@ import {readFileSync,lstatSync} from 'node:fs';
 export const CURRENT_SOURCE_BASE='da0e07dd23aee62f31cd669d0d090d948e6d1171';
 export const CURRENT_SOURCE_HEAD='8c405008cdcc9f70b070da42743bcfe837a08dfa';
 export const CURRENT_SOURCE_CATALOG='docs/operations/evidence/current-source-successor-20261103-catalog.json';
-export const CURRENT_SOURCE_CATALOG_SHA256='dac88d049274bb47ccaf0cdaa2e0dd6e3cc9c7f3e9d6bae51f86f565c13f4864';
+export const CURRENT_SOURCE_CATALOG_SHA256='ff7066dbd52526106cbb04f99eccb56635cd99f2619568cbfbdc621128766285';
 export const CURRENT_SOURCE_MANIFEST='docs/operations/evidence/core-member-integration-20261103-current-source.json';
 const root=new URL('../../',import.meta.url),hash=b=>createHash('sha256').update(b).digest('hex');
 const git=args=>execFileSync('git',['--no-replace-objects',...args],{cwd:root,maxBuffer:32e6});
@@ -42,7 +42,7 @@ export function currentSourceDefinition(bytes){
    assert.deepEqual(row.before,original(c.base,row.path),'CURRENT_SOURCE_BEFORE:'+row.path);
    assert.deepEqual(row.after,original(c.head,row.path),'CURRENT_SOURCE_AFTER:'+row.path);assert(row.after,'CURRENT_SOURCE_DELETE_FORBIDDEN');
   }
-  assert.deepEqual(c.local_support_patch.map(r=>r.path),[workflow,'tests/officialPublicAdmission.test.mjs','tests/originalIngressAdmission.test.mjs','tests/helpers/recommendationHistoricalBatch.mjs','tests/recommendationHistoricalBatch.test.mjs','tests/sixBugDatabase.integration.mjs'],'CURRENT_SOURCE_EXACT_SUPPORT_PATCH');
+  assert.deepEqual(c.local_support_patch.map(r=>r.path),[workflow,'tests/officialPublicAdmission.test.mjs','tests/originalIngressAdmission.test.mjs','tests/helpers/recommendationHistoricalBatch.mjs','tests/recommendationHistoricalBatch.test.mjs','tests/sixBugDatabase.integration.mjs','.github/workflows/core-member-integration.yml'],'CURRENT_SOURCE_EXACT_SUPPORT_PATCH');
   for(const row of c.local_support_patch){
    assert(!paths.includes(row.path),'CURRENT_SOURCE_SUPPORT_NOT_IN_GIT_DELTA');
    assert.deepEqual(row.before,original(c.head,row.path),'CURRENT_SOURCE_SUPPORT_BEFORE:'+row.path);

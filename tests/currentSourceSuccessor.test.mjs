@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {integrationPhysicalRead as physical,integrationPhysicalMode as physicalMode,integrationInventory,integrationHash,verifyIntegrationCandidate,CURRENT_INTEGRATION_MANIFEST,sourceUnionLineage} from './helpers/integrationAdmission.mjs';
 import {CURRENT_SOURCE_BASE,CURRENT_SOURCE_HEAD,CURRENT_SOURCE_CATALOG,CURRENT_SOURCE_CATALOG_SHA256,CURRENT_SOURCE_SUPPORT,currentSourceDefinition,currentSourceHash,currentSourcePriorPatch} from './helpers/currentSourceCatalog.mjs';
+import {reviewedSuccessorPaths} from './helpers/currentSourceSuccessor.mjs';
 const readJson=p=>JSON.parse(physical(p));
 function fixture(){
  const bytes=new Map(),modes=new Map(),paths=integrationInventory(),manifest=readJson(CURRENT_INTEGRATION_MANIFEST);
@@ -26,11 +27,21 @@ test('every newly admitted source rejects a changed live body even after termina
  for(const row of [...c.files,...c.local_support_patch]){const f=fixture();f.bytes.set(row.path,Buffer.concat([f.read(row.path),Buffer.from('\nUNREVIEWED_CURRENT_SOURCE')]));f.mirror(row.path);assert.throws(f.verify,/SOURCE_DRIFT/,'live '+row.path);}
 });
 test('CI patch keeps every previous control and only appends both successor test suites',()=>{
- const c=currentSourceDefinition(),patch=c.local_support_patch[0];assert.equal(c.local_support_patch.length,6);
+ const c=currentSourceDefinition(),patch=c.local_support_patch[0];assert.equal(c.local_support_patch.length,7);
  const before=execFileSync('git',['--no-replace-objects','cat-file','blob',patch.before.oid]).toString(),after=physical(patch.path).toString();
  assert.equal(after.replace(' tests/currentSourceSuccessor.test.mjs tests/reviewedSourceSuccessor.test.mjs',''),before);
  assert.equal(integrationHash(physical(patch.path)),patch.after.sha256);
  assert.equal(currentSourceHash(patch.path),patch.after.sha256);
+});
+test('Core CI retains all five ff88 proofs and runs all three later suites on the current tree',()=>{
+ const workflow=physical('.github/workflows/core-member-integration.yml').toString();
+ const block=name=>workflow.split('      - name: '+name+'\n')[1]?.split('      - name:')[0];
+ const current=block('Current Owner publication replay and completed research controls');assert(current);assert.doesNotMatch(current,/working-directory:|\bif:|continue-on-error:|--test-skip-pattern/);
+ for(const path of ['tests/ownerLegacyPublication.test.mjs','tests/completedResearch.test.mjs','tests/entryCompletedSession.test.mjs'])assert(current.includes(path));
+ const replay=physical('tests/ownerLegacyPublication.test.mjs').toString();assert(replay.includes("verifySourceUnionPinnedProof('owner_copy')"));assert(replay.includes('ff88a4ed7ce10116a6fad84110770953941fcd08'));assert(replay.includes('result.tests_run,result.tests_passed'));assert(replay.includes('VERIFIED_REMOVED'));
+ for(const path of ['tests/ownerStatusCopyAdmission.test.mjs','tests/frontendTypeClosureAdmission.test.mjs','tests/researchSourceContracts.test.mjs','tests/ownerReleaseReviewPackage.test.mjs','tests/r9FunctionalSourceClosure.test.mjs']){
+  assert(execFileSync('git',['--no-replace-objects','show','ff88a4ed7ce10116a6fad84110770953941fcd08:'+path]).length>0);
+ }
 });
 test('catalog, source and manifest co-mutation cannot create a new Git successor authority',()=>{
  const f=fixture(),c=readJson(CURRENT_SOURCE_CATALOG),row=c.files.find(r=>r.path==='research/entry-opportunity.ts');
@@ -52,6 +63,7 @@ test('an initial PASS caches no current-source acceptance and immutable catalog 
  const f=fixture();f.verify();const p='src/features/vnext/dailyRuntime.ts';f.bytes.set(p,Buffer.concat([f.read(p),Buffer.from('\nLATE_MUTATION')]));f.mirror(p);assert.throws(f.verify,/INTEGRATION_SOURCE_DRIFT:src\/features\/vnext\/dailyRuntime\.ts/);
  const c=currentSourceDefinition();assert.throws(()=>{c.files[0].after.sha256='0'.repeat(64);},TypeError);
  assert.equal(currentSourceHash('research/entry-opportunity.ts'),'49253f89038cdf67fd56819bb49e3bcf0fcd916de99f11c8bbb342e720ddaac9');
+ const paths=reviewedSuccessorPaths();paths.fill('UNREVIEWED_PATH');assert(!reviewedSuccessorPaths().includes('UNREVIEWED_PATH'));
  const patch=c.local_support_patch[0],copy=currentSourcePriorPatch(patch.path);copy.fill(0);
  assert.equal(integrationHash(currentSourcePriorPatch(patch.path)),patch.before.sha256);
 });

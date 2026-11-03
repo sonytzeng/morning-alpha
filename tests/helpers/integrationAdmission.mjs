@@ -1129,9 +1129,9 @@ const root=new URL('../../',import.meta.url);
 const REVIEWED_SUCCESSOR_SUPPORT_PINS=Object.freeze([
  Object.freeze({path:'tests/helpers/reviewedSourceSuccessor.mjs',sha256:'699ae6b5d5b5153dc89935375ed10ea2a727ef70725fd335af462c01bd6e87da'}),
  Object.freeze({path:'tests/reviewedSourceSuccessor.test.mjs',sha256:'faa9a9cb5e87e9a69ec42d5ca03752d7c951ffdcf0c1455de56fa6fcbf7d7191'}),
- Object.freeze({path:'tests/helpers/currentSourceCatalog.mjs',sha256:'292868fbc5508ec81f8934888ce5c8339c1174dc79b63db198d3bdf0eefe5a9a'}),
- Object.freeze({path:'tests/helpers/currentSourceSuccessor.mjs',sha256:'b5fb6b9ea493e324f8df94abd037046271852b1bd1e6d492c5b33406f0aafbc7'}),
- Object.freeze({path:'tests/currentSourceSuccessor.test.mjs',sha256:'cebbf9b14420e7b2b99ac39524cb0ece6468301e981199405678a0427c466662'}),
+ Object.freeze({path:'tests/helpers/currentSourceCatalog.mjs',sha256:'8057b266e9c23522bb9235d7bee22037490c3d82c1cc095c414a71aae82dfafd'}),
+ Object.freeze({path:'tests/helpers/currentSourceSuccessor.mjs',sha256:'4e361fb309f5b06851513e745341f630f0f8b6b6bbd68bb9369fd74c678fd458'}),
+ Object.freeze({path:'tests/currentSourceSuccessor.test.mjs',sha256:'f59a32407594eab4a769b32b1c0f9b7a3d0fb3b094b82bd865a060478f9c0eb7'}),
 ]);
 const git=args=>execFileSync('git',['--no-replace-objects',...args],{cwd:root,encoding:'utf8',maxBuffer:64e6});
 export const integrationHash=b=>createHash('sha256').update(b).digest('hex');

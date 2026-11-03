@@ -726,6 +726,25 @@
           "after": " console.log(JSON.stringify({fresh_database:db,bootstrap:'PASS',business_rows:0,production_writes:0}));\n process.exit(0);\n}\n// This database applies the frozen September migration. Test its exact shared\n// calendar/session pair from the accepted immutable parent, after current-tree\n// admission. A later operational exception must not rewrite this old proof.\nconst {INTEGRATION_BASE,verifyIntegrationCandidate}=await import('./helpers/integrationAdmission.mjs');\nverifyIntegrationCandidate();\nconst bundle=JSON.parse(read('docs/operations/evidence/six-bug-release-bundles-20260930.json'));\nconst pair=['market-calendar-data.json','market-session-contract.mjs'],dir=mkdtempSync(join(tmpdir(),'ma-six-bug-frozen-calendar-'));\nlet calendar,previousMarketTradingDate,validateGlobal8Session;\ntry{\n for(const name of pair){\n  const path='supabase/functions/_shared/'+name;\n  const bytes=execFileSync('git',['--no-replace-objects','show',INTEGRATION_BASE+':'+path],{cwd:root,env:{PATH:process.env.PATH,LC_ALL:'C',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_NO_LAZY_FETCH:'1',GIT_TERMINAL_PROMPT:'0'},maxBuffer:1e6});\n  assert.equal(createHash('sha256').update(bytes).digest('hex'),bundle.files[path],'SIX_BUG_FROZEN_SHARED_SOURCE:'+path);\n  writeFileSync(join(dir,name),bytes);\n  if(name.endsWith('.json'))calendar=JSON.parse(bytes);\n }\n ({previousMarketTradingDate,validateGlobal8Session}=await import(pathToFileURL(join(dir,pair[1])).href));\n}finally{rmSync(dir,{recursive:true,force:true});}\nassert.equal(calendar.version,'OFFICIAL_MARKET_CALENDAR_20260930_V1');\nassert.deepEqual(JSON.parse(sql('select public.authoritative_market_calendar_v1()')),calendar);\nlet checks=1;\nfor(const day of ['2026-09-30','2026-09-21','2026-09-29','2026-10-27','2026-05-04','2026-02-23','2026-01-02']){\n"
         }
       ]
+    },
+    {
+      "path": ".github/workflows/core-member-integration.yml",
+      "purpose": "ROUTE_CURRENT_OWNER_REPLAY_TO_CURRENT_TREE_WHILE_PRESERVING_FF88_PROOFS",
+      "before": {
+        "oid": "b4bb93fef15bce6e38bd08439bcd77a4d0d8c8fd",
+        "mode": "100644",
+        "sha256": "5f7f0336ee03c1ac094ea69f663c958f6b196dcfd9f7c84b32a46b20a7766815"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "173c3e8cbf745dc412df3274ef6a56f3616d99792ae0a304d4b9e9cfaad9e1c6"
+      },
+      "exact_edits": [
+        {
+          "before": "        env:\n          NODE_OPTIONS: --experimental-strip-types\n        run: npm ci --ignore-scripts\n      - name: Historical a360 B24 and Owner-copy source assertions including type-only runtime equivalence\n        working-directory: build/owner-regime-historical-base\n        env:\n          NODE_OPTIONS: --experimental-strip-types\n        run: node --experimental-strip-types --test tests/ownerLegacyPublication.test.mjs tests/completedResearch.test.mjs tests/entryCompletedSession.test.mjs\n      - name: Check out the immutable Worker packaging baseline only\n        uses: actions/checkout@v4\n        with:\n",
+          "after": "        env:\n          NODE_OPTIONS: --experimental-strip-types\n        run: npm ci --ignore-scripts\n      - name: Current Owner publication replay and completed research controls\n        env:\n          NODE_OPTIONS: --experimental-strip-types\n        run: node --experimental-strip-types --test --test-concurrency=1 tests/ownerLegacyPublication.test.mjs tests/completedResearch.test.mjs tests/entryCompletedSession.test.mjs\n      - name: Check out the immutable Worker packaging baseline only\n        uses: actions/checkout@v4\n        with:\n"
+        }
+      ]
     }
   ]
 }

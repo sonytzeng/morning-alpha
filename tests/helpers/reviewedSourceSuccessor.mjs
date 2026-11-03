@@ -359,6 +359,10 @@ function definition(bytes){
  }
  return immutableDefinition;
 }
+export function verifyReviewedSuccessorCatalogIdentity(read,mode){
+ assert.equal(mode(REVIEWED_SUCCESSOR_CATALOG),'100644','SUCCESSOR_CATALOG_MODE');
+ definition(Buffer.from(read(REVIEWED_SUCCESSOR_CATALOG)));
+}
 export function verifyReviewedSuccessorCatalog(read,mode){
  assert.equal(mode(REVIEWED_SUCCESSOR_CATALOG),'100644','SUCCESSOR_CATALOG_MODE');
  const d=definition(Buffer.from(read(REVIEWED_SUCCESSOR_CATALOG)));
@@ -376,9 +380,21 @@ export function reviewedSuccessorPaths(){
 }
 // Current consumers keep historical assertions at their pinned revisions and
 // resolve only an explicitly reviewed later replacement for live bytes.
+// Historical consumers and disposable fixtures can resolve the fixed committed
+// successor without importing a mutable helper or requiring its local catalog.
+// The complete live gate separately checks all 48 paths and the catalog seal.
+let currentGitPaths;
+const currentGitHashes=new Map();
+function currentSourceHash(path){
+ const base='da0e07dd23aee62f31cd669d0d090d948e6d1171',head='8c405008cdcc9f70b070da42743bcfe837a08dfa';
+ if(!currentGitPaths)currentGitPaths=new Set(git(['diff','--no-renames','--name-only','-z',base,head,'--']).toString().split('\0').filter(Boolean));
+ if(!currentGitPaths.has(path))return undefined;
+ if(!currentGitHashes.has(path))currentGitHashes.set(path,hash(git(['show',head+':'+path])));
+ return currentGitHashes.get(path);
+}
 export function reviewedSuccessorSourceHash(path,fallback){
  const c=definition().catalog;
- return c.local_patch.files.find(row=>row.path===path)?.after_sha256??c.files.find(row=>row.path===path)?.after_sha256??fallback;
+ return currentSourceHash(path)??c.local_patch.files.find(row=>row.path===path)?.after_sha256??c.files.find(row=>row.path===path)?.after_sha256??fallback;
 }
 export function reviewedSuccessorLineage(){
  const d=definition();

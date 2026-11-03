@@ -10,8 +10,8 @@ import {URL} from 'node:url';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {REVIEWED_SUCCESSOR_MANIFEST,REVIEWED_SUCCESSOR_SUPPORT,reviewedSuccessorPaths,reviewedSuccessorLineage,verifyReviewedSuccessorCatalog,applyReviewedSuccessor} from './reviewedSourceSuccessor.mjs';
-export {REVIEWED_SUCCESSOR_MANIFEST as CURRENT_INTEGRATION_MANIFEST} from './reviewedSourceSuccessor.mjs';
+import {REVIEWED_SUCCESSOR_MANIFEST,REVIEWED_SUCCESSOR_SUPPORT,reviewedSuccessorPaths,reviewedSuccessorLineage,verifyReviewedSuccessorCatalog,applyReviewedSuccessor} from './currentSourceSuccessor.mjs';
+export {REVIEWED_SUCCESSOR_MANIFEST as CURRENT_INTEGRATION_MANIFEST} from './currentSourceSuccessor.mjs';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
@@ -1123,11 +1123,15 @@ export const INTEGRATION_DELTAS=Object.freeze([
 ].sort());
 const root=new URL('../../',import.meta.url);
 // The original five support paths remain the historical trusted verifier
-// boundary. This successor extends it only by these two independently reviewed
-// files, whose literal bytes are checked independently of the candidate seal.
+// boundary. The two prior successor files and three current verifier files are
+// pinned here outside the generated seal. The current catalog makes no claim
+// of independent review, financial approval or deployment authorization.
 const REVIEWED_SUCCESSOR_SUPPORT_PINS=Object.freeze([
- Object.freeze({path:'tests/helpers/reviewedSourceSuccessor.mjs',sha256:'3a147ef0880ac9b9fb76c1b4efa7c4f811010d4abc171692e5dd607bf1c1dc60'}),
- Object.freeze({path:'tests/reviewedSourceSuccessor.test.mjs',sha256:'aee9eee09185ba9ab040eb2504c7dc5fc2d9dba90b637a9ff0c9c2dcb8edb3bb'}),
+ Object.freeze({path:'tests/helpers/reviewedSourceSuccessor.mjs',sha256:'699ae6b5d5b5153dc89935375ed10ea2a727ef70725fd335af462c01bd6e87da'}),
+ Object.freeze({path:'tests/reviewedSourceSuccessor.test.mjs',sha256:'af206c42ee0f2a7d3e822f4da968f4fad4d52fa5739e7308227e1e905836d7e4'}),
+ Object.freeze({path:'tests/helpers/currentSourceCatalog.mjs',sha256:'665f3aa963e0c93849c4285418d8451bd2f92c96232355d7b0bed45c2ca89331'}),
+ Object.freeze({path:'tests/helpers/currentSourceSuccessor.mjs',sha256:'b5fb6b9ea493e324f8df94abd037046271852b1bd1e6d492c5b33406f0aafbc7'}),
+ Object.freeze({path:'tests/currentSourceSuccessor.test.mjs',sha256:'b2935665355ecf3280ea422bf1cc2b9b9153863994a9c65f96ee15ac0c4b163f'}),
 ]);
 const git=args=>execFileSync('git',['--no-replace-objects',...args],{cwd:root,encoding:'utf8',maxBuffer:64e6});
 export const integrationHash=b=>createHash('sha256').update(b).digest('hex');

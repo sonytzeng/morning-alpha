@@ -24,7 +24,8 @@ import {
  integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHash,
  createSourceUnionComposition,verifyIntegrationCandidate,sourceUnionLineage,sourceUnionParentRead,reuseSourceUnionPinnedProof,
 } from './helpers/integrationAdmission.mjs';
-import {reviewedSuccessorPaths,reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';
+import {reviewedSuccessorPaths} from './helpers/currentSourceSuccessor.mjs';
+import {reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';
 const frozenRuntime=JSON.parse(integrationPhysicalRead(FROZEN_RUNTIME_INTEGRATION_MANIFEST));
 const frozenRuntimePaths=new Set(frozenRuntime.files.map(row=>row.path));
 const successorAdded=reviewedSuccessorPaths().filter(path=>!frozenRuntimePaths.has(path));
@@ -37,6 +38,16 @@ const R4_ASSERTION_FILE_CURRENT_SHA='cb914f90433d7d70e1aa72efee89688a4841714177a
 const R4_ASSERTION_FILE_BEFORE_SHA='c70d1ae15d1c88547f61454fdbb3069775e43d3cebadf1aceb01d4d7e9e1815e';
 const R4_ASSERTION_BEFORE_SHA='7a7414c56c596d7f22a3745b485281f4a2fdf5cccb7a5090af09e7cc56881992';
 const R4_ASSERTION_CURRENT_SHA='eb62f37aac7a219d77b0dec89067b6ff7b5fbeb6ef4ccbc0780bde5a6df6cb3e';
+// Invert only the two explicit compatibility edits before checking the original
+// whole-file pin. Any other current-byte change still fails that unchanged pin.
+function priorAssertionCompatibilitySource(current){
+ const edits=[
+  ["import {reviewedSuccessorPaths} from './helpers/currentSourceSuccessor.mjs';\nimport {reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';", "import {reviewedSuccessorPaths,reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';"],
+  ["  if(['src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts','src/features/vnext/dailyAdapter.ts','src/features/vnext/dailyParsers.mjs'].includes(path))assert.equal(integrationHash(integrationPhysicalRead(path)),reviewedSuccessorSourceHash(path,RUNTIME_INTEGRITY_FILES.find(r=>r.path===path)?.after_sha256??integrationHash(frozen)),'current candidate is independently admitted, not substituted into Worker5');", "  if(['src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts','src/features/vnext/dailyAdapter.ts'].includes(path))assert.equal(integrationHash(integrationPhysicalRead(path)),reviewedSuccessorSourceHash(path,RUNTIME_INTEGRITY_FILES.find(r=>r.path===path).after_sha256),'current candidate is independently admitted, not substituted into Worker5');"],
+ ];
+ for(const [after,before]of edits){assert.equal(current.split(after).length,2,'ASSERTION_EXACT_COMPATIBILITY_EDIT');current=current.replace(after,before);}
+ return current;
+}
 function assertionFunctionSpan(text,title){
  const starts=[...text.matchAll(/^test\('([^']+)'/gm)],matches=starts.map((row,index)=>({row,index})).filter(({row})=>row[1]===title);
  if(matches.length!==1)return null;
@@ -47,7 +58,7 @@ function reviewedSuccessorAssertionSource(path,text){
  if(path!==R4_ASSERTION_PATH)return text;
  verifyIntegrationCandidate();
  const current=integrationPhysicalRead(path).toString(),span=assertionFunctionSpan(text,R4_ASSERTION_TITLE);
- assert.equal(integrationHash(Buffer.from(current)),R4_ASSERTION_FILE_CURRENT_SHA,'ASSERTION_WHOLE_CURRENT_SOURCE_PIN');
+ assert.equal(integrationHash(Buffer.from(priorAssertionCompatibilitySource(current))),R4_ASSERTION_FILE_CURRENT_SHA,'ASSERTION_WHOLE_CURRENT_SOURCE_PIN');
  if(text!==current||!span||integrationHash(Buffer.from(span.body))!==R4_ASSERTION_CURRENT_SHA){verifyIntegrationCandidate();return text;}
  const revision='dee20b5ade6bd22070b7142b9b09b2102a87e80f',options={cwd:new URL('../',import.meta.url)};
  const metadata=execFileSync('git',['--no-replace-objects','ls-tree','-z',revision,'--',path],options).toString();
@@ -66,7 +77,7 @@ const flags=['production_authorized','migration_execution','auth_rls_change','me
 test('R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',()=>{
  const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);
  assert.equal(FROZEN_RUNTIME_INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261022-runtime-integrity.json');
- assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261102-reviewed-successor.json');
+ assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261103-current-source.json');
  assert.equal(frozenRuntime.files.length,586);
  assert.equal(FROZEN_SOURCE_UNION_R7,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r7.json');
  assert.equal(FROZEN_SOURCE_UNION,'docs/operations/evidence/core-member-integration-20261020-v1-source-union.json');
@@ -1272,6 +1283,9 @@ test('runtime candidate rejects rewritten source pins, changed recovery sources,
 
 test('successor assertion source restores exactly one reviewed R4 body while raw current execution and injected bytes remain current',()=>{
  const raw=integrationPhysicalRead(R4_ASSERTION_PATH).toString(),current=assertionFunctionSpan(raw,R4_ASSERTION_TITLE);assert(current);
+ const checkCompatibility=text=>assert.equal(integrationHash(Buffer.from(priorAssertionCompatibilitySource(text))),R4_ASSERTION_FILE_CURRENT_SHA);
+ checkCompatibility(raw);
+ for(const changed of [raw+'\nUNREVIEWED',raw.replace("from './helpers/currentSourceSuccessor.mjs'","from './helpers/unknown.mjs'"),raw.replace('src/features/vnext/dailyParsers.mjs','src/features/vnext/unknown.mjs')])assert.throws(()=>checkCompatibility(changed));
  assert.equal(integrationHash(Buffer.from(current.body)),R4_ASSERTION_CURRENT_SHA);
  const restored=reviewedSuccessorAssertionSource(R4_ASSERTION_PATH,raw),before=assertionFunctionSpan(restored,R4_ASSERTION_TITLE);assert(before);
  assert.equal(integrationHash(Buffer.from(before.body)),R4_ASSERTION_BEFORE_SHA);assert.notEqual(raw,restored);

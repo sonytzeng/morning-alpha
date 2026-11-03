@@ -30,7 +30,7 @@ jobs:
           NODE_OPTIONS: --experimental-strip-types
         run: |
           node --test tests/ciNodeObserver.test.mjs
-          node scripts/releases/observe-ci-node.mjs --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/vnextIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/marketNewsReportIntegrity.test.mjs tests/academyV11Integrity.test.mjs
+          node scripts/releases/observe-ci-node.mjs --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/vnextIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/marketNewsReportIntegrity.test.mjs tests/academyV11Integrity.test.mjs tests/currentSourceSuccessor.test.mjs tests/reviewedSourceSuccessor.test.mjs
       - name: Build member UI candidate (no Production deployment)
         env:
           NODE_OPTIONS: --experimental-strip-types

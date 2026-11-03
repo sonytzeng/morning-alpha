@@ -15,7 +15,8 @@ import {
  FROZEN_SOURCE_UNION_R13,SOURCE_UNION_R14_FILES,FROZEN_SOURCE_UNION_R14,
  FROZEN_SOURCE_UNION_R15,RUNTIME_INTEGRITY_FILES,
 } from './helpers/integrationAdmission.mjs';
-import {reviewedSuccessorPaths,reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';
+import {reviewedSuccessorPaths} from './helpers/currentSourceSuccessor.mjs';
+import {reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';
 const frozenRuntimePaths=new Set(JSON.parse(integrationPhysicalRead(FROZEN_RUNTIME_INTEGRATION_MANIFEST)).files.map(row=>row.path));
 const successorAdded=reviewedSuccessorPaths().filter(path=>!frozenRuntimePaths.has(path));
 // One changed current test consumer has an exact older Actual-parent view.
@@ -54,7 +55,7 @@ test('current union preserves the7986 four-source Worker packet, never mixing or
  for(const path of CHANGED){
   const frozen=sourceUnionParentRead('actual',path);
   assert.equal(candidate.payload.files.find(f=>f.name===path).content,frozen.toString(),'sealed Worker5 keeps the original source');
-  if(['src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts','src/features/vnext/dailyAdapter.ts'].includes(path))assert.equal(integrationHash(integrationPhysicalRead(path)),reviewedSuccessorSourceHash(path,RUNTIME_INTEGRITY_FILES.find(r=>r.path===path).after_sha256),'current candidate is independently admitted, not substituted into Worker5');
+  if(['src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts','src/features/vnext/dailyAdapter.ts','src/features/vnext/dailyParsers.mjs'].includes(path))assert.equal(integrationHash(integrationPhysicalRead(path)),reviewedSuccessorSourceHash(path,RUNTIME_INTEGRITY_FILES.find(r=>r.path===path)?.after_sha256??integrationHash(frozen)),'current candidate is independently admitted, not substituted into Worker5');
   else assert.deepEqual(integrationPhysicalRead(path),frozen);
  }
  for(const p of ['src/features/vnext/contracts.ts','src/features/vnext/engine.ts','supabase/functions/_shared/decision-v1-evidence.ts']){

@@ -1,0 +1,666 @@
+{
+  "schema": "CURRENT_GIT_SOURCE_SUCCESSOR_V1",
+  "base": "da0e07dd23aee62f31cd669d0d090d948e6d1171",
+  "head": "8c405008cdcc9f70b070da42743bcfe837a08dfa",
+  "base_tree": "389b19e3d4252c83d188283d1f6c10e482eedf43",
+  "head_tree": "20412483049763b80c1a622788a312746a3daaad",
+  "prior_manifest": {
+    "path": "docs/operations/evidence/core-member-integration-20261102-reviewed-successor.json",
+    "oid": "35ed6854765e44a31f85cf04c57de92418d0caed",
+    "mode": "100644",
+    "sha256": "14b72a695a896d8031ec68fa0cea94100ac66484601029818d49964d16c56fa5"
+  },
+  "files": [
+    {
+      "path": "research/entry-opportunity.ts",
+      "before": {
+        "oid": "5bdb30261641bebfda30f79a6023b3a3d8f5155f",
+        "mode": "100644",
+        "sha256": "30da9e781482ab1d9222a679e2e2413b47650cf5f95efc609e0a443c0dbb3031"
+      },
+      "after": {
+        "oid": "37d8cba1b883846fd301d23b4ddf8d982c2a8ed6",
+        "mode": "100644",
+        "sha256": "49253f89038cdf67fd56819bb49e3bcf0fcd916de99f11c8bbb342e720ddaac9"
+      }
+    },
+    {
+      "path": "research/entry-outcomes.ts",
+      "before": {
+        "oid": "5084fca51d993a0a7276708daeab2179f75f756f",
+        "mode": "100644",
+        "sha256": "f97184375f4b088f32518c2db6137ac46ebc149c1837c923bbb86d6136c7015b"
+      },
+      "after": {
+        "oid": "4dca35091b7b1eedec315c52d81895dc3ba68b47",
+        "mode": "100644",
+        "sha256": "951f57903d28d7d53fe98da16344a8fba4ba3504518176367444a29d041f182d"
+      }
+    },
+    {
+      "path": "research/evidence/novatek-financial-originals-20261103.json",
+      "before": null,
+      "after": {
+        "oid": "1b42305c205222c10ba596945d87247794c12e5a",
+        "mode": "100644",
+        "sha256": "08c4ac773066b7b9bc2b315c086124b1e0d6c2a992aac3f76ca33a89fe156f4e"
+      }
+    },
+    {
+      "path": "research/refresh-2330-documented-review.candidate.ts",
+      "before": null,
+      "after": {
+        "oid": "2802fd37c91f7907d119ae1e773e184f188bd011",
+        "mode": "100644",
+        "sha256": "ad3d7f05790b49e92813dfbbb2dced75764d48a6c38dc42cb1cc831a1639f6bb"
+      }
+    },
+    {
+      "path": "scripts/vnext/build-browser-daily-lock.mjs",
+      "before": null,
+      "after": {
+        "oid": "b89e238c375199e12ee3e728e6831ad9fe852ed2",
+        "mode": "100644",
+        "sha256": "202e50fc8487d2c838d6423dde8fe99f20d8fbafc1a9b5b2257817991388ff1f"
+      }
+    },
+    {
+      "path": "scripts/vnext/stock-evidence.mjs",
+      "before": {
+        "oid": "3e1eeca6d2929101f8a0fc0026b15566d9c8aa2e",
+        "mode": "100644",
+        "sha256": "aebcb44ea183b7d6866f2a4a71a2652c60aa88a2547fc875056cc0efa20013f3"
+      },
+      "after": {
+        "oid": "e3af37fead9a8cef5588292a8f57abdff57f0818",
+        "mode": "100644",
+        "sha256": "fc25e4792dce2d8b57d9cc4de968ba80002086bdb8d79a09c31755084dca3be9"
+      }
+    },
+    {
+      "path": "src/features/research/cockpit.ts",
+      "before": {
+        "oid": "282ba741101e33698a2581e9fd49e2a37a15c32c",
+        "mode": "100644",
+        "sha256": "b69eec441785b7eadcae5561fb93973c637caa020288bf3a5c2c31123e23d068"
+      },
+      "after": {
+        "oid": "af943c943523fcf166e792ee5c6624d50009d754",
+        "mode": "100644",
+        "sha256": "55dad7fb741d45dd945cdec75a6e76f53948e294e5aaf042edb6071eec4d664b"
+      }
+    },
+    {
+      "path": "src/features/vnext/browserDailyLock.ts",
+      "before": null,
+      "after": {
+        "oid": "87f0c43e202bd9402b2f717bac1ce8bc51879d8f",
+        "mode": "100644",
+        "sha256": "07f0cec4d54d9b14d5f9f7f09d39bf6a059fa970fe4374f48345422bd4590df0"
+      }
+    },
+    {
+      "path": "src/features/vnext/dailyAdapter.ts",
+      "before": {
+        "oid": "57939cf75e6f08a239f345ee26c5d5a7d819f116",
+        "mode": "100644",
+        "sha256": "c5109bcec99a8d1a7d8fceb3b70ea29fb5ada888e20609ffdca3006d1dc087b8"
+      },
+      "after": {
+        "oid": "de945f5d087baf7db3f9b81a7bc456a67c3c041a",
+        "mode": "100644",
+        "sha256": "b15c7636e296e511062aa9587eeaecfb3230e34bb76dc35a90131e4a9c03dc71"
+      }
+    },
+    {
+      "path": "src/features/vnext/dailyIntelligence.ts",
+      "before": {
+        "oid": "c02ac5690f593be731f6ff92c83613232f892aa0",
+        "mode": "100644",
+        "sha256": "61ec72f6737e6fae714cedfb93de88c9bf55e39b1afa4f9174296f07243082c0"
+      },
+      "after": {
+        "oid": "27a844277c509c3e15eaee407d0a49515f01ea45",
+        "mode": "100644",
+        "sha256": "b6b1a71bb3db87bf314e3cd0ef92ea6ea5bc2431213f5ee07eb101dbe0e9aa14"
+      }
+    },
+    {
+      "path": "src/features/vnext/dailyParsers.mjs",
+      "before": {
+        "oid": "3f7600368a7dbc7089884e241a4fe3544689e4a4",
+        "mode": "100644",
+        "sha256": "2593386f7d8be30e757a4c5d93715363f58f031d6681f4af750e348989a59800"
+      },
+      "after": {
+        "oid": "e336b4f8149da02cb6712fb62794edbe4a121d2e",
+        "mode": "100644",
+        "sha256": "ecbcad9b2b85db2c10e1bc50cb1901ab21e6c477b81c599c08da4013300bcb02"
+      }
+    },
+    {
+      "path": "src/features/vnext/dailyRuntime.ts",
+      "before": {
+        "oid": "d3126bce45aa1d20c612c7e7ce76bfa6afce5e25",
+        "mode": "100644",
+        "sha256": "caf517d9d754be599bf543fb69c79415e882b12fda5b8fab0611ef841e1f00ff"
+      },
+      "after": {
+        "oid": "286b9d9c39a782182fcff1ea4b8df7b55a9bad59",
+        "mode": "100644",
+        "sha256": "280bdfa5e850fe12c342c488942ec2177779916f9bca34839fc2c28b4e789316"
+      }
+    },
+    {
+      "path": "src/features/vnext/issuerDocumentedReviewIntake.ts",
+      "before": null,
+      "after": {
+        "oid": "24c1aaefda09414c74da57030b46589f5852412d",
+        "mode": "100644",
+        "sha256": "eddc582d23e660b999346f96ace578ddbdd305df47303ae969140790d3df08a0"
+      }
+    },
+    {
+      "path": "src/features/vnext/issuerFinancialIntake.ts",
+      "before": {
+        "oid": "41b0bce12d3029c048b12b7a9b51ad9362f6f779",
+        "mode": "100644",
+        "sha256": "95b8e3b54d6fc99d6410793b0e43096e3ddef857d9d7e1168ed44378abc89ae1"
+      },
+      "after": {
+        "oid": "e7a988bac3bd96a7aabacd37ce7445c31be410d8",
+        "mode": "100644",
+        "sha256": "37bbd479da5f9f8adf9c7689ba9d5584cfb5bf770ba764f5b018191d3ab07b55"
+      }
+    },
+    {
+      "path": "src/features/vnext/ownerDailyResearch.ts",
+      "before": null,
+      "after": {
+        "oid": "a098fb699b24bf11ac1c2db4b6ee0a685ffb6ac7",
+        "mode": "100644",
+        "sha256": "cdd2da42e9945f97d261a49dcfa53dcc5f7854ea062257c7373953c63df829e5"
+      }
+    },
+    {
+      "path": "src/pages/vnext/MemberPage.tsx",
+      "before": {
+        "oid": "87631d2dda62090e799152f077de581110099a36",
+        "mode": "100644",
+        "sha256": "0f995660868cb61ed2becc8a53065f45347eda1ba082988f9215431514790abd"
+      },
+      "after": {
+        "oid": "f0ee542364ce6df51174042cf6596fd87da75ce3",
+        "mode": "100644",
+        "sha256": "17c53c4305016bbdc2d4e7615d2b7c41d6489381337c3f4161c0df2e51a85d91"
+      }
+    },
+    {
+      "path": "src/pages/vnext/OwnerDailyResearch.tsx",
+      "before": null,
+      "after": {
+        "oid": "a7c82ab30dd27329863e419f7c55b69cfa6cb28b",
+        "mode": "100644",
+        "sha256": "f7eff5d17cfef55d4b57c8a2bd615fac8ed7bdbe5fdcc98830f798df9d579440"
+      }
+    },
+    {
+      "path": "supabase/functions/_shared/retained-documented-reviews-20261103.json",
+      "before": null,
+      "after": {
+        "oid": "d05f60c8022d4bd4bf4364812c6528887825f2ae",
+        "mode": "100644",
+        "sha256": "cf050eb7672bf57d1d3f59bff7f935a65508b610cff9624567d4b4175e09a600"
+      }
+    },
+    {
+      "path": "supabase/functions/_shared/retained-documented-reviews.ts",
+      "before": null,
+      "after": {
+        "oid": "6ac44a461ce7d446900e1f6b057ffb4c02072fc2",
+        "mode": "100644",
+        "sha256": "37463a6991ee4183d8f918c43308922eb5b07f786f07e01d27bf523b7cd3096f"
+      }
+    },
+    {
+      "path": "supabase/functions/_shared/retained-issuer-financials-20261103-basic.json",
+      "before": null,
+      "after": {
+        "oid": "0c05652fc725d088a8a3369d08f02611d9448c3f",
+        "mode": "100644",
+        "sha256": "26bab9af75ade3039a25cc795b3ab4e9ddad9f8df7245d1bbb155af5e88c865a"
+      }
+    },
+    {
+      "path": "supabase/functions/_shared/retained-issuer-financials-20261103-margin.json",
+      "before": null,
+      "after": {
+        "oid": "6d0e8930b64d307f90d638402692154ee0cc0c95",
+        "mode": "100644",
+        "sha256": "f531a0d0f38e040e593e13a6715d849398c701a5ae4874b7b48e0552207ee0d3"
+      }
+    },
+    {
+      "path": "supabase/functions/_shared/retained-issuer-financials-20261103-novatek.json",
+      "before": null,
+      "after": {
+        "oid": "6de8dbe96a1b9c70c109e7e644d7e0d34dd257c0",
+        "mode": "100644",
+        "sha256": "f4b36e364c32d50ebe248adfea2eb777047d67c849c33779ef5efd8b4a8a4718"
+      }
+    },
+    {
+      "path": "supabase/functions/_shared/retained-issuer-financials-20261103-partial.json",
+      "before": null,
+      "after": {
+        "oid": "00d1c6df2aef26142370afe29fd6752545312dde",
+        "mode": "100644",
+        "sha256": "9317efc83291882194b6c02e8d4a5ad44953e8b9af3bdad064c9ea6126956216"
+      }
+    },
+    {
+      "path": "supabase/functions/_shared/retained-issuer-financials-20261103-umc-capex.json",
+      "before": null,
+      "after": {
+        "oid": "fe5ec14dd3976529c55cfe8540baea1483288e52",
+        "mode": "100644",
+        "sha256": "8a2f423cbfdaee7fd0af91ad4393d5ed5ce897c4fbe00c0cf9098b8348a9a9a2"
+      }
+    },
+    {
+      "path": "supabase/functions/_shared/retained-issuer-financials-current.ts",
+      "before": null,
+      "after": {
+        "oid": "3074602f655dc721535bd75293c8fc9559ce46b1",
+        "mode": "100644",
+        "sha256": "a35fd908403d104983cf7d5b2322a79de66cbf841f70842b279bd3dfbc78479a"
+      }
+    },
+    {
+      "path": "supabase/functions/_shared/retained-issuer-financials.ts",
+      "before": {
+        "oid": "1a4875beeb770a2d6ee5cef3a05925e16c15531f",
+        "mode": "100644",
+        "sha256": "1cf92172248d2a3bcf03189ab9f2043f3c8bd7a52d01a3e7f08f03e08bf23f50"
+      },
+      "after": {
+        "oid": "c45251d325f215f32d12add1e24d26c6be8ebbcc",
+        "mode": "100644",
+        "sha256": "31bf39c38b2f8a40cf63cdb207ca586ff06cda4cb4346ab4dc8b1d538b791b9b"
+      }
+    },
+    {
+      "path": "supabase/functions/vnext-daily-research-v1/index.ts",
+      "before": {
+        "oid": "96e57bac45e2a72804c0efa3191e516858502c74",
+        "mode": "100644",
+        "sha256": "c07d2f4bac3e144aa1de3259b0363604d38d66e1f0238d451bf416ffcbb324d1"
+      },
+      "after": {
+        "oid": "5b327824987f378c5fa02885b0ee11cb26d46a1c",
+        "mode": "100644",
+        "sha256": "9c7037c023139b354e9e863a3251dc1293aa8370b959dadbc50114aa1cd19b24"
+      }
+    },
+    {
+      "path": "supabase/migrations/20261103005841_vnext_premarket_entry_v11.sql",
+      "before": null,
+      "after": {
+        "oid": "319110bbcde4cb96077582f8fc02508363ddcbca",
+        "mode": "100644",
+        "sha256": "250c3900bd45468517a77b9c9bd0aaeaca2e636dbf3739618e32e3a233b78464"
+      }
+    },
+    {
+      "path": "tests/entryPremarketV11.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "6c6d9d6a18ea0dd37e62f475f987f4ee843640f8",
+        "mode": "100644",
+        "sha256": "e7fff362b12cc1ce8e1fab96ab6865a2f15cbcd878a75f0caa833c62eabea1d9"
+      }
+    },
+    {
+      "path": "tests/entryPremarketV11Database.integration.mjs",
+      "before": null,
+      "after": {
+        "oid": "cfdf71562555b6b8f314ed3e6f2d8882fa6ed846",
+        "mode": "100644",
+        "sha256": "9c6b612f189eda9ec8ef2c38737bb7f09dbc9db14a99cd278d609599cd430d6a"
+      }
+    },
+    {
+      "path": "tests/ownerCockpit.test.mjs",
+      "before": {
+        "oid": "46468bdc217de70c68d890c094295bdcaa756cfb",
+        "mode": "100644",
+        "sha256": "f36f853fdcbd555e46fd8d5d472d714081b27285efc6d22bf025af197e1564c5"
+      },
+      "after": {
+        "oid": "08ebf06182b2766e9450eaff52a052cc44788e1b",
+        "mode": "100644",
+        "sha256": "2b7eeb9673020fc45ae24f7e0c565985a69baf2840cd4da8b2d0b428fbe63de9"
+      }
+    },
+    {
+      "path": "tests/ownerDailyResearch.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "5562154b055f474893d8dbd4e4a790470d4922c1",
+        "mode": "100644",
+        "sha256": "f7944c07dcb09b7ae2ce5ac5f0c40d470dc84bc64092ab45f09141ec410a3cc7"
+      }
+    },
+    {
+      "path": "tests/vnextBrowserDailyLock.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "1f9d47d064463a18ace34020622ddfaf8c8cf17d",
+        "mode": "100644",
+        "sha256": "e2b5c3e9ebef6e121ed3cfdc7ea1380ee100f28d60e3bee9cbe0d993a831b276"
+      }
+    },
+    {
+      "path": "tests/vnextDailyFactProjection.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "0610ddea152ece8ea726842c7e3da8ae9eec5871",
+        "mode": "100644",
+        "sha256": "5091afd20044543107cb043c3f189e8c318d64593f0cb2045ff2eb5014aa3cb5"
+      }
+    },
+    {
+      "path": "tests/vnextDailyIntelligence.test.mjs",
+      "before": {
+        "oid": "941a07a1de38960c459842c8af3b686e1f300243",
+        "mode": "100644",
+        "sha256": "5db3fe921dc60ac8c1102a22deefbba8831705cf0d4ca6db328e966787befa99"
+      },
+      "after": {
+        "oid": "27ff7cc4d1fb71023532ac2e18948943b6eb634f",
+        "mode": "100644",
+        "sha256": "80924f90f91d44b77d41e727dd8c6ec607ce1e3e8048a3c40a7ed9b3874f1583"
+      }
+    },
+    {
+      "path": "tests/vnextDailyProjection.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "82e4d5a907b0996e4c99911d95d07e6954e65160",
+        "mode": "100644",
+        "sha256": "9af215ab85a583dbaa4d7f867f9d48873bf68f732af7d4840c5dd78def054f4a"
+      }
+    },
+    {
+      "path": "tests/vnextDailyRuntimeRecovery.test.mjs",
+      "before": {
+        "oid": "8c43c38f4c6083583bf5bd486c7e2b4072659f56",
+        "mode": "100644",
+        "sha256": "38b35d66a13a16973e5b64ca73f1a28190f6bd12d84f76112c9f650459af08ea"
+      },
+      "after": {
+        "oid": "19791361e19a923a467292f3b14b67a820432dbe",
+        "mode": "100644",
+        "sha256": "d1b359d126dcc8370d801758efdb4df6e760b31bcf21cf0903c85bf91b46e1d3"
+      }
+    },
+    {
+      "path": "tests/vnextInstitutionalAvailability.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "eac9fdb795981b91a95b0e90f0e72af7fc9bf941",
+        "mode": "100644",
+        "sha256": "ef84f3f8962e36fe9b4335f9ceee92e028ad17d23ae9e74c99b22c2a12abaddb"
+      }
+    },
+    {
+      "path": "tests/vnextIssuerDocumentedReviewIntake.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "9ba5abe7afe98a08026d1c600c3ac7aeed396f08",
+        "mode": "100644",
+        "sha256": "b973822d947aae0274f4b942f5b4fc385ca4e7e612b05423e1f9cdccf0c6de08"
+      }
+    },
+    {
+      "path": "tests/vnextIssuerDocumentedReviewRuntime.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "14c666770b894bea1f3f37f58870596eefc54957",
+        "mode": "100644",
+        "sha256": "8fb843f8c551822ae9ca43fcda590ffee78477f157bf8dbbdce520fae526d299"
+      }
+    },
+    {
+      "path": "tests/vnextIssuerFinancialBasicIntake.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "ab1a2662d8ef1b6659516e1b8837517cb93d9d22",
+        "mode": "100644",
+        "sha256": "bb899e2fb1864d9e81b80fb25084d0ad036072bd4ea8c018f6fd002924c77a17"
+      }
+    },
+    {
+      "path": "tests/vnextIssuerFinancialBatch.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "5c87d31ab80e0b49fad7cf6fc9d348152e0cc7af",
+        "mode": "100644",
+        "sha256": "683d83f5be1d4344f26712941d901add43bd9d681de4a37e4bedb6499f0cc8c1"
+      }
+    },
+    {
+      "path": "tests/vnextIssuerFinancialIntake.test.mjs",
+      "before": {
+        "oid": "be04c3a3f384f12e9f447e397154551e99484f63",
+        "mode": "100644",
+        "sha256": "883ca620269bb84562804c344bfcd688b321b35a2df50fcf3741906fd8a9c15e"
+      },
+      "after": {
+        "oid": "26c08f5b9502408a7bb9b2deb9c6403430defd24",
+        "mode": "100644",
+        "sha256": "05772df628f370c45b07e08b3b900e922a3fd25593915b6878a2f746bd009cb5"
+      }
+    },
+    {
+      "path": "tests/vnextIssuerFinancialMarginIntake.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "229f4a692602e64172a65bd1db4a53116c993ad6",
+        "mode": "100644",
+        "sha256": "68a2adc902e9fcad1366fbe21f38ced46e2f6c46d1fad4028de34d2562ccee5e"
+      }
+    },
+    {
+      "path": "tests/vnextIssuerFinancialNovatekIntake.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "270d53bad68db236e1e1f0303e06ae43ee9b69eb",
+        "mode": "100644",
+        "sha256": "b17a18013acd8654c379c66d2f5cb63a23ffef28dade92ffa1ea226547179927"
+      }
+    },
+    {
+      "path": "tests/vnextIssuerFinancialPartialIntake.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "56ea486f0fcc3c4d0b3eaed98c7005ec97893ced",
+        "mode": "100644",
+        "sha256": "800179c70d27aaa562e4d08d0713aa9f81dabb9b142174671e72afac5f7e137d"
+      }
+    },
+    {
+      "path": "tests/vnextIssuerFinancialUmcCapexIntake.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "770bec299942931d7eae27a9959a1efe4978bf71",
+        "mode": "100644",
+        "sha256": "466edf6d12bfe1ec01b5ff9f54e01e39b0861bda217c3ed7dd8a32108bc6c643"
+      }
+    },
+    {
+      "path": "tests/vnextMemberContinuity.test.mjs",
+      "before": {
+        "oid": "1581bb2d4154adf26ae74f05975bf30bbf1d510f",
+        "mode": "100644",
+        "sha256": "e97a0ce1a1c792ae57009f8d3519d2a4d7ca79404c3e8b1b4cd2efe80fe8e9e4"
+      },
+      "after": {
+        "oid": "0fcccb7e505c9c57727b23dfd4d5fde26966ea6d",
+        "mode": "100644",
+        "sha256": "328c0c343191fd9367cf21ff6399bf4e369171ab69090881f1de61e29ac3bd78"
+      }
+    }
+  ],
+  "scope_review": {
+    "kind": "EXACT_SOURCE_DELTA_NOT_FINANCIAL_OR_OPERATIONAL_APPROVAL",
+    "independent_review": false,
+    "groups": {
+      "runtime": [
+        "research/entry-opportunity.ts",
+        "research/entry-outcomes.ts",
+        "src/features/research/cockpit.ts",
+        "src/features/vnext/dailyAdapter.ts",
+        "src/features/vnext/dailyIntelligence.ts",
+        "src/features/vnext/dailyParsers.mjs",
+        "src/features/vnext/dailyRuntime.ts",
+        "src/features/vnext/issuerDocumentedReviewIntake.ts",
+        "src/features/vnext/issuerFinancialIntake.ts",
+        "supabase/functions/vnext-daily-research-v1/index.ts"
+      ],
+      "ui": [
+        "src/features/vnext/browserDailyLock.ts",
+        "src/features/vnext/ownerDailyResearch.ts",
+        "src/pages/vnext/MemberPage.tsx",
+        "src/pages/vnext/OwnerDailyResearch.tsx"
+      ],
+      "evidence_and_support": [
+        "research/evidence/novatek-financial-originals-20261103.json",
+        "research/refresh-2330-documented-review.candidate.ts",
+        "scripts/vnext/build-browser-daily-lock.mjs",
+        "scripts/vnext/stock-evidence.mjs",
+        "supabase/functions/_shared/retained-documented-reviews-20261103.json",
+        "supabase/functions/_shared/retained-documented-reviews.ts",
+        "supabase/functions/_shared/retained-issuer-financials-20261103-basic.json",
+        "supabase/functions/_shared/retained-issuer-financials-20261103-margin.json",
+        "supabase/functions/_shared/retained-issuer-financials-20261103-novatek.json",
+        "supabase/functions/_shared/retained-issuer-financials-20261103-partial.json",
+        "supabase/functions/_shared/retained-issuer-financials-20261103-umc-capex.json",
+        "supabase/functions/_shared/retained-issuer-financials-current.ts",
+        "supabase/functions/_shared/retained-issuer-financials.ts",
+        "supabase/migrations/20261103005841_vnext_premarket_entry_v11.sql"
+      ],
+      "tests": [
+        "tests/entryPremarketV11.test.mjs",
+        "tests/entryPremarketV11Database.integration.mjs",
+        "tests/ownerCockpit.test.mjs",
+        "tests/ownerDailyResearch.test.mjs",
+        "tests/vnextBrowserDailyLock.test.mjs",
+        "tests/vnextDailyFactProjection.test.mjs",
+        "tests/vnextDailyIntelligence.test.mjs",
+        "tests/vnextDailyProjection.test.mjs",
+        "tests/vnextDailyRuntimeRecovery.test.mjs",
+        "tests/vnextInstitutionalAvailability.test.mjs",
+        "tests/vnextIssuerDocumentedReviewIntake.test.mjs",
+        "tests/vnextIssuerDocumentedReviewRuntime.test.mjs",
+        "tests/vnextIssuerFinancialBasicIntake.test.mjs",
+        "tests/vnextIssuerFinancialBatch.test.mjs",
+        "tests/vnextIssuerFinancialIntake.test.mjs",
+        "tests/vnextIssuerFinancialMarginIntake.test.mjs",
+        "tests/vnextIssuerFinancialNovatekIntake.test.mjs",
+        "tests/vnextIssuerFinancialPartialIntake.test.mjs",
+        "tests/vnextIssuerFinancialUmcCapexIntake.test.mjs",
+        "tests/vnextMemberContinuity.test.mjs"
+      ]
+    }
+  },
+  "authority": {
+    "source_admission": false,
+    "canonical_admission": false,
+    "quality_approval": false,
+    "rights_gate_changed": false,
+    "publication_approval": false,
+    "production_authorized": false,
+    "thresholds_changed": false,
+    "existing_release_payloads_changed": false
+  },
+  "local_support_patch": [
+    {
+      "path": ".github/workflows/vnext-candidate.yml",
+      "purpose": "APPEND_CURRENT_AND_PRIOR_SUCCESSOR_NEGATIVE_CONTROLS_ONLY",
+      "before": {
+        "oid": "54f1fa4c0d0466a7b351f94a4df6de86f24184f1",
+        "mode": "100644",
+        "sha256": "2c2c3bf5c36a83de94055f7ee778ad78f2c56cc40b49b258e14a9ae1206ad2e5"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "a4b545fac50132ed1689c2f30e2212d559162cf323e90bb2945982c7c9792055"
+      },
+      "exact_edits": [
+        {
+          "before": "          NODE_OPTIONS: --experimental-strip-types\n        run: |\n          node --test tests/ciNodeObserver.test.mjs\n          node scripts/releases/observe-ci-node.mjs --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/vnextIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/marketNewsReportIntegrity.test.mjs tests/academyV11Integrity.test.mjs\n      - name: Build member UI candidate (no Production deployment)\n        env:\n          NODE_OPTIONS: --experimental-strip-types\n",
+          "after": "          NODE_OPTIONS: --experimental-strip-types\n        run: |\n          node --test tests/ciNodeObserver.test.mjs\n          node scripts/releases/observe-ci-node.mjs --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/vnextIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/marketNewsReportIntegrity.test.mjs tests/academyV11Integrity.test.mjs tests/currentSourceSuccessor.test.mjs tests/reviewedSourceSuccessor.test.mjs\n      - name: Build member UI candidate (no Production deployment)\n        env:\n          NODE_OPTIONS: --experimental-strip-types\n"
+        }
+      ]
+    },
+    {
+      "path": "tests/officialPublicAdmission.test.mjs",
+      "purpose": "EXACT_CURRENT_SCOPE_AND_IMMUTABLE_WORKER_PACKET_COMPATIBILITY",
+      "before": {
+        "oid": "6b7037717577ab4edae0547594a1f8a055f132fd",
+        "mode": "100644",
+        "sha256": "cb914f90433d7d70e1aa72efee89688a4841714177a01c2bf5cc6d22d1ad7dd3"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "89af88d56b5f0f2c3544827a2171a693dfb4eca5559104af0ff3d8b0dc0b7409"
+      },
+      "exact_edits": [
+        {
+          "before": " FROZEN_SOURCE_UNION_R13,SOURCE_UNION_R14_FILES,FROZEN_SOURCE_UNION_R14,\n FROZEN_SOURCE_UNION_R15,RUNTIME_INTEGRITY_FILES,\n} from './helpers/integrationAdmission.mjs';\nimport {reviewedSuccessorPaths,reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';\nconst frozenRuntimePaths=new Set(JSON.parse(integrationPhysicalRead(FROZEN_RUNTIME_INTEGRATION_MANIFEST)).files.map(row=>row.path));\nconst successorAdded=reviewedSuccessorPaths().filter(path=>!frozenRuntimePaths.has(path));\n// One changed current test consumer has an exact older Actual-parent view.\n",
+          "after": " FROZEN_SOURCE_UNION_R13,SOURCE_UNION_R14_FILES,FROZEN_SOURCE_UNION_R14,\n FROZEN_SOURCE_UNION_R15,RUNTIME_INTEGRITY_FILES,\n} from './helpers/integrationAdmission.mjs';\nimport {reviewedSuccessorPaths} from './helpers/currentSourceSuccessor.mjs';\nimport {reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';\nconst frozenRuntimePaths=new Set(JSON.parse(integrationPhysicalRead(FROZEN_RUNTIME_INTEGRATION_MANIFEST)).files.map(row=>row.path));\nconst successorAdded=reviewedSuccessorPaths().filter(path=>!frozenRuntimePaths.has(path));\n// One changed current test consumer has an exact older Actual-parent view.\n"
+        },
+        {
+          "before": " for(const path of CHANGED){\n  const frozen=sourceUnionParentRead('actual',path);\n  assert.equal(candidate.payload.files.find(f=>f.name===path).content,frozen.toString(),'sealed Worker5 keeps the original source');\n  if(['src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts','src/features/vnext/dailyAdapter.ts'].includes(path))assert.equal(integrationHash(integrationPhysicalRead(path)),reviewedSuccessorSourceHash(path,RUNTIME_INTEGRITY_FILES.find(r=>r.path===path).after_sha256),'current candidate is independently admitted, not substituted into Worker5');\n  else assert.deepEqual(integrationPhysicalRead(path),frozen);\n }\n for(const p of ['src/features/vnext/contracts.ts','src/features/vnext/engine.ts','supabase/functions/_shared/decision-v1-evidence.ts']){\n",
+          "after": " for(const path of CHANGED){\n  const frozen=sourceUnionParentRead('actual',path);\n  assert.equal(candidate.payload.files.find(f=>f.name===path).content,frozen.toString(),'sealed Worker5 keeps the original source');\n  if(['src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts','src/features/vnext/dailyAdapter.ts','src/features/vnext/dailyParsers.mjs'].includes(path))assert.equal(integrationHash(integrationPhysicalRead(path)),reviewedSuccessorSourceHash(path,RUNTIME_INTEGRITY_FILES.find(r=>r.path===path)?.after_sha256??integrationHash(frozen)),'current candidate is independently admitted, not substituted into Worker5');\n  else assert.deepEqual(integrationPhysicalRead(path),frozen);\n }\n for(const p of ['src/features/vnext/contracts.ts','src/features/vnext/engine.ts','supabase/functions/_shared/decision-v1-evidence.ts']){\n"
+        }
+      ]
+    },
+    {
+      "path": "tests/originalIngressAdmission.test.mjs",
+      "purpose": "EXACT_CURRENT_SCOPE_AND_PRESERVED_HISTORICAL_ASSERTION_COMPATIBILITY",
+      "before": {
+        "oid": "d152f8e81f6260c1918fd8fb6c744b3e3e1c502b",
+        "mode": "100644",
+        "sha256": "a81472a9a2f266a5bf3986606e590dd9e146b619b12517f346de782bc651a55c"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "e9bab12ee19d0b59245dc43e3dbe7fa512586da131946781c0ccba463334c141"
+      },
+      "exact_edits": [
+        {
+          "before": " integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHash,\n createSourceUnionComposition,verifyIntegrationCandidate,sourceUnionLineage,sourceUnionParentRead,reuseSourceUnionPinnedProof,\n} from './helpers/integrationAdmission.mjs';\nimport {reviewedSuccessorPaths,reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';\nconst frozenRuntime=JSON.parse(integrationPhysicalRead(FROZEN_RUNTIME_INTEGRATION_MANIFEST));\nconst frozenRuntimePaths=new Set(frozenRuntime.files.map(row=>row.path));\nconst successorAdded=reviewedSuccessorPaths().filter(path=>!frozenRuntimePaths.has(path));\n",
+          "after": " integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHash,\n createSourceUnionComposition,verifyIntegrationCandidate,sourceUnionLineage,sourceUnionParentRead,reuseSourceUnionPinnedProof,\n} from './helpers/integrationAdmission.mjs';\nimport {reviewedSuccessorPaths} from './helpers/currentSourceSuccessor.mjs';\nimport {reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';\nconst frozenRuntime=JSON.parse(integrationPhysicalRead(FROZEN_RUNTIME_INTEGRATION_MANIFEST));\nconst frozenRuntimePaths=new Set(frozenRuntime.files.map(row=>row.path));\nconst successorAdded=reviewedSuccessorPaths().filter(path=>!frozenRuntimePaths.has(path));\n"
+        },
+        {
+          "before": "const R4_ASSERTION_FILE_BEFORE_SHA='c70d1ae15d1c88547f61454fdbb3069775e43d3cebadf1aceb01d4d7e9e1815e';\nconst R4_ASSERTION_BEFORE_SHA='7a7414c56c596d7f22a3745b485281f4a2fdf5cccb7a5090af09e7cc56881992';\nconst R4_ASSERTION_CURRENT_SHA='eb62f37aac7a219d77b0dec89067b6ff7b5fbeb6ef4ccbc0780bde5a6df6cb3e';\nfunction assertionFunctionSpan(text,title){\n const starts=[...text.matchAll(/^test\\('([^']+)'/gm)],matches=starts.map((row,index)=>({row,index})).filter(({row})=>row[1]===title);\n if(matches.length!==1)return null;\n",
+          "after": "const R4_ASSERTION_FILE_BEFORE_SHA='c70d1ae15d1c88547f61454fdbb3069775e43d3cebadf1aceb01d4d7e9e1815e';\nconst R4_ASSERTION_BEFORE_SHA='7a7414c56c596d7f22a3745b485281f4a2fdf5cccb7a5090af09e7cc56881992';\nconst R4_ASSERTION_CURRENT_SHA='eb62f37aac7a219d77b0dec89067b6ff7b5fbeb6ef4ccbc0780bde5a6df6cb3e';\n// Invert only the two explicit compatibility edits before checking the original\n// whole-file pin. Any other current-byte change still fails that unchanged pin.\nfunction priorAssertionCompatibilitySource(current){\n const edits=[\n  [\"import {reviewedSuccessorPaths} from './helpers/currentSourceSuccessor.mjs';\\nimport {reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';\", \"import {reviewedSuccessorPaths,reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';\"],\n  [\"  if(['src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts','src/features/vnext/dailyAdapter.ts','src/features/vnext/dailyParsers.mjs'].includes(path))assert.equal(integrationHash(integrationPhysicalRead(path)),reviewedSuccessorSourceHash(path,RUNTIME_INTEGRITY_FILES.find(r=>r.path===path)?.after_sha256??integrationHash(frozen)),'current candidate is independently admitted, not substituted into Worker5');\", \"  if(['src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts','src/features/vnext/dailyAdapter.ts'].includes(path))assert.equal(integrationHash(integrationPhysicalRead(path)),reviewedSuccessorSourceHash(path,RUNTIME_INTEGRITY_FILES.find(r=>r.path===path).after_sha256),'current candidate is independently admitted, not substituted into Worker5');\"],\n ];\n for(const [after,before]of edits){assert.equal(current.split(after).length,2,'ASSERTION_EXACT_COMPATIBILITY_EDIT');current=current.replace(after,before);}\n return current;\n}\nfunction assertionFunctionSpan(text,title){\n const starts=[...text.matchAll(/^test\\('([^']+)'/gm)],matches=starts.map((row,index)=>({row,index})).filter(({row})=>row[1]===title);\n if(matches.length!==1)return null;\n"
+        },
+        {
+          "before": " if(path!==R4_ASSERTION_PATH)return text;\n verifyIntegrationCandidate();\n const current=integrationPhysicalRead(path).toString(),span=assertionFunctionSpan(text,R4_ASSERTION_TITLE);\n assert.equal(integrationHash(Buffer.from(current)),R4_ASSERTION_FILE_CURRENT_SHA,'ASSERTION_WHOLE_CURRENT_SOURCE_PIN');\n if(text!==current||!span||integrationHash(Buffer.from(span.body))!==R4_ASSERTION_CURRENT_SHA){verifyIntegrationCandidate();return text;}\n const revision='dee20b5ade6bd22070b7142b9b09b2102a87e80f',options={cwd:new URL('../',import.meta.url)};\n const metadata=execFileSync('git',['--no-replace-objects','ls-tree','-z',revision,'--',path],options).toString();\n",
+          "after": " if(path!==R4_ASSERTION_PATH)return text;\n verifyIntegrationCandidate();\n const current=integrationPhysicalRead(path).toString(),span=assertionFunctionSpan(text,R4_ASSERTION_TITLE);\n assert.equal(integrationHash(Buffer.from(priorAssertionCompatibilitySource(current))),R4_ASSERTION_FILE_CURRENT_SHA,'ASSERTION_WHOLE_CURRENT_SOURCE_PIN');\n if(text!==current||!span||integrationHash(Buffer.from(span.body))!==R4_ASSERTION_CURRENT_SHA){verifyIntegrationCandidate();return text;}\n const revision='dee20b5ade6bd22070b7142b9b09b2102a87e80f',options={cwd:new URL('../',import.meta.url)};\n const metadata=execFileSync('git',['--no-replace-objects','ls-tree','-z',revision,'--',path],options).toString();\n"
+        },
+        {
+          "before": "test('R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',()=>{\n const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);\n assert.equal(FROZEN_RUNTIME_INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261022-runtime-integrity.json');\n assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261102-reviewed-successor.json');\n assert.equal(frozenRuntime.files.length,586);\n assert.equal(FROZEN_SOURCE_UNION_R7,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r7.json');\n assert.equal(FROZEN_SOURCE_UNION,'docs/operations/evidence/core-member-integration-20261020-v1-source-union.json');\n",
+          "after": "test('R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',()=>{\n const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);\n assert.equal(FROZEN_RUNTIME_INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261022-runtime-integrity.json');\n assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261103-current-source.json');\n assert.equal(frozenRuntime.files.length,586);\n assert.equal(FROZEN_SOURCE_UNION_R7,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r7.json');\n assert.equal(FROZEN_SOURCE_UNION,'docs/operations/evidence/core-member-integration-20261020-v1-source-union.json');\n"
+        },
+        {
+          "before": "\ntest('successor assertion source restores exactly one reviewed R4 body while raw current execution and injected bytes remain current',()=>{\n const raw=integrationPhysicalRead(R4_ASSERTION_PATH).toString(),current=assertionFunctionSpan(raw,R4_ASSERTION_TITLE);assert(current);\n assert.equal(integrationHash(Buffer.from(current.body)),R4_ASSERTION_CURRENT_SHA);\n const restored=reviewedSuccessorAssertionSource(R4_ASSERTION_PATH,raw),before=assertionFunctionSpan(restored,R4_ASSERTION_TITLE);assert(before);\n assert.equal(integrationHash(Buffer.from(before.body)),R4_ASSERTION_BEFORE_SHA);assert.notEqual(raw,restored);\n",
+          "after": "\ntest('successor assertion source restores exactly one reviewed R4 body while raw current execution and injected bytes remain current',()=>{\n const raw=integrationPhysicalRead(R4_ASSERTION_PATH).toString(),current=assertionFunctionSpan(raw,R4_ASSERTION_TITLE);assert(current);\n const checkCompatibility=text=>assert.equal(integrationHash(Buffer.from(priorAssertionCompatibilitySource(text))),R4_ASSERTION_FILE_CURRENT_SHA);\n checkCompatibility(raw);\n for(const changed of [raw+'\\nUNREVIEWED',raw.replace(\"from './helpers/currentSourceSuccessor.mjs'\",\"from './helpers/unknown.mjs'\"),raw.replace('src/features/vnext/dailyParsers.mjs','src/features/vnext/unknown.mjs')])assert.throws(()=>checkCompatibility(changed));\n assert.equal(integrationHash(Buffer.from(current.body)),R4_ASSERTION_CURRENT_SHA);\n const restored=reviewedSuccessorAssertionSource(R4_ASSERTION_PATH,raw),before=assertionFunctionSpan(restored,R4_ASSERTION_TITLE);assert(before);\n assert.equal(integrationHash(Buffer.from(before.body)),R4_ASSERTION_BEFORE_SHA);assert.notEqual(raw,restored);\n"
+        }
+      ]
+    }
+  ]
+}

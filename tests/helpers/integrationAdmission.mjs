@@ -10,8 +10,8 @@ import {URL} from 'node:url';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {REVIEWED_SUCCESSOR_MANIFEST,REVIEWED_SUCCESSOR_SUPPORT,reviewedSuccessorPaths,reviewedSuccessorLineage,verifyReviewedSuccessorCatalog,applyReviewedSuccessor} from './currentSourceSuccessor.mjs';
-export {REVIEWED_SUCCESSOR_MANIFEST as CURRENT_INTEGRATION_MANIFEST} from './currentSourceSuccessor.mjs';
+import {REVIEWED_SUCCESSOR_MANIFEST,REVIEWED_SUCCESSOR_SUPPORT,reviewedSuccessorPaths,reviewedSuccessorLineage,verifyReviewedSuccessorCatalog,applyReviewedSuccessor,recoveryPriorRead} from './recoverySourceSuccessor.mjs';
+export {REVIEWED_SUCCESSOR_MANIFEST as CURRENT_INTEGRATION_MANIFEST} from './recoverySourceSuccessor.mjs';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
@@ -1132,6 +1132,11 @@ const REVIEWED_SUCCESSOR_SUPPORT_PINS=Object.freeze([
  Object.freeze({path:'tests/helpers/currentSourceCatalog.mjs',sha256:'4cce1e37817223a3eef3ec8a2202191bfeeacce43d9f02dd37891b15318abc4c'}),
  Object.freeze({path:'tests/helpers/currentSourceSuccessor.mjs',sha256:'4e361fb309f5b06851513e745341f630f0f8b6b6bbd68bb9369fd74c678fd458'}),
  Object.freeze({path:'tests/currentSourceSuccessor.test.mjs',sha256:'b7b4f5705397f933eb4dd7219a1d846d386658b8d07f1e97d0313e51dbe11512'}),
+ // Recovery support is a separately reviewed engineering verifier boundary.
+ // All five predecessor pins above keep their original values.
+ Object.freeze({path:'tests/helpers/recoverySourceCatalog.mjs',sha256:'94afaf1d02dfb5f74550bb80973e04b8e2db497fbabfa7362b2b794845c4ff38'}),
+ Object.freeze({path:'tests/helpers/recoverySourceSuccessor.mjs',sha256:'674836ccb5040a2b93fee4f10a5992307b0677213339dc876e581092097c532c'}),
+ Object.freeze({path:'tests/recoverySourceSuccessor.test.mjs',sha256:'0ad462a0629713a91a29c03d402e22ef5061087bb9b301f2a3afb67f74d155bc'}),
 ]);
 const git=args=>execFileSync('git',['--no-replace-objects',...args],{cwd:root,encoding:'utf8',maxBuffer:64e6});
 export const integrationHash=b=>createHash('sha256').update(b).digest('hex');
@@ -1694,7 +1699,9 @@ function verifySourceUnionBoundary(read,mode){
  assert.deepEqual(REVIEWED_SUCCESSOR_SUPPORT_PINS.map(row=>row.path),[...REVIEWED_SUCCESSOR_SUPPORT],'SUCCESSOR_EXACT_SUPPORT_PINS');
  for(const row of REVIEWED_SUCCESSOR_SUPPORT_PINS){
   assert.match(row.sha256,/^[a-f0-9]{64}$/,'SUCCESSOR_SUPPORT_REVIEW_REQUIRED');
-  assert.equal(integrationHash(read(row.path)),row.sha256,'SUCCESSOR_SUPPORT_SOURCE_DRIFT:'+row.path);
+  const bytes=read(row.path);
+  const priorBytes=REVIEWED_SUCCESSOR_SUPPORT_PINS.indexOf(row)<5?recoveryPriorRead(row.path,bytes):bytes;
+  assert.equal(integrationHash(priorBytes),row.sha256,'SUCCESSOR_SUPPORT_SOURCE_DRIFT:'+row.path);
  }
  sourceUnionLineage();
  for(const [p,row]of sourceUnionExpected()){

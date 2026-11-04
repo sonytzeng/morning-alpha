@@ -30,7 +30,11 @@ jobs:
           NODE_OPTIONS: --experimental-strip-types
         run: |
           node --test tests/ciNodeObserver.test.mjs
-          node scripts/releases/observe-ci-node.mjs --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/vnextIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/marketNewsReportIntegrity.test.mjs tests/academyV11Integrity.test.mjs tests/currentSourceSuccessor.test.mjs tests/reviewedSourceSuccessor.test.mjs
+          node scripts/releases/observe-ci-node.mjs --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/vnextIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/marketNewsReportIntegrity.test.mjs tests/academyV11Integrity.test.mjs tests/currentSourceSuccessor.test.mjs tests/reviewedSourceSuccessor.test.mjs tests/recoverySourceSuccessor.test.mjs
+      - name: Recovery source, retry, fallback and member comparison controls
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextProviderRetryAfter.test.mjs tests/vnextRevenueFallback.test.mjs tests/institutionalCaptureCompatibility.test.mjs tests/dailyAiMemberComparison.test.mjs
       - name: Build member UI candidate (no Production deployment)
         env:
           NODE_OPTIONS: --experimental-strip-types
@@ -55,6 +59,17 @@ jobs:
         run: |
           node --experimental-strip-types --test tests/vnextDailyWiring.test.mjs
           node --experimental-strip-types tests/vnextDailyDatabase.integration.mjs
+          node --experimental-strip-types tests/vnextPrewarmSql.integration.mjs
+      - name: Recovery PostgreSQL nested SOURCE and warm checkpoint controls
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: |
+          npm install --prefix "$RUNNER_TEMP/ma-recovery-pglite" --ignore-scripts --no-audit --no-fund --save-exact @electric-sql/pglite@0.3.14
+          export MA_PGLITE_MODULE="$RUNNER_TEMP/ma-recovery-pglite/node_modules/@electric-sql/pglite/dist/index.js"
+          export MA_VALIDATOR_DEFS_DIR="$GITHUB_WORKSPACE/tests/fixtures/recovery-source-validators-20261105"
+          node --experimental-strip-types --test tests/dailyAiInstitutionalIssuer16Database.integration.mjs
+          node --experimental-strip-types tests/dailyAiFullNestedLocal.integration.mjs
+          node --experimental-strip-types tests/vnextWarmPgliteLocal.integration.mjs
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x

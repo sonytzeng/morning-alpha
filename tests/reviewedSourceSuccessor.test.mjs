@@ -10,6 +10,8 @@ import {
  REVIEWED_SUCCESSOR_BASE,REVIEWED_SUCCESSOR_HEAD,REVIEWED_SUCCESSOR_CATALOG,
  REVIEWED_SUCCESSOR_CATALOG_SHA256,REVIEWED_SUCCESSOR_SUPPORT,reviewedSuccessorLineage,
 } from './helpers/reviewedSourceSuccessor.mjs';
+import {CURRENT_SOURCE_MANIFEST} from './helpers/currentSourceCatalog.mjs';
+import {RECOVERY_SOURCE_MANIFEST} from './helpers/recoverySourceCatalog.mjs';
 const root=new URL('../',import.meta.url);
 const git=args=>execFileSync('git',['--no-replace-objects',...args],{cwd:root});
 function fixture(){
@@ -23,13 +25,16 @@ function fixture(){
 test('successor admits the complete Git delta and preserves the immutable prior terminal and lineage',()=>{
  const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);
  assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261022-runtime-integrity.json');
- assert.equal(CURRENT_INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261103-current-source.json');
+ assert.equal(CURRENT_SOURCE_MANIFEST,'docs/operations/evidence/core-member-integration-20261103-current-source.json');
+ assert.equal(CURRENT_INTEGRATION_MANIFEST,RECOVERY_SOURCE_MANIFEST);
  assert.deepEqual(m.files.map(r=>r.path),integrationScope());
  assert.deepEqual(integrationInventory(),[...integrationScope(),CURRENT_INTEGRATION_MANIFEST].sort());
  // The old terminal remains immutable with all 865 rows. Current source has
  // an additional exact Git delta, whose live negative controls run separately.
  const previous=JSON.parse(git(['show','da0e07dd23aee62f31cd669d0d090d948e6d1171:docs/operations/evidence/core-member-integration-20261102-reviewed-successor.json']));
- assert.equal(previous.files.length,865);assert.equal(m.files.length,903);assert.equal(integrationInventory().length,904);
+ const priorCurrent=JSON.parse(integrationPhysicalRead(CURRENT_SOURCE_MANIFEST));
+ assert.equal(previous.files.length,865);assert.equal(priorCurrent.files.length,903);assert.equal(priorCurrent.files.length+1,904);
+ assert.equal(integrationInventory().length,m.files.length+1);
  assert.equal(integrationHash(integrationPhysicalRead(INTEGRATION_MANIFEST)),'554e96d7d84995d8bc19091bbfa7e2dfb152fec6980d32502e963f4b860c199e');
  assert.deepEqual(integrationPhysicalRead(INTEGRATION_MANIFEST),git(['show',REVIEWED_SUCCESSOR_BASE+':'+INTEGRATION_MANIFEST]));
  const old=JSON.parse(integrationPhysicalRead(INTEGRATION_MANIFEST)),lineage=sourceUnionLineage();

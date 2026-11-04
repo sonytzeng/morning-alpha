@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {integrationPhysicalRead as physical,integrationPhysicalMode as physicalMode,integrationInventory,integrationHash,verifyIntegrationCandidate,CURRENT_INTEGRATION_MANIFEST,sourceUnionLineage} from './helpers/integrationAdmission.mjs';
-import {CURRENT_SOURCE_BASE,CURRENT_SOURCE_HEAD,CURRENT_SOURCE_CATALOG,CURRENT_SOURCE_CATALOG_SHA256,CURRENT_SOURCE_SUPPORT,currentSourceDefinition,currentSourceHash,currentSourcePriorPatch} from './helpers/currentSourceCatalog.mjs';
-import {reviewedSuccessorPaths} from './helpers/currentSourceSuccessor.mjs';
+import {CURRENT_SOURCE_BASE,CURRENT_SOURCE_HEAD,CURRENT_SOURCE_CATALOG,CURRENT_SOURCE_CATALOG_SHA256,CURRENT_SOURCE_MANIFEST,CURRENT_SOURCE_SUPPORT,currentSourceDefinition,currentSourceHash,currentSourcePriorPatch} from './helpers/currentSourceCatalog.mjs';
+import {reviewedSuccessorPaths,recoveryPriorRead} from './helpers/recoverySourceSuccessor.mjs';
 const readJson=p=>JSON.parse(physical(p));
 function fixture(){
  const bytes=new Map(),modes=new Map(),paths=integrationInventory(),manifest=readJson(CURRENT_INTEGRATION_MANIFEST);
@@ -13,14 +13,17 @@ function fixture(){
  return {bytes,modes,paths,manifest,read,mode,reseal,mirror,verify:()=>verifyIntegrationCandidate(read,paths,mode)};
 }
 test('current composition appends all 48 immutable Git changes and preserves the prior terminal verbatim',()=>{
- const m=verifyIntegrationCandidate(),c=currentSourceDefinition(),lineage=sourceUnionLineage().reviewed_successor.current_git_successor;
+ verifyIntegrationCandidate();
+ // Preserve the exact 903-row predecessor assertion after admitting the full
+ // live recovery union. Later source bytes are checked by its own successor.
+ const m=readJson(CURRENT_SOURCE_MANIFEST),c=currentSourceDefinition(),lineage=sourceUnionLineage().reviewed_successor.current_git_successor;
  assert.equal(c.files.length,48);assert.equal(c.base,CURRENT_SOURCE_BASE);assert.equal(c.head,CURRENT_SOURCE_HEAD);
  assert.equal(integrationHash(physical(CURRENT_SOURCE_CATALOG)),CURRENT_SOURCE_CATALOG_SHA256);
  assert.equal(lineage.exact_git_delta,48);assert.equal(lineage.scope_review.independent_review,false);
  const before=execFileSync('git',['--no-replace-objects','show',CURRENT_SOURCE_BASE+':'+c.prior_manifest.path]);
  assert.deepEqual(physical(c.prior_manifest.path),before);assert.equal(JSON.parse(before).files.length,865);assert.equal(m.files.length,903);
  assert.equal(currentSourceHash('research/entry-opportunity.ts'),'49253f89038cdf67fd56819bb49e3bcf0fcd916de99f11c8bbb342e720ddaac9');
- for(const row of c.files)assert.equal(integrationHash(physical(row.path)),row.after.sha256);
+ for(const row of c.files)assert.equal(integrationHash(recoveryPriorRead(row.path,physical(row.path))),row.after.sha256);
 });
 test('every newly admitted source rejects a changed live body even after terminal hashes are mirrored',()=>{
  const c=currentSourceDefinition();
@@ -28,9 +31,9 @@ test('every newly admitted source rejects a changed live body even after termina
 });
 test('CI patch keeps every previous control and only appends both successor test suites',()=>{
  const c=currentSourceDefinition(),patch=c.local_support_patch[0];assert.equal(c.local_support_patch.length,8);
- const before=execFileSync('git',['--no-replace-objects','cat-file','blob',patch.before.oid]).toString(),after=physical(patch.path).toString();
+ const before=execFileSync('git',['--no-replace-objects','cat-file','blob',patch.before.oid]).toString(),after=recoveryPriorRead(patch.path,physical(patch.path)).toString();
  assert.equal(after.replace(' tests/currentSourceSuccessor.test.mjs tests/reviewedSourceSuccessor.test.mjs',''),before);
- assert.equal(integrationHash(physical(patch.path)),patch.after.sha256);
+ assert.equal(integrationHash(recoveryPriorRead(patch.path,physical(patch.path))),patch.after.sha256);
  assert.equal(currentSourceHash(patch.path),patch.after.sha256);
 });
 test('Core CI retains all five ff88 proofs and runs all three later suites on the current tree',()=>{

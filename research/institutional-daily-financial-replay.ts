@@ -1,6 +1,7 @@
 /** Existing SOURCE replay pattern for exact reviewed official share counts.
  * No refetch, model call, commercial grant, lot or currency conversion. */
 import {compareTime,hashValid,snapshotHash,validObservationTime} from '../src/features/vnext/contracts.ts';
+import {canonical} from './entry-opportunity.ts';
 import type {FunnelInput,ResearchFact} from '../src/features/vnext/researchFunnel.ts';
 import type {DailyAiFinancialRefreshProof,refreshDailyAiFinancials} from './daily-ai-financial-refresh.ts';
 import {INSTITUTIONAL_SOURCE_SEAL,INSTITUTIONAL_FACTS_SHA256,INSTITUTIONAL_REGISTRY_CUTOFF,INSTITUTIONAL_FACT_IDS,INSTITUTIONAL_SYMBOLS} from './institutional-registry.constants.ts';
@@ -17,6 +18,28 @@ const object=(v:unknown):Record<string,unknown>=>{if(!v||typeof v!=='object'||Ar
 const own=(f:ResearchFact)=>fixedIds.has(f.id);
 const stopped=(signal:AbortSignal)=>{if(signal.aborted)throw Error('INSTITUTIONAL_REPLAY_ABORTED');};
 const ordered=(facts:ResearchFact[])=>facts.slice().sort((a,b)=>a.id.localeCompare(b.id));
+
+/** Distinct captures of the same public row may share its row ID and hash.
+ * Preserve the pre-existing capture byte-for-byte: never replace its receipt
+ * clock, claim the sealed registry was replayed, or infer a commercial grant. */
+export async function matchesExistingInstitutionalCaptures(inputs:FunnelInput[],registry:VerifiedInstitutionalFact[],cutoff:string){
+ if(!validObservationTime(cutoff)||inputs.length!==72||registry.length!==144||new Set(inputs.map(i=>i.symbol)).size!==72)return false;
+ const byId=new Map(registry.map(f=>[f.id,f]));
+ if(byId.size!==144)return false;
+ const existing=inputs.flatMap(i=>i.facts.filter(f=>byId.has(f.id)).map(f=>({symbol:i.symbol,f})));
+ if(existing.length!==144||new Set(existing.map(x=>x.f.id)).size!==144)return false;
+ const protectedFields=['unit','not_currency','source_admitted','member_publication_approved','source_received_at','source_sha256','source_bytes','source_locator'];
+ const ignoredFields=new Set([...protectedFields,'first_seen_at','available_at']);
+ const body=(value:ResearchFact)=>Object.fromEntries(Object.entries(value).filter(([k])=>!ignoredFields.has(k)));
+ for(const {symbol,f} of existing){
+  const expected=byId.get(f.id);if(!expected||symbol!==expected.symbol)return false;
+  if(protectedFields.some(k=>Object.hasOwn(f,k)))return false;
+  if(canonical(body(f))!==canonical(body(expected)))return false;
+  if(!f.first_seen_at||!f.available_at||!f.as_of||![f.first_seen_at,f.available_at,f.as_of].every(validObservationTime)
+   ||compareTime(f.as_of,f.first_seen_at)>0||compareTime(f.first_seen_at,f.available_at)>0||compareTime(f.available_at,cutoff)>0)return false;
+ }
+ return true;
+}
 
 export async function parseInstitutionalDailyRegistry(raw:unknown,cutoff:string):Promise<VerifiedInstitutionalFact[]>{
  let captured:unknown;try{captured=structuredClone(raw);}catch{fail();}
@@ -79,7 +102,16 @@ export function withRetainedInstitutionalDailyFinancials(baseRefresh:Refresh,loa
   const facts=await parseInstitutionalDailyRegistry(raw,began);stopped(ownedRequest.signal);
   const oldFacts=baseline.flatMap(i=>i.facts.filter(own).map(f=>({symbol:i.symbol,fact:f})));
   if(oldFacts.some(({symbol,fact})=>symbol!==(fact as VerifiedInstitutionalFact).symbol))fail();
-  if(oldFacts.length&&await snapshotHash(ordered(oldFacts.map(x=>x.fact)))!==await snapshotHash(ordered(facts)))fail();
+  if(oldFacts.length&&await snapshotHash(ordered(oldFacts.map(x=>x.fact)))!==await snapshotHash(ordered(facts))){
+   if(!await matchesExistingInstitutionalCaptures(baseline,facts,began))fail();
+   const original=structuredClone(oldFacts.map(x=>x.fact));
+   const financial=await baseRefresh(ownedRequest);stopped(ownedRequest.signal);
+   const finalFacts=financial.inputs.flatMap(i=>i.facts.filter(own));
+   if(financial.inputs.some(i=>i.facts.filter(own).some(f=>i.symbol!==(f as VerifiedInstitutionalFact).symbol))
+    ||financial.proof.removals.some(removal=>fixedIds.has(removal.id))
+    ||object(financial.proof).institutional_replay!==undefined||await snapshotHash(ordered(finalFacts))!==await snapshotHash(ordered(original)))fail();
+   return {...financial,additionalGaps:[...new Set([...financial.additionalGaps,'INSTITUTIONAL_EXISTING_CAPTURE_PRESERVED_REGISTRY_NOT_REPLAYED'])]};
+  }
   const stripped=baseline.map(i=>({...i,facts:i.facts.filter(f=>!own(f))}));
   const financial=await baseRefresh({...ownedRequest,inputs:stripped});stopped(ownedRequest.signal);
   const cutoff=ownedRequest.clock();

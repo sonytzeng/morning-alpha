@@ -4,6 +4,7 @@ import {DAILY_AI_MEMBER_STATES,dailyAiAnalysisOrigin,type DailyAiMemberCard,type
 import {dailyAiAnalysisText,dailyAiGapLabel} from '@/features/vnext/dailyAiCopy';
 import {dailyAiPricePlanForCard,type DailyAiMemberPricePlans,type DailyAiPricePlan} from '@/features/vnext/dailyAiPricePlan';
 import './daily-ai-member.css';
+import './daily-ai-comparison.css';
 
 const periods={SHORT:'先看近期事件與量價，確認條件成立後再評估。',MEDIUM:'追蹤未來數週的營收、營運與事件變化。',LONG:'檢查長期需求、獲利與估值能否支持布局。'};
 const states=Object.keys(DAILY_AI_MEMBER_STATES) as DailyAiMemberState[];
@@ -13,6 +14,7 @@ const date=(value:string)=>new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipe
 const money=(value:number)=>new Intl.NumberFormat('zh-TW',{maximumFractionDigits:2}).format(value);
 // PostgreSQL may retain microseconds; a browser timer must use the first
 // representable millisecond at or after that exact deadline.
+const sourceKinds={NEWS:'新聞／公告',MARKET:'市場資料',FINANCIAL:'財務資料',PRICE:'價格資料'};
 const priceDeadlineMs=(value:string)=>{const ms=Date.parse(value);return Number.isFinite(ms)&&compareTime(value,new Date(ms).toISOString())>0?ms+1:ms;};
 function PricePlan({plan,status,sources}:{plan:DailyAiPricePlan;status:DailyAiMemberState;sources:readonly DailyAiMemberSource[]}){
  return <section className="dam-price-plan" aria-label="條件式價格研究"><h4>條件式價格研究</h4>
@@ -60,6 +62,7 @@ function Evidence({card,year}:{card:DailyAiMemberCard;year:string}){
 export default function DailyAiMemberResearch({data,pricePlans=null,pricePlansUnavailable=false,priceSubjectUserId,selectedHorizon,onHorizonChange,viewState,onViewChange}:{data:Research;pricePlans?:DailyAiMemberPricePlans|null;pricePlansUnavailable?:boolean;priceSubjectUserId?:string;selectedHorizon?:Horizon;onHorizonChange?:(horizon:Horizon)=>void;
  viewState?:DailyAiMemberViewState;onViewChange?:(change:(previous:DailyAiMemberViewState)=>DailyAiMemberViewState)=>void}){
  const [localHorizon,setHorizon]=useState<Horizon>('SHORT'),[localView,setLocalView]=useState<DailyAiMemberViewState>({filter:'ALL',query:'',limit:9}),[now,setNow]=useState(Date.now);
+ const [comparison,setComparison]=useState<{scope:string;symbols:string[]}>({scope:'',symbols:[]});
  const horizon=selectedHorizon??localHorizon;
  const {filter,query,limit}=viewState??localView;
  const changeView=(change:(previous:DailyAiMemberViewState)=>DailyAiMemberViewState)=>{if(viewState===undefined)setLocalView(change);onViewChange?.(change);};
@@ -76,6 +79,21 @@ export default function DailyAiMemberResearch({data,pricePlans=null,pricePlansUn
   return()=>{clearInterval(timer);clearTimeout(deadline);document.removeEventListener('visibilitychange',update);};
  },[expiresAt,priceDeadline]);
  const edition=data.edition;
+ // Store chosen symbols and an exact read scope, never a new recommendation.
+ // Bind it to the exact approved snapshot, tier,
+ // subject and period; a changed read hides comparison before effect cleanup.
+ // Exact text equality avoids accepting a colliding UI revision fingerprint.
+ const comparisonScope=JSON.stringify([priceSubjectUserId??null,data.tier,data.business_date,edition,horizon,
+  data.cards.filter(card=>card.horizon===horizon),pricePlans,pricePlansUnavailable,
+  pricePlans?.plans.map(plan=>compareTime(plan.expires_at,new Date(now).toISOString())>0)]);
+ useEffect(()=>{setComparison({scope:comparisonScope,symbols:[]});},[comparisonScope]);
+ const comparisonCurrent=comparison.scope===comparisonScope&&!!priceSubjectUserId&&!!edition&&Date.parse(edition.expires_at)>now;
+ const compared=comparisonCurrent?data.cards.filter(card=>card.horizon===horizon&&comparison.symbols.includes(card.symbol)):[];
+ const toggleComparison=(symbol:string)=>{
+  if(!priceSubjectUserId||!edition||Date.parse(edition.expires_at)<=Math.max(now,Date.now()))return;
+  setComparison(previous=>{const selected=previous.scope===comparisonScope?previous.symbols:[];
+   return {scope:comparisonScope,symbols:selected.includes(symbol)?selected.filter(value=>value!==symbol):selected.length<3?[...selected,symbol]:selected};});
+ };
  if(!edition||Date.parse(edition.expires_at)<=now)return <main className="vnext-content dam" id="stock-observations"><h1>每日股票研究</h1><section role="status" className="vnext-empty"><h2>{edition?'這個研究版本已到期':'目前尚無已發布的研究版本'}</h2><p>等待完成資料核對與發布的最新研究。</p></section></main>;
  const offlineReviewed=dailyAiAnalysisOrigin(edition)==='OFFLINE_REVIEWED';
  const sourceYear=data.business_date.slice(0,4),all=data.cards.filter(c=>c.horizon===horizon),rows=all.filter(c=>(filter==='ALL'||c.status===filter)&&(!query.trim()||`${c.symbol} ${c.company}`.includes(query.trim())))
@@ -97,11 +115,30 @@ export default function DailyAiMemberResearch({data,pricePlans=null,pricePlansUn
    <label className="dam-search">搜尋本期間股票<input value={query} placeholder="股票名稱或代號" onChange={e=>{const query=e.target.value;changeView(()=>({filter:'ALL',query,limit:9}));}}/></label>
    <p role="status">{HORIZONS[horizon].label} · 符合目前篩選 {rows.length} 檔 · 先列值得追蹤，再列等待與風險；同類按代號排列。</p>
    {!all.some(c=>c.status==='WATCH')&&<p className="dam-wait">本期間目前沒有「值得追蹤」的股票，請先看等待原因與資料缺口。</p>}
+   {priceSubjectUserId&&<section className="dam-comparison" aria-label="股票研究比較">
+    <div className="dam-comparison-heading"><h3>並排比較股票研究</h3>{compared.length>0&&<button type="button" onClick={()=>setComparison({scope:comparisonScope,symbols:[]})}>清除比較</button>}</div>
+    <p role="status">已選 {compared.length}／3 檔。從下方勾選同一期間的 2～3 檔；比較保留原判讀，不另計排名。</p>
+    {compared.length<2?<p>選好至少 2 檔後，可一起核對理由、價格條件與風險。</p>:<div className="dam-comparison-scroll" tabIndex={0} role="region" aria-label="股票研究比較表，可左右捲動">
+     <table><caption>{HORIZONS[horizon].label} · 同一研究版本 {edition.edition_date}</caption><thead><tr><th scope="col">核對項目</th>{compared.map(card=><th scope="col" key={card.symbol}>{card.company}<small>{card.symbol}</small><button type="button" aria-label={`移除${card.company}比較`} onClick={()=>toggleComparison(card.symbol)}>移除</button></th>)}</tr></thead>
+      <tbody>
+       <tr><th scope="row">期間與狀態</th>{compared.map(card=><td key={card.symbol}>{HORIZONS[card.horizon].duration}<br/>{DAILY_AI_MEMBER_STATES[card.status]}</td>)}</tr>
+       <tr><th scope="row">研究理由</th>{compared.map(card=><td key={card.symbol}>{dailyAiAnalysisText(card.reason.text)}</td>)}</tr>
+       <tr><th scope="row">價格區間與等待</th>{compared.map(card=>{const plan=dailyAiPricePlanForCard(pricePlans?.tier===data.tier?pricePlans:null,card,edition.id,now,priceSubjectUserId);return <td key={card.symbol}>{plan?<><p>研究區間：NT${money(plan.entry_range[0])}～{money(plan.entry_range[1])}</p><p>NT${money(plan.wait_above)} 以上先等待重評</p><p>依據：{plan.basis}</p><p>核對：{date(plan.as_of)}；有效至 {date(plan.expires_at)}</p></>:pricePlansUnavailable?'價格計畫暫時無法核對。':'本版未提供已驗證價格區間。'}</td>;})}</tr>
+       <tr><th scope="row">確認條件</th>{compared.map(card=><td key={card.symbol}>{dailyAiAnalysisText(card.confirmation)}</td>)}</tr>
+       <tr><th scope="row">失效與重評</th>{compared.map(card=>{const plan=dailyAiPricePlanForCard(pricePlans?.tier===data.tier?pricePlans:null,card,edition.id,now,priceSubjectUserId);return <td key={card.symbol}><p>{dailyAiAnalysisText(card.invalidation)}</p>{plan&&<><p>價格計畫：{plan.invalidation}</p>{plan.stop_kind==='PRICE'&&plan.stop!==null&&<p>停止參考價：NT${money(plan.stop)}</p>}</>}</td>;})}</tr>
+       <tr><th scope="row">反面證據</th>{compared.map(card=><td key={card.symbol}>{card.counter_evidence===null?'此方案僅提供研究摘要。':card.counter_evidence.length?<ul>{card.counter_evidence.map((claim,i)=><li key={i}>{dailyAiAnalysisText(claim.text)}</li>)}</ul>:'本版未列具名反面證據，不代表沒有風險。'}</td>)}</tr>
+       <tr><th scope="row">資料時間</th>{compared.map(card=><td key={card.symbol}><p>台股收盤截至：{edition.data_through}</p><p>證據截止：{date(edition.evidence_cutoff)}</p><p>研究有效至：{date(edition.expires_at)}</p></td>)}</tr>
+       <tr><th scope="row">新聞與資料來源</th>{compared.map(card=><td key={card.symbol}>{card.sources===null?'此方案僅提供研究摘要。':card.sources.length?<><ul>{card.sources.map(source=><li key={source.id}><a href={source.source} target="_blank" rel="noopener noreferrer">{sourceKinds[source.kind]} · {new URL(source.source).hostname}</a><p>{source.published_at?`原發布：${date(source.published_at)}`:'原發布時間未確認'}；可用：{date(source.available_at)}</p></li>)}</ul>{!card.sources.some(source=>source.kind==='NEWS')&&<p>本卡未列已核對的新聞來源。</p>}</>:'本卡尚無可列出的資料來源。'}</td>)}</tr>
+       <tr><th scope="row">資料缺口</th>{compared.map(card=><td key={card.symbol}>{card.gaps.length?<ul>{card.gaps.map((gap,i)=><li key={i}>{dailyAiGapLabel(gap)}</li>)}</ul>:'本版未另列缺口，不代表證據完整。'}</td>)}</tr>
+      </tbody>
+     </table>
+    </div>}
+   </section>}
    <div className="vnext-grid">{rows.slice(0,limit).map(card=>{const plan=dailyAiPricePlanForCard(pricePlans?.tier===data.tier?pricePlans:null,card,edition.id,now,priceSubjectUserId);
     const planSources=plan?pricePlans?.source_sets?.find(set=>set.symbol===card.symbol)?.sources.filter(source=>plan.evidence_ids.includes(source.id))??[]:[];
     return <article className="vnext-card dam-card" key={card.symbol}>
     <div className="dam-card-top"><span className="dam-period-badge">{HORIZONS[horizon].label} · {HORIZONS[horizon].duration}</span><span className={`dam-status dam-status-${card.status.toLowerCase()}`}>{DAILY_AI_MEMBER_STATES[card.status]}</span></div>
-    <h3>{card.company}<small>{card.symbol}</small></h3><h4>為什麼這樣判斷？</h4><p>{dailyAiAnalysisText(card.reason.text)}</p><p className="dam-inference">{offlineReviewed?'離線審核分析':'AI 判讀'} · 請搭配下方證據與反面條件</p>
+    <h3>{card.company}<small>{card.symbol}</small></h3>{priceSubjectUserId&&<label className="dam-compare-choice"><input type="checkbox" checked={compared.some(selected=>selected.symbol===card.symbol)} disabled={compared.length>=3&&!compared.some(selected=>selected.symbol===card.symbol)} onChange={()=>toggleComparison(card.symbol)}/>{card.company}加入比較</label>}<h4>為什麼這樣判斷？</h4><p>{dailyAiAnalysisText(card.reason.text)}</p><p className="dam-inference">{offlineReviewed?'離線審核分析':'AI 判讀'} · 請搭配下方證據與反面條件</p>
     <h4>接下來看什麼確認？</h4><p>{dailyAiAnalysisText(card.confirmation)}</p><div className="vnext-risk"><h4>什麼情況取消或重評？</h4><p>{dailyAiAnalysisText(card.invalidation)}</p>
      {card.counter_evidence!==null&&<><h4>反面證據與風險</h4>{card.counter_evidence.length?<ul>{card.counter_evidence.map((c,i)=><li key={i}>{dailyAiAnalysisText(c.text)}</li>)}</ul>:<p>本版未列出具名反面證據；不代表沒有風險。</p>}</>}
     </div>

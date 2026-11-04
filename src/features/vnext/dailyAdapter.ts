@@ -12,6 +12,42 @@ import {targetSessions} from './dailyOutcome.ts';
 import type {DailyLock} from './dailyIntelligence.ts';
 
 export const ADAPTER_VERSION='VNEXT_DAILY_OFFICIAL_1';
+// Latest requested month may not be published yet. Fetch one older month as
+// a fallback; the evaluator still requires three actual consecutive reports.
+export const REVENUE_ACQUISITION_MONTHS=RESEARCH_RULES.medium_months+1;
+// Longer provider waits are retained by the worker's durable checkpoint,
+// separately from the SQL scheduler's bounded 300-second wake-up interval.
+export const MAX_PROVIDER_RETRY_SECONDS=86400;
+export function providerRetryAfter(header:string|null,observedAt:string){
+ const now=Date.parse(observedAt);if(!validObservationTime(observedAt))throw Error('SOURCE_RETRY_CLOCK_INVALID');
+ if(header===null)return {retryAfter:3,retryNotBefore:null,retryBlocked:false};
+ const value=header.trim();let seconds:number;
+ if(/^\d+(?:\.\d+)?$/.test(value)&&value.length<=32)seconds=Math.ceil(Number(value));
+ else{
+  // Validate the three HTTP-date representations, including their actual
+  // calendar and weekday. Date.parse alone accepts unrelated/local strings.
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const weekdays=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const fullDays=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const imf=/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat), (\d{2}) ([A-Z][a-z]{2}) (\d{4}) (\d{2}):(\d{2}):(\d{2}) GMT$/.exec(value);
+  const old=/^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday), (\d{2})-([A-Z][a-z]{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) GMT$/.exec(value);
+  const asc=/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat) ([A-Z][a-z]{2}) ( \d|\d{2}) (\d{2}):(\d{2}):(\d{2}) (\d{4})$/.exec(value);
+  const parts=imf??old??(asc?[asc[0],asc[1],asc[3].trim(),asc[2],asc[7],asc[4],asc[5],asc[6]]:null);
+  if(!parts)return {retryAfter:3,retryNotBefore:null,retryBlocked:true};
+  let year=Number(parts[4]);
+  if(old){year=Math.floor(new Date(now).getUTCFullYear()/100)*100+year;
+   if(Date.UTC(year,months.indexOf(parts[3]),Number(parts[2]),Number(parts[5]),Number(parts[6]),Number(parts[7]))>now+50*365.25*86400000)year-=100;}
+  const month=months.indexOf(parts[3]),day=Number(parts[2]),hour=Number(parts[5]),minute=Number(parts[6]),second=Number(parts[7]);
+  const parsed=Date.UTC(year,month,day,hour,minute,second),date=new Date(parsed);
+  if(month<0||year<100||date.getUTCFullYear()!==year||date.getUTCMonth()!==month||date.getUTCDate()!==day
+   ||date.getUTCHours()!==hour||date.getUTCMinutes()!==minute||date.getUTCSeconds()!==second
+   ||(old?fullDays:weekdays)[date.getUTCDay()]!==parts[1])return {retryAfter:3,retryNotBefore:null,retryBlocked:true};
+  seconds=Math.ceil((parsed-now)/1000);
+ }
+ if(!Number.isFinite(seconds)||seconds>MAX_PROVIDER_RETRY_SECONDS)return {retryAfter:3,retryNotBefore:null,retryBlocked:true};
+ seconds=Math.max(3,seconds);
+ return {retryAfter:seconds,retryNotBefore:seconds>300?new Date(now+seconds*1000).toISOString():null,retryBlocked:false};
+}
 const INDEX_OPEN_API='https://openapi.twse.com.tw/v1/indicesReport/MI_5MINS_HIST';
 export type Company={symbol:string;company:string;exchange:Exchange;industry:string};
 export type SourceTask={key:string;kind:string;url:string;format:'json'|'text';scope:string;
@@ -65,7 +101,7 @@ export async function acquisitionPlan(date:string,companies:Company[]):Promise<S
  // all evaluator requirements stay unchanged; old persisted plans are immutable.
  const warmDates=new Set(dates.slice(-20)),warmMonths=new Set([...warmDates].map(d=>d.slice(0,7)));
  const institutionalDates=new Set(dates.slice(-RESEARCH_RULES.medium_institutional_sessions));
- const revenuePeriods=new Set(tasks.filter(t=>t.kind==='REVENUE').map(t=>t.period!).sort().filter((p,i,a)=>a.indexOf(p)===i).slice(-RESEARCH_RULES.medium_months));
+ const revenuePeriods=new Set(tasks.filter(t=>t.kind==='REVENUE').map(t=>t.period!).sort().filter((p,i,a)=>a.indexOf(p)===i).slice(-REVENUE_ACQUISITION_MONTHS));
  const priority=(t:Omit<SourceTask,'key'>)=>{
   if(t.kind==='TWSE_PRICE_DAY')return -1;
   if(t.kind==='PRICE'||t.kind==='BENCHMARK')return warmMonths.has(t.month!)?0:3;
@@ -143,7 +179,8 @@ export async function fetchSource(task:SourceTask,fetcher:typeof fetch,clock:()=
  if(url.protocol!=='https:'||url.username||url.password||!['www.twse.com.tw','openapi.twse.com.tw','www.tpex.org.tw','mopsov.twse.com.tw','mops.twse.com.tw'].includes(url.hostname))throw Error('SOURCE_NOT_ALLOWED');
  const json=task.kind==='EVENT',body=task.form?(json?JSON.stringify(task.form):new URLSearchParams(task.form)):undefined;
  const r=await fetcher(task.url,{method:body?'POST':'GET',body,redirect:'error',signal:AbortSignal.any([signal,AbortSignal.timeout(12000)]),headers:{Accept:task.format==='json'?'application/json':'text/html,text/csv',...(body?{'Content-Type':json?'application/json':'application/x-www-form-urlencoded'}:{})}});
- if(!r.ok){await r.body?.cancel();const error=Object.assign(Error(r.status===429?'RATE_LIMITED':r.status===403?'SOURCE_ACCESS_RESTRICTED':'SOURCE_HTTP_'+r.status),{retryAfter:Math.min(300,Math.max(3,Number(r.headers.get('retry-after'))||3))});throw error;}
+ if(!r.ok){await r.body?.cancel();const observedAt=clock(),retry=r.status===403?{retryAfter:3,retryNotBefore:null,retryBlocked:false}:providerRetryAfter(r.headers.get('retry-after'),observedAt);
+  throw Object.assign(Error(r.status===429?'RATE_LIMITED':r.status===403?'SOURCE_ACCESS_RESTRICTED':'SOURCE_HTTP_'+r.status),retry,{retryObservedAt:observedAt});}
  const reader=r.body!.getReader(),parts:Uint8Array[]=[];let size=0;
  try{for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>8_000_000)throw Error('SOURCE_SIZE_LIMIT');parts.push(value);}}finally{await reader.cancel();}
  const bytes=new Uint8Array(size);let pos=0;for(const part of parts){bytes.set(part,pos);pos+=part.length;}

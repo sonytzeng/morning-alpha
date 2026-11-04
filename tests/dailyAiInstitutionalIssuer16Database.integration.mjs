@@ -122,6 +122,39 @@ test('synthetic institutional/native16 SQL contracts in real isolated PostgreSQL
   for(const change of [p=>p.institutional_replay.source_admitted=true,p=>p.institutional_replay.fact_ids.reverse(),p=>p.institutional_replay.extra=true]){
    const p=structuredClone(proof144);change(p);await rejects(()=>call(baseline,with144,p),/INSTITUTIONAL_PROOF_REQUIRED_OR_DRIFT/);
   }
+  // New isolated compatibility branch: distinct observed receipts share a row ID
+  // without claiming the sealed receipt or changing any timestamp.
+  let compatibility=await readFile(new URL('../research/institutional-existing-capture.candidate.sql',import.meta.url),'utf8');
+  compatibility=compatibility.replaceAll('322a73e452f1f5c25561925d87cb37500f1f6bacb832d84cfd1f8a822e8ef3c8',instSeal)
+   .replace('c6aa315d3d957dfea4126af5b126255ce1b9a9eb3826f475e4f7c3e084808d59',sha(await definition('vnext_runtime.validate_daily_ai_financial_refresh_institutional_v1(jsonb,jsonb,jsonb,timestamptz,date)')));
+  // Only this synthetic registry uses a different seal. Obtain PostgreSQL's
+  // normalized after-image in a rolled-back fixture transaction; the full
+  // nested test separately enforces the unchanged real before/after hashes.
+  const candidateCreate=compatibility.match(/create or replace function[\s\S]*?end \$fn\$;/)?.[0];assert(candidateCreate);
+  await db.exec('begin;'+candidateCreate);
+  const fixtureCandidateHash=sha(await definition('vnext_runtime.validate_daily_ai_financial_refresh_institutional_v1(jsonb,jsonb,jsonb,timestamptz,date)'));
+  await db.exec('rollback');
+  compatibility=compatibility.replace('f5d0235827dda68d85fafe050e8b462b4be2bc94d5b3938b5789d3e94c5e180b',fixtureCandidateHash);
+  await db.exec(compatibility);
+  const observed=institutional.map(f=>{const v=structuredClone(f);for(const k of ['unit','not_currency','source_admitted','member_publication_approved','source_received_at','source_sha256','source_bytes','source_locator'])delete v[k];
+   v.first_seen_at='2026-11-01T23:30:00.000Z';v.available_at=v.first_seen_at;return v;});
+  const withObserved=append(baseline,observed);
+  equal(await call(withObserved,withObserved,{}),{},'Different receipt of exact row remains unchanged without registry proof');
+  await rejects(()=>call(withObserved,withObserved,{},beforeCutoff),/INSTITUTIONAL_EXISTING_CAPTURE_DRIFT/,'Registry cutoff still enforced');
+  for(const change of [i=>i[0].facts.at(-1).values.net_shares++,i=>i[0].facts.at(-1).available_at='2026-11-02T00:00:00.001Z',
+    i=>i[0].facts.at(-1).source_admitted=true,i=>i[0].facts.pop(),i=>i[1].facts.push(i[0].facts.pop())]){
+   const modified=structuredClone(withObserved);change(modified);
+   await rejects(()=>call(withObserved,modified,{}),/INSTITUTIONAL_EXISTING_CAPTURE_DRIFT/);
+  }
+  for(const change of [i=>i[0].facts.at(-1).values.net_shares++,i=>i[0].facts.at(-1).evidence_hash='b'.repeat(64),
+    i=>i[0].facts.at(-1).available_at='2026-11-02T00:00:00.001Z',i=>i[0].facts.at(-1).source_admitted=true]){
+   const modified=structuredClone(withObserved);change(modified);
+   await rejects(()=>call(modified,modified,{}),/INSTITUTIONAL_EXISTING_CAPTURE_DRIFT/,'Equal altered base/input cannot bypass registry identity checks');
+  }
+  await db.exec(`create or replace function vnext_runtime.project_daily_stock_ai_inputs_reviews_v2(p_inputs jsonb) returns jsonb
+   language sql immutable set search_path='' as $$select jsonb_agg(case when x->>'symbol'='2454' then jsonb_set(x,'{facts}','[]'::jsonb) else x end) from jsonb_array_elements(p_inputs)x$$`);
+  await rejects(()=>call(withObserved,withObserved,{}),/INSTITUTIONAL_PROJECTION_TRUNCATED/,'Projection loss fails closed');
+  await db.exec(oldProjection);
   await stage('issuer16-source-replay.template.sql',issuer16,nativeSeal,sha(await definition(sourceSignature)),sha(oldProjection));
   const full=append(with144,issuer16),result=await call(with144,full,proof16);
   equal(result.institutional_replay,proof144.institutional_replay);equal(result.issuer16_replay,proof16.issuer16_replay);

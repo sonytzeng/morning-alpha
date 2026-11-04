@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {integrationPhysicalRead as physical,integrationPhysicalMode as physicalMode,integrationInventory,integrationHash,verifyIntegrationCandidate,CURRENT_INTEGRATION_MANIFEST,sourceUnionLineage} from './helpers/integrationAdmission.mjs';
 import {CURRENT_SOURCE_BASE,CURRENT_SOURCE_HEAD,CURRENT_SOURCE_CATALOG,CURRENT_SOURCE_CATALOG_SHA256,CURRENT_SOURCE_MANIFEST,CURRENT_SOURCE_SUPPORT,currentSourceDefinition,currentSourceHash,currentSourcePriorPatch} from './helpers/currentSourceCatalog.mjs';
-import {reviewedSuccessorPaths,recoveryPriorRead} from './helpers/recoverySourceSuccessor.mjs';
+import {reviewedSuccessorPaths,recoveryPriorRead} from './helpers/ciShardSourceSuccessor.mjs';
 const readJson=p=>JSON.parse(physical(p));
 function fixture(){
  const bytes=new Map(),modes=new Map(),paths=integrationInventory(),manifest=readJson(CURRENT_INTEGRATION_MANIFEST);

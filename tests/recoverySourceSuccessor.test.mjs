@@ -5,10 +5,12 @@ import {mkdtempSync,mkdirSync,writeFileSync,symlinkSync,rmSync,existsSync} from 
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {integrationPhysicalRead as physical,integrationPhysicalMode as physicalMode,integrationInventory,integrationHash,verifyIntegrationCandidate,createSourceUnionComposition,CURRENT_INTEGRATION_MANIFEST,sourceUnionLineage} from './helpers/integrationAdmission.mjs';
+import {integrationPhysicalRead as physical,integrationPhysicalMode as physicalMode,integrationInventory,integrationHash,verifyIntegrationCandidate,createSourceUnionComposition,CURRENT_INTEGRATION_MANIFEST,INTEGRATION_MANIFEST,sourceUnionLineage} from './helpers/integrationAdmission.mjs';
 import {CURRENT_SOURCE_MANIFEST,CURRENT_SOURCE_CATALOG} from './helpers/currentSourceCatalog.mjs';
 import {RECOVERY_SOURCE_BASE,RECOVERY_SOURCE_HEAD,RECOVERY_SOURCE_CATALOG,RECOVERY_SOURCE_CATALOG_SHA256,RECOVERY_SOURCE_MANIFEST,RECOVERY_SOURCE_SUPPORT,recoverySourceDefinition,recoverySourceHash,recoverySourcePriorPatch} from './helpers/recoverySourceCatalog.mjs';
-import {reviewedSuccessorPaths,recoveryPriorRead,readRecoveryRegularFile} from './helpers/recoverySourceSuccessor.mjs';
+import {reviewedSuccessorPaths as recoveryReviewedSuccessorPaths,readRecoveryRegularFile} from './helpers/recoverySourceSuccessor.mjs';
+import {reviewedSuccessorPaths,recoveryPriorRead,ciShardPriorRead} from './helpers/ciShardSourceSuccessor.mjs';
+import {CI_SHARD_SOURCE_MANIFEST} from './helpers/ciShardSourceCatalog.mjs';
 const root=new URL('../',import.meta.url),git=args=>execFileSync('git',['--no-replace-objects',...args],{cwd:root});
 const readJson=p=>JSON.parse(physical(p));
 function fixture(){
@@ -19,15 +21,15 @@ function fixture(){
  return {bytes,modes,paths,manifest,read,mode,reseal,mirror,verify:()=>verifyIntegrationCandidate(read,paths,mode)};
 }
 test('recovery appends the exact sixteen-file committed delta after the unchanged 903-file predecessor',()=>{
- const m=verifyIntegrationCandidate(),c=recoverySourceDefinition();assert.deepEqual(createSourceUnionComposition(),m);
- assert.equal(CURRENT_INTEGRATION_MANIFEST,RECOVERY_SOURCE_MANIFEST);assert.equal(c.base,RECOVERY_SOURCE_BASE);assert.equal(c.head,RECOVERY_SOURCE_HEAD);assert.equal(c.files.length,16);
+ const live=verifyIntegrationCandidate(),m=readJson(RECOVERY_SOURCE_MANIFEST),c=recoverySourceDefinition();assert.deepEqual(createSourceUnionComposition(),live);
+ assert.equal(RECOVERY_SOURCE_MANIFEST,'docs/operations/evidence/core-member-integration-20261105-recovery-source.json');assert.equal(CURRENT_INTEGRATION_MANIFEST,CI_SHARD_SOURCE_MANIFEST);assert.equal(c.base,RECOVERY_SOURCE_BASE);assert.equal(c.head,RECOVERY_SOURCE_HEAD);assert.equal(c.files.length,16);
  assert.deepEqual(physical(CURRENT_SOURCE_MANIFEST),git(['show',RECOVERY_SOURCE_BASE+':'+CURRENT_SOURCE_MANIFEST]));assert.equal(readJson(CURRENT_SOURCE_MANIFEST).files.length,903);
  assert.deepEqual(physical(CURRENT_SOURCE_CATALOG),git(['show',RECOVERY_SOURCE_BASE+':'+CURRENT_SOURCE_CATALOG]));
- const additions=c.files.filter(r=>r.before===null).length;
- assert.equal(c.local_fixture.length,27);assert.equal(m.files.length,903+additions+2+RECOVERY_SOURCE_SUPPORT.length+c.local_fixture.length);assert.equal(integrationInventory().length,m.files.length+1);
+ const additions=c.files.filter(r=>r.before===null).length,priorInventory=[...new Set([...readJson(INTEGRATION_MANIFEST).files.map(r=>r.path),...recoveryReviewedSuccessorPaths()])].sort();
+ assert.equal(c.local_fixture.length,27);assert.equal(m.files.length,903+additions+2+RECOVERY_SOURCE_SUPPORT.length+c.local_fixture.length);assert.equal(priorInventory.length+1,m.files.length+1);assert.deepEqual(priorInventory,m.files.map(r=>r.path));assert.equal(integrationInventory().length,live.files.length+1);
  assert.equal(integrationHash(physical(RECOVERY_SOURCE_CATALOG)),RECOVERY_SOURCE_CATALOG_SHA256);
  const lineage=sourceUnionLineage().reviewed_successor.recovery_git_successor;assert.equal(lineage.exact_git_delta,16);assert.equal(lineage.scope_review.independent_review,false);
- for(const row of c.files)assert.equal(integrationHash(physical(row.path)),row.after.sha256);
+ for(const row of c.files)assert.equal(integrationHash(ciShardPriorRead(row.path,physical(row.path))),row.after.sha256);
 });
 test('every recovery source and support patch rejects a mirrored live-body mutation',()=>{
  for(const row of [...recoverySourceDefinition().files,...recoverySourceDefinition().local_support_patch]){
@@ -65,7 +67,7 @@ test('all predecessor receipts, source modes, missing and unknown paths remain p
  const absent=fixture();absent.bytes.set('src/features/vnext/dailyRuntime.ts',undefined);assert.throws(absent.verify);
 });
 test('prior-byte reflection is exact, cannot erase injected bytes, and immutable metadata returns owned copies',()=>{
- verifyIntegrationCandidate();const path='src/features/vnext/dailyRuntime.ts',current=physical(path),c=recoverySourceDefinition(),row=c.files.find(r=>r.path===path);
+ verifyIntegrationCandidate();const path='src/features/vnext/dailyRuntime.ts',current=ciShardPriorRead(path,physical(path)),c=recoverySourceDefinition(),row=c.files.find(r=>r.path===path);
  assert.equal(integrationHash(recoveryPriorRead(path,current)),row.before.sha256);assert.equal(recoverySourceHash(path),row.after.sha256);
  const injected=Buffer.concat([current,Buffer.from('\nINJECTED_AFTER_ADMISSION')]);assert.deepEqual(recoveryPriorRead(path,injected),injected);
  assert.equal(recoveryPriorRead(path,'\ud800'),'\ud800');assert.equal(recoveryPriorRead('unknown/path',injected),injected);
@@ -75,7 +77,7 @@ test('prior-byte reflection is exact, cannot erase injected bytes, and immutable
  const f=fixture();f.verify();f.bytes.set(path,injected);f.mirror(path);assert.throws(f.verify,/INTEGRATION_SOURCE_DRIFT/);
 });
 test('workflow preserves all prior source commands and appends real recovery regressions without weakening limits',()=>{
- verifyIntegrationCandidate();const row=recoverySourceDefinition().local_support_patch[0],after=physical(row.path).toString();
+ verifyIntegrationCandidate();const row=recoverySourceDefinition().local_support_patch[0],after=ciShardPriorRead(row.path,physical(row.path)).toString();
  let restored=after;for(const edit of [...row.exact_edits].reverse()){assert.equal(restored.split(edit.after).length,2);restored=restored.replace(edit.after,edit.before);}
  assert.deepEqual(Buffer.from(restored),git(['show',RECOVERY_SOURCE_BASE+':'+row.path]));
  assert.match(after,/--max-old-space-size=512/);assert.match(after,/timeout-minutes: 45/);

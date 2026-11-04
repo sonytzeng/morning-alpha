@@ -12,6 +12,7 @@ import {
 } from './helpers/reviewedSourceSuccessor.mjs';
 import {CURRENT_SOURCE_MANIFEST} from './helpers/currentSourceCatalog.mjs';
 import {RECOVERY_SOURCE_MANIFEST} from './helpers/recoverySourceCatalog.mjs';
+import {CI_SHARD_SOURCE_MANIFEST} from './helpers/ciShardSourceCatalog.mjs';
 const root=new URL('../',import.meta.url);
 const git=args=>execFileSync('git',['--no-replace-objects',...args],{cwd:root});
 function fixture(){
@@ -26,7 +27,8 @@ test('successor admits the complete Git delta and preserves the immutable prior 
  const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);
  assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261022-runtime-integrity.json');
  assert.equal(CURRENT_SOURCE_MANIFEST,'docs/operations/evidence/core-member-integration-20261103-current-source.json');
- assert.equal(CURRENT_INTEGRATION_MANIFEST,RECOVERY_SOURCE_MANIFEST);
+ assert.equal(RECOVERY_SOURCE_MANIFEST,'docs/operations/evidence/core-member-integration-20261105-recovery-source.json');
+ assert.equal(CURRENT_INTEGRATION_MANIFEST,CI_SHARD_SOURCE_MANIFEST);
  assert.deepEqual(m.files.map(r=>r.path),integrationScope());
  assert.deepEqual(integrationInventory(),[...integrationScope(),CURRENT_INTEGRATION_MANIFEST].sort());
  // The old terminal remains immutable with all 865 rows. Current source has

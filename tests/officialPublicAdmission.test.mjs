@@ -15,8 +15,8 @@ import {
  FROZEN_SOURCE_UNION_R13,SOURCE_UNION_R14_FILES,FROZEN_SOURCE_UNION_R14,
  FROZEN_SOURCE_UNION_R15,RUNTIME_INTEGRITY_FILES,
 } from './helpers/integrationAdmission.mjs';
-import {reviewedSuccessorPaths} from './helpers/recoverySourceSuccessor.mjs';
-import {recoverySourceHash as reviewedSuccessorSourceHash} from './helpers/recoverySourceCatalog.mjs';
+import {reviewedSuccessorPaths} from './helpers/ciShardSourceSuccessor.mjs';
+import {ciShardSourceHash as reviewedSuccessorSourceHash} from './helpers/ciShardSourceCatalog.mjs';
 const frozenRuntimePaths=new Set(JSON.parse(integrationPhysicalRead(FROZEN_RUNTIME_INTEGRATION_MANIFEST)).files.map(row=>row.path));
 const successorAdded=reviewedSuccessorPaths().filter(path=>!frozenRuntimePaths.has(path));
 // One changed current test consumer has an exact older Actual-parent view.

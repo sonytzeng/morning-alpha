@@ -23,30 +23,39 @@ export function readRecoveryRegularFile(path,base=root){
 /** Exact after-images only. Injected, missing and non-round-tripping values
  * remain untouched; callers must run the complete live admission first. */
 export function recoveryPriorRead(path,bytes){
+ return recoveryPriorReadWithVerifiedPhysical(path,bytes,readRecoveryRegularFile);
+}
+// Internal successor bridge only. The newer trusted verifier must validate
+// physical current bytes before supplying the exact immutable 748 image.
+// Public admission never accepts this adapter from an application caller.
+export function recoveryPriorReadWithVerifiedPhysical(path,bytes,physical){
  const c=recoverySourceDefinition(),row=[...c.files,...c.local_support_patch].find(r=>r.path===path);
  if(!row?.before||bytes===undefined||bytes===null)return bytes;
  if(typeof bytes==='string'&&Buffer.from(bytes).toString('utf8')!==bytes)return bytes;
  if(hash(bytes)!==row.after.sha256)return bytes;
  const url=new URL(path,root),st=lstatSync(url);assert(st.isFile()&&!st.isSymbolicLink(),'RECOVERY_SOURCE_REGULAR_FILE:'+path);
  assert.equal(st.mode&0o111?'100755':'100644',row.after.mode,'RECOVERY_SOURCE_CHANGED_MODE:'+path);
- assert.equal(hash(readRecoveryRegularFile(path)),row.after.sha256,'RECOVERY_SOURCE_CHANGED_AFTER_ADMISSION:'+path);
+ assert.equal(hash(physical(path)),row.after.sha256,'RECOVERY_SOURCE_CHANGED_AFTER_ADMISSION:'+path);
  const before=recoverySourcePriorPatch(path);return typeof bytes==='string'?before.toString('utf8'):before;
 }
 export function verifyReviewedSuccessorCatalog(read,mode){
- readRecoveryRegularFile(RECOVERY_SOURCE_CATALOG);
+ return verifyRecoverySuccessorWithVerifiedPhysical(read,mode,readRecoveryRegularFile);
+}
+export function verifyRecoverySuccessorWithVerifiedPhysical(read,mode,physical){
+ physical(RECOVERY_SOURCE_CATALOG);
  assert.equal(mode(RECOVERY_SOURCE_CATALOG),'100644','RECOVERY_SOURCE_CATALOG_MODE');
  const c=recoverySourceDefinition(read(RECOVERY_SOURCE_CATALOG));
  // Preserve the predecessor identity refusal before comparing newer source
  // bodies, including catalog/source co-mutation controls at both old layers.
  verifyReviewedSuccessorCatalogIdentity(read,mode);currentSourceDefinition(read(CURRENT_SOURCE_CATALOG));
- for(const row of [...c.files,...c.local_support_patch]){const prefix=prior.REVIEWED_SUCCESSOR_SUPPORT.includes(row.path)?'SUCCESSOR_SUPPORT_SOURCE_DRIFT:':'INTEGRATION_SOURCE_DRIFT:';assert.equal(hash(read(row.path)),row.after.sha256,prefix+row.path);readRecoveryRegularFile(row.path);assert.equal(mode(row.path),row.after.mode,'INTEGRATION_MODE_DRIFT:'+row.path);}
- for(const row of c.local_fixture){assert.equal(hash(read(row.path)),row.sha256,'INTEGRATION_SOURCE_DRIFT:'+row.path);readRecoveryRegularFile(row.path);assert.equal(mode(row.path),row.mode,'INTEGRATION_MODE_DRIFT:'+row.path);}
+ for(const row of [...c.files,...c.local_support_patch]){const prefix=prior.REVIEWED_SUCCESSOR_SUPPORT.includes(row.path)?'SUCCESSOR_SUPPORT_SOURCE_DRIFT:':'INTEGRATION_SOURCE_DRIFT:';assert.equal(hash(read(row.path)),row.after.sha256,prefix+row.path);assert.equal(hash(physical(row.path)),row.after.sha256,prefix+row.path);assert.equal(mode(row.path),row.after.mode,'INTEGRATION_MODE_DRIFT:'+row.path);}
+ for(const row of c.local_fixture){assert.equal(hash(read(row.path)),row.sha256,'INTEGRATION_SOURCE_DRIFT:'+row.path);assert.equal(hash(physical(row.path)),row.sha256,'INTEGRATION_SOURCE_DRIFT:'+row.path);assert.equal(mode(row.path),row.mode,'INTEGRATION_MODE_DRIFT:'+row.path);}
  // The prior layer receives fixed Git before-images solely after this layer's
  // live source, identity and mode checks. It retains all of its old assertions.
- prior.verifyReviewedSuccessorCatalog(path=>recoveryPriorRead(path,read(path)),mode);
+ prior.verifyReviewedSuccessorCatalog(path=>recoveryPriorReadWithVerifiedPhysical(path,read(path),physical),mode);
  assert.equal(hash(read(c.prior_manifest.path)),c.prior_manifest.sha256,'RECOVERY_SOURCE_PRIOR_MANIFEST_DRIFT');
  assert.equal(mode(c.prior_manifest.path),'100644','RECOVERY_SOURCE_PRIOR_MODE');
- for(const path of RECOVERY_SOURCE_SUPPORT){readRecoveryRegularFile(path);assert.equal(mode(path),'100644','RECOVERY_SOURCE_SUPPORT_MODE');}
+ for(const path of RECOVERY_SOURCE_SUPPORT){physical(path);assert.equal(mode(path),'100644','RECOVERY_SOURCE_SUPPORT_MODE');}
 }
 let immutablePaths;
 export function reviewedSuccessorPaths(){

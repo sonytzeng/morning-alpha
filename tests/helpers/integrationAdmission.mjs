@@ -10,8 +10,8 @@ import {URL} from 'node:url';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {REVIEWED_SUCCESSOR_MANIFEST,REVIEWED_SUCCESSOR_SUPPORT,reviewedSuccessorPaths,reviewedSuccessorLineage,verifyReviewedSuccessorCatalog,applyReviewedSuccessor,recoveryPriorRead} from './recoverySourceSuccessor.mjs';
-export {REVIEWED_SUCCESSOR_MANIFEST as CURRENT_INTEGRATION_MANIFEST} from './recoverySourceSuccessor.mjs';
+import {REVIEWED_SUCCESSOR_MANIFEST,REVIEWED_SUCCESSOR_SUPPORT,reviewedSuccessorPaths,reviewedSuccessorLineage,verifyReviewedSuccessorCatalog,applyReviewedSuccessor,recoveryPriorRead,ciShardPriorRead} from './ciShardSourceSuccessor.mjs';
+export {REVIEWED_SUCCESSOR_MANIFEST as CURRENT_INTEGRATION_MANIFEST} from './ciShardSourceSuccessor.mjs';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
@@ -1137,6 +1137,9 @@ const REVIEWED_SUCCESSOR_SUPPORT_PINS=Object.freeze([
  Object.freeze({path:'tests/helpers/recoverySourceCatalog.mjs',sha256:'94afaf1d02dfb5f74550bb80973e04b8e2db497fbabfa7362b2b794845c4ff38'}),
  Object.freeze({path:'tests/helpers/recoverySourceSuccessor.mjs',sha256:'674836ccb5040a2b93fee4f10a5992307b0677213339dc876e581092097c532c'}),
  Object.freeze({path:'tests/recoverySourceSuccessor.test.mjs',sha256:'0ad462a0629713a91a29c03d402e22ef5061087bb9b301f2a3afb67f74d155bc'}),
+ Object.freeze({path:'tests/helpers/ciShardSourceCatalog.mjs',sha256:'8d769924f25ed6fca511fc707fd55e771dca2e982b688a4f4136fbffbb7927ed'}),
+ Object.freeze({path:'tests/helpers/ciShardSourceSuccessor.mjs',sha256:'dc3867c9f18a0d4d2d537378bdffdf90984a89e321342693ab184222393556e4'}),
+ Object.freeze({path:'tests/ciShardSourceSuccessor.test.mjs',sha256:'1b926396ad91c038dad0b0f47ee3bbc0e8d2b32d8cc886a8796525f86ff0fc76'}),
 ]);
 const git=args=>execFileSync('git',['--no-replace-objects',...args],{cwd:root,encoding:'utf8',maxBuffer:64e6});
 export const integrationHash=b=>createHash('sha256').update(b).digest('hex');
@@ -1700,7 +1703,7 @@ function verifySourceUnionBoundary(read,mode){
  for(const row of REVIEWED_SUCCESSOR_SUPPORT_PINS){
   assert.match(row.sha256,/^[a-f0-9]{64}$/,'SUCCESSOR_SUPPORT_REVIEW_REQUIRED');
   const bytes=read(row.path);
-  const priorBytes=REVIEWED_SUCCESSOR_SUPPORT_PINS.indexOf(row)<5?recoveryPriorRead(row.path,bytes):bytes;
+  const index=REVIEWED_SUCCESSOR_SUPPORT_PINS.indexOf(row),priorBytes=index<5?recoveryPriorRead(row.path,bytes):index<8?ciShardPriorRead(row.path,bytes):bytes;
   assert.equal(integrationHash(priorBytes),row.sha256,'SUCCESSOR_SUPPORT_SOURCE_DRIFT:'+row.path);
  }
  sourceUnionLineage();

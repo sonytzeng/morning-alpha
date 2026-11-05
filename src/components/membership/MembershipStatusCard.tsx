@@ -31,6 +31,7 @@ export default function MembershipStatusCard() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<MemberAccessResponse | null>(null);
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let disposed = false;
@@ -73,7 +74,7 @@ export default function MembershipStatusCard() {
       generation++;
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [attempt]);
 
   const signOut = async () => {
     await signOutMembership();
@@ -91,6 +92,7 @@ export default function MembershipStatusCard() {
         <h2 className="mt-2 text-xl font-bold text-white">{failed ? '暫時無法確認會員權益' : '登入後確認自己的會員權益'}</h2>
         <p className="mt-2 text-sm leading-6 text-white/50">{failed ? '目前沒有取得權益結果，不代表權益已失效。請稍後重新載入。' : '免費內容與完整內容依有效權益提供；登入不會自動扣款。'}</p>
         <Link to="/login?next=/member-note" className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-primary-500 px-4 text-sm font-bold text-background-50">免費註冊／登入</Link>
+        {failed && <button type="button" onClick={() => setAttempt(value => value + 1)} className="ml-3 mt-4 min-h-11 text-sm font-semibold text-white/70">重新確認權益</button>}
       </section>
     );
   }

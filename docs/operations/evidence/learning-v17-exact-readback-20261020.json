@@ -1,0 +1,152 @@
+{
+  "schema": "CLE_V17_EXACT_SOURCE_READBACK_SAFE_V1",
+  "scope": "AUTHORIZED_READONLY_PRODUCTION_SOURCE",
+  "base": "7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3",
+  "version": 17,
+  "status": "ACTIVE",
+  "verify_jwt": false,
+  "import_map": false,
+  "ezbr_sha256": "9c36d75abed3d80a83dad644cb9bdab2d5fbb18c7d292c23ee5c8461c9f65884",
+  "files": [
+    {
+      "path": "supabase/functions/continuous-learning-engine/index.ts",
+      "production_sha256": "acf3214cf183e2c8eb37b8c615b6742dd9e08567f8af32a33e777d491c036102",
+      "base_sha256": "acf3214cf183e2c8eb37b8c615b6742dd9e08567f8af32a33e777d491c036102",
+      "matched": true,
+      "bytes": 83718
+    },
+    {
+      "path": "supabase/functions/_shared/critical-rpc-observer.ts",
+      "production_sha256": "fd9dde30f65a69d19196b4e76b5db34f14178d0e49d5fa6984bfa7490af51ed0",
+      "base_sha256": "fd9dde30f65a69d19196b4e76b5db34f14178d0e49d5fa6984bfa7490af51ed0",
+      "matched": true,
+      "bytes": 2852
+    },
+    {
+      "path": "supabase/functions/_shared/critical-contract-recorder.ts",
+      "production_sha256": "eeda652dcc8bc79c3d513eec16c632aaffae23687a7e3c4e0ec969f5316f63f7",
+      "base_sha256": "eeda652dcc8bc79c3d513eec16c632aaffae23687a7e3c4e0ec969f5316f63f7",
+      "matched": true,
+      "bytes": 9424
+    },
+    {
+      "path": "supabase/functions/_shared/research-quality-gate.ts",
+      "production_sha256": "18a19d9bdddb1d5c79e3c6a4a5f35031604d7931d7eeb350fd38b3ff8b4a66c6",
+      "base_sha256": "18a19d9bdddb1d5c79e3c6a4a5f35031604d7931d7eeb350fd38b3ff8b4a66c6",
+      "matched": true,
+      "bytes": 3714
+    },
+    {
+      "path": "supabase/functions/_shared/operational-market-quality.ts",
+      "production_sha256": "26ebde4463e15fdba46d9a5c8365902cbff9f8a09a2021ec84451b3d994c0d14",
+      "base_sha256": "26ebde4463e15fdba46d9a5c8365902cbff9f8a09a2021ec84451b3d994c0d14",
+      "matched": true,
+      "bytes": 1376
+    },
+    {
+      "path": "supabase/functions/_shared/operational-market-contract.mjs",
+      "production_sha256": "8ec4d9e2e2dfe61c7aa2393433164f3aa0392fdb78237cb4a6ad3f4e806ce47b",
+      "base_sha256": "8ec4d9e2e2dfe61c7aa2393433164f3aa0392fdb78237cb4a6ad3f4e806ce47b",
+      "matched": true,
+      "bytes": 8688
+    },
+    {
+      "path": "supabase/functions/_shared/fetch-checkpoint-evidence.mjs",
+      "production_sha256": "a0eae0cf9cde35f745e724ab30b86649116e2859ea7cd3b7a160714091f4017b",
+      "base_sha256": "a0eae0cf9cde35f745e724ab30b86649116e2859ea7cd3b7a160714091f4017b",
+      "matched": true,
+      "bytes": 13264
+    },
+    {
+      "path": "supabase/functions/_shared/market-runtime-stability.mjs",
+      "production_sha256": "cf0a0b09839cb227f7010c52f480fe902ef918806108bd6b5817bfd4c8d94783",
+      "base_sha256": "cf0a0b09839cb227f7010c52f480fe902ef918806108bd6b5817bfd4c8d94783",
+      "matched": true,
+      "bytes": 10736
+    },
+    {
+      "path": "supabase/functions/_shared/provider-failure-contract.mjs",
+      "production_sha256": "aaa3037aaf708cc3f76a7d6d856c97034eb0b2f0bbe02c03cc06fb389b01b5f4",
+      "base_sha256": "aaa3037aaf708cc3f76a7d6d856c97034eb0b2f0bbe02c03cc06fb389b01b5f4",
+      "matched": true,
+      "bytes": 4038
+    },
+    {
+      "path": "supabase/functions/_shared/premarket-provider-readiness.mjs",
+      "production_sha256": "032d9c2521e1214cfa971983644bb10e8f926752134d22f1e123df820ba3770b",
+      "base_sha256": "032d9c2521e1214cfa971983644bb10e8f926752134d22f1e123df820ba3770b",
+      "matched": true,
+      "bytes": 1162
+    },
+    {
+      "path": "supabase/functions/_shared/txf-session-contract.mjs",
+      "production_sha256": "e2fd629da470099a4a4436e8b52aaf097ca22422f95cc6f283d004e8eb646a1e",
+      "base_sha256": "e2fd629da470099a4a4436e8b52aaf097ca22422f95cc6f283d004e8eb646a1e",
+      "matched": true,
+      "bytes": 2857
+    },
+    {
+      "path": "supabase/functions/_shared/market-status.ts",
+      "production_sha256": "d285910516d5ae5e0f55d8ee4314da7b7e21214b766d20cda2853fa775af0737",
+      "base_sha256": "d285910516d5ae5e0f55d8ee4314da7b7e21214b766d20cda2853fa775af0737",
+      "matched": true,
+      "bytes": 4766
+    },
+    {
+      "path": "supabase/functions/_shared/market-calendar-data.json",
+      "production_sha256": "6585353538e81881b3cecdfa5d982eb70ead06da177e449ec86c385a7ab6d232",
+      "base_sha256": "6585353538e81881b3cecdfa5d982eb70ead06da177e449ec86c385a7ab6d232",
+      "matched": true,
+      "bytes": 1671
+    },
+    {
+      "path": "supabase/functions/_shared/taiwan-cash-session-contract.mjs",
+      "production_sha256": "e001b99094fae902b693ff0f226206dd05e314f779be4674940317d56dc06985",
+      "base_sha256": "e001b99094fae902b693ff0f226206dd05e314f779be4674940317d56dc06985",
+      "matched": true,
+      "bytes": 3832
+    },
+    {
+      "path": "supabase/functions/_shared/market-session-contract.mjs",
+      "production_sha256": "5b41e134ffd98e8eedcff8e782b104c96b7368ad3f455ec7ac2b406e74316d44",
+      "base_sha256": "5b41e134ffd98e8eedcff8e782b104c96b7368ad3f455ec7ac2b406e74316d44",
+      "matched": true,
+      "bytes": 2994
+    },
+    {
+      "path": "supabase/functions/_shared/canonical-market-state.ts",
+      "production_sha256": "be04074a69883f46bf686df769feb0ad7896a203db8590649167fa63fbab6ebb",
+      "base_sha256": "be04074a69883f46bf686df769feb0ad7896a203db8590649167fa63fbab6ebb",
+      "matched": true,
+      "bytes": 8762
+    },
+    {
+      "path": "supabase/functions/_shared/closing-learning-contract.ts",
+      "production_sha256": "29d6e62b2246772a261d34376b794de36db8c9d8f44d9f4ba1e80042ec4abe76",
+      "base_sha256": "29d6e62b2246772a261d34376b794de36db8c9d8f44d9f4ba1e80042ec4abe76",
+      "matched": true,
+      "bytes": 21472
+    },
+    {
+      "path": "supabase/functions/_shared/intraday-runtime-contract.ts",
+      "production_sha256": "a4dd6a44f26c403be788f26f9381367866bc0437556bb6ac12debd490f249ce8",
+      "base_sha256": "a4dd6a44f26c403be788f26f9381367866bc0437556bb6ac12debd490f249ce8",
+      "matched": true,
+      "bytes": 8630
+    },
+    {
+      "path": "supabase/functions/_shared/continuous-learning-core.mjs",
+      "production_sha256": "455cb6797be9726d504506dcfd351323a9702c3a31f5743ec822cc8e075ee4f1",
+      "base_sha256": "455cb6797be9726d504506dcfd351323a9702c3a31f5743ec822cc8e075ee4f1",
+      "matched": true,
+      "bytes": 13193
+    },
+    {
+      "path": "supabase/functions/_shared/internal-function-auth.mjs",
+      "production_sha256": "2a15efde1117cf2f8c1ef3adf376de95c930254902c57f2ec5dbf74ce0f930be",
+      "base_sha256": "2a15efde1117cf2f8c1ef3adf376de95c930254902c57f2ec5dbf74ce0f930be",
+      "matched": true,
+      "bytes": 4761
+    }
+  ]
+}

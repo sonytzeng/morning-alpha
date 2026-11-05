@@ -1,9 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
+import { createSupabaseAuthFetch } from './supabaseAuthFetch';
 
 const supabaseUrl = 'https://cttfzgvhiewfckydcrci.supabase.co';
 const supabaseKey = 'sb_publishable_AysDzd1cdGje6m5svhEwFQ_pPUVL-wD';
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
+  global: { fetch: createSupabaseAuthFetch(supabaseUrl) },
   auth: {
     flowType: 'pkce',
     persistSession: true,

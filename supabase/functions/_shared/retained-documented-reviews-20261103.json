@@ -1,0 +1,542 @@
+{
+  "schema": "PRIVATE_2330_REVIEW_POLICY_V1",
+  "symbol": "2330",
+  "reviewed_at": "2026-11-03T00:39:12.860Z",
+  "expires_at": "2026-11-10T00:39:12.860Z",
+  "max_age_days": 7,
+  "policy_id": "2330_EPS_REINVESTMENT_THREE_SCENARIO_25_BUFFER_CONDITIONAL_WAIT_V1",
+  "source_study_sha256": "52e93a439428681fce4cb56cc81869c702f7493ec0f9340a9e4b885e68dfcbf3",
+  "financial_reference": [
+    {
+      "id": "retained-financial:2330:2025-Q4:EPS:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "kind": "EPS",
+      "as_of": "2025-12-31T23:59:59+08:00",
+      "basis": "SINGLE_QUARTER",
+      "period": "2025-Q4",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-01/00fe50f72b38d74e6b9b066398f020f337cd4e9d/4Q25%20Management%20Report.pdf",
+      "symbol": "2330",
+      "values": {
+        "unit": "TWD_PER_COMMON_SHARE",
+        "value": 19.5,
+        "reported_decimal": "19.50",
+        "measurement_basis": "DILUTED"
+      },
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "published_at": null,
+      "source_bytes": 4986716,
+      "consolidation": "CONSOLIDATED",
+      "evidence_hash": "6bb75680b4760e5d2fd31ce932dc412f3657613d5b9c1e9ee80a2123a257a728",
+      "first_seen_at": "2026-10-18T04:39:50.339Z",
+      "source_sha256": "cbd5645aed3df57a59beb942110ec251a45c6407c401f8813cff4942e4503e35",
+      "source_locator": {
+        "page": 1,
+        "locator": "Summary current-quarter EPS (NT$ per common share); diluted weighted-average shares note",
+        "table_column": "CURRENT_QUARTER"
+      },
+      "source_admitted": false,
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_received_at": "2026-10-18T04:39:50.339Z",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "member_publication_approved": false
+    },
+    {
+      "id": "retained-financial:2330:2025-Q4:MARGIN:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "kind": "MARGIN",
+      "as_of": "2025-12-31T23:59:59+08:00",
+      "basis": "SINGLE_QUARTER",
+      "period": "2025-Q4",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-01/00fe50f72b38d74e6b9b066398f020f337cd4e9d/4Q25%20Management%20Report.pdf",
+      "symbol": "2330",
+      "values": {
+        "unit": "PERCENT",
+        "value": 62.3,
+        "reported_decimal": "62.3",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN"
+      },
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "published_at": null,
+      "source_bytes": 4986716,
+      "consolidation": "CONSOLIDATED",
+      "evidence_hash": "c58ff75f5a3d7575e0df14cf2aafa8a7950141ce19fe9364e67e0c3a07709db6",
+      "first_seen_at": "2026-10-18T04:39:50.339Z",
+      "source_sha256": "cbd5645aed3df57a59beb942110ec251a45c6407c401f8813cff4942e4503e35",
+      "source_locator": {
+        "page": 1,
+        "locator": "Summary current-quarter Gross Margin; not annual/YTD column",
+        "table_column": "CURRENT_QUARTER"
+      },
+      "source_admitted": false,
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_received_at": "2026-10-18T04:39:50.339Z",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "member_publication_approved": false
+    },
+    {
+      "id": "retained-financial:2330:2025-Q4:CAPEX:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "kind": "CAPEX",
+      "as_of": "2025-12-31T23:59:59+08:00",
+      "basis": "SINGLE_QUARTER",
+      "period": "2025-Q4",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-01/00fe50f72b38d74e6b9b066398f020f337cd4e9d/4Q25%20Management%20Report.pdf",
+      "symbol": "2330",
+      "values": {
+        "unit": "TWD",
+        "value": 356910000000,
+        "reported_unit": "TWD_BILLION",
+        "reported_decimal": "-356.91",
+        "measurement_basis": "EXPENDITURE_MAGNITUDE_NOT_CASH_INFLOW",
+        "signed_cashflow_twd": -356910000000
+      },
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "published_at": null,
+      "source_bytes": 4986716,
+      "consolidation": "CONSOLIDATED",
+      "evidence_hash": "435a9e304883ad526467852cbfeaeec2e9dae592f16f3298a5b63a8585cc47b0",
+      "first_seen_at": "2026-10-18T04:39:50.339Z",
+      "source_sha256": "cbd5645aed3df57a59beb942110ec251a45c6407c401f8813cff4942e4503e35",
+      "source_locator": {
+        "page": 5,
+        "locator": "Quarterly Cash Flow Analysis current-quarter Capital Expenditures row; excludes annual and USD CapEx tables",
+        "table_column": "CURRENT_QUARTER"
+      },
+      "source_admitted": false,
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_received_at": "2026-10-18T04:39:50.339Z",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "member_publication_approved": false
+    },
+    {
+      "id": "retained-financial:2330:2026-Q1:EPS:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "kind": "EPS",
+      "as_of": "2026-03-31T23:59:59+08:00",
+      "basis": "SINGLE_QUARTER",
+      "period": "2026-Q1",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-04/5508a9df8981f587c73dbfaf9f577f142e22bbb1/1Q26ManagementReport.pdf",
+      "symbol": "2330",
+      "values": {
+        "unit": "TWD_PER_COMMON_SHARE",
+        "value": 22.08,
+        "reported_decimal": "22.08",
+        "measurement_basis": "DILUTED"
+      },
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "published_at": null,
+      "source_bytes": 4653875,
+      "consolidation": "CONSOLIDATED",
+      "evidence_hash": "0df26356d8907008d17eeea1ad9e82df35ce11641e85827bafb8f02b8b3e4be9",
+      "first_seen_at": "2026-10-18T04:40:02.208Z",
+      "source_sha256": "4878487acab931ea06635a8bb97cbb9dcf14e2140d4c480667298ca1c43e8bdc",
+      "source_locator": {
+        "page": 1,
+        "locator": "Summary current-quarter EPS (NT$ per common share); diluted weighted-average shares note",
+        "table_column": "CURRENT_QUARTER"
+      },
+      "source_admitted": false,
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_received_at": "2026-10-18T04:40:02.208Z",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "member_publication_approved": false
+    },
+    {
+      "id": "retained-financial:2330:2026-Q1:MARGIN:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "kind": "MARGIN",
+      "as_of": "2026-03-31T23:59:59+08:00",
+      "basis": "SINGLE_QUARTER",
+      "period": "2026-Q1",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-04/5508a9df8981f587c73dbfaf9f577f142e22bbb1/1Q26ManagementReport.pdf",
+      "symbol": "2330",
+      "values": {
+        "unit": "PERCENT",
+        "value": 66.2,
+        "reported_decimal": "66.2",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN"
+      },
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "published_at": null,
+      "source_bytes": 4653875,
+      "consolidation": "CONSOLIDATED",
+      "evidence_hash": "512ca416a4a2a9e8fccfb090a4eac5d10d484e76c66e169f87c44054d278c960",
+      "first_seen_at": "2026-10-18T04:40:02.208Z",
+      "source_sha256": "4878487acab931ea06635a8bb97cbb9dcf14e2140d4c480667298ca1c43e8bdc",
+      "source_locator": {
+        "page": 1,
+        "locator": "Summary current-quarter Gross Margin; not annual/YTD column",
+        "table_column": "CURRENT_QUARTER"
+      },
+      "source_admitted": false,
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_received_at": "2026-10-18T04:40:02.208Z",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "member_publication_approved": false
+    },
+    {
+      "id": "retained-financial:2330:2026-Q1:CAPEX:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "kind": "CAPEX",
+      "as_of": "2026-03-31T23:59:59+08:00",
+      "basis": "SINGLE_QUARTER",
+      "period": "2026-Q1",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-04/5508a9df8981f587c73dbfaf9f577f142e22bbb1/1Q26ManagementReport.pdf",
+      "symbol": "2330",
+      "values": {
+        "unit": "TWD",
+        "value": 350760000000,
+        "reported_unit": "TWD_BILLION",
+        "reported_decimal": "-350.76",
+        "measurement_basis": "EXPENDITURE_MAGNITUDE_NOT_CASH_INFLOW",
+        "signed_cashflow_twd": -350760000000
+      },
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "published_at": null,
+      "source_bytes": 4653875,
+      "consolidation": "CONSOLIDATED",
+      "evidence_hash": "92c8fa475faf3b7cb317a0cc8ad049c384c6c8da38fcc78486883acd1d5d24cc",
+      "first_seen_at": "2026-10-18T04:40:02.208Z",
+      "source_sha256": "4878487acab931ea06635a8bb97cbb9dcf14e2140d4c480667298ca1c43e8bdc",
+      "source_locator": {
+        "page": 5,
+        "locator": "Quarterly Cash Flow Analysis current-quarter Capital Expenditures row; excludes annual and USD CapEx tables",
+        "table_column": "CURRENT_QUARTER"
+      },
+      "source_admitted": false,
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_received_at": "2026-10-18T04:40:02.208Z",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "member_publication_approved": false
+    },
+    {
+      "id": "retained-financial:2330:2026-Q2:EPS:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "kind": "EPS",
+      "as_of": "2026-06-30T23:59:59+08:00",
+      "basis": "SINGLE_QUARTER",
+      "period": "2026-Q2",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-07/6f49632674bd2d0fd48cb65aaf89ec6ab510b559/2Q26%20ManagementReport.pdf",
+      "symbol": "2330",
+      "values": {
+        "unit": "TWD_PER_COMMON_SHARE",
+        "value": 27.25,
+        "reported_decimal": "27.25",
+        "measurement_basis": "DILUTED"
+      },
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "published_at": null,
+      "source_bytes": 4645787,
+      "consolidation": "CONSOLIDATED",
+      "evidence_hash": "ed254d65822e2febe505e410db21293c844ffb794a5d43dc7bd6a7dee3cec5f0",
+      "first_seen_at": "2026-10-18T05:34:49.723Z",
+      "source_sha256": "fad79c6a6ec870357df9eae00e680256956e34083ec84a226959c693eccb1a5f",
+      "source_locator": {
+        "page": 1,
+        "locator": "Summary current-quarter EPS (NT$ per common share); diluted weighted-average shares note",
+        "table_column": "CURRENT_QUARTER"
+      },
+      "source_admitted": false,
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_received_at": "2026-10-18T05:34:49.723Z",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "member_publication_approved": false
+    },
+    {
+      "id": "retained-financial:2330:2026-Q2:MARGIN:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "kind": "MARGIN",
+      "as_of": "2026-06-30T23:59:59+08:00",
+      "basis": "SINGLE_QUARTER",
+      "period": "2026-Q2",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-07/6f49632674bd2d0fd48cb65aaf89ec6ab510b559/2Q26%20ManagementReport.pdf",
+      "symbol": "2330",
+      "values": {
+        "unit": "PERCENT",
+        "value": 67.7,
+        "reported_decimal": "67.7",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN"
+      },
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "published_at": null,
+      "source_bytes": 4645787,
+      "consolidation": "CONSOLIDATED",
+      "evidence_hash": "88de41fec13598236f887ddeb3a8b8e654c676cc4c613c05b3157695d1a39b70",
+      "first_seen_at": "2026-10-18T05:34:49.723Z",
+      "source_sha256": "fad79c6a6ec870357df9eae00e680256956e34083ec84a226959c693eccb1a5f",
+      "source_locator": {
+        "page": 1,
+        "locator": "Summary current-quarter Gross Margin; not annual/YTD column",
+        "table_column": "CURRENT_QUARTER"
+      },
+      "source_admitted": false,
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_received_at": "2026-10-18T05:34:49.723Z",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "member_publication_approved": false
+    },
+    {
+      "id": "retained-financial:2330:2026-Q2:CAPEX:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "kind": "CAPEX",
+      "as_of": "2026-06-30T23:59:59+08:00",
+      "basis": "SINGLE_QUARTER",
+      "period": "2026-Q2",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-07/6f49632674bd2d0fd48cb65aaf89ec6ab510b559/2Q26%20ManagementReport.pdf",
+      "symbol": "2330",
+      "values": {
+        "unit": "TWD",
+        "value": 496000000000,
+        "reported_unit": "TWD_BILLION",
+        "reported_decimal": "-496.00",
+        "measurement_basis": "EXPENDITURE_MAGNITUDE_NOT_CASH_INFLOW",
+        "signed_cashflow_twd": -496000000000
+      },
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "published_at": null,
+      "source_bytes": 4645787,
+      "consolidation": "CONSOLIDATED",
+      "evidence_hash": "34fa9522c780248d302865a2acd43220f928dd65def3f1826ce74a3efb00cdf9",
+      "first_seen_at": "2026-10-18T05:34:49.723Z",
+      "source_sha256": "fad79c6a6ec870357df9eae00e680256956e34083ec84a226959c693eccb1a5f",
+      "source_locator": {
+        "page": 5,
+        "locator": "Quarterly Cash Flow Analysis current-quarter Capital Expenditures row; excludes annual and USD CapEx tables",
+        "table_column": "CURRENT_QUARTER"
+      },
+      "source_admitted": false,
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_received_at": "2026-10-18T05:34:49.723Z",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "member_publication_approved": false
+    },
+    {
+      "id": "retained-financial:2330:2026-Q3:EPS:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "kind": "EPS",
+      "as_of": "2026-09-30T23:59:59+08:00",
+      "basis": "SINGLE_QUARTER",
+      "period": "2026-Q3",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-10/f83780000ddc0c3b48e57a87eab6814c4ab35058/3Q26%20ManagementReport.pdf",
+      "symbol": "2330",
+      "values": {
+        "unit": "TWD_PER_COMMON_SHARE",
+        "value": 29.43,
+        "reported_decimal": "29.43",
+        "measurement_basis": "DILUTED"
+      },
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "published_at": null,
+      "source_bytes": 468113,
+      "consolidation": "CONSOLIDATED",
+      "evidence_hash": "4201bb2239ea2251ae400a08e79053283fe172bd1b2e98a0594a019e8ac72edf",
+      "first_seen_at": "2026-10-18T05:34:39.061Z",
+      "source_sha256": "27b5b92d05207bf662756edfbe72494c5f34a007a79306ae040d957886b411d2",
+      "source_locator": {
+        "page": 1,
+        "locator": "Summary current-quarter EPS (NT$ per common share); diluted weighted-average shares note",
+        "table_column": "CURRENT_QUARTER"
+      },
+      "source_admitted": false,
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_received_at": "2026-10-18T05:34:39.061Z",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "member_publication_approved": false
+    },
+    {
+      "id": "retained-financial:2330:2026-Q3:MARGIN:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "kind": "MARGIN",
+      "as_of": "2026-09-30T23:59:59+08:00",
+      "basis": "SINGLE_QUARTER",
+      "period": "2026-Q3",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-10/f83780000ddc0c3b48e57a87eab6814c4ab35058/3Q26%20ManagementReport.pdf",
+      "symbol": "2330",
+      "values": {
+        "unit": "PERCENT",
+        "value": 66.4,
+        "reported_decimal": "66.4",
+        "measurement_basis": "DIRECTLY_REPORTED_GROSS_MARGIN"
+      },
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "published_at": null,
+      "source_bytes": 468113,
+      "consolidation": "CONSOLIDATED",
+      "evidence_hash": "0bc8beedf967b62c9a98bb71cce77c64b9ddadbbd7d86cf9a0d696b5d5665f07",
+      "first_seen_at": "2026-10-18T05:34:39.061Z",
+      "source_sha256": "27b5b92d05207bf662756edfbe72494c5f34a007a79306ae040d957886b411d2",
+      "source_locator": {
+        "page": 1,
+        "locator": "Summary current-quarter Gross Margin; not annual/YTD column",
+        "table_column": "CURRENT_QUARTER"
+      },
+      "source_admitted": false,
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_received_at": "2026-10-18T05:34:39.061Z",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "member_publication_approved": false
+    },
+    {
+      "id": "retained-financial:2330:2026-Q3:CAPEX:aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "kind": "CAPEX",
+      "as_of": "2026-09-30T23:59:59+08:00",
+      "basis": "SINGLE_QUARTER",
+      "period": "2026-Q3",
+      "source": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-10/f83780000ddc0c3b48e57a87eab6814c4ab35058/3Q26%20ManagementReport.pdf",
+      "symbol": "2330",
+      "values": {
+        "unit": "TWD",
+        "value": 443210000000,
+        "reported_unit": "TWD_BILLION",
+        "reported_decimal": "-443.21",
+        "measurement_basis": "EXPENDITURE_MAGNITUDE_NOT_CASH_INFLOW",
+        "signed_cashflow_twd": -443210000000
+      },
+      "available_at": "2026-10-19T09:08:23.667Z",
+      "published_at": null,
+      "source_bytes": 468113,
+      "consolidation": "CONSOLIDATED",
+      "evidence_hash": "5b3995c663affb65cf9dc35adc131352984b87d21b1a37cf5ab4b71d77d0b6b3",
+      "first_seen_at": "2026-10-18T05:34:39.061Z",
+      "source_sha256": "27b5b92d05207bf662756edfbe72494c5f34a007a79306ae040d957886b411d2",
+      "source_locator": {
+        "page": 5,
+        "locator": "Quarterly Cash Flow Analysis current-quarter Capital Expenditures row; excludes annual and USD CapEx tables",
+        "table_column": "CURRENT_QUARTER"
+      },
+      "source_admitted": false,
+      "source_pack_sha256": "aee057576d4198c4e9bc7e16354b2030957afd2bc261d99050b8e9dcbc90c498",
+      "source_received_at": "2026-10-18T05:34:39.061Z",
+      "data_quality_status": "DIRECT_ISSUER_QUARTER_OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN",
+      "member_publication_approved": false
+    }
+  ],
+  "reviews": [
+    {
+      "kind": "DEMAND",
+      "source": "https://www.sec.gov/Archives/edgar/data/1046179/000104617926000726/a3q26e_withguidancexfinal.htm",
+      "source_sha256": "3aa2379995ee83542ed79aa91f78686d70e6cca158f6b9f7f866f7e57a64005d",
+      "source_bytes": 28007,
+      "analysis_zh": "四季已實現營收年增皆正，最新季先進製程占晶圓營收79%，支持有限範圍的需求研究假設。公司下季展望不能視為實現訂單。",
+      "counter_evidence_zh": "僅四季已實現表現，沒有多年綁約訂單；匯率與產品組合影響營收。"
+    },
+    {
+      "kind": "MOAT",
+      "source": "https://www.sec.gov/Archives/edgar/data/1046179/000162828026025362/tsm-20251231.htm",
+      "source_sha256": "d9312bb946c6ecd2d68e09b3e11aeafe6cdbae840cee42b313cd12b939381ad3",
+      "source_bytes": 10355928,
+      "analysis_zh": "原件所列研發投入、製造規模與先進節點實際收入支持可觀察的技術及規模優勢；不表示永久壟斷或可保證超額報酬。",
+      "counter_evidence_zh": "最新季毛利率66.4%低於前季67.7%；競爭、海外廠成本與技術轉換仍可能侵蝕經濟利益。"
+    }
+  ],
+  "source_documents": [
+    {
+      "period": "2025-Q4",
+      "kind": "release",
+      "url": "https://www.sec.gov/Archives/edgar/data/1046179/000104617926000008/a4q25e_withguidancexfinal.htm",
+      "sha256": "5b76ed5b393af6bd952d507e5e8be836e73fa3a9e012d423541425a856c090b2",
+      "bytes": 28050,
+      "received_at": "2026-11-03T00:36:52.965368+00:00",
+      "http": 200
+    },
+    {
+      "period": "2025-Q4",
+      "kind": "presentation",
+      "url": "https://www.sec.gov/Archives/edgar/data/1046179/000104617926000008/a4q25presentatione.htm",
+      "sha256": "9393984c798c69b79419c295cbeabe177968613694a813391f79e2aea295d57a",
+      "bytes": 11272,
+      "received_at": "2026-11-03T00:36:53.193612+00:00",
+      "http": 200
+    },
+    {
+      "period": "2026-Q1",
+      "kind": "release",
+      "url": "https://www.sec.gov/Archives/edgar/data/1046179/000104617926000199/a1q26e_withguidancexfinal.htm",
+      "sha256": "ceb9802676571851e3bc45ac8dbc2894609d58ce639389f7077cf73e2ab836d6",
+      "bytes": 27558,
+      "received_at": "2026-11-03T00:36:54.465341+00:00",
+      "http": 200
+    },
+    {
+      "period": "2026-Q1",
+      "kind": "presentation",
+      "url": "https://www.sec.gov/Archives/edgar/data/1046179/000104617926000199/a1q26presentatione.htm",
+      "sha256": "39dd73f50be0dfb01326297d18177cf9ded17468f229974a9763e48cb338681f",
+      "bytes": 9622,
+      "received_at": "2026-11-03T00:36:58.789939+00:00",
+      "http": 200
+    },
+    {
+      "period": "2026-Q2",
+      "kind": "release",
+      "url": "https://www.sec.gov/Archives/edgar/data/1046179/000104617926000451/a2q26e_withguidancexfinal.htm",
+      "sha256": "f9238f2f33739d6ca19210d86256af9dc72b5b6b05c85013b391fe2d5eab635b",
+      "bytes": 28114,
+      "received_at": "2026-11-03T00:36:58.669468+00:00",
+      "http": 200
+    },
+    {
+      "period": "2026-Q2",
+      "kind": "presentation",
+      "url": "https://www.sec.gov/Archives/edgar/data/1046179/000104617926000451/a2q26presentatione.htm",
+      "sha256": "4f2b4cc2cae9059f647ac1127fa42b57b27e4b9720b5f2234d54b96b527a7736",
+      "bytes": 9721,
+      "received_at": "2026-11-03T00:36:58.813910+00:00",
+      "http": 200
+    },
+    {
+      "period": "2026-Q3",
+      "kind": "release",
+      "url": "https://www.sec.gov/Archives/edgar/data/1046179/000104617926000726/a3q26e_withguidancexfinal.htm",
+      "sha256": "3aa2379995ee83542ed79aa91f78686d70e6cca158f6b9f7f866f7e57a64005d",
+      "bytes": 28007,
+      "received_at": "2026-11-03T00:37:03.617328+00:00",
+      "http": 200
+    },
+    {
+      "period": "2026-Q3",
+      "kind": "presentation",
+      "url": "https://www.sec.gov/Archives/edgar/data/1046179/000104617926000726/a3q26presentatione.htm",
+      "sha256": "f0c3b3d1d4cf6fbaf781f2f663e46344dbfd6cb01168c67cb624b0800c6c20fa",
+      "bytes": 9557,
+      "received_at": "2026-11-03T00:37:03.793620+00:00",
+      "http": 200
+    },
+    {
+      "period": "2025-FY",
+      "kind": "annual",
+      "url": "https://www.sec.gov/Archives/edgar/data/1046179/000162828026025362/tsm-20251231.htm",
+      "sha256": "d9312bb946c6ecd2d68e09b3e11aeafe6cdbae840cee42b313cd12b939381ad3",
+      "bytes": 10355928,
+      "received_at": "2026-11-03T00:37:05.142646+00:00",
+      "http": 200
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "conservative",
+      "g_H": 0.06,
+      "R_H": 0.12,
+      "r": 0.12,
+      "g_T": 0.02,
+      "R_T": 0.12,
+      "model_value_twd": 867.9633333333331,
+      "discount_25_threshold_twd": 650.9724999999999,
+      "terminal_fraction": 0.7306905984665755
+    },
+    {
+      "name": "base",
+      "g_H": 0.12,
+      "R_H": 0.25,
+      "r": 0.1,
+      "g_T": 0.03,
+      "R_T": 0.15,
+      "model_value_twd": 1565.5654574592666,
+      "discount_25_threshold_twd": 1174.17409309445,
+      "terminal_fraction": 0.8084653077608785
+    },
+    {
+      "name": "optimistic",
+      "g_H": 0.18,
+      "R_H": 0.3,
+      "r": 0.09,
+      "g_T": 0.04,
+      "R_T": 0.2,
+      "model_value_twd": 2740.468888886903,
+      "discount_25_threshold_twd": 2055.3516666651776,
+      "terminal_fraction": 0.8871207802941113
+    }
+  ],
+  "source_admitted": false,
+  "member_publication_approved": false,
+  "methodology_promoted": false
+}

@@ -1,0 +1,165 @@
+import {analyseStock,validateAnalysisPacket,type AnalysisPacket} from '../../../research/daily-ai-analysis.ts';
+import {buildStockAnalysisContext} from '../../../research/daily-ai-semantics.ts';
+import {HORIZONS,snapshotHash} from '../../../src/features/vnext/contracts.ts';
+import {assertStockAiPaidModelAllowed} from './daily-stock-ai-cost-policy.ts';
+
+export type StockAiProviderReceipt={response_id:string;model:string;input_tokens:number;output_tokens:number};
+export type StockAiCandidateObserver=(candidate:unknown,receipt:StockAiProviderReceipt,inputHash:string)=>Promise<void>;
+export type StockAiProviderFailureDiagnostic=Readonly<{
+ schema:'STOCK_AI_PROVIDER_FAILURE_V1';http_status:number;
+ classification:'QUOTA'|'RATE_LIMIT'|'AUTH'|'UNKNOWN_429'|'OTHER_HTTP';
+ error_code:string|null;error_type:string|null;request_id:string|null;retry_after_seconds:number|null;
+ body_state:'PARSED'|'INVALID'|'OVERSIZED'|'UNAVAILABLE'|'DEADLINE';
+}>;
+export type StockAiProviderFailureObserver=(diagnostic:StockAiProviderFailureDiagnostic)=>void|Promise<void>;
+// Official error/rate-limit guides, checked 2026-11-01. Retain the earlier
+// insufficient_quota/rate_limit_exceeded forms; unknown values remain unknown.
+const providerQuotaCodes=new Set(['insufficient_quota','credit_balance_exhausted','organization_spend_limit_exceeded',
+ 'project_spend_limit_exceeded','organization_usage_limit_exceeded']);
+const providerRateLimitCodes=new Set(['rate_limit_exceeded','slow_down']);
+const providerErrorCodes=new Set([...providerQuotaCodes,...providerRateLimitCodes,'server_is_overloaded']);
+const providerErrorTypes=new Set(['insufficient_quota','rate_limit_error','service_unavailable_error','invalid_request_error']);
+/** Read only enough to classify a failed request. Raw messages/bodies are never
+ * returned, logged or attached to the job error; diagnostics cannot retry work. */
+export async function readStockAiProviderFailure(response:Response,signal?:AbortSignal):Promise<StockAiProviderFailureDiagnostic>{
+ const headerId=response.headers.get('x-request-id'),retryAfter=response.headers.get('retry-after');
+ const request_id=headerId&&(/^(?:req_[A-Za-z0-9_-]{1,96}|[a-fA-F0-9]{8}(?:-[a-fA-F0-9]{4}){3}-[a-fA-F0-9]{12})$/).test(headerId)?headerId:null;
+ let retry_after_seconds:number|null=null;
+ if(retryAfter&&/^\d{1,5}$/.test(retryAfter)&&Number(retryAfter)<=86400)retry_after_seconds=Number(retryAfter);
+ // Accept only an RFC-style HTTP date, not arbitrary strings Date.parse accepts.
+ else if(retryAfter&&/^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/.test(retryAfter)){
+  const delay=Math.ceil((Date.parse(retryAfter)-Date.now())/1000);
+  if(Number.isFinite(delay)&&delay>=0&&delay<=86400)retry_after_seconds=delay;
+ }
+ let body_state:StockAiProviderFailureDiagnostic['body_state']='UNAVAILABLE',error_code:string|null=null,error_type:string|null=null;
+ let reader:ReadableStreamDefaultReader<Uint8Array>|undefined;
+ try{reader=response.body?.getReader();}catch{/* A locked/unavailable body cannot replace its HTTP failure. */}
+ let timer:ReturnType<typeof setTimeout>|undefined,abort:(()=>void)|undefined;
+ if(reader){
+  try{
+   if(Number(response.headers.get('content-length'))>16384)body_state='OVERSIZED';
+   else{
+    const chunks:Uint8Array[]=[];let bytes=0,reads=0;
+    const deadline=new Promise<never>((_,reject)=>{
+     timer=setTimeout(()=>reject(Error('DIAGNOSTIC_DEADLINE')),250);
+     abort=()=>reject(Error('DIAGNOSTIC_DEADLINE'));signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();
+    });
+    for(;;){
+     // Empty chunks still consume work. Bound iterations independently of bytes
+     // so a perpetually ready stream cannot starve the deadline's timer task.
+     if(reads++>=128){body_state='OVERSIZED';break;}
+     const part=await Promise.race([reader.read(),deadline]);if(part.done)break;
+     bytes+=part.value.byteLength;if(bytes>16384){body_state='OVERSIZED';break;}chunks.push(part.value);
+    }
+    if(body_state!=='OVERSIZED'){
+     const data=new Uint8Array(bytes);let offset=0;for(const chunk of chunks){data.set(chunk,offset);offset+=chunk.byteLength;}
+     const body:unknown=JSON.parse(new TextDecoder().decode(data));
+     if(body&&typeof body==='object'&&!Array.isArray(body)){
+      const error=(body as Record<string,unknown>).error;
+      if(error&&typeof error==='object'&&!Array.isArray(error)){
+       const fields=error as Record<string,unknown>;
+       if(typeof fields.code==='string'&&providerErrorCodes.has(fields.code))error_code=fields.code;
+       if(typeof fields.type==='string'&&providerErrorTypes.has(fields.type))error_type=fields.type;
+      }
+     }
+     body_state='PARSED';
+    }
+   }
+  }catch(error){body_state=error instanceof Error&&error.message==='DIAGNOSTIC_DEADLINE'?'DEADLINE':'INVALID';}
+  finally{
+   if(timer)clearTimeout(timer);if(abort)signal?.removeEventListener('abort',abort);
+   // An error stream may never finish cancelling. Do not delay the existing
+   // HTTP failure/stop contract waiting for a remote cancellation acknowledgement.
+   void reader.cancel().catch(()=>{});try{reader.releaseLock();}catch{/* Nothing from the body may escape. */}
+  }
+ }
+ const cause=error_code??error_type;
+ const classification:StockAiProviderFailureDiagnostic['classification']=cause&&providerQuotaCodes.has(cause)?'QUOTA'
+  :cause&&(providerRateLimitCodes.has(cause)||cause==='rate_limit_error')?'RATE_LIMIT'
+  :response.status===401||response.status===403?'AUTH':response.status===429?'UNKNOWN_429':'OTHER_HTTP';
+ return Object.freeze({schema:'STOCK_AI_PROVIDER_FAILURE_V1',http_status:response.status,classification,error_code,error_type,request_id,retry_after_seconds,body_state});
+}
+const citationRepairInstructions=' 本次為跨日引用修復。每一條 reason 或 counter_evidence 若包含跨日比較（包括低開、開高、跳空、較前日或減輕），該條 claim.evidence_ids 必須同時引用所比較的兩個交易日 PRICE 證據，不能借用其他理由或反面證據的引用。若該條無法自帶兩天來源，就省略該跨日比較。';
+const allFactsCitationRepairInstructions=' 本次另為每條主張完整引用的第二次修復。每條 reason 或 counter_evidence 的所有事實前提（包括EPS正負、跨月轉折及反證）都必須由該條 claim.evidence_ids 自己完整支持，且引用的資料類型必須精確；例如EPS正負必須引用EPS原報資料，不能用營業利益率或其他比率代替。不能借用別段引文；沒有該事實的證據就不作該事實判斷。';
+
+/** Shared references keep each packet's long evidence identifiers in one enum.
+ * The original citation/text validators still run after provider decoding. */
+export function dailyStockAnalysisResponseFormat(packet:AnalysisPacket){
+ validateAnalysisPacket(packet);
+ const evidenceIds=packet.evidence.map(e=>e.id);
+ if(evidenceIds.some(id=>typeof id!=='string'||!id.trim()||id.length>200))throw Error('STOCK_AI_SCHEMA_EVIDENCE_IDS');
+ const text={type:'string',minLength:1,maxLength:1500,pattern:'\\S'};
+ const condition={...text,pattern:'^[^0-9０-９]*[^0-9０-９\\s][^0-9０-９]*$',
+  description:'只寫不含數字的事件式確認或取消條件；不得提供任何數字價格、價位、買價或停損價。日期和財務數字放在有來源期間的理由。'};
+ const horizon=(statuses:string[],minimumGaps:number)=>({type:'object',additionalProperties:false,
+  properties:{horizon:{type:'string',enum:['SHORT','MEDIUM','LONG']},status:{type:'string',enum:statuses},reason:{$ref:'#/$defs/claim'},
+   counter_evidence:{type:'array',maxItems:20,items:{$ref:'#/$defs/claim'}},confirmation:condition,invalidation:condition,
+   gaps:{type:'array',minItems:minimumGaps,maxItems:30,items:text}},
+  required:['horizon','status','reason','counter_evidence','confirmation','invalidation','gaps']});
+ return {type:'json_schema',json_schema:{name:'daily_stock_analysis_v1',strict:true,schema:{
+  type:'object',additionalProperties:false,
+  properties:{symbol:{type:'string',enum:[packet.symbol]},horizons:{type:'array',minItems:3,maxItems:3,items:{$ref:'#/$defs/horizon'}}},
+  required:['symbol','horizons'],
+  $defs:{evidence_id:{type:'string',enum:evidenceIds},claim:{type:'object',additionalProperties:false,
+   properties:{text:{...text,description:'每句包含營收、EPS、每股盈餘、毛利或其他公司財務數字時，必須同句逐字標示該引用的實際完整期間 YYYY-MM 或 YYYY-Qn。不得用研究日補年份；歷史已報實績不得稱為預測。'},evidence_ids:{type:'array',minItems:1,maxItems:100,items:{$ref:'#/$defs/evidence_id'}}},required:['text','evidence_ids']},
+   horizon:{anyOf:[horizon(['WATCH','WAIT','AVOID'],0),horizon(['INSUFFICIENT'],1)]}},
+ }}};
+}
+
+/** Server-only port. Reuses a server supplied credential; never accepts member
+ * request options, changes secrets, publishes content or logs provider bodies. */
+export async function analyseStockWithProvider(packet:AnalysisPacket,config:{apiKey:string;model:string;fetcher:typeof fetch;signal?:AbortSignal;onCandidate?:StockAiCandidateObserver;onProviderFailure?:StockAiProviderFailureObserver;citationRepair?:true;allFactsCitationRepair?:true}){
+ assertStockAiPaidModelAllowed();
+ if(!config.apiKey||!config.model||config.model.length>100)throw Error('STOCK_AI_CONFIGURATION_REQUIRED');
+ if(config.citationRepair!==undefined&&config.citationRepair!==true)throw Error('STOCK_AI_REPAIR_CONFIGURATION');
+ if(config.allFactsCitationRepair!==undefined&&(config.allFactsCitationRepair!==true||config.citationRepair!==true))throw Error('STOCK_AI_REPAIR_CONFIGURATION');
+ let receipt:StockAiProviderReceipt|null=null;
+ const analysis=await analyseStock(packet,async request=>{
+  // Build the enum from analyseStock's owned snapshot, never a mutable caller.
+  const owned=JSON.parse(request.input) as AnalysisPacket,responseFormat=dailyStockAnalysisResponseFormat(owned);
+  const context=buildStockAnalysisContext(owned);
+  const providerInput={...owned,analysis_context:{...context,
+   horizon_definitions:Object.fromEntries(Object.entries(HORIZONS).map(([h,rule])=>[h,rule.duration])),
+   revenue_periods_present_in_packet:[...new Set(context.financial_evidence_periods.filter(r=>r.kind==='REVENUE'&&r.period).map(r=>r.period))].sort(),
+   financial_basis_rule:'AS_REPORTED_IS_NOT_SINGLE_QUARTER_YTD_CUMULATIVE_OR_TTM',
+   gap_statement_rule:'MISSING_IN_THIS_PACKET_IS_NOT_PROOF_OF_NOT_PUBLISHED',
+  }};
+  const completion=config.model==='gpt-6-astra'?{max_completion_tokens:6000,reasoning_effort:'low'}:{max_tokens:6000};
+  const response=await config.fetcher('https://api.openai.com/v1/chat/completions',{
+   method:'POST',signal:request.signal,headers:{'Content-Type':'application/json',Authorization:'Bearer '+config.apiKey},
+   body:JSON.stringify({model:config.model,messages:[{role:'system',content:request.system+' 引用必須逐字使用 JSON Schema 列舉中的完整 evidence_ids，不得改寫或縮短，且同一主張不得重複引用同一 ID。期間定義必須與 analysis_context.horizon_definitions 一致：SHORT為1～10個交易日，MEDIUM為2～12週，LONG為3～18個月，不得自行改持有期間。analysis_context.latest_revenue_period 與 recent_revenue 是來源實際已報期間，不是研究月份；即使研究日已過數年，也不得把年份換成今年。每句包含任何公司財務數字（營收、EPS、毛利率等）都必須同句標示對應來源的完整 YYYY-MM 或 YYYY-Qn；不可以只寫十月或第二季。AS_REPORTED只代表來源原報值與期間標籤，未證明單季或累計；不得把AS_REPORTED稱為單季、累計、年初至今、YTD或TTM，也不得自行差分或換算。已報歷史營收與財報都是實績，不得寫成未來預測、預估或將公布數值。缺口只能描述本次輸入未包含或無法確認，不能因此宣稱公司尚未公布、營收未揭露或市場沒有資料；先檢查 revenue_periods_present_in_packet 全部實際月份，不能因缺少季度標籤就忽略已有的該季各月營收。不得宣稱無來源的連續季數、連續年數或成長期數，除非逐期證據足夠。確認與失效條件只寫無數字的事件／資料條件，不得包含阿拉伯或全形數字，也不得用中文數字提供任何價格、價位、買價或停損；日期移到理由或缺口。請精簡：每段理由以240字內、反面證據0到3段且每段160字內、確認與失效條件各120字內、每項缺口80字內為原則。所有文字不得為空白；INSUFFICIENT 至少列一項真實缺口。每個期間各輸出一次。'+(config.citationRepair?citationRepairInstructions:'')+(config.allFactsCitationRepair?allFactsCitationRepairInstructions:'')},{role:'user',content:JSON.stringify(providerInput)}],
+    response_format:responseFormat,...completion}),
+  });
+  if(!response.ok){
+   const diagnostic=await readStockAiProviderFailure(response,request.signal);
+   try{
+    if(config.onProviderFailure)void Promise.resolve(config.onProviderFailure(diagnostic)).catch(()=>{});
+    else console.warn('STOCK_AI_PROVIDER_FAILURE',JSON.stringify(diagnostic));
+   }catch{/* Diagnostic observers cannot change the immutable job failure code. */}
+   throw Error('STOCK_AI_PROVIDER_HTTP_'+response.status);
+  }
+  const bytes=Number(response.headers.get('content-length'));
+  if(bytes>512000)throw Error('STOCK_AI_RESPONSE_LIMIT');
+  // Streaming read bounds actual bytes even when Content-Length is absent.
+  const reader=response.body?.getReader();if(!reader)throw Error('STOCK_AI_RESPONSE_MISSING');
+  const chunks:Uint8Array[]=[];let size=0;
+  try{for(;;){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;
+    if(size>512000)throw Error('STOCK_AI_RESPONSE_LIMIT');chunks.push(part.value);}}
+  finally{await reader.cancel();reader.releaseLock();}
+  const data=new Uint8Array(size);let offset=0;for(const chunk of chunks){data.set(chunk,offset);offset+=chunk.byteLength;}
+  const body=JSON.parse(new TextDecoder().decode(data));
+  const choice=body.choices?.[0],content=choice?.message?.content,usage=body.usage;
+  if(choice?.message?.refusal)throw Error('STOCK_AI_PROVIDER_REFUSAL');
+  if(choice?.finish_reason!=='stop'||typeof content!=='string'||typeof body.id!=='string'||!body.id
+   ||typeof body.model!=='string'||!body.model||!Number.isSafeInteger(usage?.prompt_tokens)||usage.prompt_tokens<0
+   ||!Number.isSafeInteger(usage?.completion_tokens)||usage.completion_tokens<0)throw Error('STOCK_AI_RECEIPT_INVALID');
+  receipt={response_id:body.id,model:body.model,input_tokens:usage.prompt_tokens,output_tokens:usage.completion_tokens};
+  const candidate:unknown=JSON.parse(content);
+  // Preserve the exact paid response before semantic validation can reject it.
+  // Audit storage receives detached copies and cannot repair the model output.
+  if(config.onCandidate)await config.onCandidate(structuredClone(candidate),{...receipt},await snapshotHash(owned));
+  return candidate;
+ },30000,config.signal);
+ if(!receipt)throw Error('STOCK_AI_RECEIPT_MISSING');
+ return {...analysis,receipt,publication_ready:false as const};
+}

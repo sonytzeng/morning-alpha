@@ -28,6 +28,19 @@ jobs:
           tests/decisionEvidencePipeline.test.mjs
           tests/recommendationProducer.test.mjs
           tests/recommendationReaderBinding.test.mjs
+          tests/ciEvidenceDatabaseImage.test.mjs
+      - name: Prepare fixed PostgreSQL 17.11 image for this isolated runner
+        timeout-minutes: 3
+        env:
+          # Same official postgres:17 / 17.11 linux-amd64 image, observed
+          # 2026-10-22. Other jobs' Docker caches do not exist on this runner.
+          TEST_POSTGRES_IMAGE: postgres@sha256:3518071376d0b6156b02e1db2747a78511b5b9dc3763cc79c506ebe2dc2ee71c
+        run: |
+          set -euo pipefail
+          timeout 120s docker pull "$TEST_POSTGRES_IMAGE"
+          test "$(docker image inspect "$TEST_POSTGRES_IMAGE" --format '{{.Os}}/{{.Architecture}}')" = linux/amd64
+          docker run --rm --pull never --network none "$TEST_POSTGRES_IMAGE" postgres --version | grep -E '^postgres \(PostgreSQL\) 17\.11([[:space:]]|$)'
+          docker tag "$TEST_POSTGRES_IMAGE" postgres:17
       - name: Disposable SQL and RLS, no Production connectivity
         env:
           NODE_OPTIONS: --experimental-strip-types

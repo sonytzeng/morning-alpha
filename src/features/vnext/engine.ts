@@ -1,6 +1,5 @@
-import { HORIZONS, FROZEN_V1_REF, hashValid, snapshotHash, sourceSafe, validTime } from './contracts.ts';
+import { HORIZONS, FROZEN_V1_REF, compareTime, hashValid, snapshotHash, sourceSafe, validObservationTime as validTime } from './contracts.ts';
 import type { Evidence, EventRevision, Horizon, License, Observation, ObservationState, Projection, SupplyRelation } from './contracts.ts';
-const t = Date.parse;
 const unique = (ids: string[]) => new Set(ids).size === ids.length;
 
 /** Availability is never inferred from a publication date or candle date. */
@@ -9,9 +8,9 @@ export function evidenceIssues(e: Evidence, cutoff: string): string[] {
   if (!e.id || !e.symbol || !e.source || !sourceSafe(e.source_ref) || !hashValid(e.snapshot_hash)) issues.push('SOURCE_LINEAGE_INVALID');
   const stamps = [cutoff, e.published_at, e.first_seen_at, e.available_at, e.as_of, e.last_verified_at, e.valid_until];
   if (!stamps.every(validTime)) return [...issues, 'TIME_INVALID'];
-  if (t(e.as_of) > t(e.published_at) || t(e.published_at) > t(e.available_at) || t(e.first_seen_at) > t(e.available_at)
-      || t(e.available_at) > t(cutoff) || t(e.last_verified_at) > t(cutoff) || t(e.last_verified_at) < t(e.available_at)) issues.push('POINT_IN_TIME_INVALID');
-  if (t(e.valid_until) <= t(cutoff)) issues.push('STALE_EVIDENCE');
+  if (compareTime(e.as_of, e.published_at) > 0 || compareTime(e.published_at, e.available_at) > 0 || compareTime(e.first_seen_at, e.available_at) > 0
+      || compareTime(e.available_at, cutoff) > 0 || compareTime(e.last_verified_at, cutoff) > 0 || compareTime(e.last_verified_at, e.available_at) < 0) issues.push('POINT_IN_TIME_INVALID');
+  if (compareTime(e.valid_until, cutoff) <= 0) issues.push('STALE_EVIDENCE');
   if (e.quality !== 'PASS') issues.push('QUALITY_REJECTED');
   if (!e.relevant) issues.push('RELEVANCE_REJECTED');
   if (!['CONFIRMED_FACT', 'REPORTED_CLAIM', 'INFERENCE', 'UNVERIFIED'].includes(e.classification)) issues.push('CLASSIFICATION_INVALID');
@@ -28,9 +27,9 @@ export function eventTimeline(rows: EventRevision[], cutoff: string) {
       || !row.evidence_ids.length || !unique(row.evidence_ids) || !row.affected_companies.length
       || !['CONFIRMED_FACT', 'REPORTED_CLAIM', 'INFERENCE', 'UNVERIFIED'].includes(row.classification)
       || !row.expected_horizons.length || row.expected_horizons.some(h => !Object.hasOwn(HORIZONS, h))
-      || t(row.available_at) < Math.max(t(row.published_at), t(row.first_seen_at))
-      || t(row.last_verified_at) < t(row.available_at)) throw Error('EVENT_INVALID');
-    if (t(row.available_at) > t(cutoff) || t(row.last_verified_at) > t(cutoff)) continue;
+      || compareTime(row.available_at, row.published_at) < 0 || compareTime(row.available_at, row.first_seen_at) < 0
+      || compareTime(row.last_verified_at, row.available_at) < 0) throw Error('EVENT_INVALID');
+    if (compareTime(row.available_at, cutoff) > 0 || compareTime(row.last_verified_at, cutoff) > 0) continue;
     const revisions = events.get(row.event_id) ?? [];
     if (revisions.some(r => r.source !== row.source || r.source_event_id !== row.source_event_id)) throw Error('EVENT_ID_COLLISION');
     const prior = revisions.find(r => r.revision === row.revision);
@@ -40,7 +39,7 @@ export function eventTimeline(rows: EventRevision[], cutoff: string) {
   }
   return [...events.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([event_id, revisions]) => {
     const timeline = revisions.sort((a, b) => a.revision - b.revision);
-    if (timeline.some((r, i) => i > 0 && t(r.available_at) < t(timeline[i - 1].available_at))) throw Error('EVENT_REVISION_TIME_REVERSED');
+    if (timeline.some((r, i) => i > 0 && compareTime(r.available_at, timeline[i - 1].available_at) < 0)) throw Error('EVENT_REVISION_TIME_REVERSED');
     return { event_id, timeline, current: timeline[timeline.length - 1], distinct_event_count: 1 };
   });
 }
@@ -49,8 +48,8 @@ export function supplyRelationStatus(row: SupplyRelation, evidence: Evidence[], 
   if (!validTime(cutoff) || ![row.observed_at, row.available_at, row.valid_from].every(validTime)
     || (row.valid_to !== null && !validTime(row.valid_to)) || !row.id || !row.from || !row.to || row.from === row.to || !row.source
     || !['CUSTOMER', 'SUPPLIER', 'COMPETITOR', 'PRODUCT', 'INDUSTRY'].includes(row.type)
-    || t(row.available_at) < t(row.observed_at) || t(row.available_at) > t(cutoff)
-    || t(row.valid_from) > t(cutoff) || (row.valid_to !== null && t(row.valid_to) <= t(cutoff))
+    || compareTime(row.available_at, row.observed_at) < 0 || compareTime(row.available_at, cutoff) > 0
+    || compareTime(row.valid_from, cutoff) > 0 || (row.valid_to !== null && compareTime(row.valid_to, cutoff) <= 0)
     || row.verification_status !== 'VERIFIED' || row.confidence !== 'DOCUMENTED'
     || !row.evidence_ids.length || !unique(row.evidence_ids)) return 'UNKNOWN';
   if (row.revenue_exposure !== null && (!Number.isFinite(row.revenue_exposure) || row.revenue_exposure < 0 || row.revenue_exposure > 1)) return 'UNKNOWN';
@@ -65,9 +64,9 @@ export function evaluateObservation(o: Observation, evidence: Evidence[], now: s
   const issues: string[] = [];
   if (!Object.hasOwn(HORIZONS, o.horizon)) return { state: 'WATCHING' as ObservationState, issues: ['HORIZON_INVALID'], eligible: false };
   if (![now, o.created_at, o.as_of, o.available_at, o.last_verified_at, o.next_review_at, o.expires_at].every(validTime)
-    || t(o.as_of) > t(o.available_at) || t(o.available_at) > t(o.created_at)
-    || t(o.last_verified_at) > t(o.created_at) || t(o.last_verified_at) < t(o.available_at)
-    || t(o.next_review_at) <= t(o.created_at) || t(o.expires_at) <= t(o.created_at) || t(o.created_at) > t(now)) issues.push('OBSERVATION_TIME_INVALID');
+    || compareTime(o.as_of, o.available_at) > 0 || compareTime(o.available_at, o.created_at) > 0
+    || compareTime(o.last_verified_at, o.created_at) > 0 || compareTime(o.last_verified_at, o.available_at) < 0
+    || compareTime(o.next_review_at, o.created_at) <= 0 || compareTime(o.expires_at, o.created_at) <= 0 || compareTime(o.created_at, now) > 0) issues.push('OBSERVATION_TIME_INVALID');
   if (!o.id || !o.symbol || !o.company || !o.reason || !o.strategy_version || !hashValid(o.snapshot_hash)) issues.push('OBSERVATION_LINEAGE_INVALID');
   if (!o.evidence_ids.length || !unique(o.evidence_ids) || !unique(evidence.map(e => e.id))) issues.push('EVIDENCE_ID_INVALID');
   const selected = o.evidence_ids.map(id => evidence.find(e => e.id === id));
@@ -81,10 +80,10 @@ export function evaluateObservation(o: Observation, evidence: Evidence[], now: s
   if (!o.confirmation_conditions.length || !o.invalidation_conditions.length || conditions.some(c => !c.text || !['CONFIRMED', 'NOT_MET', 'UNKNOWN'].includes(c.state)
     || !c.evidence_ids.length || !unique(c.evidence_ids) || c.evidence_ids.some(id => !o.evidence_ids.includes(id)))) issues.push('CONDITIONS_UNTRACEABLE');
   let state: ObservationState = 'WATCHING';
-  if (validTime(now) && validTime(o.expires_at) && t(now) >= t(o.expires_at)) state = 'EXPIRED';
+  if (validTime(now) && validTime(o.expires_at) && compareTime(now, o.expires_at) >= 0) state = 'EXPIRED';
   else if (issues.length === 0 && o.invalidation_conditions.some(c => c.state === 'CONFIRMED')) state = 'INVALIDATED';
   else if (issues.length === 0 && o.confirmation_conditions.every(c => c.state === 'CONFIRMED') && o.invalidation_conditions.every(c => c.state === 'NOT_MET')) state = 'CONDITION_MET';
-  if (validTime(now) && validTime(o.next_review_at) && t(now) >= t(o.next_review_at)) issues.push('REVIEW_OVERDUE');
+  if (validTime(now) && validTime(o.next_review_at) && compareTime(now, o.next_review_at) >= 0) issues.push('REVIEW_OVERDUE');
   return { state, issues: [...new Set(issues)], eligible: issues.length === 0 && !['EXPIRED', 'INVALIDATED'].includes(state) };
 }
 
@@ -97,14 +96,14 @@ export function publicationGate(o: Observation, evidence: Evidence[], licenses: 
   if (!result.eligible) issues.push('OBSERVATION_NOT_ELIGIBLE');
   if (policy.content_kind !== 'RESEARCH_OBSERVATION' || o.mode !== 'FORWARD_SHADOW') issues.push('RESEARCH_CLASSIFICATION_REQUIRED');
   if (o.publication_status !== 'APPROVED' || policy.approved_snapshot_hash !== o.snapshot_hash
-    || !policy.approval_at || !validTime(policy.approval_at) || t(policy.approval_at) < t(o.created_at) || t(policy.approval_at) > t(policy.now)) issues.push('PUBLICATION_NOT_APPROVED');
+    || !policy.approval_at || !validTime(policy.approval_at) || compareTime(policy.approval_at, o.created_at) < 0 || compareTime(policy.approval_at, policy.now) > 0) issues.push('PUBLICATION_NOT_APPROVED');
   const copy = [o.reason, ...o.confirmation_conditions.map(c => c.text), ...o.invalidation_conditions.map(c => c.text)].join(' ');
   if (/保證|穩賺|必漲|必賺|高勝率|正式推薦|買進訊號/.test(copy)) issues.push('MISLEADING_COPY');
   for (const id of o.evidence_ids) {
     const e = evidence.find(item => item.id === id), matches = licenses.filter(l => l.id === e?.license_id && l.source === e?.source);
     const l = matches.length === 1 ? matches[0] : null;
     if (!l || !l.storage || !l.derived || !l.commercial || !l.redistribution || !l.attribution || !sourceSafe(l.document_url)
-      || !validTime(l.reviewed_at) || t(l.reviewed_at) > t(policy.now) || (l.expires_at !== null && (!validTime(l.expires_at) || t(l.expires_at) <= t(policy.now)))) issues.push('LICENSE_NOT_CLEARED');
+      || !validTime(l.reviewed_at) || compareTime(l.reviewed_at, policy.now) > 0 || (l.expires_at !== null && (!validTime(l.expires_at) || compareTime(l.expires_at, policy.now) <= 0))) issues.push('LICENSE_NOT_CLEARED');
   }
   return { allowed: issues.length === 0, issues: [...new Set(issues)], state: result.state };
 }
@@ -142,7 +141,7 @@ export function validationReadiness(horizon: Horizon, c: ValidationCoverage) {
   if (!['TAIEX', 'RANDOM_ELIGIBLE', 'MOMENTUM', 'FROZEN_V1', 'CANDIDATE'].every(x => c.baselines.includes(x))) issues.push('BASELINES_INCOMPLETE');
   if (!['UP', 'DOWN', 'RANGE'].every(x => c.regimes.includes(x))) issues.push('REGIMES_INCOMPLETE');
   if (![c.train_end, c.validation_start, c.validation_end, c.oos_start, c.oos_end, c.frozen_at].every(validTime)
-    || !(t(c.train_end) < t(c.validation_start) && t(c.validation_start) <= t(c.validation_end)
-    && t(c.validation_end) < t(c.oos_start) && t(c.oos_start) <= t(c.oos_end) && t(c.frozen_at) < t(c.oos_start))) issues.push('SPLIT_LEAKAGE');
+    || !(compareTime(c.train_end, c.validation_start) < 0 && compareTime(c.validation_start, c.validation_end) <= 0
+    && compareTime(c.validation_end, c.oos_start) < 0 && compareTime(c.oos_start, c.oos_end) <= 0 && compareTime(c.frozen_at, c.oos_start) < 0)) issues.push('SPLIT_LEAKAGE');
   return { data_ready: issues.length === 0, issues, BACKTEST_VALIDITY: issues.length ? 'INSUFFICIENT' : 'READY_FOR_EXECUTION', SIGNAL_EDGE: 'UNPROVEN', metrics: null };
 }

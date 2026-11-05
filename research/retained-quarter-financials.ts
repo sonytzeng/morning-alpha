@@ -1,6 +1,6 @@
 /** Offline Owner research adapter for four already-retained issuer originals.
  * No acquisition, old-snapshot mutation, source admission or publication. */
-import {snapshotHash,validTime,hashValid,sourceSafe} from '../src/features/vnext/contracts.ts';
+import {snapshotHash,validObservationTime,compareTime,hashValid,sourceSafe} from '../src/features/vnext/contracts.ts';
 import type {FunnelInput} from '../src/features/vnext/researchFunnel.ts';
 import type {StockDossier,StockFact} from '../src/features/vnext/stockResearch.ts';
 
@@ -48,10 +48,10 @@ const day=(at:string)=>new Date(Date.parse(at)+8*3600000).toISOString().slice(0,
  * diluted EPS, reported margin, and the signed TWD CapEx line independently of
  * any later caller. The hash proves integrity against that offline review, not source admission. */
 export async function retainedQuarterFinancialFacts(cutoff:string,pack:QuarterFinancialPack,seal:QuarterFinancialSeal):Promise<StockFact[]>{
- if(!validTime(cutoff)||seal?.schema!=='RETAINED_QUARTER_FINANCIAL_SOURCE_SEAL_V1'||!hashValid(seal.source_pack_sha256)
+ if(!validObservationTime(cutoff)||seal?.schema!=='RETAINED_QUARTER_FINANCIAL_SOURCE_SEAL_V1'||!hashValid(seal.source_pack_sha256)
   ||await snapshotHash(pack)!==seal.source_pack_sha256||pack.schema!=='RETAINED_2330_DIRECT_QUARTER_FINANCIAL_FAMILIES_V1'
   ||pack.symbol!=='2330'||pack.rows.length!==4||pack.source_admitted!==false||pack.member_publication_approved!==false
-  ||pack.methodology_promoted!==false||pack.forward_sample!==0||pack.outcome_sample!==0||!validTime(pack.created_at)
+  ||pack.methodology_promoted!==false||pack.forward_sample!==0||pack.outcome_sample!==0||!validObservationTime(pack.created_at)
   ||!hashValid(pack.source_review_sha256)||!hashValid(pack.source_quality_review_sha256))throw Error('RETAINED_FINANCIAL_SOURCE_INVALID');
  const periods=['2025-Q4','2026-Q1','2026-Q2','2026-Q3'];
  for(const [i,row] of pack.rows.entries()){
@@ -66,11 +66,11 @@ export async function retainedQuarterFinancialFacts(cutoff:string,pack:QuarterFi
    ||row.capex.positive_value_semantics!=='EXPENDITURE_MAGNITUDE_NOT_CASH_INFLOW'||row.eps.page!==1||row.margin.page!==1||row.capex.page!==5
    ||!row.eps.locator||!row.margin.locator||!row.capex.locator||!sourceSafe(row.source.url)||!hashValid(row.source.sha256)
    ||!Number.isSafeInteger(row.source.bytes)||row.source.bytes<1||row.source.bytes>8_000_000||row.source.published_at!==null
-   ||row.source.original_version!==null||row.source.revision_chain!==null||!validTime(row.source.received_at)||!validTime(row.source.first_seen_at)
-   ||Date.parse(row.source.first_seen_at)!==Date.parse(row.source.received_at)||Date.parse(row.source.received_at)>Date.parse(pack.created_at)
-   ||Date.parse(row.source.received_at)<Date.parse(end+'T23:59:59+08:00'))throw Error('RETAINED_FINANCIAL_SOURCE_INVALID');
+   ||row.source.original_version!==null||row.source.revision_chain!==null||!validObservationTime(row.source.received_at)||!validObservationTime(row.source.first_seen_at)
+   ||compareTime(row.source.first_seen_at,row.source.received_at)!==0||compareTime(row.source.received_at,pack.created_at)>0
+   ||compareTime(row.source.received_at,end+'T23:59:59+08:00')<0)throw Error('RETAINED_FINANCIAL_SOURCE_INVALID');
  }
- if(Date.parse(cutoff)<Date.parse(pack.created_at)||day(cutoff)<pack.supported_as_of_dates.from||day(cutoff)>pack.supported_as_of_dates.through)throw Error('RETAINED_FINANCIAL_CUTOFF_INVALID');
+ if(compareTime(cutoff,pack.created_at)<0||day(cutoff)<pack.supported_as_of_dates.from||day(cutoff)>pack.supported_as_of_dates.through)throw Error('RETAINED_FINANCIAL_CUTOFF_INVALID');
  const result:StockFact[]=[];
  for(const row of pack.rows){
   const [whole,fraction]=row.capex.reported_signed_decimal_twd_billion.slice(1).split('.');

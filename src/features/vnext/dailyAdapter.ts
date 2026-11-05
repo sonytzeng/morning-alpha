@@ -1,21 +1,59 @@
 /** Date-driven, official-source-only adapter. No historical file or credential fallback. */
-import {snapshotHash, HORIZONS} from './contracts.ts';
+import {snapshotHash, HORIZONS, validObservationTime, compareTime} from './contracts.ts';
 import {previousMarketTradingDate, coveredCalendarDate, isMarketTradingDate} from '../../../supabase/functions/_shared/market-session-contract.mjs';
 import {RECOMMENDATION_UNIVERSE} from '../../../supabase/functions/_shared/recommendation-stock-evidence.ts';
-import {historyUrl, parseOfficialHistory, tpexDailyUrl, parseTpexDaily, companyDirectory, type Exchange} from '../../../research/entry-official-history.ts';
+import {historyUrl, parseOfficialHistory, tpexDailyUrl, parseTpexDaily, twseDailyUrl, parseTwseDaily, companyDirectory, type Exchange} from '../../../research/entry-official-history.ts';
 import {parseRevenue, parseInstitutional, parseFinancial, parseIndex, parseEventIndex, ACTION_SOURCES, parseActionInventory} from './dailyParsers.mjs';
 import type {AcquiredResearch} from './dailyIntelligence.ts';
 import type {DailyBar, ResearchFact, FunnelInput} from './researchFunnel.ts';
-import {RESEARCH_RULES} from './researchFunnel.ts';
+import {RESEARCH_RULES,traceIssues} from './researchFunnel.ts';
 import type {EntryInput} from '../../../research/entry-opportunity.ts';
 import {targetSessions} from './dailyOutcome.ts';
 import type {DailyLock} from './dailyIntelligence.ts';
 
 export const ADAPTER_VERSION='VNEXT_DAILY_OFFICIAL_1';
+// Latest requested month may not be published yet. Fetch one older month as
+// a fallback; the evaluator still requires three actual consecutive reports.
+export const REVENUE_ACQUISITION_MONTHS=RESEARCH_RULES.medium_months+1;
+// Longer provider waits are retained by the worker's durable checkpoint,
+// separately from the SQL scheduler's bounded 300-second wake-up interval.
+export const MAX_PROVIDER_RETRY_SECONDS=86400;
+export function providerRetryAfter(header:string|null,observedAt:string){
+ const now=Date.parse(observedAt);if(!validObservationTime(observedAt))throw Error('SOURCE_RETRY_CLOCK_INVALID');
+ if(header===null)return {retryAfter:3,retryNotBefore:null,retryBlocked:false};
+ const value=header.trim();let seconds:number;
+ if(/^\d+(?:\.\d+)?$/.test(value)&&value.length<=32)seconds=Math.ceil(Number(value));
+ else{
+  // Validate the three HTTP-date representations, including their actual
+  // calendar and weekday. Date.parse alone accepts unrelated/local strings.
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const weekdays=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const fullDays=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const imf=/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat), (\d{2}) ([A-Z][a-z]{2}) (\d{4}) (\d{2}):(\d{2}):(\d{2}) GMT$/.exec(value);
+  const old=/^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday), (\d{2})-([A-Z][a-z]{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) GMT$/.exec(value);
+  const asc=/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat) ([A-Z][a-z]{2}) ( \d|\d{2}) (\d{2}):(\d{2}):(\d{2}) (\d{4})$/.exec(value);
+  const parts=imf??old??(asc?[asc[0],asc[1],asc[3].trim(),asc[2],asc[7],asc[4],asc[5],asc[6]]:null);
+  if(!parts)return {retryAfter:3,retryNotBefore:null,retryBlocked:true};
+  let year=Number(parts[4]);
+  if(old){year=Math.floor(new Date(now).getUTCFullYear()/100)*100+year;
+   if(Date.UTC(year,months.indexOf(parts[3]),Number(parts[2]),Number(parts[5]),Number(parts[6]),Number(parts[7]))>now+50*365.25*86400000)year-=100;}
+  const month=months.indexOf(parts[3]),day=Number(parts[2]),hour=Number(parts[5]),minute=Number(parts[6]),second=Number(parts[7]);
+  const parsed=Date.UTC(year,month,day,hour,minute,second),date=new Date(parsed);
+  if(month<0||year<100||date.getUTCFullYear()!==year||date.getUTCMonth()!==month||date.getUTCDate()!==day
+   ||date.getUTCHours()!==hour||date.getUTCMinutes()!==minute||date.getUTCSeconds()!==second
+   ||(old?fullDays:weekdays)[date.getUTCDay()]!==parts[1])return {retryAfter:3,retryNotBefore:null,retryBlocked:true};
+  seconds=Math.ceil((parsed-now)/1000);
+ }
+ if(!Number.isFinite(seconds)||seconds>MAX_PROVIDER_RETRY_SECONDS)return {retryAfter:3,retryNotBefore:null,retryBlocked:true};
+ seconds=Math.max(3,seconds);
+ return {retryAfter:seconds,retryNotBefore:seconds>300?new Date(now+seconds*1000).toISOString():null,retryBlocked:false};
+}
+const INDEX_OPEN_API='https://openapi.twse.com.tw/v1/indicesReport/MI_5MINS_HIST';
 export type Company={symbol:string;company:string;exchange:Exchange;industry:string};
 export type SourceTask={key:string;kind:string;url:string;format:'json'|'text';scope:string;
  symbols:string[];exchange?:Exchange;month?:string;date?:string;period?:string;year?:number;quarter?:number;
- from?:string;through?:string;form?:Record<string,string>;action_index?:number;max_age_days:number};
+ from?:string;through?:string;form?:Record<string,string>;action_index?:number;max_age_days:number;
+ financial_response_contract?:'MOPS_RESPONSE_PERIOD_V1';benchmark_response_contract?:'TWSE_OPENAPI_INDEX_V1'};
 export type SourceReceipt={task:SourceTask;first_seen_at:string;available_at:string;published_at:null;as_of:string;
  version:string;raw_hash:string;payload_hash:string;payload:Record<string,unknown>;status:'OK'|'UNAVAILABLE';reason:string|null};
 const day=(at:string)=>new Date(Date.parse(at)+8*3600000).toISOString().slice(0,10);
@@ -38,10 +76,11 @@ export async function acquisitionPlan(date:string,companies:Company[]):Promise<S
  if(companies.length!==72||JSON.stringify(companies.map(c=>c.symbol).sort())!==JSON.stringify([...RECOMMENDATION_UNIVERSE].sort()))throw Error('UNIVERSE_DRIFT');
  const dates=sessionsBefore(date),through=dates.at(-1)!,months=[...new Set(dates.map(d=>d.slice(0,7)))],tasks:Omit<SourceTask,'key'>[]=[];
  const add=(t:Omit<SourceTask,'key'|'scope'|'max_age_days'>,age=1)=>tasks.push({...t,scope:ADAPTER_VERSION+(age===1?':'+date:''),max_age_days:age});
+ add({kind:'TWSE_PRICE_DAY',url:twseDailyUrl(through),format:'json',symbols:companies.filter(c=>c.exchange==='TWSE').map(c=>c.symbol),exchange:'TWSE',date:through});
  for(const c of companies.filter(c=>c.exchange==='TWSE'))for(const month of months)add({kind:'PRICE',url:historyUrl(c.exchange,c.symbol,month),format:'json',symbols:[c.symbol],exchange:c.exchange,month},month===through.slice(0,7)?1:7);
  const otc=companies.filter(c=>c.exchange==='TPEX').map(c=>c.symbol);
  for(const d of dates)add({kind:'OTC_PRICE',url:tpexDailyUrl(d),format:'json',symbols:otc,date:d,exchange:'TPEX'},d===through?1:7);
- for(const month of months)add({kind:'BENCHMARK',url:`https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?date=${month.replace('-','')}01&response=json`,format:'json',symbols:[],month},month===through.slice(0,7)?1:7);
+ for(const month of months){const current=month===through.slice(0,7);add({kind:'BENCHMARK',url:current?INDEX_OPEN_API:`https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?date=${month.replace('-','')}01&response=json`,format:'json',symbols:[],month,...(current?{benchmark_response_contract:'TWSE_OPENAPI_INDEX_V1' as const}:{})},current?1:7);}
  const [y,m]=date.split('-').map(Number);
  for(const exchange of ['TWSE','TPEX'] as const){const market=exchange==='TWSE'?'sii':'otc',symbols=companies.filter(c=>c.exchange===exchange).map(c=>c.symbol);
   for(let i=1;i<=36;i++){const d=new Date(Date.UTC(y,m-1-i,1)),period=d.toISOString().slice(0,7),year=d.getUTCFullYear(),month=d.getUTCMonth()+1;
@@ -50,7 +89,7 @@ export async function acquisitionPlan(date:string,companies:Company[]):Promise<S
    add({kind:'INSTITUTIONAL',date:d,exchange,symbols,format:'json',url:exchange==='TWSE'?`https://www.twse.com.tw/rwd/zh/fund/T86?date=${d.replaceAll('-','')}&selectType=ALL&response=json`:`https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&se=EW&t=D&d=${roc}&o=json`},d===through?1:7);}
   const quarterIndex=y*4+Math.floor((m-1)/3)-1;
   for(let i=0;i<10;i++){const q=quarterIndex-i,year=Math.floor(q/4),quarter=q%4+1;
-   for(const [kind,path] of [['FINANCIAL_YTD','04'],['CASHFLOW_YTD','20']])add({kind,year,quarter,exchange,symbols,format:'text',url:`https://mopsov.twse.com.tw/mops/web/ajax_t163sb${path}`,form:{encodeURIComponent:'1',firstin:'1',off:'1',step:'1',isQuery:'Y',TYPEK:market,year:String(year-1911),season:String(quarter).padStart(2,'0')}},i<2?1:7);}
+   for(const [kind,path] of [['FINANCIAL_YTD','04'],['CASHFLOW_YTD','20']])add({kind,year,quarter,exchange,symbols,format:'text',financial_response_contract:'MOPS_RESPONSE_PERIOD_V1',url:`https://mopsov.twse.com.tw/mops/web/ajax_t163sb${path}`,form:{encodeURIComponent:'1',firstin:'1',off:'1',step:'1',isQuery:'Y',TYPEK:market,year:String(year-1911),season:String(quarter).padStart(2,'0')}},i<2?1:7);}
  }
  for(const c of companies)for(let i=0;i<2;i++){const d=new Date(Date.UTC(y,m-1-i,1)),year=d.getUTCFullYear(),month=d.getUTCMonth()+1,from=d.toISOString().slice(0,10),end=new Date(Date.UTC(year,month,0)).toISOString().slice(0,10),to=end<date?end:date;
   add({kind:'EVENT',url:'https://mops.twse.com.tw/mops/api/t05st01',format:'json',symbols:[c.symbol],year,month:String(month),from,through:to,form:{companyId:c.symbol,year:String(year-1911),month:String(month),firstDay:'1',lastDay:String(Number(to.slice(8)))}});}
@@ -62,8 +101,9 @@ export async function acquisitionPlan(date:string,companies:Company[]):Promise<S
  // all evaluator requirements stay unchanged; old persisted plans are immutable.
  const warmDates=new Set(dates.slice(-20)),warmMonths=new Set([...warmDates].map(d=>d.slice(0,7)));
  const institutionalDates=new Set(dates.slice(-RESEARCH_RULES.medium_institutional_sessions));
- const revenuePeriods=new Set(tasks.filter(t=>t.kind==='REVENUE').map(t=>t.period!).sort().filter((p,i,a)=>a.indexOf(p)===i).slice(-RESEARCH_RULES.medium_months));
+ const revenuePeriods=new Set(tasks.filter(t=>t.kind==='REVENUE').map(t=>t.period!).sort().filter((p,i,a)=>a.indexOf(p)===i).slice(-REVENUE_ACQUISITION_MONTHS));
  const priority=(t:Omit<SourceTask,'key'>)=>{
+  if(t.kind==='TWSE_PRICE_DAY')return -1;
   if(t.kind==='PRICE'||t.kind==='BENCHMARK')return warmMonths.has(t.month!)?0:3;
   if(t.kind==='OTC_PRICE')return warmDates.has(t.date!)?0:3;
   if(t.kind==='REVENUE'&&revenuePeriods.has(t.period!)||t.kind==='INSTITUTIONAL'&&institutionalDates.has(t.date!))return 1;
@@ -109,11 +149,27 @@ export async function normalizeSource(task:SourceTask,raw:unknown,at:string):Pro
   const records=history?history.bars.map(bar=>({symbol:t.symbols[0],bar})):parseTpexDaily(p,t.date!,t.symbols,at).daily.filter(r=>r.bar).map(r=>({symbol:r.symbol,bar:r.bar!}));
   return {rows:await Promise.all(records.map(async({symbol,bar})=>({symbol,...bar,id:`bar-${symbol}-${bar.date}`,source:t.url,published_at:null,first_seen_at:at,as_of:bar.date+'T13:30:00+08:00',evidence_hash:await snapshotHash(bar),session_scope:history?.volume_amount_scope??'INCLUDES_ODD_AFTERHOURS_BLOCK_TRADES'}))),rejected:history?.rejected??[]};
  }
+ if(t.kind==='TWSE_PRICE_DAY'){
+  if(t.exchange!=='TWSE'||!t.date||t.url!==twseDailyUrl(t.date))throw Error('DAILY_SOURCE_IDENTITY_INVALID');
+  const daily=parseTwseDaily(p,t.date,t.symbols,at);
+  return {rows:await Promise.all(daily.daily.filter(r=>r.bar).map(async({symbol,bar})=>({symbol,...bar!,id:`bar-${symbol}-${bar!.date}`,source:t.url,
+   published_at:null,first_seen_at:at,as_of:bar!.date+'T13:30:00+08:00',evidence_hash:await snapshotHash(bar),session_scope:daily.volume_amount_scope}))),
+   rejected:daily.daily.filter(r=>!r.bar).map(r=>({symbol:r.symbol,reason:r.reason}))};
+ }
  if(t.kind==='REVENUE')return parseRevenue(String(raw),{...t,period:t.period!},at);
  if(t.kind==='INSTITUTIONAL')return parseInstitutional(raw,{...t,exchange:t.exchange!,date:t.date!},at);
  if(t.kind==='FINANCIAL_YTD'||t.kind==='CASHFLOW_YTD')return parseFinancial(String(raw),{...t,year:t.year!,quarter:t.quarter!,exchange:t.exchange!},at);
  if(t.kind==='EVENT')return parseEventIndex(raw,{...t,symbol:t.symbols[0],year:t.year!,month:Number(t.month),from:t.from!,through:t.through!,url:t.url+'?'+new URLSearchParams(t.form)},at);
- if(t.kind==='BENCHMARK')return {rows:parseIndex(raw,t.month,at,t.url).map((b:Record<string,unknown>)=>({...b,id:'benchmark-'+b.date,volume:null,amount:null,session_scope:'TAIEX_OFFICIAL'}))};
+ if(t.kind==='BENCHMARK'){
+  if(t.benchmark_response_contract!==undefined||t.url===INDEX_OPEN_API){
+   const fields=['Date','OpeningIndex','HighestIndex','LowestIndex','ClosingIndex'];
+   if(t.benchmark_response_contract!=='TWSE_OPENAPI_INDEX_V1'||t.url!==INDEX_OPEN_API||!/^\d{4}-\d\d$/.test(t.month??'')
+    ||!Array.isArray(raw)||!raw.length||raw.length>32||raw.some(r=>!r||typeof r!=='object'||Array.isArray(r)
+     ||Object.keys(r).sort().join('|')!==[...fields].sort().join('|')||fields.some(k=>typeof r[k]!=='string')))throw Error('BENCHMARK_OPENAPI_SCHEMA');
+   raw={stat:'OK',date:t.month!.replace('-','')+'01',fields:['日期','開盤指數','最高指數','最低指數','收盤指數'],data:raw.map(r=>fields.map(k=>r[k]))};
+  }
+  return {rows:parseIndex(raw,t.month,at,t.url).map((b:Record<string,unknown>)=>({...b,id:'benchmark-'+b.date,volume:null,amount:null,session_scope:'TAIEX_OFFICIAL'}))};
+ }
  if(t.kind==='ACTION')return {rows:parseActionInventory(ACTION_SOURCES[t.action_index!],raw,t.symbols,t.url,at,t.from,t.through),complete:false};
  throw Error('SOURCE_KIND_INVALID');
 }
@@ -123,7 +179,8 @@ export async function fetchSource(task:SourceTask,fetcher:typeof fetch,clock:()=
  if(url.protocol!=='https:'||url.username||url.password||!['www.twse.com.tw','openapi.twse.com.tw','www.tpex.org.tw','mopsov.twse.com.tw','mops.twse.com.tw'].includes(url.hostname))throw Error('SOURCE_NOT_ALLOWED');
  const json=task.kind==='EVENT',body=task.form?(json?JSON.stringify(task.form):new URLSearchParams(task.form)):undefined;
  const r=await fetcher(task.url,{method:body?'POST':'GET',body,redirect:'error',signal:AbortSignal.any([signal,AbortSignal.timeout(12000)]),headers:{Accept:task.format==='json'?'application/json':'text/html,text/csv',...(body?{'Content-Type':json?'application/json':'application/x-www-form-urlencoded'}:{})}});
- if(!r.ok){await r.body?.cancel();const error=Object.assign(Error(r.status===429?'RATE_LIMITED':r.status===403?'SOURCE_ACCESS_RESTRICTED':'SOURCE_HTTP_'+r.status),{retryAfter:Math.min(300,Math.max(3,Number(r.headers.get('retry-after'))||3))});throw error;}
+ if(!r.ok){await r.body?.cancel();const observedAt=clock(),retry=r.status===403?{retryAfter:3,retryNotBefore:null,retryBlocked:false}:providerRetryAfter(r.headers.get('retry-after'),observedAt);
+  throw Object.assign(Error(r.status===429?'RATE_LIMITED':r.status===403?'SOURCE_ACCESS_RESTRICTED':'SOURCE_HTTP_'+r.status),retry,{retryObservedAt:observedAt});}
  const reader=r.body!.getReader(),parts:Uint8Array[]=[];let size=0;
  try{for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>8_000_000)throw Error('SOURCE_SIZE_LIMIT');parts.push(value);}}finally{await reader.cancel();}
  const bytes=new Uint8Array(size);let pos=0;for(const part of parts){bytes.set(part,pos);pos+=part.length;}
@@ -132,18 +189,100 @@ export async function fetchSource(task:SourceTask,fetcher:typeof fetch,clock:()=
 }
 export async function assembleDaily(date:string,companies:Company[],receipts:SourceReceipt[],cutoff:string,market:EntryInput['market']=null):Promise<AcquiredResearch>{
  const dates=sessionsBefore(date),through=dates.at(-1)!;
+ // Daily research and Entry both consume the final 20 complete sessions.
+ // Keep the 250-session calendar and every original receipt/hash, while
+ // avoiding 230 unused bars per stock in every checkpoint and validation.
+ const dailyPriceDates=new Set(dates.slice(-20));
  if(day(cutoff)!==date)throw Error('CUTOFF_DATE_MISMATCH');
  const valid=receipts.filter(r=>r.status==='OK');for(const r of valid)if(Date.parse(r.available_at)>Date.parse(cutoff)||r.payload_hash!==await snapshotHash(r.payload))throw Error('SOURCE_REVISION_INVALID');
- const records=(k:string)=>valid.filter(r=>r.task.kind===k).flatMap(r=>Array.isArray(r.payload.rows)?r.payload.rows as Record<string,unknown>[]:[]);
- const allBars=[...records('PRICE'),...records('OTC_PRICE')],facts=[...records('REVENUE'),...records('INSTITUTIONAL'),...records('FINANCIAL_YTD'),...records('CASHFLOW_YTD')];
- const inputs:FunnelInput[]=companies.map(c=>({symbol:c.symbol,company:c.company,cutoff,through,next_session:date,expected_sessions:dates,
-  bars:allBars.filter(b=>b.symbol===c.symbol&&dates.includes(String(b.date))).sort((a,b)=>String(a.date).localeCompare(String(b.date))) as DailyBar[],
-  facts:facts.filter(f=>f.symbol===c.symbol) as ResearchFact[],v1_missing:Object.fromEntries(Object.keys(HORIZONS).map(h=>[h,['INDEPENDENT_V1_NOT_EVALUATED']])) as FunnelInput['v1_missing']}));
+ const sourceIssues:{kind:string;key:string;reason:string}[]=[];
+ // Old immutable receipts remain preserved, but a request-derived quarter is
+ // not upgraded by merely loading it through the newer adapter. Only future
+ // versioned tasks with matching source proof may contribute financial facts.
+ const admitted=valid.filter(r=>{
+  if(!['FINANCIAL_YTD','CASHFLOW_YTD'].includes(r.task.kind))return true;
+  const rows=Array.isArray(r.payload.rows)?r.payload.rows as Record<string,unknown>[]:[];
+  const matched=r.task.financial_response_contract==='MOPS_RESPONSE_PERIOD_V1'&&rows.length>0&&rows.every(row=>{
+   const period=object(row.source_period);
+   return row.period_verification==='RESPONSE_REPORT_HEADING_MATCHED_REQUEST'
+    &&period.year===r.task.year&&period.quarter===r.task.quarter
+    &&row.period===`${r.task.year}-Q${r.task.quarter}`&&row.basis==='AS_REPORTED_YTD'
+    &&row.standalone_quarter_actual===false&&row.kind===r.task.kind
+    &&r.task.symbols.includes(String(row.symbol));
+  });
+  if(!matched)sourceIssues.push({kind:r.task.kind,key:r.task.key,reason:'FINANCIAL_RESPONSE_PERIOD_UNPROVEN'});
+  return matched;
+ });
+ const records=(k:string)=>admitted.filter(r=>r.task.kind===k).flatMap(r=>Array.isArray(r.payload.rows)?r.payload.rows as Record<string,unknown>[]:[]);
+ // Canonical direction/regime remains authoritative. Bind its missing index
+ // change to two complete official sessions already known at this cutoff;
+ // neither an unrelated latest quote nor an unpromoted V2 run is required.
+ if(market&&market.value.change_percent===undefined&&market.source_ref
+  &&[market.observed_at,market.available_at,cutoff].every(validObservationTime)
+  &&compareTime(market.observed_at,market.available_at)<=0&&compareTime(market.available_at,cutoff)<=0){
+  const expected=dates.slice(-2),selected=expected.map(d=>admitted.filter(r=>r.task.kind==='BENCHMARK').flatMap(r=>
+   (Array.isArray(r.payload.rows)?r.payload.rows as Record<string,unknown>[]:[]).filter(b=>b.date===d).map(b=>({r,b}))));
+  // Different official endpoints may retain the same session. Require equal
+  // native OHLC and unique endpoint rows; conflicts never select a winner.
+  if(expected.length===2&&selected.every(xs=>xs.length>0&&new Set(xs.map(x=>x.r.task.url)).size===xs.length
+   &&xs.every(x=>['open','high','low','close'].every(k=>x.b[k]===xs[0].b[k])))){
+   const pairs=selected.flat(),ok=pairs.every(({r,b})=>
+    (r.task.url===INDEX_OPEN_API&&r.task.benchmark_response_contract==='TWSE_OPENAPI_INDEX_V1'
+     ||r.task.url===`https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?date=${r.task.month?.replace('-','')}01&response=json`)
+    &&b.source===r.task.url&&b.session_scope==='TAIEX_OFFICIAL'&&b.id==='benchmark-'+b.date
+    &&[r.first_seen_at,r.available_at].every(validObservationTime)
+    &&compareTime(r.first_seen_at,r.available_at)<=0&&compareTime(r.available_at,cutoff)<=0
+    &&b.first_seen_at===r.first_seen_at&&b.available_at===r.available_at
+    &&[b.open,b.high,b.low,b.close].every(v=>typeof v==='number'&&Number.isFinite(v)&&v>0)
+    &&Number(b.high)>=Math.max(Number(b.open),Number(b.close))&&Number(b.low)<=Math.min(Number(b.open),Number(b.close))
+    &&typeof b.as_of==='string'&&b.as_of===b.date+'T13:30:00+08:00'
+    &&traceIssues(b as unknown as DailyBar,cutoff).length===0);
+   if(ok){
+    const change=(Number(selected[1][0].b.close)/Number(selected[0][0].b.close)-1)*100;
+    const latest=(values:string[])=>values.reduce((a,b)=>compareTime(a,b)>=0?a:b);
+    if(Number.isFinite(change))market={...market,value:{...market.value,change_percent:change},
+     observed_at:latest([market.observed_at,...pairs.map(({r})=>r.first_seen_at)]),
+     available_at:latest([market.available_at,...pairs.map(({r})=>r.available_at)]),
+     source_ref:market.source_ref+pairs.map(({r,b})=>'|'+r.task.url+'#'+b.id+':'+b.evidence_hash).join('')};
+   }
+  }
+ }
+ const historicalBars=[...records('PRICE'),...records('OTC_PRICE')],originalDailyBars=records('TWSE_PRICE_DAY'),historicalDates=new Set(dates),companySymbols=new Set(companies.map(c=>c.symbol));
+ // validateAcquired used to inspect these retained prefix bars too. Preserve
+ // its point-in-time/lineage veto even though daily decisions do not use them.
+ for(const b of [...historicalBars,...originalDailyBars])if(companySymbols.has(String(b.symbol))&&historicalDates.has(String(b.date))&&!dailyPriceDates.has(String(b.date))
+  &&traceIssues(b as DailyBar,cutoff).some(reason=>['FUTURE_EVIDENCE','TIME_ORDER_INVALID','LINEAGE_INVALID'].includes(reason)))throw Error('POINT_IN_TIME_INVALID');
+ const historyBars=historicalBars.filter(b=>dailyPriceDates.has(String(b.date))),
+  dailyBars=originalDailyBars.filter(b=>dailyPriceDates.has(String(b.date))),priceKeys=new Map<string,Record<string,unknown>[]>();
+ const barKey=(b:Record<string,unknown>)=>String(b.symbol)+':'+String(b.date);
+ for(const b of historyBars){const k=barKey(b);priceKeys.set(k,[...(priceKeys.get(k)??[]),b]);}
+ const dailyKeys=new Map<string,Record<string,unknown>[]>();for(const b of dailyBars){const k=barKey(b);dailyKeys.set(k,[...(dailyKeys.get(k)??[]),b]);}
+ for(const [key,rows] of dailyKeys){
+  const prior=priceKeys.get(key)??[],b=rows[0];
+  if(rows.length!==1||prior.length>1||prior.some(p=>p.session_scope!==b.session_scope||['open','high','low','close','volume','amount'].some(k=>p[k]!==b[k]))){
+   priceKeys.delete(key);sourceIssues.push({kind:'TWSE_PRICE_DAY',key,reason:'OFFICIAL_PRICE_SOURCE_CONFLICT'});
+  }else if(!prior.length)priceKeys.set(key,rows);
+ }
+ const allBars=[...priceKeys.values()].flat(),facts=[...records('REVENUE'),...records('INSTITUTIONAL'),...records('FINANCIAL_YTD'),...records('CASHFLOW_YTD')];
+ const inputs:AcquiredResearch['inputs']=companies.map(c=>{
+  const stockFacts=facts.filter(f=>f.symbol===c.symbol) as ResearchFact[],selected=new Set<ResearchFact>();
+  // Match the evaluator's stable period sort and slice, including duplicate
+  // periods. Financial/other kinds stay complete for newer-period/basis vetoes.
+  for(const [kind,count] of [['REVENUE',RESEARCH_RULES.medium_months],['INSTITUTIONAL',RESEARCH_RULES.medium_institutional_sessions]] as const)
+   for(const f of stockFacts.filter(f=>f.kind===kind).sort((a,b)=>(a.period??'').localeCompare(b.period??'')).slice(-count))selected.add(f);
+  const omitted=stockFacts.filter(f=>['REVENUE','INSTITUTIONAL'].includes(f.kind)&&!selected.has(f));
+  for(const f of omitted)if(traceIssues(f,cutoff).some(reason=>['FUTURE_EVIDENCE','TIME_ORDER_INVALID','LINEAGE_INVALID'].includes(reason)))throw Error('POINT_IN_TIME_INVALID');
+  const kept=stockFacts.filter(f=>!['REVENUE','INSTITUTIONAL'].includes(f.kind)||selected.has(f));
+  return {symbol:c.symbol,company:c.company,cutoff,through,next_session:date,expected_sessions:dates,
+   bars:allBars.filter(b=>b.symbol===c.symbol&&dates.includes(String(b.date))).sort((a,b)=>String(a.date).localeCompare(String(b.date))) as DailyBar[],
+   facts:kept,...(omitted.length?{omitted_fact_ids:[...new Set(omitted.map(f=>f.id))]}:{}),
+   v1_missing:Object.fromEntries(Object.keys(HORIZONS).map(h=>[h,['INDEPENDENT_V1_NOT_EVALUATED']])) as FunnelInput['v1_missing']};
+ });
  // Do not infer reviewed company events from an index, cumulative EPS from a
  // quarter, or adjusted relative/sector returns from raw prices.
  const entry:EntryInput={business_date:date,evaluation_time:cutoff,source_revision:await snapshotHash(valid.map(r=>r.payload_hash)),source_evidence_hash:await snapshotHash(inputs),market,provenance:'REAL_RETAINED',mode:'FORWARD',stocks:inputs.map(i=>{
   const revenue=i.facts.filter(f=>f.kind==='REVENUE').sort((a,b)=>(a.period??'').localeCompare(b.period??'')).at(-1);
   const fundamental=revenue&&typeof revenue.values.yoy_percent==='number'&&typeof revenue.values.mom_percent==='number'?{value:{revenue_yoy:revenue.values.yoy_percent,revenue_mom:revenue.values.mom_percent,eps_actual:null},source_ref:revenue.source,observed_at:revenue.as_of!,available_at:revenue.available_at!}:null;
   return {symbol:i.symbol,name:i.company,bars:i.bars.slice(-20).map(b=>({...b,source_ref:b.source,available_at:b.available_at!})),fundamental,relative_strength:null,sector_return:null,events_reviewed:null,v2_status:null};})};
- const body={inputs,entry,evidence_cutoff:cutoff};return {...body,snapshot_hash:await snapshotHash(body)};
+ const body={inputs,entry,evidence_cutoff:cutoff,...(sourceIssues.length?{source_issues:sourceIssues}:{})};return {...body,snapshot_hash:await snapshotHash(body)};
 }

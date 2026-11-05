@@ -34,7 +34,7 @@ function setup() {
   const calls = { auth: [], channels: [], removed: [], refresh: 0, morning: 0, warnings: [] };
   const timers = new Set(), listeners = new Set();
   const supabase = {
-    auth: { getSession: () => sessionReady },
+    auth: { getSession: () => sessionReady, onAuthStateChange: () => ({data:{subscription:{unsubscribe(){}}}}) },
     realtime: { setAuth: (...args) => { calls.auth.push(args); return ready; } },
     channel(topic) {
       const channel = { topic, bindings: [], subscribed: 0,
@@ -47,6 +47,7 @@ function setup() {
   };
   const globals = {
     supabase, loadMorningState: () => { calls.morning++; }, refresh: () => { calls.refresh++; },
+    active:{current:false},generation:{current:0},morningRequest:{current:0},isFetchingRef:{current:null},
     getAdaptiveDashboardPollMs: () => 300000,
     document: { visibilityState: 'visible',
       addEventListener: (name, fn) => listeners.add(fn), removeEventListener: (name, fn) => listeners.delete(fn) },

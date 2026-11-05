@@ -1,0 +1,72 @@
+{
+  "schema": "READBACK_READDY_RESEARCH_FRONTEND_V1",
+  "version": 723,
+  "recorded_at": "2026-10-31T11:10:31.381Z",
+  "files": [
+    {
+      "path": "src/lib/supabase.ts",
+      "expected_characters": 502,
+      "observed_characters": 502,
+      "match": "EXACT"
+    },
+    {
+      "path": "src/lib/supabaseAuthFetch.ts",
+      "expected_characters": 2412,
+      "observed_characters": 2411,
+      "match": "ONLY_ONE_TERMINAL_LF"
+    },
+    {
+      "path": "src/pages/academy/useAcademyAccess.ts",
+      "expected_characters": 3558,
+      "observed_characters": 3557,
+      "match": "ONLY_ONE_TERMINAL_LF"
+    },
+    {
+      "path": "src/features/vnext/dailyAiMemberDelta.ts",
+      "expected_characters": 3434,
+      "observed_characters": 3433,
+      "match": "ONLY_ONE_TERMINAL_LF"
+    },
+    {
+      "path": "src/pages/vnext/MemberPage.tsx",
+      "expected_characters": 22020,
+      "observed_characters": 22020,
+      "match": "EXACT"
+    },
+    {
+      "path": "src/features/vnext/dailyAiCopy.ts",
+      "expected_characters": 8242,
+      "observed_characters": 8242,
+      "match": "EXACT"
+    },
+    {
+      "path": "src/pages/vnext/DailyAiMemberResearch.tsx",
+      "expected_characters": 10364,
+      "observed_characters": 10364,
+      "match": "EXACT"
+    },
+    {
+      "path": "src/pages/home/page.tsx",
+      "expected_characters": 52632,
+      "observed_characters": 52632,
+      "match": "EXACT"
+    },
+    {
+      "path": "src/pages/pricing/Pricing.tsx",
+      "expected_characters": 7856,
+      "observed_characters": 7856,
+      "match": "EXACT"
+    }
+  ],
+  "type_check": "PASS",
+  "build": "PASS",
+  "lint": "PASS",
+  "diff_check": "PASS",
+  "final_member_expiry_pricing_tests": {
+    "pass": 15,
+    "fail": 0
+  },
+  "frontend_published": false,
+  "capacity_10000_proven": false,
+  "payment_enabled": false
+}

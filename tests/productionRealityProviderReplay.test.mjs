@@ -6,20 +6,11 @@ import {
 } from './helpers/productionRealityProviderReplay.mjs';
 import { CHECKPOINT_PROVIDER_KEYS, validateAtomicCheckpointEvidenceRows } from '../supabase/functions/_shared/fetch-checkpoint-evidence.mjs';
 
-test('real Production 07:00 provider replay reaches one complete atomic candidate without claiming a natural day', async () => {
-  const replay = await replayProductionRealityProviderBatch();
-  assert.equal(replay.source, 'REAL_PRODUCTION_CAPTURE');
-  assert.equal(replay.real_production_capture, true);
-  assert.equal(replay.replay_uses_same_adapter_as_production, true);
-  assert.equal(replay.replay_uses_same_contract_as_production, true);
-  assert.equal(replay.replay_uses_correct_market_phase, true);
-  assert.equal(replay.provider_count, 11);
-  assert.equal(replay.evidence.length, 11);
-  assert.deepEqual(replay.evidence.map(row => row.provider_key), CHECKPOINT_PROVIDER_KEYS);
-  assert.equal(validateAtomicCheckpointEvidenceRows(replay.evidence).valid, true);
-  assert.equal(replay.historical_success_claim, false);
-  assert.equal(replay.natural_day_pass_claimed, false);
-  assert.deepEqual(replay.synthetic_adjustments, ['TAIWAN_PHASE_SESSION_CONTRACT_FIXTURE']);
+test('unchanged historical ticker-based replay fails closed under the repaired current adapter', async () => {
+  // This helper retains original real responses and its original synthetic
+  // ticker phase adjustment. It no longer proves current 11/11 quote readiness.
+  await assert.rejects(replayProductionRealityProviderBatch,
+    /TAIEX_REALITY_ADAPTER_FAILED:PROVIDER_RESPONSE_CONTRACT_INVALID/);
 });
 
 test('Production Replay rejects fixtures that are not marked as real Production captures', () => {
@@ -34,11 +25,10 @@ test('Production Replay rejects fixtures that are not marked as real Production 
   }), /REAL_PRODUCTION_CAPTURE_REQUIRED/);
 });
 
-test('the captured prior TAIEX contract rejection still produces atomic 0 instead of 10', async () => {
-  const replay = await replayProductionRealityProviderBatch();
-  const withoutTaiex = replay.evidence.filter(row => row.provider_key !== 'TAIEX');
-  assert.equal(withoutTaiex.length, 10);
-  assert.deepEqual(validateAtomicCheckpointEvidenceRows(withoutTaiex), {
+test('synthetic partial Atomic control cannot turn a rejected cash provider into a ten-row commit', () => {
+  // Explicit cardinality-only control, not fabricated retained provider data.
+  const partial=CHECKPOINT_PROVIDER_KEYS.filter(key=>key!=='TAIEX').map(provider_key=>({provider_key}));
+  assert.deepEqual(validateAtomicCheckpointEvidenceRows(partial), {
     valid: false, error: 'ATOMIC_CHECKPOINT_PROVIDER_CARDINALITY', rowCount: 10,
   });
 });

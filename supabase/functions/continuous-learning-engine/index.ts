@@ -17,6 +17,7 @@ import {
   safeAverage,
   selectTargetTradingDate,
   stableCaseSignature,
+  temporalLearningCandidate,
 } from '../_shared/continuous-learning-core.mjs';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
 import { canonicalMarketDocument } from '../_shared/canonical-market-state.ts';
@@ -867,8 +868,10 @@ async function aggregatePatterns(
     const prediction = predictionMap.get(String(review.prediction_id));
     const outcome = outcomeMap.get(String(review.prediction_id));
     if (!prediction || !outcome) continue;
-    const dimensions = buildPatternDimensions(prediction);
-    const key = buildPatternKey(dimensions);
+    const modelVersion = firstText(prediction.model_version);
+    if (!modelVersion || modelVersion === 'unknown') continue;
+    const dimensions = { ...buildPatternDimensions(prediction), model_version: modelVersion };
+    const key = buildPatternKey(dimensions) + '|model_version=' + encodeURIComponent(modelVersion);
     const group = groups.get(key) || [];
     group.push({ prediction, outcome, review, dimensions });
     groups.set(key, group);
@@ -887,7 +890,7 @@ async function aggregatePatterns(
     const accuracy = sampleSize > 0 ? success / sampleSize : null;
     patternRows.push({
       pattern_key: patternKey,
-      pattern_version: 'CLE_PATTERN_V1',
+      pattern_version: 'CLE_PATTERN_TEMPORAL_V2',
       dimensions: group[0]?.dimensions || {},
       sample_size: sampleSize,
       success_count: success,
@@ -912,6 +915,35 @@ async function aggregatePatterns(
     .select('*');
   if (error) throw error;
   return { patterns: (data || []) as JsonRecord[], groups };
+}
+
+/** Reuse persisted reviews for the existing 120-day prediction window. Creating
+ * today's reviews must not turn a 90-day model/backtest into a one-day sample.
+ * Fixed chunks and an overflow sentinel refuse silently truncated/duplicate data;
+ * this read never recreates or updates an old prediction, outcome or review. */
+async function loadLearningReviewWindow(client: RuntimeClient, targetDate: string, predictions: PredictionRow[]): Promise<JsonRecord[]> {
+  if (predictions.length > 2000) throw new Error('LEARNING_REVIEW_WINDOW_LIMIT');
+  const scope = new Map(predictions.map(p => [p.id, p.report_date]));
+  if (scope.size !== predictions.length) throw new Error('LEARNING_REVIEW_WINDOW_DUPLICATE');
+  const ids = [...scope.keys()], rows: JsonRecord[] = [], seen = new Set<string>();
+  for (let start = 0; start < ids.length; start += 128) {
+    const chunk = ids.slice(start, start + 128);
+    const result = await client.from('prediction_reviews')
+      .select('prediction_id,review_date,review_version,idempotency_key,review_result,learning_eligible')
+      .in('prediction_id', chunk).eq('review_version', 'CLE_REVIEW_V1')
+      .gte('review_date', shiftDate(targetDate, -120)).lte('review_date', targetDate)
+      .order('prediction_id', { ascending: true }).limit(chunk.length + 1);
+    if (result.error) throw result.error;
+    const found = (result.data || []) as JsonRecord[];
+    if (found.length > chunk.length) throw new Error('LEARNING_REVIEW_WINDOW_OVERFLOW');
+    for (const row of found) {
+      const id = String(row.prediction_id || '');
+      if (!chunk.includes(id) || row.review_date !== scope.get(id) || row.review_version !== 'CLE_REVIEW_V1'
+        || row.idempotency_key !== `${id}:close:CLE_REVIEW_V1` || seen.has(id)) throw new Error('LEARNING_REVIEW_WINDOW_INVALID');
+      seen.add(id); rows.push(row);
+    }
+  }
+  return rows;
 }
 
 function brierScore(items: JsonRecord[], confidenceAdjustment = 0): number | null {
@@ -1044,13 +1076,16 @@ async function evaluateRuleCandidates(
 ): Promise<number> {
   let evaluated = 0;
   for (const pattern of patterns) {
-    const sampleSize = Number(pattern.sample_size || 0);
-    const rate = finiteNumber(pattern.follow_through_rate);
-    if (sampleSize < 20 || rate === null || (rate >= 0.55 && rate < 0.75)) continue;
     const patternKey = String(pattern.pattern_key);
+    // Candidate selection must never inspect held-out labels. Cohorts and
+    // observed label times are frozen before choosing the unchanged adjustment.
+    const temporal = temporalLearningCandidate(groups.get(patternKey) || [], new Date().toISOString());
+    const training = temporal.training as JsonRecord[], outOfSample = temporal.outOfSample as JsonRecord[];
+    const sampleSize = training.length, rate = temporal.training_rate;
+    if (temporal.adjustment === null || rate === null) continue;
     const isWeak = rate < 0.55;
-    const adjustment = isWeak ? -8 : 4;
-    const ruleKey = `pattern:${patternKey}:${isWeak ? 'downgrade' : 'reinforce'}:v1`;
+    const adjustment = temporal.adjustment;
+    const ruleKey = `pattern:${patternKey}:${isWeak ? 'downgrade' : 'reinforce'}:temporal-v2`;
     const { data: existingRule, error: existingRuleError } = await client
       .from('learning_rules')
       .select('*')
@@ -1065,14 +1100,14 @@ async function evaluateRuleCandidates(
           rule_key: ruleKey,
           name: isWeak ? '相似 Pattern 信心降權' : '相似 Pattern 證據加權',
           hypothesis: isWeak
-            ? `此 Pattern 在 ${sampleSize} 筆可信樣本中的方向成立率僅 ${(rate * 100).toFixed(1)}%。`
-            : `此 Pattern 在 ${sampleSize} 筆可信樣本中的方向成立率達 ${(rate * 100).toFixed(1)}%。`,
+            ? `此 Pattern 在 ${sampleSize} 筆時間隔離訓練樣本中的方向成立率僅 ${(rate * 100).toFixed(1)}%。`
+            : `此 Pattern 在 ${sampleSize} 筆時間隔離訓練樣本中的方向成立率達 ${(rate * 100).toFixed(1)}%。`,
           condition_json: pattern.dimensions,
           action_json: { type: 'confidence_adjustment', points: adjustment, production_effect: false },
           source_pattern_id: pattern.id,
           minimum_sample_size: 20,
           status: 'candidate',
-          version: 1,
+          version: 2,
         })
         .select('*')
         .single();
@@ -1080,16 +1115,13 @@ async function evaluateRuleCandidates(
       rule = insertedRule as JsonRecord;
     }
     if (!rule?.id) throw new Error('LEARNING_RULE_INSERT_FAILED');
-    const group = (groups.get(patternKey) || []).sort((a, b) =>
-      String(asObject(a.prediction).report_date).localeCompare(String(asObject(b.prediction).report_date))
-    );
-    const splitIndex = Math.floor(group.length * 0.7);
-    const training = group.slice(0, splitIndex);
-    const outOfSample = group.slice(splitIndex);
+    // Do not overwrite a legacy or manually changed rule under this review.
+    if (asObject(rule.action_json).type !== 'confidence_adjustment'
+      || finiteNumber(asObject(rule.action_json).points) !== adjustment) throw new Error('LEARNING_RULE_REVIEW_SCOPE_CONFLICT');
     const baselineCalibration = brierScore(outOfSample);
     const candidateCalibration = brierScore(outOfSample, adjustment);
     const statisticalEvidence = pairedBrierImprovement(outOfSample, adjustment);
-    const enough = training.length >= 20 && outOfSample.length >= 10;
+    const enough = temporal.enough;
     const statisticallySupported = statisticalEvidence.lower_90_bound !== null && statisticalEvidence.lower_90_bound > 0;
     const passed = enough && statisticallySupported && baselineCalibration !== null && candidateCalibration !== null && candidateCalibration < baselineCalibration;
     const status = enough ? passed ? 'passed' : 'failed' : 'insufficient_sample';
@@ -1105,8 +1137,8 @@ async function evaluateRuleCandidates(
     }
     const { error: backtestError } = await client.from('rule_backtests').upsert({
       rule_id: rule.id,
-      backtest_version: 'CLE_BACKTEST_V1',
-      idempotency_key: `${rule.id}:${targetDate}:CLE_BACKTEST_V1`,
+      backtest_version: 'CLE_BACKTEST_TEMPORAL_V2',
+      idempotency_key: `${rule.id}:${targetDate}:CLE_BACKTEST_TEMPORAL_V2`,
       training_start: training.length ? String(asObject(training[0].prediction).report_date) : null,
       training_end: training.length ? String(asObject(training.at(-1)?.prediction).report_date) : null,
       out_of_sample_start: outOfSample.length ? String(asObject(outOfSample[0].prediction).report_date) : null,
@@ -1128,6 +1160,12 @@ async function evaluateRuleCandidates(
       },
       status,
       result_json: {
+        review_version: temporal.version,
+        selection_scope: 'TRAINING_ONLY',
+        whole_report_date_cohorts: true,
+        training_follow_through_rate: rate,
+        excluded_samples: temporal.excluded,
+        first_oos_prediction_at: temporal.first_oos_prediction_at,
         confidence_adjustment: adjustment,
         production_effect: false,
         exact_pattern_scope: true,
@@ -1168,6 +1206,10 @@ async function updateShadowRules(
   for (const row of (data || []) as JsonRecord[]) {
     const ruleId = String(row.id || '');
     if (!ruleId) continue;
+    const condition = asObject(row.condition_json), modelVersion = firstText(condition.model_version);
+    // Legacy unversioned candidates need explicit review, not automatic
+    // accumulation from a newly available multi-model historical window.
+    if (!modelVersion || modelVersion === 'unknown') continue;
     if (row.status === 'eligible_shadow') {
       const { error: startError } = await client
         .from('learning_rules')
@@ -1183,16 +1225,19 @@ async function updateShadowRules(
       evaluated += 1;
       continue;
     }
-    const startedDate = firstText(row.shadow_started_at).slice(0, 10);
+    const startedAt = Date.parse(firstText(row.shadow_started_at));
+    const startedDate = Number.isFinite(startedAt) ? new Date(startedAt + 8 * 3600000).toISOString().slice(0, 10) : '';
     if (!startedDate || row.shadow_completed_at) {
       evaluated += 1;
       continue;
     }
-    const patternKey = buildPatternKey(asObject(row.condition_json));
+    const patternKey = buildPatternKey(condition) + '|model_version=' + encodeURIComponent(modelVersion);
     const samples = (groups.get(patternKey) || []).filter((item) => {
       const predictionDate = firstText(asObject(item.prediction).report_date);
+      const predictionAt = Date.parse(firstText(asObject(item.prediction).prediction_at));
       const review = asObject(item.review);
-      return predictionDate > startedDate &&
+      return predictionDate > startedDate && asObject(item.prediction).model_version === modelVersion
+        && Number.isFinite(predictionAt) && predictionAt > startedAt &&
         review.learning_eligible === true &&
         ['correct', 'incorrect'].includes(String(review.review_result));
     });
@@ -1671,15 +1716,16 @@ Deno.serve(async (req: Request) => {
     counters.reviews_unchanged = reviewResult.reviewsUnchanged;
     counters.cases_created = reviewResult.casesCreated;
     counters.cases_unchanged = reviewResult.casesUnchanged;
+    const historicalReviews = await loadLearningReviewWindow(client, targetDate, window.predictions);
     const patternResult = await aggregatePatterns(
       client,
       targetDate,
       window.predictions,
       outcomes,
-      reviewResult.reviews,
+      historicalReviews,
     );
     counters.patterns_updated = patternResult.patterns.length;
-    await evaluateModels(client, targetDate, window.predictions, outcomes, reviewResult.reviews);
+    await evaluateModels(client, targetDate, window.predictions, outcomes, historicalReviews);
     counters.rules_evaluated = await evaluateRuleCandidates(
       client,
       targetDate,

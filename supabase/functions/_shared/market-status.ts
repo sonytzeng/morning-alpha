@@ -49,7 +49,7 @@ function nextTradingDay(dateString: string): string {
 
 export function previousTradingDay(dateString: string): string | null {
   const date = dateFromString(dateString);
-  if (!date) return null;
+  if (!date || formatDate(date) !== dateString || dateString < calendar.TW.from || dateString > calendar.TW.through) return null;
   for (let i = 0; i < 30; i++) {
     date.setUTCDate(date.getUTCDate() - 1);
     const candidate = formatDate(date);
@@ -73,7 +73,10 @@ export function resolveMarketStatus(dateString: string): ResolvedMarketStatus {
     };
   }
 
-  const exceptional = TAIWAN_EXCEPTIONAL_CLOSURES_2026[dateString] || null;
+  const exceptional = TAIWAN_EXCEPTIONAL_CLOSURES_2026[dateString] ||
+    (calendar.TW.preserved_exceptional_closures.includes(dateString)
+      ? { status: 'EMERGENCY_CLOSE' as const, reason: '官方特殊休市日' }
+      : null);
   if (exceptional) {
     const message = exceptional.status === 'TYPHOON'
       ? '今日因停班停市，Morning Alpha 已切換休市模式。'

@@ -1,0 +1,326 @@
+{
+  "schema": "issuer-financial-pdf-local-candidate-review-v1",
+  "scope": "Only new Cathay 2882 issuer PDF direct-quarter ordinary basic EPS profile; separate from legacy financial21 iXBRL and unread retained 2330 pack.",
+  "base": {
+    "branch": "codex/official-source-wiring-20261020",
+    "HEAD": "3f494a209079801525a0f6208707c8b3d3d61155",
+    "origin_main": "7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3",
+    "ahead": 5,
+    "behind": 0,
+    "remote_ref_note": "Existing local origin/main only; no fetch."
+  },
+  "implementations": [
+    {
+      "path": "scripts/official-actuals/issuer-financial-pdf.py",
+      "bytes": 17727,
+      "sha256": "875d63ef15d04cef5480510e01e9b8c8eb1d7c147dec7bd4f7d565b1d5258564"
+    },
+    {
+      "path": "tests/test_issuer_financial_pdf.py",
+      "bytes": 10510,
+      "sha256": "a892c53558b57db0730f2d2cbdf867acbdb399b75bf0a340ba571a74fe404f3e"
+    }
+  ],
+  "original_replays": [
+    {
+      "period": "2026Q2",
+      "original_path": "/Users/sonytzeng/.codex/visualizations/2026/07/11/019f4fe6-5ca6-7c80-bd65-722d6bd0eccc/issuer-financial-originals-20261020/cathay-2026q2.pdf",
+      "source_bytes": 8569411,
+      "source_sha256": "32b47d83ed389e488b4a21700aa06202fd01629c7e9a0f97639f5ec141ef0b6a",
+      "original_mode": "400",
+      "result_path": "/private/tmp/morning-alpha-issuer-financial-20261020/cathay-2026q2-actual-candidate-20261020-a3.json",
+      "result_bytes": 5497,
+      "result_sha256": "f4429d2f46a23dc1469ee6fcc92a78e323d9243390c361875502097d9a2e3c7d",
+      "first_verified_at": "2026-10-20T06:14:49.830310+00:00",
+      "conservative_available_at": "2026-10-20T06:14:53.292477+00:00",
+      "source_received_at": null,
+      "announced_at": null,
+      "source_version": null,
+      "revision_chain": null,
+      "rows": 1,
+      "metric": "basic_eps",
+      "unit": "TWD/ordinary_share",
+      "decimals": 2,
+      "accounting": {
+        "basis": "IFRS17_RETROSPECTIVE_APPLICATION",
+        "evidence_pdf_pages": [
+          19
+        ],
+        "comparative_information_restated": true,
+        "comparative_columns_extracted": false,
+        "cross_period_comparability": "NOT_ESTABLISHED",
+        "four_consecutive_comparable_quarters": false
+      },
+      "statement_pdf_page": 12,
+      "note_number": 31,
+      "note_pdf_pages": [
+        99,
+        100
+      ],
+      "ordinary_share_denominator_proven": true,
+      "preference_dividend_deduction_row_present": true,
+      "source_admission": false,
+      "member_publication": false,
+      "missing": [
+        {
+          "metric": "financial_net_revenue",
+          "reason": "SOURCE_PROFIT_FROM_OPERATIONS_NOT_EQUIVALENT_TO_NET_REVENUE"
+        },
+        {
+          "metric": "revenue",
+          "reason": "GENERIC_REVENUE_IDENTITY_NOT_PROVEN"
+        },
+        {
+          "field": "announced_at",
+          "reason": "NO_EXACT_ANNOUNCEMENT_RECEIPT"
+        },
+        {
+          "field": "source_received_at_and_first_seen_at",
+          "reason": "NO_NATIVE_ACQUISITION_TIME_RECEIPT"
+        },
+        {
+          "field": "source_version_and_revision_chain",
+          "reason": "NO_SOURCE_VERSION_CHAIN"
+        }
+      ]
+    },
+    {
+      "period": "2026Q1",
+      "original_path": "/Users/sonytzeng/.codex/visualizations/2026/07/11/019f4fe6-5ca6-7c80-bd65-722d6bd0eccc/issuer-financial-originals-20261020/cathay-2026q1.pdf",
+      "source_bytes": 6080675,
+      "source_sha256": "4077649dec0b872598d21890c78defeddaec24a6662ab6ed418cfff325e9bdf1",
+      "original_mode": "400",
+      "result_path": "/private/tmp/morning-alpha-issuer-financial-20261020/cathay-2026q1-actual-candidate-20261020-a3.json",
+      "result_bytes": 5420,
+      "result_sha256": "ab6efc2cd341dc9b47fdbb01b333f41dbf4dd27d0104b3c08a2df1b00d56c2f3",
+      "first_verified_at": "2026-10-20T06:14:49.829299+00:00",
+      "conservative_available_at": "2026-10-20T06:14:52.944636+00:00",
+      "source_received_at": null,
+      "announced_at": null,
+      "source_version": null,
+      "revision_chain": null,
+      "rows": 1,
+      "metric": "basic_eps",
+      "unit": "TWD/ordinary_share",
+      "decimals": 2,
+      "accounting": {
+        "basis": "IFRS17_RETROSPECTIVE_APPLICATION",
+        "evidence_pdf_pages": [
+          14
+        ],
+        "comparative_information_restated": true,
+        "comparative_columns_extracted": false,
+        "cross_period_comparability": "NOT_ESTABLISHED",
+        "four_consecutive_comparable_quarters": false
+      },
+      "statement_pdf_page": 7,
+      "note_number": 30,
+      "note_pdf_pages": [
+        93,
+        94
+      ],
+      "ordinary_share_denominator_proven": true,
+      "preference_dividend_deduction_row_present": false,
+      "source_admission": false,
+      "member_publication": false,
+      "missing": [
+        {
+          "metric": "financial_net_revenue",
+          "reason": "SOURCE_PROFIT_FROM_OPERATIONS_NOT_EQUIVALENT_TO_NET_REVENUE"
+        },
+        {
+          "metric": "revenue",
+          "reason": "GENERIC_REVENUE_IDENTITY_NOT_PROVEN"
+        },
+        {
+          "field": "announced_at",
+          "reason": "NO_EXACT_ANNOUNCEMENT_RECEIPT"
+        },
+        {
+          "field": "source_received_at_and_first_seen_at",
+          "reason": "NO_NATIVE_ACQUISITION_TIME_RECEIPT"
+        },
+        {
+          "field": "source_version_and_revision_chain",
+          "reason": "NO_SOURCE_VERSION_CHAIN"
+        }
+      ]
+    },
+    {
+      "period": "2025Q3",
+      "original_path": "/Users/sonytzeng/.codex/visualizations/2026/07/11/019f4fe6-5ca6-7c80-bd65-722d6bd0eccc/issuer-financial-originals-20261020/cathay-2025q3.pdf",
+      "source_bytes": 1154835,
+      "source_sha256": "3f7cfe4c4e10e7e24ec8a17a0b1bff2b4a9e9afdf1f7849d374e400ede9ff43f",
+      "original_mode": "400",
+      "result_path": "/private/tmp/morning-alpha-issuer-financial-20261020/cathay-2025q3-actual-candidate-20261020-a3.json",
+      "result_bytes": 5480,
+      "result_sha256": "5680c6c6b92cf4c672d68e337b750c2800d64c3fbde3159c49b352d9f2b94f02",
+      "first_verified_at": "2026-10-20T06:14:49.827289+00:00",
+      "conservative_available_at": "2026-10-20T06:14:50.352906+00:00",
+      "source_received_at": null,
+      "announced_at": null,
+      "source_version": null,
+      "revision_chain": null,
+      "rows": 1,
+      "metric": "basic_eps",
+      "unit": "TWD/ordinary_share",
+      "decimals": 2,
+      "accounting": {
+        "basis": "IFRS4_OVERLAY_AS_REPORTED",
+        "evidence_pdf_pages": [
+          24
+        ],
+        "comparative_information_restated": false,
+        "comparative_columns_extracted": false,
+        "cross_period_comparability": "NOT_ESTABLISHED",
+        "four_consecutive_comparable_quarters": false
+      },
+      "statement_pdf_page": 7,
+      "note_number": 29,
+      "note_pdf_pages": [
+        120,
+        121
+      ],
+      "ordinary_share_denominator_proven": true,
+      "preference_dividend_deduction_row_present": true,
+      "source_admission": false,
+      "member_publication": false,
+      "missing": [
+        {
+          "metric": "financial_net_revenue",
+          "reason": "SOURCE_PROFIT_FROM_OPERATIONS_NOT_EQUIVALENT_TO_NET_REVENUE"
+        },
+        {
+          "metric": "revenue",
+          "reason": "GENERIC_REVENUE_IDENTITY_NOT_PROVEN"
+        },
+        {
+          "field": "announced_at",
+          "reason": "NO_EXACT_ANNOUNCEMENT_RECEIPT"
+        },
+        {
+          "field": "source_received_at_and_first_seen_at",
+          "reason": "NO_NATIVE_ACQUISITION_TIME_RECEIPT"
+        },
+        {
+          "field": "source_version_and_revision_chain",
+          "reason": "NO_SOURCE_VERSION_CHAIN"
+        }
+      ]
+    }
+  ],
+  "result_payload_policy": "Real normalized values only in new a3 JSON files under /private/tmp/morning-alpha-issuer-financial-20261020; this evidence contains metadata, coverage and validation only. Earlier a1/a2 JSON attempts remain untouched and are superseded by a3.",
+  "time_policy": {
+    "source_received_at": null,
+    "first_seen_at": null,
+    "announced_at": null,
+    "source_version": null,
+    "revision_chain": null,
+    "clock": "Runtime UTC after byte SHA verification and successful normalization; per-candidate conservative bounds, not historical source announcement/earliest acquisition.",
+    "mtime_used": false,
+    "printed_approval_or_auditor_date_used": false,
+    "hash_used_as_source_version": false
+  },
+  "profile_limits": {
+    "max_bytes": 12000000,
+    "max_pages": 400,
+    "max_page_chars": 100000,
+    "max_total_chars": 4000000,
+    "max_words_per_selected_page": 15000,
+    "cooperative_seconds": 90,
+    "statement_search_pdf_pages": [
+      2,
+      16
+    ],
+    "eps_note_search_pdf_pages": [
+      70,
+      125
+    ],
+    "accounting_search_pdf_pages": [
+      12,
+      40
+    ],
+    "profile_drift_policy": "Fail closed; no OCR, no fuzzy value recovery, no YTD subtraction, no generic revenue rename.",
+    "supported_periods": [
+      "2025Q3",
+      "2026Q1",
+      "2026Q2"
+    ]
+  },
+  "visual_review": {
+    "skill": "pdf:pdf",
+    "rendering": "In-memory pdftoppm only; no rendered image files created or uploaded to an external service.",
+    "reviewed_pdf_pages": {
+      "2026Q2": [
+        9,
+        12,
+        99,
+        100
+      ],
+      "2026Q1": [
+        7,
+        93
+      ],
+      "2025Q3": [
+        7,
+        120,
+        121
+      ]
+    },
+    "note": "Q2 direct three-month versus six-month and ordinary/preference note verified; Q1 note 30 has no preference deduction row and absence is not assumed zero; Q3 note 29 total EPS selected rather than continuing-only."
+  },
+  "validation": {
+    "python_runtime": "/Users/sonytzeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+    "test_command": "MA_ISSUER_FINANCIAL_PDF_DIR=<controlled originals directory> python3 -B -m unittest discover -s tests -p test_issuer_financial_pdf.py",
+    "tests_passed": 19,
+    "tests_failed": 0,
+    "tests_skipped": 0,
+    "real_pdf_replays": 3,
+    "python_ast": "PASS; no bytecode written",
+    "type_check": "PASS: npm run type-check",
+    "lint": "PASS: npm run lint",
+    "build": "NOT_RUN: user permits only three repository additions; existing build generates files outside this scope.",
+    "git_diff_check": "PASS; new-file whitespace also checked before handoff"
+  },
+  "negative_controls": [
+    "YTD-only header",
+    "wrong/current-comparative year",
+    "wrong quarter/date",
+    "diluted instead of basic",
+    "duplicate basic rows",
+    "missing/misaligned value",
+    "unsupported precision",
+    "missing ordinary-share denominator",
+    "missing Q2 preference adjustment",
+    "wrong EPS note unit",
+    "statement/note EPS disagreement",
+    "future IFRS17 mention is not adoption",
+    "wrong SHA-256",
+    "unsupported source host",
+    "wrong original PDF period",
+    "byte/page/text/deadline bounds"
+  ],
+  "remaining_gaps": [
+    "financial_net_revenue identity",
+    "generic revenue identity",
+    "exact native acquisition/announcement time",
+    "issuer original version/revision chain",
+    "four consecutive comparable quarter coverage",
+    "cross-IFRS4/IFRS17 growth and equivalence"
+  ],
+  "source_admission": false,
+  "member_publication": false,
+  "canonical_schema_changed": false,
+  "canonical_writer_invoked": false,
+  "legacy_2330_pack_changed": false,
+  "raw_PDF_changed": false,
+  "raw_PDF_or_images_added_to_git": false,
+  "network_requests": 0,
+  "secret_reads": 0,
+  "production_writes": 0,
+  "commit": false,
+  "push": false,
+  "deploy": false,
+  "migration_execution": false,
+  "cron_changed": false
+}

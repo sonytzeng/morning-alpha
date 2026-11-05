@@ -1,6 +1,6 @@
 import {timingSafeEqual} from 'node:crypto';
 import {workDailyRun,type RuntimePorts} from '../../../src/features/vnext/dailyRuntime.ts';
-export type WorkerEnvironment=RuntimePorts&{cronSecret:string;background:(p:Promise<unknown>)=>void;continueRun:(id:string)=>Promise<void>};
+export type WorkerEnvironment=RuntimePorts&{cronSecret:string;background:(p:Promise<unknown>)=>void;continueRun:(id:string)=>Promise<void>;stagePublication?:(id:string)=>Promise<void>};
 /** Gateway validates the existing anon JWT; this additional server credential
  * is mandatory. Browser/Owner/member JWTs alone never authorize this worker. */
 export async function handleVnextDaily(req:Request,env:WorkerEnvironment){
@@ -21,6 +21,12 @@ export async function handleVnextDaily(req:Request,env:WorkerEnvironment){
   }
   const backgroundDeadline=Date.now()+120000;
   env.background(workDailyRun(id,env).then(async r=>{
+   // Independent transport of committed results only. Failure cannot erase or
+   // relabel a prediction, and a later existing checkpoint can retry even when
+   // the research run is already COMPLETE. This never approves publication.
+   if(r.status==='COMPLETE'||('reason' in r&&r.reason==='COLD_BOOTSTRAP_WITH_IMMUTABLE_LOCK')){
+    try{await env.stagePublication?.(id);}catch{console.warn('VNEXT_PUBLICATION_INTAKE_PENDING');}
+   }
    if(!r.continue)return;
    if(r.status==='LEASE_RECOVERY_PENDING'){
     if(!('lease_until' in r)||!('not_before' in r)||typeof r.lease_until!=='string'||typeof r.not_before!=='string')return;

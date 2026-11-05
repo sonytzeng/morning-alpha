@@ -9,7 +9,7 @@ import { trackEvent, trackPageView } from '@/utils/analytics';
 const publicFeatures = [
   '30 秒首頁判斷',
   '今日方向與下一個驗證時間',
-  '公開候選股篩選結果',
+  '登入後查看短、中、長期精選研究摘要',
   '可查證的歷史績效',
 ];
 
@@ -17,7 +17,7 @@ const memberFeatures = [
   '海外事件 → 台股族群 → 代表股完整因果鏈',
   '今日是否適合當沖、成立條件與放棄條件',
   '09:00、09:30、10:30、13:00 盤中變化與判斷更新',
-  '每檔候選股的成立條件、取消條件與反向證據',
+  '短、中、長期股票研究，附確認條件、失效條件與反面證據',
   '14:10 收盤初驗、14:30 完整確認與明日調整',
   'LINE 每日提醒與重要節點通知',
 ];
@@ -30,6 +30,7 @@ const dailyDeliveries = [
 ];
 
 const planComparison = [
+  { label: '股票研究', publicValue: '短、中、長期精選摘要', memberValue: '完整已核准個股研究、反面證據與資料來源' },
   { label: '今日能不能做', publicValue: '結論與下一次確認', memberValue: '完整理由、支持與反對證據' },
   { label: '優先觀察', publicValue: '最多三項摘要', memberValue: '因果鏈、成立與取消條件' },
   { label: '當沖決策', publicValue: '目前狀態', memberValue: '是否適合、成立條件與放棄條件' },
@@ -64,8 +65,8 @@ export default function Pricing() {
             <h1>每天不用猜方向，<br />先知道什麼證據值得等</h1>
             <p>Morning Alpha 專為沒有時間盯盤的上班族整理：盤前先定判斷、盤中只更新變化、收盤公開驗證。不是報明牌，而是幫你少做一次情緒決策。</p>
             <div className="ma-pricing-v2-hero-actions">
-              <Link to="/login?next=/member-note">登入查看目前內容<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
-              <Link to="/report/today">先看今天怎麼判斷</Link>
+              <Link to="/login?next=/stocks">登入查看目前內容<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
+              <Link to="/stocks">先看短中長期股票研究</Link>
             </div>
           </div>
         </header>
@@ -88,7 +89,7 @@ export default function Pricing() {
                 <header><div><span>預定正式方案</span><h3>創始會員</h3></div><strong>NT$199<small>/月</small></strong></header>
                 <p>目前尚未啟用付款或正式14天試用。內容是否可讀，依帳戶現有權限與研究發布資格判定。</p>
                 <ul>{memberFeatures.map((feature) => <li key={feature}><i className="ri-check-line" aria-hidden="true" />{feature}</li>)}</ul>
-                <Link to="/login?next=/member-note">查看我的內容權限</Link>
+                <Link to="/login?next=/stocks">查看我的內容權限</Link>
               </article>
             </div>
           </section>

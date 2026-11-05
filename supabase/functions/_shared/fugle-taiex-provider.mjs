@@ -213,7 +213,8 @@ function contractFailure(response, contract, endpoint, validation, fallbackError
 async function resolveDirectProvider(request, options, contract, validators) {
   const phase = String(record(options).phase || '').trim().toLowerCase();
   const premarket = phase === 'premarket' || phase === 'manual_backfill';
-  const endpoint = premarket ? contract.tickerEndpoint : contract.quoteEndpoint;
+  const tickerPhase = phase === 'manual_backfill';
+  const endpoint = tickerPhase ? contract.tickerEndpoint : contract.quoteEndpoint;
   const response = record(await request({ requestType: contract.requestType, endpoint, symbol: contract.symbol }));
   if (Number(response.status) !== 200) return providerFailure(response, contract, endpoint, 'provider_resource_failed');
   const tradingDate = String(record(options).tradingDate || '');
@@ -234,19 +235,45 @@ async function resolveDirectProvider(request, options, contract, validators) {
       failure_code: 'STALE_PROVIDER_DATA', rejected_field: 'date',
     }, 'provider_envelope_date_outside_premarket_contract');
   }
-  const validation = premarket
+  // A ticker's reference/previousClose is not the envelope session's close.
+  // Premarket requires the expected prior session's completed quote, while
+  // manual-backfill reference handling retains its separate existing scope.
+  if (phase === 'premarket') {
+    const payload = record(response.payload);
+    const closePrice = firstNumber(payload, ['closePrice']);
+    const previousClose = firstNumber(payload, ['previousClose']);
+    if (payload.isClose !== true || payload.isTrial === true ||
+      !positiveNumber(closePrice) || !positiveNumber(previousClose) ||
+      (payload.price != null && Number(payload.price) !== Number(payload.closePrice)) ||
+      (record(payload.lastTrade).price != null && Number(record(payload.lastTrade).price) !== Number(payload.closePrice))) {
+      return contractFailure(response, contract, endpoint, {
+        failure_code: 'PROVIDER_RESPONSE_CONTRACT_INVALID', rejected_field: 'completed_close',
+      }, 'premarket_completed_cash_quote_required');
+    }
+  }
+  const validation = tickerPhase
     ? validators.ticker(response.payload, providerEnvelopeDate)
     : validators.quote(response.payload, expectation.expected_session_date);
   if (!validation.valid) return contractFailure(response, contract, endpoint, validation, 'provider_contract_invalid');
-  if (premarket) {
+  if (tickerPhase) {
     validation.provider_envelope_date = providerEnvelopeDate;
     validation.evidence_session_date = expectation.expected_session_date;
     validation.source_timestamp = taipeiStartOfDate(expectation.expected_session_date);
   }
+  if (phase === 'premarket') {
+    const completed = evaluateTaiwanCashSession({
+      phase: 'close', tradingDate: expectation.expected_session_date,
+      providerSessionDate: record(response.payload).date,
+      sourceTimestamp: validation.source_timestamp, observedAt: record(options).observedAt,
+    });
+    if (!completed.valid) return contractFailure(response, contract, endpoint, {
+      failure_code: completed.failure_code || 'STALE_PROVIDER_DATA', rejected_field: completed.error,
+    }, 'premarket_cash_close_not_completed');
+  }
   const sessionContract = phase === 'manual_backfill' ? null : evaluateTaiwanCashSession({
     phase,
     tradingDate,
-    providerSessionDate: premarket ? validation.evidence_session_date : record(response.payload).date,
+    providerSessionDate: tickerPhase ? validation.evidence_session_date : record(response.payload).date,
     sourceTimestamp: validation.source_timestamp,
     observedAt: record(options).observedAt,
   });

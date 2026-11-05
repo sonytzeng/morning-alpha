@@ -1,0 +1,134 @@
+{
+  "schema": "PRIVATE_RETAINED_ISSUER_FINANCIALS_V1",
+  "created_at": "2026-11-03T12:11:13.535Z",
+  "source_study_sha256": "08c4ac773066b7b9bc2b315c086124b1e0d6c2a992aac3f76ca33a89fe156f4e",
+  "source_admitted": false,
+  "member_publication_approved": false,
+  "methodology_promoted": false,
+  "facts": [
+    {
+      "symbol": "3034",
+      "kind": "EPS",
+      "period": "2025-Q3",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 6.01,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "BASIC",
+        "consolidation": "CONSOLIDATED",
+        "period_basis": "DIRECT_SINGLE_QUARTER"
+      },
+      "source": "https://www.novatek.com.tw/upload/website/_2025 Q3 Consolidated Financial Report_e_25112611_951.pdf",
+      "source_sha256": "9231678ae7a1e510be284fd7efba2784389bd01512d6ae3d4a76b10033ed92c0",
+      "source_bytes": 1587535,
+      "published_at": null,
+      "first_seen_at": "2026-11-03T12:05:39.992755+00:00",
+      "source_received_at": "2026-11-03T12:05:39.992755+00:00",
+      "available_at": "2026-11-03T12:11:13.535Z",
+      "as_of": "2025-09-30T23:59:59+08:00",
+      "source_locator": {
+        "page": 6,
+        "row": "Basic earnings per share",
+        "column": "FIRST_CURRENT_YEAR_THREE_MONTH_COLUMN",
+        "cell_bbox": [
+          465,
+          521.50135169,
+          491,
+          530.82106669
+        ],
+        "source_cell_text": "6.01",
+        "document": "3034_2025Q3_official.pdf"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "DIRECT_BASIC_SINGLE_QUARTER_ORIGINAL_CHECKED_Q4_BASIS_STILL_MISSING",
+      "evidence_hash": "043017d0e116af7f62b26e21fdfedd22dddf49f0bcf3374d866468a22bd0e1c4",
+      "id": "issuer-quarter:3034:2025-Q3:EPS:9231678ae7a1e510be284fd7efba2784389bd01512d6ae3d4a76b10033ed92c0"
+    },
+    {
+      "symbol": "3034",
+      "kind": "EPS",
+      "period": "2026-Q1",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 6.19,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "BASIC",
+        "consolidation": "CONSOLIDATED",
+        "period_basis": "DIRECT_SINGLE_QUARTER"
+      },
+      "source": "https://www.novatek.com.tw/upload/website/_2026 Q1 Consolidated Financial Report_e_26052515_666.pdf",
+      "source_sha256": "b07ecd931e3fa9073dd3c99cc82c78bb7dd9f104b0b5333218ba9c6d9702c124",
+      "source_bytes": 1652561,
+      "published_at": null,
+      "first_seen_at": "2026-11-03T12:05:41.319365+00:00",
+      "source_received_at": "2026-11-03T12:05:41.319365+00:00",
+      "available_at": "2026-11-03T12:11:13.535Z",
+      "as_of": "2026-03-31T23:59:59+08:00",
+      "source_locator": {
+        "page": 6,
+        "row": "Basic earnings per share",
+        "column": "FIRST_CURRENT_YEAR_THREE_MONTH_COLUMN",
+        "cell_bbox": [
+          410,
+          712.11269905,
+          435,
+          721.67299905
+        ],
+        "source_cell_text": "6 .19",
+        "document": "3034_2026Q1_official.pdf"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "DIRECT_BASIC_SINGLE_QUARTER_ORIGINAL_CHECKED_Q4_BASIS_STILL_MISSING",
+      "evidence_hash": "f4745c9936f1b09e8308f18d4022c0f45fcc97bdb7d141f3bb8834acdb72e4b1",
+      "id": "issuer-quarter:3034:2026-Q1:EPS:b07ecd931e3fa9073dd3c99cc82c78bb7dd9f104b0b5333218ba9c6d9702c124"
+    },
+    {
+      "symbol": "3034",
+      "kind": "EPS",
+      "period": "2026-Q2",
+      "basis": "SINGLE_QUARTER",
+      "values": {
+        "value": 10.4,
+        "unit": "TWD_PER_COMMON_SHARE",
+        "measurement_basis": "BASIC",
+        "consolidation": "CONSOLIDATED",
+        "period_basis": "DIRECT_SINGLE_QUARTER"
+      },
+      "source": "https://www.novatek.com.tw/upload/website/_2026 Q2 Consolidated Financial Report_e_26082611_155.pdf",
+      "source_sha256": "378477f94d31b506c5017ff40a4c6e93b652ccb28d494ad38d6b0c2ec6b2aad7",
+      "source_bytes": 1688771,
+      "published_at": null,
+      "first_seen_at": "2026-11-03T12:04:11.564496+00:00",
+      "source_received_at": "2026-11-03T12:04:11.564496+00:00",
+      "available_at": "2026-11-03T12:11:13.535Z",
+      "as_of": "2026-06-30T23:59:59+08:00",
+      "source_locator": {
+        "page": 6,
+        "row": "Basic earnings per share",
+        "column": "FIRST_CURRENT_YEAR_THREE_MONTH_COLUMN",
+        "cell_bbox": [
+          465,
+          521.50134169,
+          491,
+          530.82105669
+        ],
+        "source_cell_text": "10.40",
+        "document": "3034_2026Q2_official.pdf"
+      },
+      "source_admitted": false,
+      "member_publication_approved": false,
+      "data_quality_status": "DIRECT_BASIC_SINGLE_QUARTER_ORIGINAL_CHECKED_Q4_BASIS_STILL_MISSING",
+      "evidence_hash": "3c58c6275b572e5a6466ea2105d5986c28c9facafb43cdf172eaf9a463d1f26e",
+      "id": "issuer-quarter:3034:2026-Q2:EPS:378477f94d31b506c5017ff40a4c6e93b652ccb28d494ad38d6b0c2ec6b2aad7"
+    }
+  ],
+  "known_release_deadlines": {
+    "3034": "2026-11-06T00:00:00+08:00"
+  },
+  "release_deadline_sources": {
+    "3034": "https://www.novatek.com.tw/en-global/Download/ir_event/Index/analyst_meeting"
+  },
+  "max_age_days": 7
+}

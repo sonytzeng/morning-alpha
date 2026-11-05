@@ -25,6 +25,7 @@ import {
   resolveFugle2330Provider,
   resolveFugleTaiexProvider,
 } from '../supabase/functions/_shared/fugle-taiex-provider.mjs';
+import { sanitizeProductionMarketPayload } from '../supabase/functions/_shared/provider-reliability-contract.mjs';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const capture = JSON.parse(read('tests/fixtures/production-parity-v2/provider-capture-20260916.json'));
@@ -54,13 +55,23 @@ async function resolved(slot, payload) {
 }
 
 function providerPayload(slot) {
-  if (slot.key === 'TAIEX' || slot.key === '2330') return taiwan.responses[slot.key];
+  // Explicit SYNTHETIC completed-cash controls. The retained real provider
+  // capture and the older ticker fixture stay unchanged; no live quote was
+  // obtained by this test, and this mixed fixture is not a natural 11/11 day.
+  if (slot.key === 'TAIEX' || slot.key === '2330') return {
+    date: '2026-09-15',
+    symbol: slot.key === 'TAIEX' ? 'IX0001' : '2330',
+    type: slot.key === 'TAIEX' ? 'INDEX' : 'EQUITY',
+    exchange: 'TWSE', market: 'TSE',
+    closePrice: 100, previousClose: 99, isClose: true, isTrial: false,
+    lastUpdated: Date.parse('2026-09-15T13:30:00+08:00') * 1000,
+  };
   return capture.responses[slot.key].payload;
 }
 
 function providerEndpoint(slot) {
-  if (slot.key === 'TAIEX') return FUGLE_TAIEX_CONTRACT.tickerEndpoint;
-  if (slot.key === '2330') return FUGLE_2330_CONTRACT.tickerEndpoint;
+  if (slot.key === 'TAIEX') return FUGLE_TAIEX_CONTRACT.quoteEndpoint;
+  if (slot.key === '2330') return FUGLE_2330_CONTRACT.quoteEndpoint;
   return capture.responses[slot.key].endpoint;
 }
 
@@ -101,7 +112,7 @@ async function elevenInputs() {
   return Promise.all(REQUIRED_PROVIDER_CONFIG.map(slot => inputFor(slot)));
 }
 
-test('normal 11/11 capture stores one deidentified replay row for every required provider', async () => {
+test('synthetic completed-cash controls and retained other providers store one deidentified row per required slot', async () => {
   const rows = await Promise.all((await elevenInputs()).map(buildProductionProviderEvidence));
   assert.equal(rows.length, 11);
   assert.equal(new Set(rows.map(row => row.provider_key)).size, 11);
@@ -112,7 +123,7 @@ test('normal 11/11 capture stores one deidentified replay row for every required
   assert.equal(rows.find(row => row.provider_key === 'TAIEX').evidence_session_date, '2026-09-15');
 });
 
-test('one failed provider preserves 10 PASS plus one explicit FAIL without fabricating payload', async () => {
+test('synthetic completed-cash batch with one failed provider preserves 10 PASS plus one explicit FAIL', async () => {
   const inputs = await elevenInputs();
   const index = inputs.findIndex(input => input.providerKey === 'SPX');
   inputs[index] = {
@@ -188,8 +199,34 @@ test('sanitizer captures no secrets or PII and bounds nested payloads', () => {
   assert.doesNotMatch(JSON.stringify(sanitized), /real-secret|person@example\.com|0912345678/);
 });
 
-test('recorded 11-provider evidence replays deterministically through current adapters and Atomic candidate validation', async () => {
+test('quote-proof flags round-trip as booleans only while secrets and contacts remain excluded', () => {
+  const sanitize = flags => sanitizeRecordedEvidence(sanitizeProductionMarketPayload({
+    symbol: '2330', ...flags, Authorization: 'Bearer fixture-secret', api_key: 'fixture-api-key',
+    email: 'fixture@example.invalid', phone: '0900000000', member: {email: 'member@example.invalid'},
+  }));
+  for (const flag of ['isClose', 'isTrial']) {
+    for (const value of [true, false]) {
+      const sanitized = sanitize({[flag]: value});
+      assert.deepEqual(sanitized, {symbol: '2330', [flag]: value});
+      assert.equal(recordedEvidenceContainsSensitiveData(sanitized), false);
+    }
+    for (const value of ['false', 'true', 1, 0, null, undefined, {}, [], {value: true}]) {
+      const sanitized = sanitize({[flag]: value});
+      assert.equal(Object.hasOwn(sanitized, flag), false, `${flag}: ${JSON.stringify(value)} is not a boolean`);
+      assert.deepEqual(sanitized, {symbol: '2330'});
+    }
+  }
+  assert.doesNotMatch(JSON.stringify(sanitize({isClose: true, isTrial: false})),
+    /fixture-secret|fixture-api-key|@example\.invalid|0900000000/);
+});
+
+test('recorded synthetic completed-cash controls replay through current adapters and Atomic candidate validation', async () => {
   const rows = await Promise.all((await elevenInputs()).map(buildProductionProviderEvidence));
+  for (const key of ['TAIEX', '2330']) {
+    const raw = rows.find(row => row.provider_key === key).replay_payload.provider_payload;
+    assert.equal(raw.isClose, true, `${key}: recorder must preserve completed-close proof`);
+    assert.equal(raw.isTrial, false, `${key}: recorder must preserve trial classification`);
+  }
   const replay = await replayRecordedProviderEvidenceBatch(rows);
   assert.equal(replay.deterministic, true, JSON.stringify(replay.replayed.map(item => ({
     provider_key: item.provider_key,
@@ -200,6 +237,52 @@ test('recorded 11-provider evidence replays deterministically through current ad
   }))));
   assert.equal(replay.atomic_candidate_valid, true, replay.atomic_error || 'atomic replay failed');
   assert.equal(replay.replayed.length, PRODUCTION_EVIDENCE_MAX_ROWS);
+});
+
+test('recorder preserves synthetic trial rejection evidence instead of losing quote-proof flags', async () => {
+  for (const key of ['TAIEX', '2330']) {
+    const slot = REQUIRED_PROVIDER_CONFIG.find(item => item.key === key);
+    const payload = {...providerPayload(slot), isTrial: true};
+    const resolver = key === 'TAIEX' ? resolveFugleTaiexProvider : resolveFugle2330Provider;
+    const result = await resolver(async () => ({status: 200, payload}), {
+      tradingDate: date, phase: 'premarket', observedAt,
+    });
+    assert.equal(result.ok, false);
+    const input = await inputFor(slot, {
+      rawPayload: payload, normalizedQuote: null,
+      evidence: {valid: false, error: 'ATOMIC_PROVIDER_RESULT_MISSING'},
+      adapterFailureCode: result.failureCode,
+    });
+    const row = await buildProductionProviderEvidence(input);
+    assert.equal(row.replay_payload.provider_payload.isClose, true);
+    assert.equal(row.replay_payload.provider_payload.isTrial, true);
+    const replay = await replayRecordedProviderEvidence(row);
+    assert.equal(replay.contract_result, 'FAIL');
+    assert.equal(replay.deterministic, true);
+  }
+});
+
+test('unchanged retained ticker evidence cannot supply the completed quote now required before open', async () => {
+  assert.equal(capture.real_production_capture, true);
+  assert.equal(taiwan.fixture_type, 'SYNTHETIC_CONTRACT_FIXTURE');
+  const originalCapture = JSON.stringify(capture);
+  const originalTickerFixture = JSON.stringify(taiwan);
+  const direct = capture.responses.TAIEX;
+  const calls = [];
+  // Replay only the response actually retained at its original endpoint. A
+  // ticker body is not relabelled as a real response from the quote endpoint.
+  const result = await resolveFugleTaiexProvider(async ({endpoint}) => {
+    calls.push(endpoint);
+    return endpoint === direct.endpoint
+      ? {status: direct.http_status, payload: direct.payload, error: null}
+      : {status: 503, payload: null, error: 'COMPLETED_QUOTE_NOT_RETAINED'};
+  }, {tradingDate: date, phase: 'premarket', observedAt});
+  assert.deepEqual(calls, [FUGLE_TAIEX_CONTRACT.quoteEndpoint]);
+  assert.equal(result.ok, false);
+  assert.equal(result.failureCode, 'PROVIDER_REQUEST_REJECTED');
+  assert.equal(normalizeRequiredTaiwanCoreQuote(result, 'TAIEX'), null);
+  assert.equal(JSON.stringify(capture), originalCapture);
+  assert.equal(JSON.stringify(taiwan), originalTickerFixture);
 });
 
 test('migration enforces service-role-only append-only storage, 90-day bounded cleanup, and no Cron', () => {

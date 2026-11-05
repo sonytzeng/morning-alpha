@@ -1,0 +1,521 @@
+{
+  "schema": "RECOVERY_GIT_SOURCE_SUCCESSOR_V1",
+  "base": "835168c834948961a61d18633e9e29cf69dba1f0",
+  "head": "302e6cd89ba386e27eaab287fe759c3b0922b02f",
+  "base_tree": "bdb573d2fdc04ffc337dad64a251ff86e48c21bc",
+  "head_tree": "7ec335d9413343c627031aec91631e6bf77d1bb1",
+  "scope_review": {
+    "kind": "EXACT_ENGINEERING_DELTA_NOT_FINANCIAL_OR_OPERATIONAL_APPROVAL",
+    "independent_review": false,
+    "review_basis": "Ordinary research-code and engineering source review only. No investment-method, data-rights, source-admission or production/publication approval.",
+    "groups": {
+      "runtime": [
+        "research/institutional-daily-financial-replay.ts",
+        "src/features/vnext/dailyAdapter.ts",
+        "src/features/vnext/dailyRuntime.ts"
+      ],
+      "private_sql_candidates": [
+        "research/institutional-existing-capture.candidate.sql",
+        "research/institutional-existing-capture.rollback.candidate.sql"
+      ],
+      "member_comparison": [
+        "src/pages/vnext/DailyAiMemberResearch.tsx",
+        "src/pages/vnext/daily-ai-comparison.css"
+      ],
+      "regression_and_isolated_controls": [
+        "tests/dailyAiFullNestedLocal.integration.mjs",
+        "tests/dailyAiInstitutionalIssuer16Database.integration.mjs",
+        "tests/dailyAiMemberComparison.test.mjs",
+        "tests/institutionalCaptureCompatibility.test.mjs",
+        "tests/vnextDailyRuntimeRecovery.test.mjs",
+        "tests/vnextPrewarmSql.integration.mjs",
+        "tests/vnextProviderRetryAfter.test.mjs",
+        "tests/vnextRevenueFallback.test.mjs",
+        "tests/vnextWarmPgliteLocal.integration.mjs"
+      ]
+    }
+  },
+  "files": [
+    {
+      "path": "research/institutional-daily-financial-replay.ts",
+      "before": {
+        "oid": "97e001f421fa45ac162ca8d3558d65faa5f95508",
+        "mode": "100644",
+        "sha256": "06d59f93c02e44eb69df30f901f670957b9bbfb59cf3a18f5106dd75c4e2e304"
+      },
+      "after": {
+        "oid": "8424121928fe14bf82eba06f8743c5a2641bb53f",
+        "mode": "100644",
+        "sha256": "1c175d829b77edebc5c39f9f4890825aa301707220acbde6675802f5be8db7c6"
+      }
+    },
+    {
+      "path": "research/institutional-existing-capture.candidate.sql",
+      "before": null,
+      "after": {
+        "oid": "6ea3e053519e723057f65a7ef5adc6621b6db79c",
+        "mode": "100644",
+        "sha256": "9cb039acc04d5bcba7641485d43498c347f7c3ef1f8fcdf5040169028600f83b"
+      }
+    },
+    {
+      "path": "research/institutional-existing-capture.rollback.candidate.sql",
+      "before": null,
+      "after": {
+        "oid": "264c871e95ff0378f192fcdf3a4c1b10eb9192f3",
+        "mode": "100644",
+        "sha256": "b71e2fc1cbf8c841d387ffa195adb7f720549f8e93d7c2a7d53a0bc80e0a54eb"
+      }
+    },
+    {
+      "path": "src/features/vnext/dailyAdapter.ts",
+      "before": {
+        "oid": "de945f5d087baf7db3f9b81a7bc456a67c3c041a",
+        "mode": "100644",
+        "sha256": "b15c7636e296e511062aa9587eeaecfb3230e34bb76dc35a90131e4a9c03dc71"
+      },
+      "after": {
+        "oid": "ef75f0db08a95cf2ab5c8ff6aaf05d844055691b",
+        "mode": "100644",
+        "sha256": "41d8193f34dc7d98c3098065d5320148a9acd81122ae706c0798467275e04521"
+      }
+    },
+    {
+      "path": "src/features/vnext/dailyRuntime.ts",
+      "before": {
+        "oid": "286b9d9c39a782182fcff1ea4b8df7b55a9bad59",
+        "mode": "100644",
+        "sha256": "280bdfa5e850fe12c342c488942ec2177779916f9bca34839fc2c28b4e789316"
+      },
+      "after": {
+        "oid": "21e0d504da9b703b8a01927156cd244daf61f073",
+        "mode": "100644",
+        "sha256": "c1d59c773db8d4d29ae4db1622ae0d6d08b725c4774e543c7f8eb59593095f69"
+      }
+    },
+    {
+      "path": "src/pages/vnext/DailyAiMemberResearch.tsx",
+      "before": {
+        "oid": "79a62a0f716470faf0186d3a38abbb4ae244bfcc",
+        "mode": "100644",
+        "sha256": "7d376b153f5c2bae7fb607229009f6fb8451b3c782b60ed5184dc11bfb0bf32b"
+      },
+      "after": {
+        "oid": "d2d2667c875cf333a9a7dfd5f61f7be8e02a8f13",
+        "mode": "100644",
+        "sha256": "d48393458a7d4fd7a1911971a5a82727410580d79314a3ab06756dc811ccd966"
+      }
+    },
+    {
+      "path": "src/pages/vnext/daily-ai-comparison.css",
+      "before": null,
+      "after": {
+        "oid": "abd4d6f5a5f69adc13124ee5a2b6d742fad3ad0f",
+        "mode": "100644",
+        "sha256": "8a66330f1749c1653524625aa59d9b3ed901765e385e1557877f19682b37c561"
+      }
+    },
+    {
+      "path": "tests/dailyAiFullNestedLocal.integration.mjs",
+      "before": null,
+      "after": {
+        "oid": "3da17445dab0502d09e045799c464860e2ecf891",
+        "mode": "100644",
+        "sha256": "473ab70dc9e4c1e4ff378fe3b56c2915813d5e66fbb8dccf692defd65bb910b5"
+      }
+    },
+    {
+      "path": "tests/dailyAiInstitutionalIssuer16Database.integration.mjs",
+      "before": {
+        "oid": "5335fc2840853988179150b2c5bb55d589077507",
+        "mode": "100644",
+        "sha256": "5de54217a0e283b4418aae3ee28b8671499827af1e7c7b700de76e7c5ae34968"
+      },
+      "after": {
+        "oid": "c68412cc4444ab31ac9dd1534c67311d961ee9cd",
+        "mode": "100644",
+        "sha256": "a38491e9ce9805c6a50871391b5cd6ff17c6d2f224a0fa8002d40c14b336bdd5"
+      }
+    },
+    {
+      "path": "tests/dailyAiMemberComparison.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "94a25aa74827a500ee54b273aa2b0f8f01e332e0",
+        "mode": "100644",
+        "sha256": "8e811b43d74ae0cf5a9615ddf36b363cba867045a160d50c4467d9d1fa7e03fd"
+      }
+    },
+    {
+      "path": "tests/institutionalCaptureCompatibility.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "34260cf411a6689242a1b0bb9f6f4bad07b794ed",
+        "mode": "100644",
+        "sha256": "5e0721a1a56d43b3bf6b278bed690147741cbdbe04bf5009cc84da366b965ccd"
+      }
+    },
+    {
+      "path": "tests/vnextDailyRuntimeRecovery.test.mjs",
+      "before": {
+        "oid": "19791361e19a923a467292f3b14b67a820432dbe",
+        "mode": "100644",
+        "sha256": "d1b359d126dcc8370d801758efdb4df6e760b31bcf21cf0903c85bf91b46e1d3"
+      },
+      "after": {
+        "oid": "742a14a13cbf170c5892382953ca0d1d9d4550f6",
+        "mode": "100644",
+        "sha256": "b4019cdaff0e7325e2d47f966e7f36c65d133c607f70cdb1aede9b19d2795529"
+      }
+    },
+    {
+      "path": "tests/vnextPrewarmSql.integration.mjs",
+      "before": null,
+      "after": {
+        "oid": "9abf1ae9f4564821cb8924463e87bd0847703d25",
+        "mode": "100644",
+        "sha256": "c90f2a652bcca0386c0eb67fec8f9a32584ac5bc586b8669787307a0276ae86f"
+      }
+    },
+    {
+      "path": "tests/vnextProviderRetryAfter.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "bd8e83638d28bcf6d038e0948dbfde1c793bfe03",
+        "mode": "100644",
+        "sha256": "1eea6eb8033bf0784f499c5f1ac1dbdfc239fd8f13bc1473e8036c5a1c49827f"
+      }
+    },
+    {
+      "path": "tests/vnextRevenueFallback.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "5b08473ab6b7ecfc44d67c1fe4125ecc9cd71302",
+        "mode": "100644",
+        "sha256": "75521e44a1f86e633a12035b3394bf72e9979628318effef440b415e5a817009"
+      }
+    },
+    {
+      "path": "tests/vnextWarmPgliteLocal.integration.mjs",
+      "before": null,
+      "after": {
+        "oid": "0445a3431cd6d887e846bcecd33eeb1032b38c54",
+        "mode": "100644",
+        "sha256": "ef457ae2421990f17c3003c559b7f11edb4ed5cacbd8cde81e5cbe1f65064ada"
+      }
+    }
+  ],
+  "local_support_patch": [
+    {
+      "path": ".github/workflows/vnext-candidate.yml",
+      "purpose": "APPEND_RECOVERY_CONTROLS_AND_RUN_BOUNDED_FUNCTIONAL_REGRESSIONS",
+      "before": {
+        "oid": "a88b1323a658c52b1675d9dbd32d0212fd6461e3",
+        "mode": "100644",
+        "sha256": "a4b545fac50132ed1689c2f30e2212d559162cf323e90bb2945982c7c9792055"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "f12fabb3f93012cd3e83a7f2ecb67a4a128109b9e0d656a56f7d9fa60cbbc101"
+      },
+      "exact_edits": [
+        {
+          "before": "      - name: Current source and live inventory negative controls (no build race)\n        env:\n          NODE_OPTIONS: --experimental-strip-types\n        run: |\n          node --test tests/ciNodeObserver.test.mjs\n          node scripts/releases/observe-ci-node.mjs --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/vnextIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/marketNewsReportIntegrity.test.mjs tests/academyV11Integrity.test.mjs tests/currentSourceSuccessor.test.mjs tests/reviewedSourceSuccessor.test.mjs\n      - name: Build member UI candidate (no Production deployment)\n        env:\n          NODE_OPTIONS: --experimental-strip-types\n        run: MA_VNEXT_BUILD_DIR=/tmp/ma-vnext-member-build node scripts/vnext/member-build.mjs\n      - name: Disposable Auth, publication and RLS (not Production Owner proof)\n",
+          "after": "      - name: Current source and live inventory negative controls (no build race)\n        env:\n          NODE_OPTIONS: --experimental-strip-types\n        run: |\n          node --test tests/ciNodeObserver.test.mjs\n          node scripts/releases/observe-ci-node.mjs --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/vnextIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/marketNewsReportIntegrity.test.mjs tests/academyV11Integrity.test.mjs tests/currentSourceSuccessor.test.mjs tests/reviewedSourceSuccessor.test.mjs tests/recoverySourceSuccessor.test.mjs\n      - name: Recovery source, retry, fallback and member comparison controls\n        env:\n          NODE_OPTIONS: --experimental-strip-types\n        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextProviderRetryAfter.test.mjs tests/vnextRevenueFallback.test.mjs tests/institutionalCaptureCompatibility.test.mjs tests/dailyAiMemberComparison.test.mjs\n      - name: Build member UI candidate (no Production deployment)\n        env:\n          NODE_OPTIONS: --experimental-strip-types\n        run: MA_VNEXT_BUILD_DIR=/tmp/ma-vnext-member-build node scripts/vnext/member-build.mjs\n      - name: Disposable Auth, publication and RLS (not Production Owner proof)\n"
+        },
+        {
+          "before": "        env:\n          NODE_OPTIONS: --experimental-strip-types\n        run: |\n          node --experimental-strip-types --test tests/vnextDailyWiring.test.mjs\n          node --experimental-strip-types tests/vnextDailyDatabase.integration.mjs\n      - uses: denoland/setup-deno@v2\n        with:\n          deno-version: v2.x\n      - name: New worker and exact nonblocking hook type checks\n        run: deno check --no-lock supabase/functions/vnext-daily-research-v1/index.ts supabase/functions/recommendation-v2-forward-worker-v1/index.ts supabase/functions/member-access/index.ts\n",
+          "after": "        env:\n          NODE_OPTIONS: --experimental-strip-types\n        run: |\n          node --experimental-strip-types --test tests/vnextDailyWiring.test.mjs\n          node --experimental-strip-types tests/vnextDailyDatabase.integration.mjs\n          node --experimental-strip-types tests/vnextPrewarmSql.integration.mjs\n      - name: Recovery PostgreSQL nested SOURCE and warm checkpoint controls\n        env:\n          NODE_OPTIONS: --experimental-strip-types\n        run: |\n          npm install --prefix \"$RUNNER_TEMP/ma-recovery-pglite\" --ignore-scripts --no-audit --no-fund --save-exact @electric-sql/pglite@0.3.14\n          export MA_PGLITE_MODULE=\"$RUNNER_TEMP/ma-recovery-pglite/node_modules/@electric-sql/pglite/dist/index.js\"\n          export MA_VALIDATOR_DEFS_DIR=\"$GITHUB_WORKSPACE/tests/fixtures/recovery-source-validators-20261105\"\n          node --experimental-strip-types --test tests/dailyAiInstitutionalIssuer16Database.integration.mjs\n          node --experimental-strip-types tests/dailyAiFullNestedLocal.integration.mjs\n          node --experimental-strip-types tests/vnextWarmPgliteLocal.integration.mjs\n      - uses: denoland/setup-deno@v2\n        with:\n          deno-version: v2.x\n      - name: New worker and exact nonblocking hook type checks\n        run: deno check --no-lock supabase/functions/vnext-daily-research-v1/index.ts supabase/functions/recommendation-v2-forward-worker-v1/index.ts supabase/functions/member-access/index.ts\n"
+        }
+      ]
+    },
+    {
+      "path": "tests/currentSourceSuccessor.test.mjs",
+      "purpose": "PRESERVE_PRIOR_ASSERTIONS_WITH_EXACT_RECOVERY_SOURCE_BRIDGE",
+      "before": {
+        "oid": "af18654040c10e7a0edc4eed228457fc7391583d",
+        "mode": "100644",
+        "sha256": "b7b4f5705397f933eb4dd7219a1d846d386658b8d07f1e97d0313e51dbe11512"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "d38f8028793d23fed118df4405a78eb82b80de3ac2cdf087d085536cf0f9e46d"
+      },
+      "exact_edits": [
+        {
+          "before": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {execFileSync} from 'node:child_process';\nimport {integrationPhysicalRead as physical,integrationPhysicalMode as physicalMode,integrationInventory,integrationHash,verifyIntegrationCandidate,CURRENT_INTEGRATION_MANIFEST,sourceUnionLineage} from './helpers/integrationAdmission.mjs';\nimport {CURRENT_SOURCE_BASE,CURRENT_SOURCE_HEAD,CURRENT_SOURCE_CATALOG,CURRENT_SOURCE_CATALOG_SHA256,CURRENT_SOURCE_SUPPORT,currentSourceDefinition,currentSourceHash,currentSourcePriorPatch} from './helpers/currentSourceCatalog.mjs';\nimport {reviewedSuccessorPaths} from './helpers/currentSourceSuccessor.mjs';\nconst readJson=p=>JSON.parse(physical(p));\nfunction fixture(){\n const bytes=new Map(),modes=new Map(),paths=integrationInventory(),manifest=readJson(CURRENT_INTEGRATION_MANIFEST);\n const read=p=>bytes.has(p)?bytes.get(p):physical(p),mode=p=>modes.get(p)??physicalMode(p);\n const reseal=()=>bytes.set(CURRENT_INTEGRATION_MANIFEST,Buffer.from(JSON.stringify(manifest)));\n const mirror=p=>{const row=manifest.files.find(r=>r.path===p);assert(row);row.after_sha256=integrationHash(read(p));reseal();};\n return {bytes,modes,paths,manifest,read,mode,reseal,mirror,verify:()=>verifyIntegrationCandidate(read,paths,mode)};\n}\ntest('current composition appends all 48 immutable Git changes and preserves the prior terminal verbatim',()=>{\n const m=verifyIntegrationCandidate(),c=currentSourceDefinition(),lineage=sourceUnionLineage().reviewed_successor.current_git_successor;\n assert.equal(c.files.length,48);assert.equal(c.base,CURRENT_SOURCE_BASE);assert.equal(c.head,CURRENT_SOURCE_HEAD);\n assert.equal(integrationHash(physical(CURRENT_SOURCE_CATALOG)),CURRENT_SOURCE_CATALOG_SHA256);\n assert.equal(lineage.exact_git_delta,48);assert.equal(lineage.scope_review.independent_review,false);\n const before=execFileSync('git',['--no-replace-objects','show',CURRENT_SOURCE_BASE+':'+c.prior_manifest.path]);\n assert.deepEqual(physical(c.prior_manifest.path),before);assert.equal(JSON.parse(before).files.length,865);assert.equal(m.files.length,903);\n assert.equal(currentSourceHash('research/entry-opportunity.ts'),'49253f89038cdf67fd56819bb49e3bcf0fcd916de99f11c8bbb342e720ddaac9');\n for(const row of c.files)assert.equal(integrationHash(physical(row.path)),row.after.sha256);\n});\ntest('every newly admitted source rejects a changed live body even after terminal hashes are mirrored',()=>{\n const c=currentSourceDefinition();\n for(const row of [...c.files,...c.local_support_patch]){const f=fixture();f.bytes.set(row.path,Buffer.concat([f.read(row.path),Buffer.from('\\nUNREVIEWED_CURRENT_SOURCE')]));f.mirror(row.path);assert.throws(f.verify,/SOURCE_DRIFT/,'live '+row.path);}\n});\ntest('CI patch keeps every previous control and only appends both successor test suites',()=>{\n const c=currentSourceDefinition(),patch=c.local_support_patch[0];assert.equal(c.local_support_patch.length,8);\n const before=execFileSync('git',['--no-replace-objects','cat-file','blob',patch.before.oid]).toString(),after=physical(patch.path).toString();\n assert.equal(after.replace(' tests/currentSourceSuccessor.test.mjs tests/reviewedSourceSuccessor.test.mjs',''),before);\n assert.equal(integrationHash(physical(patch.path)),patch.after.sha256);\n assert.equal(currentSourceHash(patch.path),patch.after.sha256);\n});\ntest('Core CI retains all five ff88 proofs and runs all three later suites on the current tree',()=>{\n const workflow=physical('.github/workflows/core-member-integration.yml').toString();\n const block=name=>workflow.split('      - name: '+name+'\\n')[1]?.split('      - name:')[0];\n",
+          "after": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {execFileSync} from 'node:child_process';\nimport {integrationPhysicalRead as physical,integrationPhysicalMode as physicalMode,integrationInventory,integrationHash,verifyIntegrationCandidate,CURRENT_INTEGRATION_MANIFEST,sourceUnionLineage} from './helpers/integrationAdmission.mjs';\nimport {CURRENT_SOURCE_BASE,CURRENT_SOURCE_HEAD,CURRENT_SOURCE_CATALOG,CURRENT_SOURCE_CATALOG_SHA256,CURRENT_SOURCE_MANIFEST,CURRENT_SOURCE_SUPPORT,currentSourceDefinition,currentSourceHash,currentSourcePriorPatch} from './helpers/currentSourceCatalog.mjs';\nimport {reviewedSuccessorPaths,recoveryPriorRead} from './helpers/recoverySourceSuccessor.mjs';\nconst readJson=p=>JSON.parse(physical(p));\nfunction fixture(){\n const bytes=new Map(),modes=new Map(),paths=integrationInventory(),manifest=readJson(CURRENT_INTEGRATION_MANIFEST);\n const read=p=>bytes.has(p)?bytes.get(p):physical(p),mode=p=>modes.get(p)??physicalMode(p);\n const reseal=()=>bytes.set(CURRENT_INTEGRATION_MANIFEST,Buffer.from(JSON.stringify(manifest)));\n const mirror=p=>{const row=manifest.files.find(r=>r.path===p);assert(row);row.after_sha256=integrationHash(read(p));reseal();};\n return {bytes,modes,paths,manifest,read,mode,reseal,mirror,verify:()=>verifyIntegrationCandidate(read,paths,mode)};\n}\ntest('current composition appends all 48 immutable Git changes and preserves the prior terminal verbatim',()=>{\n verifyIntegrationCandidate();\n // Preserve the exact 903-row predecessor assertion after admitting the full\n // live recovery union. Later source bytes are checked by its own successor.\n const m=readJson(CURRENT_SOURCE_MANIFEST),c=currentSourceDefinition(),lineage=sourceUnionLineage().reviewed_successor.current_git_successor;\n assert.equal(c.files.length,48);assert.equal(c.base,CURRENT_SOURCE_BASE);assert.equal(c.head,CURRENT_SOURCE_HEAD);\n assert.equal(integrationHash(physical(CURRENT_SOURCE_CATALOG)),CURRENT_SOURCE_CATALOG_SHA256);\n assert.equal(lineage.exact_git_delta,48);assert.equal(lineage.scope_review.independent_review,false);\n const before=execFileSync('git',['--no-replace-objects','show',CURRENT_SOURCE_BASE+':'+c.prior_manifest.path]);\n assert.deepEqual(physical(c.prior_manifest.path),before);assert.equal(JSON.parse(before).files.length,865);assert.equal(m.files.length,903);\n assert.equal(currentSourceHash('research/entry-opportunity.ts'),'49253f89038cdf67fd56819bb49e3bcf0fcd916de99f11c8bbb342e720ddaac9');\n for(const row of c.files)assert.equal(integrationHash(recoveryPriorRead(row.path,physical(row.path))),row.after.sha256);\n});\ntest('every newly admitted source rejects a changed live body even after terminal hashes are mirrored',()=>{\n const c=currentSourceDefinition();\n for(const row of [...c.files,...c.local_support_patch]){const f=fixture();f.bytes.set(row.path,Buffer.concat([f.read(row.path),Buffer.from('\\nUNREVIEWED_CURRENT_SOURCE')]));f.mirror(row.path);assert.throws(f.verify,/SOURCE_DRIFT/,'live '+row.path);}\n});\ntest('CI patch keeps every previous control and only appends both successor test suites',()=>{\n const c=currentSourceDefinition(),patch=c.local_support_patch[0];assert.equal(c.local_support_patch.length,8);\n const before=execFileSync('git',['--no-replace-objects','cat-file','blob',patch.before.oid]).toString(),after=recoveryPriorRead(patch.path,physical(patch.path)).toString();\n assert.equal(after.replace(' tests/currentSourceSuccessor.test.mjs tests/reviewedSourceSuccessor.test.mjs',''),before);\n assert.equal(integrationHash(recoveryPriorRead(patch.path,physical(patch.path))),patch.after.sha256);\n assert.equal(currentSourceHash(patch.path),patch.after.sha256);\n});\ntest('Core CI retains all five ff88 proofs and runs all three later suites on the current tree',()=>{\n const workflow=physical('.github/workflows/core-member-integration.yml').toString();\n const block=name=>workflow.split('      - name: '+name+'\\n')[1]?.split('      - name:')[0];\n"
+        }
+      ]
+    },
+    {
+      "path": "tests/reviewedSourceSuccessor.test.mjs",
+      "purpose": "PRESERVE_PRIOR_ASSERTIONS_WITH_EXACT_RECOVERY_SOURCE_BRIDGE",
+      "before": {
+        "oid": "735db6b8036df5d416b1bc50340ec542e534b642",
+        "mode": "100644",
+        "sha256": "faa9a9cb5e87e9a69ec42d5ca03752d7c951ffdcf0c1455de56fa6fcbf7d7191"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "edc0abab91c02b7f71b93bb89adc36916350824a15298ce639657db927c8adae"
+      },
+      "exact_edits": [
+        {
+          "before": "} from './helpers/integrationAdmission.mjs';\nimport {\n REVIEWED_SUCCESSOR_BASE,REVIEWED_SUCCESSOR_HEAD,REVIEWED_SUCCESSOR_CATALOG,\n REVIEWED_SUCCESSOR_CATALOG_SHA256,REVIEWED_SUCCESSOR_SUPPORT,reviewedSuccessorLineage,\n} from './helpers/reviewedSourceSuccessor.mjs';\nconst root=new URL('../',import.meta.url);\nconst git=args=>execFileSync('git',['--no-replace-objects',...args],{cwd:root});\nfunction fixture(){\n const bytes=new Map(),modes=new Map(),paths=integrationInventory(),manifest=JSON.parse(integrationPhysicalRead(CURRENT_INTEGRATION_MANIFEST));\n const read=p=>bytes.has(p)?bytes.get(p):integrationPhysicalRead(p);\n",
+          "after": "} from './helpers/integrationAdmission.mjs';\nimport {\n REVIEWED_SUCCESSOR_BASE,REVIEWED_SUCCESSOR_HEAD,REVIEWED_SUCCESSOR_CATALOG,\n REVIEWED_SUCCESSOR_CATALOG_SHA256,REVIEWED_SUCCESSOR_SUPPORT,reviewedSuccessorLineage,\n} from './helpers/reviewedSourceSuccessor.mjs';\nimport {CURRENT_SOURCE_MANIFEST} from './helpers/currentSourceCatalog.mjs';\nimport {RECOVERY_SOURCE_MANIFEST} from './helpers/recoverySourceCatalog.mjs';\nconst root=new URL('../',import.meta.url);\nconst git=args=>execFileSync('git',['--no-replace-objects',...args],{cwd:root});\nfunction fixture(){\n const bytes=new Map(),modes=new Map(),paths=integrationInventory(),manifest=JSON.parse(integrationPhysicalRead(CURRENT_INTEGRATION_MANIFEST));\n const read=p=>bytes.has(p)?bytes.get(p):integrationPhysicalRead(p);\n"
+        },
+        {
+          "before": " return {bytes,modes,paths,manifest,read,mode,reseal,mirror,verify:()=>verifyIntegrationCandidate(read,paths,mode)};\n}\ntest('successor admits the complete Git delta and preserves the immutable prior terminal and lineage',()=>{\n const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);\n assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261022-runtime-integrity.json');\n assert.equal(CURRENT_INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261103-current-source.json');\n assert.deepEqual(m.files.map(r=>r.path),integrationScope());\n assert.deepEqual(integrationInventory(),[...integrationScope(),CURRENT_INTEGRATION_MANIFEST].sort());\n // The old terminal remains immutable with all 865 rows. Current source has\n // an additional exact Git delta, whose live negative controls run separately.\n const previous=JSON.parse(git(['show','da0e07dd23aee62f31cd669d0d090d948e6d1171:docs/operations/evidence/core-member-integration-20261102-reviewed-successor.json']));\n assert.equal(previous.files.length,865);assert.equal(m.files.length,903);assert.equal(integrationInventory().length,904);\n assert.equal(integrationHash(integrationPhysicalRead(INTEGRATION_MANIFEST)),'554e96d7d84995d8bc19091bbfa7e2dfb152fec6980d32502e963f4b860c199e');\n assert.deepEqual(integrationPhysicalRead(INTEGRATION_MANIFEST),git(['show',REVIEWED_SUCCESSOR_BASE+':'+INTEGRATION_MANIFEST]));\n const old=JSON.parse(integrationPhysicalRead(INTEGRATION_MANIFEST)),lineage=sourceUnionLineage();\n delete lineage.reviewed_successor;assert.deepEqual(old.source_union,lineage);\n assert.equal(old.files.length,586);assert.equal(RUNTIME_INTEGRITY_FILES.length,86);\n",
+          "after": " return {bytes,modes,paths,manifest,read,mode,reseal,mirror,verify:()=>verifyIntegrationCandidate(read,paths,mode)};\n}\ntest('successor admits the complete Git delta and preserves the immutable prior terminal and lineage',()=>{\n const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);\n assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261022-runtime-integrity.json');\n assert.equal(CURRENT_SOURCE_MANIFEST,'docs/operations/evidence/core-member-integration-20261103-current-source.json');\n assert.equal(CURRENT_INTEGRATION_MANIFEST,RECOVERY_SOURCE_MANIFEST);\n assert.deepEqual(m.files.map(r=>r.path),integrationScope());\n assert.deepEqual(integrationInventory(),[...integrationScope(),CURRENT_INTEGRATION_MANIFEST].sort());\n // The old terminal remains immutable with all 865 rows. Current source has\n // an additional exact Git delta, whose live negative controls run separately.\n const previous=JSON.parse(git(['show','da0e07dd23aee62f31cd669d0d090d948e6d1171:docs/operations/evidence/core-member-integration-20261102-reviewed-successor.json']));\n const priorCurrent=JSON.parse(integrationPhysicalRead(CURRENT_SOURCE_MANIFEST));\n assert.equal(previous.files.length,865);assert.equal(priorCurrent.files.length,903);assert.equal(priorCurrent.files.length+1,904);\n assert.equal(integrationInventory().length,m.files.length+1);\n assert.equal(integrationHash(integrationPhysicalRead(INTEGRATION_MANIFEST)),'554e96d7d84995d8bc19091bbfa7e2dfb152fec6980d32502e963f4b860c199e');\n assert.deepEqual(integrationPhysicalRead(INTEGRATION_MANIFEST),git(['show',REVIEWED_SUCCESSOR_BASE+':'+INTEGRATION_MANIFEST]));\n const old=JSON.parse(integrationPhysicalRead(INTEGRATION_MANIFEST)),lineage=sourceUnionLineage();\n delete lineage.reviewed_successor;assert.deepEqual(old.source_union,lineage);\n assert.equal(old.files.length,586);assert.equal(RUNTIME_INTEGRITY_FILES.length,86);\n"
+        }
+      ]
+    },
+    {
+      "path": "tests/officialPublicAdmission.test.mjs",
+      "purpose": "PRESERVE_PRIOR_ASSERTIONS_WITH_EXACT_RECOVERY_SOURCE_BRIDGE",
+      "before": {
+        "oid": "ccbf45b470566b0b080e6c168a018bc26764d017",
+        "mode": "100644",
+        "sha256": "89af88d56b5f0f2c3544827a2171a693dfb4eca5559104af0ff3d8b0dc0b7409"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "2625b54f1dbbb84ca98d1ae2b01c1c86032b72d1dbf600eba0f8d689c0f21784"
+      },
+      "exact_edits": [
+        {
+          "before": " FROZEN_SOURCE_UNION_R10,\n FROZEN_SOURCE_UNION_R11,FROZEN_SOURCE_UNION_R12,SOURCE_UNION_R12_FILES,\n FROZEN_SOURCE_UNION_R13,SOURCE_UNION_R14_FILES,FROZEN_SOURCE_UNION_R14,\n FROZEN_SOURCE_UNION_R15,RUNTIME_INTEGRITY_FILES,\n} from './helpers/integrationAdmission.mjs';\nimport {reviewedSuccessorPaths} from './helpers/currentSourceSuccessor.mjs';\nimport {reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';\nconst frozenRuntimePaths=new Set(JSON.parse(integrationPhysicalRead(FROZEN_RUNTIME_INTEGRATION_MANIFEST)).files.map(row=>row.path));\nconst successorAdded=reviewedSuccessorPaths().filter(path=>!frozenRuntimePaths.has(path));\n// One changed current test consumer has an exact older Actual-parent view.\n// Raw reads and all source-gate callbacks keep the physical current bytes.\nfunction readActualIssuerConsumer(path,bytes){\n",
+          "after": " FROZEN_SOURCE_UNION_R10,\n FROZEN_SOURCE_UNION_R11,FROZEN_SOURCE_UNION_R12,SOURCE_UNION_R12_FILES,\n FROZEN_SOURCE_UNION_R13,SOURCE_UNION_R14_FILES,FROZEN_SOURCE_UNION_R14,\n FROZEN_SOURCE_UNION_R15,RUNTIME_INTEGRITY_FILES,\n} from './helpers/integrationAdmission.mjs';\nimport {reviewedSuccessorPaths} from './helpers/recoverySourceSuccessor.mjs';\nimport {recoverySourceHash as reviewedSuccessorSourceHash} from './helpers/recoverySourceCatalog.mjs';\nconst frozenRuntimePaths=new Set(JSON.parse(integrationPhysicalRead(FROZEN_RUNTIME_INTEGRATION_MANIFEST)).files.map(row=>row.path));\nconst successorAdded=reviewedSuccessorPaths().filter(path=>!frozenRuntimePaths.has(path));\n// One changed current test consumer has an exact older Actual-parent view.\n// Raw reads and all source-gate callbacks keep the physical current bytes.\nfunction readActualIssuerConsumer(path,bytes){\n"
+        }
+      ]
+    },
+    {
+      "path": "tests/originalIngressAdmission.test.mjs",
+      "purpose": "PRESERVE_PRIOR_ASSERTIONS_WITH_EXACT_RECOVERY_SOURCE_BRIDGE",
+      "before": {
+        "oid": "1710f5c07d8e9a0cd41882f9c613ce4834add289",
+        "mode": "100644",
+        "sha256": "a9d7cd352abf59c884e4af08024985f8813bd50e9fe55d18ce369ee7503248de"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "2d75e7bdff159031b5bcdd812c2b8fef0dfe86d146cb5f156d2e5fbb12f4e7ce"
+      },
+      "exact_edits": [
+        {
+          "before": " FROZEN_SOURCE_UNION_R13,SOURCE_UNION_R14_BASE,SOURCE_UNION_R14_FILES,sourceUnionR14Lineage,FROZEN_SOURCE_UNION_R14,SOURCE_UNION_R15_BASE,SOURCE_UNION_R15_FILES,sourceUnionR15Lineage,\n FROZEN_SOURCE_UNION_R15,RUNTIME_INTEGRITY_FILES,RUNTIME_INTEGRITY_BASE,runtimeIntegrityLineage,\n integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHash,\n createSourceUnionComposition,verifyIntegrationCandidate,sourceUnionLineage,sourceUnionParentRead,reuseSourceUnionPinnedProof,\n} from './helpers/integrationAdmission.mjs';\nimport {reviewedSuccessorPaths} from './helpers/currentSourceSuccessor.mjs';\nimport {reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';\nimport {currentSourceHash} from './helpers/currentSourceCatalog.mjs';\nconst frozenRuntime=JSON.parse(integrationPhysicalRead(FROZEN_RUNTIME_INTEGRATION_MANIFEST));\nconst frozenRuntimePaths=new Set(frozenRuntime.files.map(row=>row.path));\nconst successorAdded=reviewedSuccessorPaths().filter(path=>!frozenRuntimePaths.has(path));\n// Later source succession changes one current R4 consumer view. The older\n// retention audits compare that ONE reviewed function with its immutable dee\n",
+          "after": " FROZEN_SOURCE_UNION_R13,SOURCE_UNION_R14_BASE,SOURCE_UNION_R14_FILES,sourceUnionR14Lineage,FROZEN_SOURCE_UNION_R14,SOURCE_UNION_R15_BASE,SOURCE_UNION_R15_FILES,sourceUnionR15Lineage,\n FROZEN_SOURCE_UNION_R15,RUNTIME_INTEGRITY_FILES,RUNTIME_INTEGRITY_BASE,runtimeIntegrityLineage,\n integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHash,\n createSourceUnionComposition,verifyIntegrationCandidate,sourceUnionLineage,sourceUnionParentRead,reuseSourceUnionPinnedProof,\n} from './helpers/integrationAdmission.mjs';\nimport {reviewedSuccessorPaths} from './helpers/recoverySourceSuccessor.mjs';\nimport {recoverySourceHash as reviewedSuccessorSourceHash,RECOVERY_SOURCE_MANIFEST} from './helpers/recoverySourceCatalog.mjs';\nimport {recoverySourceHash as currentSourceHash} from './helpers/recoverySourceCatalog.mjs';\nimport {CURRENT_SOURCE_MANIFEST} from './helpers/currentSourceCatalog.mjs';\nconst frozenRuntime=JSON.parse(integrationPhysicalRead(FROZEN_RUNTIME_INTEGRATION_MANIFEST));\nconst frozenRuntimePaths=new Set(frozenRuntime.files.map(row=>row.path));\nconst successorAdded=reviewedSuccessorPaths().filter(path=>!frozenRuntimePaths.has(path));\n// Later source succession changes one current R4 consumer view. The older\n// retention audits compare that ONE reviewed function with its immutable dee\n"
+        },
+        {
+          "before": "const R4_ASSERTION_CURRENT_SHA='eb62f37aac7a219d77b0dec89067b6ff7b5fbeb6ef4ccbc0780bde5a6df6cb3e';\n// Invert only the two explicit compatibility edits before checking the original\n// whole-file pin. Any other current-byte change still fails that unchanged pin.\nfunction priorAssertionCompatibilitySource(current){\n const edits=[\n  [\"import {reviewedSuccessorPaths} from './helpers/currentSourceSuccessor.mjs';\\nimport {reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';\", \"import {reviewedSuccessorPaths,reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';\"],\n  [\"  if(['src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts','src/features/vnext/dailyAdapter.ts','src/features/vnext/dailyParsers.mjs'].includes(path))assert.equal(integrationHash(integrationPhysicalRead(path)),reviewedSuccessorSourceHash(path,RUNTIME_INTEGRITY_FILES.find(r=>r.path===path)?.after_sha256??integrationHash(frozen)),'current candidate is independently admitted, not substituted into Worker5');\", \"  if(['src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts','src/features/vnext/dailyAdapter.ts'].includes(path))assert.equal(integrationHash(integrationPhysicalRead(path)),reviewedSuccessorSourceHash(path,RUNTIME_INTEGRITY_FILES.find(r=>r.path===path).after_sha256),'current candidate is independently admitted, not substituted into Worker5');\"],\n ];\n for(const [after,before]of edits){assert.equal(current.split(after).length,2,'ASSERTION_EXACT_COMPATIBILITY_EDIT');current=current.replace(after,before);}\n return current;\n",
+          "after": "const R4_ASSERTION_CURRENT_SHA='eb62f37aac7a219d77b0dec89067b6ff7b5fbeb6ef4ccbc0780bde5a6df6cb3e';\n// Invert only the two explicit compatibility edits before checking the original\n// whole-file pin. Any other current-byte change still fails that unchanged pin.\nfunction priorAssertionCompatibilitySource(current){\n const edits=[\n  [\"import {reviewedSuccessorPaths} from './helpers/recoverySourceSuccessor.mjs';\\nimport {recoverySourceHash as reviewedSuccessorSourceHash} from './helpers/recoverySourceCatalog.mjs';\", \"import {reviewedSuccessorPaths} from './helpers/currentSourceSuccessor.mjs';\\nimport {reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';\"],\n  [\"import {reviewedSuccessorPaths} from './helpers/currentSourceSuccessor.mjs';\\nimport {reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';\", \"import {reviewedSuccessorPaths,reviewedSuccessorSourceHash} from './helpers/reviewedSourceSuccessor.mjs';\"],\n  [\"  if(['src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts','src/features/vnext/dailyAdapter.ts','src/features/vnext/dailyParsers.mjs'].includes(path))assert.equal(integrationHash(integrationPhysicalRead(path)),reviewedSuccessorSourceHash(path,RUNTIME_INTEGRITY_FILES.find(r=>r.path===path)?.after_sha256??integrationHash(frozen)),'current candidate is independently admitted, not substituted into Worker5');\", \"  if(['src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts','src/features/vnext/dailyAdapter.ts'].includes(path))assert.equal(integrationHash(integrationPhysicalRead(path)),reviewedSuccessorSourceHash(path,RUNTIME_INTEGRITY_FILES.find(r=>r.path===path).after_sha256),'current candidate is independently admitted, not substituted into Worker5');\"],\n ];\n for(const [after,before]of edits){assert.equal(current.split(after).length,2,'ASSERTION_EXACT_COMPATIBILITY_EDIT');current=current.replace(after,before);}\n return current;\n"
+        },
+        {
+          "before": "const runtimeAdded=RUNTIME_INTEGRITY_FILES.filter(r=>r.before_sha256===null||[\"research/entry-opportunity.ts\",\"src/features/vnext/researchFunnel.ts\",\"supabase/functions/_shared/market-calendar-data.json\",\"tests/browser/ownerCockpitSupabaseMock.ts\",\"research/entry-official-history.ts\",\"tests/entryOpportunityOfficialHistory.test.mjs\",\"src/components/base/MarketDataCards.tsx\",\"src/pages/terms/page.tsx\",\"supabase/functions/_shared/required-provider-validation.mjs\",\"supabase/functions/_shared/provider-reliability-contract.mjs\",\"supabase/functions/_shared/production-evidence-recorder.mjs\",\"supabase/functions/fetch-market-data-v10/index.ts\",\"supabase/functions/market-readiness-preflight/index.ts\"].includes(r.path)).map(r=>r.path);\nconst flags=['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'];\ntest('R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',()=>{\n const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);\n assert.equal(FROZEN_RUNTIME_INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261022-runtime-integrity.json');\n assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261103-current-source.json');\n assert.equal(frozenRuntime.files.length,586);\n assert.equal(FROZEN_SOURCE_UNION_R7,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r7.json');\n assert.equal(FROZEN_SOURCE_UNION,'docs/operations/evidence/core-member-integration-20261020-v1-source-union.json');\n assert.equal(FROZEN_SOURCE_UNION_NORMALIZER,'docs/operations/evidence/core-member-integration-20261020-v1-source-union-normalizer.json');\n assert.equal(m.files.length,586+successorAdded.length);assert.equal(integrationInventory().length,587+successorAdded.length);\n",
+          "after": "const runtimeAdded=RUNTIME_INTEGRITY_FILES.filter(r=>r.before_sha256===null||[\"research/entry-opportunity.ts\",\"src/features/vnext/researchFunnel.ts\",\"supabase/functions/_shared/market-calendar-data.json\",\"tests/browser/ownerCockpitSupabaseMock.ts\",\"research/entry-official-history.ts\",\"tests/entryOpportunityOfficialHistory.test.mjs\",\"src/components/base/MarketDataCards.tsx\",\"src/pages/terms/page.tsx\",\"supabase/functions/_shared/required-provider-validation.mjs\",\"supabase/functions/_shared/provider-reliability-contract.mjs\",\"supabase/functions/_shared/production-evidence-recorder.mjs\",\"supabase/functions/fetch-market-data-v10/index.ts\",\"supabase/functions/market-readiness-preflight/index.ts\"].includes(r.path)).map(r=>r.path);\nconst flags=['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'];\ntest('R8 complete physical current union preserves R4/R5/R6/R7 assertions at their immutable parents',()=>{\n const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);\n assert.equal(FROZEN_RUNTIME_INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261022-runtime-integrity.json');\n assert.equal(CURRENT_SOURCE_MANIFEST,'docs/operations/evidence/core-member-integration-20261103-current-source.json');\n assert.equal(INTEGRATION_MANIFEST,RECOVERY_SOURCE_MANIFEST);\n assert.equal(frozenRuntime.files.length,586);\n assert.equal(FROZEN_SOURCE_UNION_R7,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r7.json');\n assert.equal(FROZEN_SOURCE_UNION,'docs/operations/evidence/core-member-integration-20261020-v1-source-union.json');\n assert.equal(FROZEN_SOURCE_UNION_NORMALIZER,'docs/operations/evidence/core-member-integration-20261020-v1-source-union-normalizer.json');\n assert.equal(m.files.length,586+successorAdded.length);assert.equal(integrationInventory().length,587+successorAdded.length);\n"
+        },
+        {
+          "before": "\ntest('successor assertion source restores exactly one reviewed R4 body while raw current execution and injected bytes remain current',()=>{\n const raw=integrationPhysicalRead(R4_ASSERTION_PATH).toString(),current=assertionFunctionSpan(raw,R4_ASSERTION_TITLE);assert(current);\n const checkCompatibility=text=>assert.equal(integrationHash(Buffer.from(priorAssertionCompatibilitySource(text))),R4_ASSERTION_FILE_CURRENT_SHA);\n checkCompatibility(raw);\n for(const changed of [raw+'\\nUNREVIEWED',raw.replace(\"from './helpers/currentSourceSuccessor.mjs'\",\"from './helpers/unknown.mjs'\"),raw.replace('src/features/vnext/dailyParsers.mjs','src/features/vnext/unknown.mjs')])assert.throws(()=>checkCompatibility(changed));\n assert.equal(integrationHash(Buffer.from(current.body)),R4_ASSERTION_CURRENT_SHA);\n const restored=reviewedSuccessorAssertionSource(R4_ASSERTION_PATH,raw),before=assertionFunctionSpan(restored,R4_ASSERTION_TITLE);assert(before);\n assert.equal(integrationHash(Buffer.from(before.body)),R4_ASSERTION_BEFORE_SHA);assert.notEqual(raw,restored);\n assert.equal((current.body.match(/\\bassert[.(]/g)??[]).length,10);assert.equal((before.body.match(/\\bassert[.(]/g)??[]).length,7);\n assert.equal(restored,raw.slice(0,current.start)+before.body+raw.slice(current.start+current.body.length));\n",
+          "after": "\ntest('successor assertion source restores exactly one reviewed R4 body while raw current execution and injected bytes remain current',()=>{\n const raw=integrationPhysicalRead(R4_ASSERTION_PATH).toString(),current=assertionFunctionSpan(raw,R4_ASSERTION_TITLE);assert(current);\n const checkCompatibility=text=>assert.equal(integrationHash(Buffer.from(priorAssertionCompatibilitySource(text))),R4_ASSERTION_FILE_CURRENT_SHA);\n checkCompatibility(raw);\n for(const changed of [raw+'\\nUNREVIEWED',raw.replace(\"from './helpers/recoverySourceSuccessor.mjs'\",\"from './helpers/unknown.mjs'\"),raw.replace('src/features/vnext/dailyParsers.mjs','src/features/vnext/unknown.mjs')])assert.throws(()=>checkCompatibility(changed));\n assert.equal(integrationHash(Buffer.from(current.body)),R4_ASSERTION_CURRENT_SHA);\n const restored=reviewedSuccessorAssertionSource(R4_ASSERTION_PATH,raw),before=assertionFunctionSpan(restored,R4_ASSERTION_TITLE);assert(before);\n assert.equal(integrationHash(Buffer.from(before.body)),R4_ASSERTION_BEFORE_SHA);assert.notEqual(raw,restored);\n assert.equal((current.body.match(/\\bassert[.(]/g)??[]).length,10);assert.equal((before.body.match(/\\bassert[.(]/g)??[]).length,7);\n assert.equal(restored,raw.slice(0,current.start)+before.body+raw.slice(current.start+current.body.length));\n"
+        }
+      ]
+    }
+  ],
+  "prior_manifest": {
+    "path": "docs/operations/evidence/core-member-integration-20261103-current-source.json",
+    "oid": "e6f75ff76846d75617588b950811ef06a743f0c0",
+    "mode": "100644",
+    "sha256": "7a643f1e5f6abdb98c39f0735777c8046035ef21dee31fa5af220fc6a545be98"
+  },
+  "trusted_verifier_boundary": {
+    "path": "tests/helpers/integrationAdmission.mjs",
+    "before": {
+      "oid": "a0efa6e3652dcce094483c063f58ce9cd18e870d",
+      "mode": "100644",
+      "sha256": "e9af807dd54f078696aaf514906f0f93fb2d6dffbf96f3ec2ef88645f6195375"
+    },
+    "purpose": "SWITCH_DEFAULT_SUCCESSOR_PRESERVE_PRIOR_PINS_APPEND_RECOVERY_SUPPORT_PINS"
+  },
+  "authority": {
+    "source_admission": false,
+    "canonical_admission": false,
+    "quality_approval": false,
+    "rights_gate_changed": false,
+    "publication_approval": false,
+    "production_authorized": false,
+    "thresholds_changed": false,
+    "existing_release_payloads_changed": false
+  },
+  "fixture_source": {
+    "path": "tests/dailyAiFullNestedLocal.integration.mjs",
+    "revision": "302e6cd89ba386e27eaab287fe759c3b0922b02f",
+    "oid": "3da17445dab0502d09e045799c464860e2ecf891",
+    "mode": "100644",
+    "sha256": "473ab70dc9e4c1e4ff378fe3b56c2915813d5e66fbb8dccf692defd65bb910b5"
+  },
+  "local_fixture": [
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/0_daily_ai_financial_body_v3.sql",
+      "mode": "100644",
+      "sha256": "7e25018f0c7ad8d2435a56c086d76277e7c45789ead3e3b0b768a6d376b41610",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/10_documented_review_phase_v2.sql",
+      "mode": "100644",
+      "sha256": "7ff227b6130f019ad4ac5b0ff70b76b695df58a59b0a4aa7c01822adf01f3158",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/11_is_documented_review_v2.sql",
+      "mode": "100644",
+      "sha256": "5f8dab7b9de7ced783779ec558c76e01020b4da5d2f84249746d1e94394ad9c9",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/12_is_issuer_ir_direct_fact_v1.sql",
+      "mode": "100644",
+      "sha256": "25845c46f34b6dc3bc86b91b9f33ef4c9002b607c3bb2e50decd479559346128",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/13_is_retained_sec_quarter_identity_v1.sql",
+      "mode": "100644",
+      "sha256": "83e4811a2af7eccdb10ca522b51e0a7a3b94fec22107b12df59e4e553959d999",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/14_is_umc_ir_direct_fact_v1.sql",
+      "mode": "100644",
+      "sha256": "738e78ed73d84f6349c258e3efdafaa396763f848a080b96a60a8f28763f0ba4",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/15_project_daily_stock_ai_inputs_reviews_v2.sql",
+      "mode": "100644",
+      "sha256": "6ca2fea04f29f4de1d379d70c55d7295832f1565345947629a82f24f37331e05",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/16_project_daily_stock_ai_inputs_v1.sql",
+      "mode": "100644",
+      "sha256": "7b3da81170bfdae84fdac26fbf88844791f4e4d795b6e687499b7a655559a977",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/17_validate_daily_ai_financial_refresh_institutional_v1.sql",
+      "mode": "100644",
+      "sha256": "c6aa315d3d957dfea4126af5b126255ce1b9a9eb3826f475e4f7c3e084808d59",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/18_validate_daily_ai_financial_refresh_issuer16_v1.sql",
+      "mode": "100644",
+      "sha256": "714542532b0750de136417c6189d279d9957ca6d558203c859473c91eba149f5",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/19_validate_daily_ai_financial_refresh_issuer_ir_v1.sql",
+      "mode": "100644",
+      "sha256": "2a8a82bb89ed879b7a6a8bd7f274c4c6fe6f084c89f020a6c91d6f7c52c81fe0",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/1_daily_ai_financial_body_v5.sql",
+      "mode": "100644",
+      "sha256": "d5ecd0b38168ed7fd3a0d182e0b199731a8736fbc7f62bc8b845568f292522c5",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/20_validate_daily_ai_financial_refresh_portal_margin_v1.sql",
+      "mode": "100644",
+      "sha256": "7f13eff1de29ebf0c6ff01eb7e0c5cddc578d66957b0e2551b59c7d441122300",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/21_validate_daily_ai_financial_refresh_reviews_v2.sql",
+      "mode": "100644",
+      "sha256": "a0567eb45678c58a4ad883ca53b8071dba4510fe658eea49c3beb7bb48cbc9e8",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/22_validate_daily_ai_financial_refresh_sec_v1.sql",
+      "mode": "100644",
+      "sha256": "0d6cde2b2d48fd5976434bdd8a2859db0483b7b500b9d0eb45c083d37e438711",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/23_validate_daily_ai_financial_refresh_umc_ir_v1.sql",
+      "mode": "100644",
+      "sha256": "74557a23b4889792f8ee58eea9bee64ac0b26ee54c7813e77cfa8f1834648f8d",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/24_validate_daily_ai_financial_refresh_v3.sql",
+      "mode": "100644",
+      "sha256": "0b6496439a0dc9b370bf371fe5aa2f2cc37d4e718819b38c68d81d6be29792ce",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/25_validate_daily_ai_financial_refresh_v5.sql",
+      "mode": "100644",
+      "sha256": "e6f4aa5a0f9f89fa42eaeff44fcde20c75620ec3937f9cdc477706415b87e318",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/27_daily_stock_ai_intake.sql",
+      "mode": "100644",
+      "sha256": "cd662b8fbad10449d0eda20addcf4f402df5e6645639bce3586d3a2635b020c0",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/2_daily_ai_financial_company_v5.sql",
+      "mode": "100644",
+      "sha256": "9d642b1fccf6671bf023ecca7025b2abd857a79c79e58877425adf567154a726",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/3_daily_ai_financial_field_v3.sql",
+      "mode": "100644",
+      "sha256": "48e6a2737c4f6d633d4808c118aadfd63000dec0b50f05d40a2f24c08387a644",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/4_daily_ai_financial_latest_v3.sql",
+      "mode": "100644",
+      "sha256": "794da20e2eb1363459a0d30ef513ae9ea93cf826f41283c86e6be0d2cec5950d",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/5_daily_ai_financial_latest_v5.sql",
+      "mode": "100644",
+      "sha256": "3dd464b5d5d27b0222e948c77fb719a90e05a1a5f7aaab51cb8836050f492595",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/6_daily_ai_financial_number_v3.sql",
+      "mode": "100644",
+      "sha256": "9f36c2ab756e9b87185e52c59723324fe5c761cb74ea59451a0d75250402930a",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/7_daily_ai_financial_report_v3.sql",
+      "mode": "100644",
+      "sha256": "2976e44939a95a5ad4ff5624b10466b8fb8072b5d6322964d629867c829fc917",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/8_daily_ai_financial_restricted_v3.sql",
+      "mode": "100644",
+      "sha256": "c8af5e581c9e91897fcfd57cffc757521edfca81787cea9fd51838c9b8510667",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    },
+    {
+      "path": "tests/fixtures/recovery-source-validators-20261105/9_daily_ai_financial_valuation_report_v5.sql",
+      "mode": "100644",
+      "sha256": "1a371f627b4d3c36e03e5ce65513f7d4271c944e36fb34541d2abf8f2882dbf9",
+      "origin": "READ_ONLY_POSTGRES_FUNCTION_DEFINITION_NO_DATA"
+    }
+  ]
+}

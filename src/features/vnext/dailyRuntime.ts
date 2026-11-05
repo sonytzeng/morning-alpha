@@ -1,18 +1,37 @@
 /** Production-like runner. Persistence is exclusively transactional RPC, never files. */
-import {snapshotHash} from './contracts.ts';
-import {directoryPlan,classifyCompanies,acquisitionPlan,outcomePlan,fetchSource,assembleDaily,type SourceReceipt,type SourceTask} from './dailyAdapter.ts';
+import {snapshotHash,hashValid,validTime} from './contracts.ts';
+import {ADAPTER_VERSION,directoryPlan,classifyCompanies,acquisitionPlan,outcomePlan,fetchSource,assembleDaily,sessionsBefore,REVENUE_ACQUISITION_MONTHS,MAX_PROVIDER_RETRY_SECONDS,type SourceReceipt,type SourceTask} from './dailyAdapter.ts';
 import {runDailyIntelligence,dailyPublication,verifyDailyLock,type DailyLock,type RunState,type DailyStore} from './dailyIntelligence.ts';
 import {researchOutcome,type OutcomeSource} from './dailyOutcome.ts';
-import {canonical} from '../../../research/entry-opportunity.ts';
-import type {DailyBar} from './researchFunnel.ts';
+import {canonical,ENTRY_VERSION,ENTRY_PREMARKET_VERSION} from '../../../research/entry-opportunity.ts';
+import {RESEARCH_RULES,type DailyBar} from './researchFunnel.ts';
 import {entryInputFromV2} from '../../../research/entry-v2-adapter.ts';
 import type {V2Input} from '../../../supabase/functions/_shared/recommendation-shadow-v2-engine.ts';
+import {mergeIssuerFinancialBatch,type IssuerFinancialPacket} from './issuerFinancialIntake.ts';
+import {mergeIssuerDocumentedReviews,type IssuerDocumentedReviewBinding} from './issuerDocumentedReviewIntake.ts';
+import {previousMarketTradingDate} from '../../../supabase/functions/_shared/market-session-contract.mjs';
 export type Rpc=(name:string,args:Record<string,unknown>)=>Promise<unknown>;
-export type RuntimePorts={rpc:Rpc;fetcher:typeof fetch;clock:()=>string;sleep:(ms:number)=>Promise<void>};
+export type IssuerFinancialReleaseBinding={packet:IssuerFinancialPacket;expectedHash:string};
+export type RuntimePorts={rpc:Rpc;fetcher:typeof fetch;clock:()=>string;sleep:(ms:number)=>Promise<void>;
+ issuerFinancials?:IssuerFinancialReleaseBinding|readonly IssuerFinancialReleaseBinding[];
+ issuerDocumentedReviews?:IssuerDocumentedReviewBinding;
+ entryVersion?:typeof ENTRY_VERSION|typeof ENTRY_PREMARKET_VERSION};
 type ClaimedRun={id:string;business_date:string;actionable_at:string;lease:string;lease_until?:string;fence:number;plan:SourceTask[];checkpoint:RunState|Record<string,never>;cursor:number};
 export type LeaseRecoveryPending={status:'LEASE_RECOVERY_PENDING';continue:true;reason:'FINISH_COMMIT_UNCONFIRMED';lease_until:string;not_before:string};
 const object=(v:unknown):Record<string,unknown>=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
 const failure=(e:unknown)=>{const msg=e instanceof Error?e.message:'';return /^[A-Z0-9_]{1,100}$/.test(msg)?msg:'INTEGRATION_FAILED';};
+// Scheduling reserves, not a changed actionable cutoff or evidence threshold.
+// RPC/CPU latency is not guaranteed: recheck at each durable stage boundary and
+// leave SQL's current-time veto authoritative for a delayed prediction insert.
+const FORWARD_PREPARE_MS=180000,ASSEMBLY_ADMISSION_MS=45000,STAGE_RESERVE_MS=20000,WRITE_RESERVE_MS=5000;
+// Cached and exhausted tasks consume RPC/JSON CPU too. Bound their traversal
+// independently of the existing eight-provider-fetch and wall-clock budgets.
+const ACQUISITION_TASKS_PER_INVOCATION=32;
+// Synthetic candidate tradeoff: allow two maximum 300s SQL backoffs plus a
+// 60s processing margin after the first pass. This does not bound the first
+// pass, Outcome completion, or guarantee three attempts near the reserve.
+const PREWARM_RETRY_WINDOW_MS=660000;
+type ProviderRetry={url:string;observed_at:string;not_before:string|null;blocked:boolean};
 export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
  const claimStarted=Date.now();
  const claim=object(await p.rpc('claim_vnext_daily_research_v1',{p_run:id}));if(claim.status!=='ACQUIRED')return {status:String(claim.status),continue:false};
@@ -21,7 +40,28 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
  // Keep lease/budget time on the wall clock; p.clock remains the evidence cutoff.
  const leaseUntil=typeof r.lease_until==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,6})?(?:Z|[+-]\d\d:\d\d)$/.test(r.lease_until)?Date.parse(r.lease_until):NaN;
  const recoverableLease=Number.isFinite(leaseUntil)&&leaseUntil>claimStarted&&leaseUntil<=claimCompleted+100000;
- const rpc=(op:string,data:unknown={})=>p.rpc('vnext_daily_runtime_v1',{p_run:r.id,p_lease:r.lease,p_fence:r.fence,p_op:op,p_data:data});
+ let runtimeCheckpoint=r.checkpoint;
+ let providerRetries:Record<string,ProviderRetry>={};
+ const rpc=async(op:string,data:unknown={})=>{
+  // SQL CHECKPOINT replaces the complete document. Preserve the provider
+  // barrier through prewarm, snapshot pin, engine stages and compact saves.
+  const metadata=Object.keys(providerRetries).length?{provider_retry_v1:{version:1,by_url:providerRetries}}:{};
+  const payload=op==='CHECKPOINT'?{...object(data),...metadata}:op==='CHECKPOINT_STATE'
+   ?{...object(data),checkpoint:{...object(object(data).checkpoint),...metadata}}:data;
+  const result=await p.rpc('vnext_daily_runtime_v1',{p_run:r.id,p_lease:r.lease,p_fence:r.fence,p_op:op,p_data:payload});
+  // Production claims are detached JSON values. Never depend on a test RPC
+  // mutating the object returned by claim to keep later saves current.
+  if(op==='CHECKPOINT')runtimeCheckpoint=payload as ClaimedRun['checkpoint'];
+  else if(op==='CHECKPOINT_STATE')runtimeCheckpoint={...object(object(payload).checkpoint),
+   acquired:object(runtimeCheckpoint).acquired,...('locks' in runtimeCheckpoint?{locks:runtimeCheckpoint.locks}:{})} as ClaimedRun['checkpoint'];
+  return result;
+ };
+ const actionable=Date.parse(r.actionable_at);
+ let cursor=r.cursor,planLength=r.plan.length,prepared='locks' in runtimeCheckpoint,predictionFailure:string|null=null;
+ const forwardBudget=(reserve=WRITE_RESERVE_MS)=>{
+  if(!hasLock&&Date.parse(p.clock())>=actionable)throw Error('FORWARD_WINDOW_ELAPSED');
+  if(Date.now()+reserve>=deadline)throw Error('FORWARD_PREPARATION_CONTINUATION');
+ };
  const finish=async(status:string,reason:string|null=null)=>{
   try{await rpc('FINISH',{status,reason});}
   catch(error){
@@ -36,9 +76,22 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   }
   return {status,continue:status==='QUEUED',reason,retry_after_seconds:retryAfter};
  };
- const commitLocks=(rows:DailyLock[])=>rpc('PREDICTIONS',rows.map(body=>{const {lock_hash,...rest}=body;return {body,canonical:canonical(rest),hash:lock_hash};}));
+ const commitLocks=async(rows:DailyLock[])=>{
+  try{return await rpc('PREDICTIONS',rows.map(body=>{const {lock_hash,...rest}=body;return {body,canonical:canonical(rest),hash:lock_hash};}));}
+  catch(e){predictionFailure=failure(e);throw e;}
+ };
  const collect=async(task:SourceTask):Promise<SourceReceipt|null|false>=>{
   if(Date.now()+14000>=deadline||fetched>=8)return false;
+  // The same endpoint may occur under several immutable task keys (for
+  // example POST quarters). A run-wide URL barrier prevents that bypass.
+  const endpoint=await snapshotHash(task.url),providerWait=providerRetries[endpoint];
+  if(providerWait){
+   if(providerWait.url!==task.url)throw Error('PROVIDER_RETRY_CHECKPOINT_INVALID');
+   if(providerWait.blocked)return null;
+   if(Date.parse(providerWait.not_before!)>Date.parse(p.clock())){
+    retryAfter=Math.min(300,Math.max(3,Math.ceil((Date.parse(providerWait.not_before!)-Date.parse(p.clock()))/1000)));return false;
+   }
+  }
   const reserved=object(await rpc('SOURCE_BEGIN',task));
   if(reserved.status==='CACHE')return reserved.receipt as SourceReceipt;
   if(reserved.status==='EXHAUSTED')return null;
@@ -50,68 +103,288 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
    await rpc('SOURCE_SAVE',{text:canonical(receipt)});return receipt;
   }catch(e){
    const reason=failure(e);retryAfter=Math.min(300,Math.max(3,Number(object(e).retryAfter)||3));
-   await rpc('SOURCE_FAIL',{key:task.key,reason,retry_seconds:retryAfter});
+   const error=object(e),blocked=error.retryBlocked===true;
+   if(reason!=='SOURCE_ACCESS_RESTRICTED'&&(blocked||typeof error.retryNotBefore==='string')){
+    const observed=error.retryObservedAt,notBefore=blocked?null:error.retryNotBefore;
+    if(typeof observed!=='string'||!validTime(observed)||Date.parse(observed)>Date.parse(p.clock())
+     ||(!blocked&&(typeof notBefore!=='string'||!validTime(notBefore)||Date.parse(notBefore)-Date.parse(observed)<=300000
+      ||Date.parse(notBefore)-Date.parse(observed)>MAX_PROVIDER_RETRY_SECONDS*1000)))throw Error('PROVIDER_RETRY_INVALID');
+    const previous=providerRetries;
+    providerRetries={...providerRetries,[endpoint]:{url:task.url,observed_at:observed,not_before:notBefore as string|null,blocked}};
+    if(Object.keys(providerRetries).length>3202)throw Error('PROVIDER_RETRY_LIMIT');
+    // Persist before another lease may attempt this source. A failed or lost
+    // write stops the run; never continue on an in-memory-only cooldown.
+    try{await rpc('CHECKPOINT',{...runtimeCheckpoint});}catch(error){providerRetries=previous;throw error;}
+   }
+   await rpc('SOURCE_FAIL',{key:task.key,reason:blocked?'SOURCE_RETRY_AFTER_UNUSABLE':reason,retry_seconds:retryAfter});
    // A denied official endpoint is not a transient rate limit. Preserve the
    // exact missing-source reason and advance; never retry/bypass its access
    // restriction or let hundreds of denied event tasks starve later evidence.
    // Transient failures keep the existing durable three-attempt backoff.
-   return reason==='SOURCE_ACCESS_RESTRICTED'?null:false;
+   return reason==='SOURCE_ACCESS_RESTRICTED'||blocked?null:false;
   }
  };
  try{
-  if('locks' in r.checkpoint){
-   if(r.checkpoint.locks?.length!==216||(await Promise.all(r.checkpoint.locks.map(verifyDailyLock))).some(ok=>!ok))throw Error('CHECKPOINT_LOCK_INVALID');
+  if('provider_retry_v1' in runtimeCheckpoint){
+   const raw=object(object(runtimeCheckpoint).provider_retry_v1),rows=object(raw.by_url);
+   if(raw.version!==1||Object.keys(raw).sort().join('|')!=='by_url|version'||raw.by_url!==rows||Object.keys(rows).length>3202)throw Error('PROVIDER_RETRY_CHECKPOINT_INVALID');
+   for(const [key,value] of Object.entries(rows)){
+    const row=object(value),span=Date.parse(String(row.not_before))-Date.parse(String(row.observed_at));
+    if(!hashValid(key)||Object.keys(row).sort().join('|')!=='blocked|not_before|observed_at|url'
+     ||typeof row.url!=='string'||row.url.length>2048||typeof row.blocked!=='boolean'||typeof row.observed_at!=='string'
+     ||!validTime(row.observed_at)||Date.parse(row.observed_at)>Date.parse(p.clock())
+     ||(row.blocked?row.not_before!==null:typeof row.not_before!=='string'||!validTime(row.not_before)||span<=300000||span>MAX_PROVIDER_RETRY_SECONDS*1000))throw Error('PROVIDER_RETRY_CHECKPOINT_INVALID');
+   }
+   providerRetries=rows as Record<string,ProviderRetry>;
+  }
+  // A legacy request binding without its original acquired bytes cannot be
+  // repaired by choosing a new cutoff/revision or resetting durable attempts.
+  if('key' in runtimeCheckpoint&&!runtimeCheckpoint.acquired)throw Error('CHECKPOINT_ACQUIRED_MISSING');
+  if('locks' in runtimeCheckpoint){
+   if(runtimeCheckpoint.locks?.length!==216||(await Promise.all(runtimeCheckpoint.locks.map(verifyDailyLock))).some(ok=>!ok))throw Error('CHECKPOINT_LOCK_INVALID');
    // Checkpoint locks are PREPARED, not proof of a committed transaction.
    // Replay identical bytes before any acquisition/outcome/completion. SQL
    // fences the lease, permits exact committed retries even after the cutoff,
    // and rejects new late inserts without backdating a Forward prediction.
-   await commitLocks(r.checkpoint.locks);hasLock=true;
+   await commitLocks(runtimeCheckpoint.locks);hasLock=true;
   }
+  const due=await rpc('DUE_OUTCOMES') as {prediction:DailyLock;horizons:number[]}[];
   const dirs:SourceReceipt[]=[];for(const t of await directoryPlan(r.business_date)){const receipt=await collect(t);if(!receipt)return finish(receipt===null?'BLOCKED':'QUEUED','UNIVERSE_DIRECTORY_UNAVAILABLE');dirs.push(receipt);}
   const companies=classifyCompanies(dirs),plan=r.plan.length?r.plan:await acquisitionPlan(r.business_date,companies);
   if(!r.plan.length)await rpc('PLAN',plan);
-  const due=await rpc('DUE_OUTCOMES') as {prediction:DailyLock;horizons:number[]}[];
-  let cursor=r.cursor;
-  for(let i=r.cursor;i<plan.length&&due.length===0;i++){
+  planLength=plan.length;
+  const retainedAcquired='acquired' in runtimeCheckpoint?runtimeCheckpoint.acquired:undefined;
+  const resumePrepared=hasLock&&'key' in runtimeCheckpoint&&runtimeCheckpoint.finished!==true
+   &&new Date(Date.parse(p.clock())+8*3600000).toISOString().slice(0,10)===r.business_date;
+  // Old persisted plans cannot be reordered. An independent warm pass is
+  // needed both when outcomes are due and when an older plan places a cold
+  // task before still-unprocessed current-window tasks. It never moves cursor.
+  const warmDates=!hasLock&&!retainedAcquired?sessionsBefore(r.business_date,20):[],warmMonths=new Set(warmDates.map(d=>d.slice(0,7)));
+  const recentInstitutional=new Set(warmDates.slice(-RESEARCH_RULES.medium_institutional_sessions));
+  const recentRevenue=new Set([...new Set(plan.filter(t=>t.kind==='REVENUE'&&t.period).map(t=>t.period!))].sort().slice(-REVENUE_ACQUISITION_MONTHS));
+  const isCurrentWindow=(t:SourceTask)=>t.kind==='TWSE_PRICE_DAY'
+   ||(t.kind==='PRICE'||t.kind==='BENCHMARK')&&warmMonths.has(t.month??'')
+   ||t.kind==='OTC_PRICE'&&warmDates.includes(t.date??'')
+   ||t.kind==='INSTITUTIONAL'&&recentInstitutional.has(t.date??'')
+   ||t.kind==='REVENUE'&&recentRevenue.has(t.period??'');
+  const coldAheadOfWarm=r.cursor<plan.length&&!isCurrentWindow(plan[r.cursor])&&plan.slice(r.cursor+1).some(isCurrentWindow);
+  const usePrewarm=!hasLock&&!retainedAcquired&&Date.parse(p.clock())<actionable-FORWARD_PREPARE_MS
+   &&(due.length>0||coldAheadOfWarm||'prewarm_v1' in runtimeCheckpoint);
+  if(usePrewarm){
+   const warm=plan.filter(isCurrentWindow),warmKeys=warm.map(t=>t.key);
+   if(new Set(warmKeys).size!==warmKeys.length)throw Error('PREWARM_PLAN_DUPLICATE');
+   const fingerprint=await snapshotHash(warmKeys);
+   const prior=object(object(runtimeCheckpoint).prewarm_v1);
+   let next=0,deferred:number[]=[],retryUntil:string|null=null;
+   if(Object.keys(prior).length){
+    if(prior.fingerprint!==fingerprint||!Number.isInteger(prior.next)||Number(prior.next)<0||Number(prior.next)>warm.length
+      ||!Array.isArray(prior.deferred)||prior.deferred.some(i=>!Number.isInteger(i)||i<0||i>=Number(prior.next))
+      ||new Set(prior.deferred).size!==prior.deferred.length)throw Error('PREWARM_CHECKPOINT_INVALID');
+    if(prior.retry_until!==null&&prior.retry_until!==undefined
+      &&(typeof prior.retry_until!=='string'||!validTime(prior.retry_until)||Date.parse(prior.retry_until)>actionable-FORWARD_PREPARE_MS))throw Error('PREWARM_CHECKPOINT_INVALID');
+    next=Number(prior.next);deferred=[...prior.deferred] as number[];retryUntil=typeof prior.retry_until==='string'?prior.retry_until:null;
+   }
+   const saveProgress=()=>rpc('CHECKPOINT',{...runtimeCheckpoint,prewarm_v1:{fingerprint,next,deferred,retry_until:retryUntil}});
+   let processed=0;
+   const budgetAvailable=()=>processed<ACQUISITION_TASKS_PER_INVOCATION&&Date.now()+14000<deadline&&fetched<8;
+   while(next<warm.length&&Date.parse(p.clock())<actionable-FORWARD_PREPARE_MS){
+    if(!budgetAvailable()){retryAfter=3;return finish('QUEUED','PREWARM_CONTINUATION');}
+    const index=next,receipt=await collect(warm[index]);processed++;
+    // A transient source is deferred instead of blocking unrelated sources. Its
+    // attempt/backoff remains owned by SOURCE_BEGIN/SOURCE_FAIL in SQL.
+    if(receipt===false)deferred.push(index);
+    next++;await saveProgress();
+   }
+   // Give transient failures a bounded opportunity to use the original SQL
+   // retry/backoff/three-attempt policy. The finite retry window only starts
+   // after the first pass and never crosses the forward-preparation reserve.
+   // A slow or late provider can still result in a truthful partial snapshot.
+   if(deferred.length&&Date.parse(p.clock())<actionable-FORWARD_PREPARE_MS){
+    if(!retryUntil){retryUntil=new Date(Math.min(Date.parse(p.clock())+PREWARM_RETRY_WINDOW_MS,actionable-FORWARD_PREPARE_MS)).toISOString();await saveProgress();}
+    let minRetry=300;const retryCount=deferred.length;
+    for(let i=0;i<retryCount&&Date.parse(p.clock())<Date.parse(retryUntil);i++){
+     if(!budgetAvailable()){retryAfter=3;return finish('QUEUED','PREWARM_CONTINUATION');}
+     const index=deferred.shift()!,receipt=await collect(warm[index]);processed++;
+     if(receipt===false){deferred.push(index);minRetry=Math.min(minRetry,retryAfter);}
+     await saveProgress();
+    }
+    if(deferred.length&&Date.parse(p.clock())<Date.parse(retryUntil)){
+     retryAfter=Math.max(3,Math.min(20,minRetry,Math.ceil((Date.parse(retryUntil)-Date.parse(p.clock()))/1000)));
+     return finish('QUEUED','PREWARM_RETRY_PENDING');
+    }
+   }
+   // Expired/exhausted tasks remain absent from this snapshot; their durable
+   // SQL source state is preserved for later processing by the original plan.
+   retryAfter=3;
+  }
+  // When there are no due outcomes, a current ordered plan normally traverses
+  // the warm prefix with the original durable cursor. Once that prefix is
+  // complete, pin today's snapshot before spending time on cold history. The
+  // immutable original cursor remains at the first cold item and resumes only
+  // after the forward lock. For unusual plans with later warm items, retain the
+  // earlier prewarm path; a plan without warm tasks keeps its old behaviour.
+  let lastWarmIndex=-1;
+  for(let j=0;j<plan.length;j++)if(isCurrentWindow(plan[j]))lastWarmIndex=j;
+  for(let i=r.cursor,processed=0;i<plan.length&&!resumePrepared&&(!retainedAcquired||hasLock||Date.parse(p.clock())>=actionable);i++,processed++){
+   if(due.length>0||usePrewarm)break;
+   // An old persisted plan may start warm, then place a cold task before more
+   // warm work. Yield with cursor at that cold task; the next lease detects
+   // coldAheadOfWarm and uses the durable independent prewarm path. Never skip
+   // the cold task or wait on its provider before acquiring the later warm work.
+   if(!hasLock&&!retainedAcquired&&Date.parse(p.clock())<actionable-FORWARD_PREPARE_MS
+    &&!isCurrentWindow(plan[i])&&i<lastWarmIndex)return finish('QUEUED','WARM_PRIORITY_CONTINUATION');
+   if(!hasLock&&!retainedAcquired&&Date.parse(p.clock())<actionable&&lastWarmIndex>=0&&i>lastWarmIndex)break;
    // Lock a truthful partial-evidence evaluation before the existing 09:00
    // deadline. Long-history bootstrap may continue; never backdate its receipts.
-   const current=Date.parse(p.clock()),actionable=Date.parse(r.actionable_at);
-   if(!hasLock&&current>=actionable-60000&&current<actionable)break;
-   if(Date.now()+14000>=deadline||fetched>=8)return finish('QUEUED','ACQUISITION_CONTINUATION');
+   const current=Date.parse(p.clock());
+   if(!hasLock&&current>=actionable-FORWARD_PREPARE_MS&&current<actionable)break;
+   if(processed>=ACQUISITION_TASKS_PER_INVOCATION||Date.now()+14000>=deadline||fetched>=8)return finish('QUEUED','ACQUISITION_CONTINUATION');
    const receipt=await collect(plan[i]);if(receipt===false)return finish('QUEUED','SOURCE_RETRY_PENDING');
    await rpc('CURSOR',{cursor:i+1});cursor=i+1;
   }
+  if(!hasLock&&Date.parse(p.clock())<actionable||resumePrepared){
+  let acquired=retainedAcquired;
+  if(!acquired){
+  if(Date.now()+ASSEMBLY_ADMISSION_MS>=deadline)return finish('QUEUED','EVALUATION_CONTINUATION');
   const sources=await rpc('SOURCES') as SourceReceipt[];
   if(Date.now()+30000>=deadline)return finish('QUEUED','EVALUATION_CONTINUATION');
+  forwardBudget();
   // Only actual same-cutoff retained market/Entry capsules may enrich this run.
   const evaluationCutoff=p.clock();
-  const lineage=hasLock?{}:object(await rpc('ENTRY_SOURCE',{cutoff:evaluationCutoff}));const market=lineage.market??null;
-  if(!hasLock&&!market&&Date.parse(p.clock())<Date.parse(r.actionable_at)-60000){retryAfter=30;return finish('QUEUED','CANONICAL_PUBLICATION_PENDING');}
-  const acquired='acquired' in r.checkpoint&&r.checkpoint.acquired?r.checkpoint.acquired:await assembleDaily(r.business_date,companies,sources,evaluationCutoff,market as Parameters<typeof assembleDaily>[4]);
-  if(!('acquired' in r.checkpoint)&&lineage.evidence&&typeof lineage.hash==='string'&&acquired.entry){
+  const lineage=object(await rpc('ENTRY_SOURCE',{cutoff:evaluationCutoff}));const market=lineage.market??null;
+  const entryVersion=p.entryVersion??ENTRY_VERSION;
+  if(![ENTRY_VERSION,ENTRY_PREMARKET_VERSION].includes(entryVersion))throw Error('ENTRY_VERSION_UNSUPPORTED');
+  // The new runtime must never feed a new version into an unprepared database.
+  // This capability comes from the existing fenced server RPC, not a browser.
+  if(entryVersion===ENTRY_PREMARKET_VERSION&&(!Array.isArray(lineage.entry_versions)
+   ||!lineage.entry_versions.includes(ENTRY_PREMARKET_VERSION)))throw Error('ENTRY_VERSION_DATABASE_NOT_READY');
+  // Keep the original Canonical wait: early scheduling must not permanently
+  // freeze a missing market that may become available before the last minute.
+  if(!market&&Date.parse(p.clock())<actionable-60000){retryAfter=30;return finish('QUEUED','CANONICAL_PUBLICATION_PENDING');}
+  acquired=await assembleDaily(r.business_date,companies,sources,evaluationCutoff,market as Parameters<typeof assembleDaily>[4]);
+  // The server release may supply already-normalized issuer originals. Only
+  // a new acquisition is enriched; a retained checkpoint keeps its exact bytes.
+  // Their private/unadmitted status and unknown publication time stay intact.
+  if(p.issuerFinancials){
+   const releases='packet' in p.issuerFinancials?[p.issuerFinancials]:p.issuerFinancials;
+   acquired=await mergeIssuerFinancialBatch(acquired,releases);
+  }
+  if(p.issuerDocumentedReviews){
+   // Reprice the fixed, freshly reviewed policy only for this unpinned input.
+   // Its actual computation clock advances the cutoff; saved snapshots keep
+   // their original facts, cutoff and version on every continuation.
+   acquired=await mergeIssuerDocumentedReviews(acquired,p.issuerDocumentedReviews,p.clock);
+  }
+  if(!('acquired' in runtimeCheckpoint)&&lineage.evidence&&typeof lineage.hash==='string'&&acquired.entry){
    const capsule=lineage.evidence as V2Input;
    if(capsule.identity.report_date!==r.business_date||Date.parse(capsule.identity.generated_at)>Date.parse(acquired.evidence_cutoff))throw Error('ENTRY_CUTOFF_MISMATCH');
    const entry=await entryInputFromV2(capsule,lineage.hash,market as Parameters<typeof entryInputFromV2>[2],'FORWARD','REAL_RETAINED');
-   acquired.entry.market=entry.market;
+   // Only close observations for this premarket's completed TW session can veto the
+   // independently validated Canonical + official-index fallback. A capsule
+   // also retains older history; its mere presence is not a current refusal.
+   // Do not filter timestamps, values or quality here: a matching-session
+   // future/invalid/conflicting quote must retain V2's original null refusal.
+   const marketSession=previousMarketTradingDate('TW',r.business_date);
+   const marketObservationInScope=capsule.data.quotes.some(q=>{
+    if(q.symbol!=='TAIEX'||q.phase!=='close')return false;
+    const raw=object(q.raw_payload),native=object(raw.source_raw);
+    return String(raw.evidence_session_date||native.evidence_session_date||q.trading_date)===marketSession;
+   });
+   if(entry.market||marketObservationInScope)acquired.entry.market=entry.market;
    for(const stock of acquired.entry.stocks){const prior=entry.stocks.find(s=>s.symbol===stock.symbol);if(prior){stock.relative_strength=prior.relative_strength;stock.sector_return=prior.sector_return;stock.events_reviewed=prior.events_reviewed;stock.v2_status=prior.v2_status;}}
    const {snapshot_hash,...body}=acquired;void snapshot_hash;acquired.snapshot_hash=await snapshotHash(body);
   }
-  if(!hasLock&&Date.parse(p.clock())<Date.parse(r.actionable_at)){
-   let state='key' in r.checkpoint?r.checkpoint as RunState:null;
-   const store:DailyStore={exclusive:async(_key,work)=>work(),load:async()=>state,save:async s=>{await rpc('CHECKPOINT',s);state=s;},
-    lock:async rows=>{await commitLocks(rows);}};
+  if(entryVersion===ENTRY_PREMARKET_VERSION){
+   acquired.entry_version=ENTRY_PREMARKET_VERSION;
+   const {snapshot_hash,...body}=acquired;void snapshot_hash;acquired.snapshot_hash=await snapshotHash(body);
+  }
+  // Assembly and its first durable pin can already consume most of an Edge
+  // invocation's CPU allowance. Do not immediately serialize/validate the same
+  // multi-MB snapshot again in this invocation. This checkpoint is NOT an
+  // acquisition/quality PASS and has no request-bound attempt yet. The existing
+  // continuation reclaims a new SQL lease, reuses these exact bytes/cutoff, and
+  // the unchanged engine still validates before completing ACQUISITION.
+  forwardBudget();
+  await rpc('CHECKPOINT',{acquired});
+  // This is a completed-stage handoff, not a pending provider retry. A skipped
+  // restricted source must not carry its Retry-After into Handler's handoff.
+  retryAfter=3;
+  return finish('QUEUED','ACQUIRED_SNAPSHOT_CONTINUATION');
+  }
+  if(hasLock||Date.parse(p.clock())<actionable){
+   // Operational CPU budget, not an evidence/selection threshold. Small
+   // snapshots retain the prior lifecycle; large immutable snapshots must not
+   // serialize all pre-lock checkpoints in the same Edge invocation.
+   const prelockStageLimit=new TextEncoder().encode(JSON.stringify(acquired)).byteLength>2*1024*1024?1:0;
+   let state='key' in runtimeCheckpoint?runtimeCheckpoint as RunState:null;
+   let savedAttempts={...state?.attempts};
+   // commitLocks above already received SQL's exact-batch reconciliation. Keep
+   // a private byte receipt; this confirmation never invokes a writer RPC.
+   const committedPrepared=hasLock&&'locks' in runtimeCheckpoint?JSON.stringify(runtimeCheckpoint.locks):null;
+   let preparedBytes='locks' in runtimeCheckpoint?JSON.stringify(runtimeCheckpoint.locks):null;
+   const store:DailyStore={exclusive:async(_key,work)=>work(),load:async()=>state,save:async s=>{
+    const startingStage=Object.entries(s.attempts).some(([stage,n])=>stage!=='ACQUISITION'&&(n??0)>(savedAttempts[stage as keyof typeof savedAttempts]??0));
+    forwardBudget(startingStage?STAGE_RESERVE_MS:WRITE_RESERVE_MS);
+    // Pin the already assembled revision in the first attempt-before-work
+    // checkpoint. This is a recoverable snapshot, NOT validation/quality PASS:
+    // the unchanged engine still validates it before completing ACQUISITION.
+    const checkpoint={...s,acquired:s.acquired??acquired};
+    if(prelockStageLimit>0){
+     // The acquired snapshot is already durably pinned. Keep it server-side
+     // instead of re-sending it with every mutable stage checkpoint. Once a
+     // prepared batch is pinned, omit it only after exact local byte equality.
+     const compact:Partial<RunState>={...s};delete compact.acquired;
+     const lockBytes=s.locks?JSON.stringify(s.locks):null;
+     if(preparedBytes!==null){
+      if(lockBytes!==preparedBytes)throw Error('PREPARED_LOCKS_IMMUTABLE');
+      delete compact.locks;
+     }
+     await rpc('CHECKPOINT_STATE',{source_revision:acquired.snapshot_hash,checkpoint:compact});
+     preparedBytes??=lockBytes;
+    }else await rpc('CHECKPOINT',checkpoint);
+    state=checkpoint;savedAttempts={...s.attempts};prepared||=!!s.locks;
+   },lock:async rows=>{forwardBudget();await commitLocks(rows);hasLock=true;},
+   confirmCommitted:async rows=>{
+    if(committedPrepared===null||JSON.stringify(rows)!==committedPrepared)throw Error('COMMITTED_BATCH_UNCONFIRMED');
+   }};
    const result=await runDailyIntelligence({business_date:r.business_date,checkpoint:'NATURAL_MARKET_READY',mode:'FORWARD_SHADOW',provenance:'RETAINED_REAL_EVIDENCE',
     core_ready:true,core_busy:false,source_revision:acquired.snapshot_hash,source_hash:acquired.snapshot_hash,actionable_at:r.actionable_at},store,{
     acquire:async()=>acquired,clock:p.clock,outcomes:async()=>({state:'DURABLE_OUTCOME_QUEUE'}),
-    publication:locks=>dailyPublication(locks,(_,hash)=>({now:p.clock(),audience:'owner',server_entitlement_verified:true,input_hash:hash,approved_hash:null,approved_at:null,quality_reviewed:false,methodology_approved:false,use:'OWN_ANALYSIS',grants:[]}))});
-   if(!['COMPLETE','ALREADY_COMPLETE'].includes(result.state))return finish('BLOCKED',('checkpoint' in result?result.checkpoint.failure?.reason:null)??result.state);
+    publication:locks=>dailyPublication(locks,(_,hash)=>({now:p.clock(),audience:'owner',server_entitlement_verified:true,input_hash:hash,approved_hash:null,approved_at:null,quality_reviewed:false,methodology_approved:false,use:'OWN_ANALYSIS',grants:[]}))},20000,prelockStageLimit,prelockStageLimit>0,prelockStageLimit>0);
+   if(!['COMPLETE','ALREADY_COMPLETE'].includes(result.state)){
+    if(predictionFailure)throw Error(predictionFailure);
+    if(result.state==='BUDGET_YIELDED')return finish('QUEUED','FORWARD_PREPARATION_CONTINUATION');
+    return finish('BLOCKED',('checkpoint' in result?result.checkpoint.failure?.reason:null)??result.state);
+   }
    hasLock=true;
+  }
   }
   // Sweep PRIOR locked predictions, not just the freshly created run. This is
   // independently repeatable across subsequent natural checkpoints/dates.
   const outcomeReceipts:SourceReceipt[]=[];
-  for(const task of await outcomePlan(r.business_date,due,companies,p.clock())){
-   const receipt=await collect(task);if(receipt===false)return finish('QUEUED','OUTCOME_SOURCE_CONTINUATION');
+  const outcomeTasks=await outcomePlan(r.business_date,due,companies,p.clock());
+  // A long-horizon window can have hundreds of already durable receipts. One
+  // SOURCE_BEGIN RPC per cached prefix exhausted every invocation at the same
+  // position, so even a fully acquired window never reached its Outcome. Read
+  // this run's immutable revisions once; only missing tasks spend a reservation
+  // or provider call. Match the complete plan, including PREMARKET/CLOSE scope.
+  const wanted=new Set(outcomeTasks.map(t=>t.key)),retained=new Map<string,SourceReceipt>();
+  // Small windows already fit the existing eight-source bound; do not load the
+  // full source inventory when at most eight targeted reservations suffice.
+  if(outcomeTasks.length>8){
+   for(const receipt of await rpc('SOURCES') as SourceReceipt[]){
+    if(!wanted.has(receipt.task.key))continue;
+    if(retained.has(receipt.task.key))throw Error('OUTCOME_RECEIPT_DUPLICATE');
+    retained.set(receipt.task.key,receipt);
+   }
+  }
+  for(const task of outcomeTasks){
+   if(Date.now()+5000>=deadline)return finish('QUEUED','OUTCOME_SOURCE_CONTINUATION');
+   const receipt=retained.get(task.key)??await collect(task);if(receipt===false)return finish('QUEUED','OUTCOME_SOURCE_CONTINUATION');
+   if(receipt&&(receipt.version!==ADAPTER_VERSION||receipt.status!=='OK'||canonical(receipt.task)!==canonical(task)
+    ||!validTime(receipt.available_at)||!validTime(receipt.first_seen_at)||Date.parse(receipt.first_seen_at)>Date.parse(receipt.available_at)
+    ||Date.parse(receipt.available_at)>Date.parse(p.clock())||!hashValid(receipt.raw_hash)||!hashValid(receipt.payload_hash)
+    ||receipt.payload_hash!==await snapshotHash(receipt.payload)))throw Error('OUTCOME_RECEIPT_INVALID');
    if(receipt)outcomeReceipts.push(receipt);
   }
   const rows=(kind:string)=>outcomeReceipts.filter(s=>s.task.kind===kind&&s.status==='OK').flatMap(s=>s.payload.rows as Record<string,unknown>[]??[]);
@@ -127,9 +400,11 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   if(cursor<plan.length)return finish('QUEUED',hasLock?'COLD_BOOTSTRAP_WITH_IMMUTABLE_LOCK':'COLD_BOOTSTRAP_NO_LATE_FORWARD');
   return finish(hasLock?'COMPLETE':'EXPIRED',hasLock?null:'LATE_ACQUISITION_NOT_FORWARD');
  }catch(e){
-  const reason=failure(e);
+  const reason=predictionFailure??failure(e);
+  if(reason==='FORWARD_PREPARATION_CONTINUATION')return finish('QUEUED',reason);
+  if(reason==='FORWARD_WINDOW_ELAPSED')return finish(cursor<planLength?'QUEUED':'EXPIRED',cursor<planLength?'COLD_BOOTSTRAP_NO_LATE_FORWARD':'LATE_ACQUISITION_NOT_FORWARD');
   // Only an explicit SQL time rejection of a missing prepared commit is expiry;
   // transport errors, corrupt checkpoints and other denials stay BLOCKED.
-  return finish(reason==='FORWARD_TIME_INVALID'&&'locks' in r.checkpoint&&Date.parse(p.clock())>=Date.parse(r.actionable_at)?'EXPIRED':'BLOCKED',reason);
+  return finish(reason==='FORWARD_TIME_INVALID'&&prepared&&Date.parse(p.clock())>=actionable?'EXPIRED':'BLOCKED',reason);
  }
 }

@@ -1,0 +1,156 @@
+{
+  "schema": "DAILY_AI_RATE_LIMIT_RECOVERY_CANDIDATE_V1",
+  "candidate_sql_sha256": "eabfd2e637f095fbfc5ea3ec2ce10bb80303a23b47ff967813a4e581232efb3c",
+  "rollback_sql_sha256": "608d06ec1e29b81fde1953ac06074a475893f7da66c0d483fc8739c4a394001a",
+  "pinned_batch_id": "0524783a79af043a70be593d2e019c435bc067f168a5b2567a831e32d78b4ddc",
+  "retained_seed_bytes": 5197315,
+  "retained_seed_fixture": {
+    "environment": "MA_RECOVERY_SEED_FILE",
+    "default": "/workspace/scratch/3d0c86e17b1f/evidence/2330-long-bound-reviews-v2-new72.seed.json",
+    "require_sha256": "0524783a79af043a70be593d2e019c435bc067f168a5b2567a831e32d78b4ddc",
+    "candidate_pin_substitution": false
+  },
+  "original_model_revision": "gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low",
+  "recovery_model_revision": "gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low:recovery-1",
+  "provider_model": "gpt-6-astra",
+  "provider_prompt_policy": "Original complete prompt7 remains unchanged; recovery-1 is a bounded failure-recovery job identity, not a new analysis prompt.",
+  "new_paid_deadline_utc": "2026-11-02T05:30:00Z",
+  "deadline_rule": "New dispatch/first CLAIM require both batch cutoff+72h and bound-review deadline in the future. Cached reads/progress remain readable. Manual staging expiry must not exceed this bound-review deadline.",
+  "eligibility": "Only the exact original prompt7 job with matching packet hash/symbol/cutoff, FAILED + exact STOCK_AI_PROVIDER_HTTP_429 + attempts3. All72 original jobs must be COMPLETE or satisfy this exhausted429 condition before paid work.",
+  "budget": {
+    "normal_dispatcher216_unchanged": true,
+    "separate_recovery_receipt_cap": 54,
+    "receipt_unique": [
+      "batch_id",
+      "symbol"
+    ],
+    "one_provider_claim_per_target": true,
+    "separate_batch_or_round_allowed": false,
+    "records_still_enter_shared_dispatch_audit": true,
+    "automatic_continuation": false,
+    "automatic_resume": false
+  },
+  "global_stop": "A pending receipt or active recovery RUNNING prevents another target. Any FAILED stops the entire batch; expired RUNNING is STOPPED_UNKNOWN and is never reclaimed. A completed target allows one separately reviewed manual next dispatch.",
+  "original_job_attempts_or_results_modified": false,
+  "new_revision_retries": false,
+  "review_document_hash_policy": "Operation-authorization binding only. It is not automatic quality/time/licensing/source-use PASS and creates no ai_research_reviews or publication events.",
+  "new_functions": [
+    {
+      "signature": "public.daily_stock_ai_rate_limit_recovery_job_v1(text, text, text, text, text, text, jsonb, jsonb, uuid, text)",
+      "definition_sha256": "fcec571f097c18bb102b766dd2a84800874d8e07965d8a23e369b4add7048fb2",
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "security_definer": true,
+      "volatility": "v",
+      "search_path": [
+        "search_path=\"\""
+      ]
+    },
+    {
+      "signature": "public.dispatch_daily_stock_ai_rate_limit_recovery_v1(text, text, text)",
+      "definition_sha256": "32ca0f32baccaccbc70d988b35e2ebe00243e7a953a5ff11b883dfc0f397571d",
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "security_definer": true,
+      "volatility": "v",
+      "search_path": [
+        "search_path=\"\""
+      ]
+    },
+    {
+      "signature": "public.load_daily_stock_ai_rate_limit_recovery_progress_v1(text)",
+      "definition_sha256": "8c31eb5e297108a7bef1d71c5fd3022563201768098517bd19809800832d1c0a",
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "security_definer": true,
+      "volatility": "s",
+      "search_path": [
+        "search_path=\"\""
+      ]
+    },
+    {
+      "signature": "public.load_daily_stock_ai_rate_limit_recovery_v1(text, text, text)",
+      "definition_sha256": "b2c30483420d9c420cc4ab831df4c049c57d447ebe1089a2c907edf5ec28e0ad",
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "security_definer": true,
+      "volatility": "s",
+      "search_path": [
+        "search_path=\"\""
+      ]
+    },
+    {
+      "signature": "vnext_runtime.daily_stock_ai_rate_limit_recovery_context_v1(text, text)",
+      "definition_sha256": "43ebb34cf9afacf435b452e22a71cb823f8bd8125548d720eb38da335256ae4b",
+      "acl": [
+        "postgres=X/postgres"
+      ],
+      "security_definer": true,
+      "volatility": "s",
+      "search_path": [
+        "search_path=\"\""
+      ]
+    },
+    {
+      "signature": "vnext_runtime.seal_daily_stock_ai_rate_limit_recovery_receipt_v1()",
+      "definition_sha256": "2cd3a0e54a061311c0ff5d3eeab2f2db576e0ecddd6e2578f9b891afe9bfa8d8",
+      "acl": [
+        "postgres=X/postgres"
+      ],
+      "security_definer": false,
+      "volatility": "v",
+      "search_path": [
+        "search_path=\"\""
+      ]
+    }
+  ],
+  "old_function_pins": [
+    {
+      "signature": "public.daily_stock_ai_job_v1(text,text,text,jsonb,jsonb,uuid,text)",
+      "sha256": "2a055e4746a570d3a4ab3c9324b5f7272d4798ca80164249252a53ce71662e98"
+    },
+    {
+      "signature": "public.stage_daily_ai_research_edition_v1(text,text[],timestamptz)",
+      "sha256": "651467f9f66872cd17d1eaa9855e789f35a0b88ad8836bd0a04acff8a9f35efb"
+    },
+    {
+      "signature": "public.dispatch_daily_stock_ai_batch_v1(text)",
+      "sha256": "d0c3395e030c92b8cd55cedb53882fbb86cc07b37ac57c0d4b007db623467878"
+    }
+  ],
+  "progress_policy": "Original COMPLETE wins per symbol; otherwise only receipted recovery COMPLETE contributes its real immutable job key. No raw results; count/key set must cover all72 before existing operator staging.",
+  "writes_reviews": false,
+  "writes_publications": false,
+  "automatic_staging": false,
+  "rollback_policy": "Refuse DROP when any recovery receipt or any recovery-1 job exists, including FAILED/RUNNING/unknown. Separately disable EXECUTE and retain historical records if work has started.",
+  "financial_or_account_changes": {
+    "top_up": false,
+    "purchase": false,
+    "secret": false,
+    "auth": false,
+    "cron": false,
+    "account_budget": false
+  },
+  "historical_attempts_note": "The previously observed182 attempts/transports are not182 successful billed calls. Actual charges associated with429 responses are unknown.",
+  "production_change_performed": false,
+  "tests": {
+    "database": "Real isolated PostgreSQL17.5",
+    "input": "Exact retained5,197,315-byte source fixture",
+    "results": "Synthetic local analyses and provider receipts; no model/network/production call",
+    "expiry_clock": "An isolated WASM clock is advanced only for expiry-negative tests",
+    "capacity_claimed": false
+  },
+  "limitations": [
+    "New recovery jobs require the separately implemented exact worker path.",
+    "A single isolated PostgreSQL/WASM connection does not prove production lock-wait timing or capacity.",
+    "Existing queued/direct Edge and citation-repair paths are separate; original jobs are never reset."
+  ]
+}

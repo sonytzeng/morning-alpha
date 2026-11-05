@@ -1,0 +1,62 @@
+name: V1 source union candidate admission
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  current-union:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+      - name: Complete current R8 admission; seven exact source deltas, frozen R7 root and full composition
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/originalIngressAdmission.test.mjs tests/officialPublicAdmission.test.mjs
+      - name: R8 current retained issuer input and official financial chronology synthetic controls; no source or publication grant
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/retainedIssuerActuals.test.mjs tests/officialV1SourceJoin.test.mjs
+      - name: R5 offline exact daily open-data and license-scope synthetic controls only; no source or publication grant
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/officialDailyOpenDataCandidate.test.mjs tests/officialDailyLicenseScope.test.mjs
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.2
+      - name: R5 offline type check; sloppy-imports resolves the existing extensionless type import only
+        run: deno check --no-config --no-lock --no-remote --deny-import --no-npm --node-modules-dir=none --sloppy-imports research/official-daily-open-data-candidate.ts
+      - name: R8 offline type check of both exact research sources in their original scope after admission
+        run: deno check --no-config --no-lock --no-remote --deny-import --no-npm --node-modules-dir=none --sloppy-imports research/issuer-actual-v1-input.ts research/recommendation-official-source-join.ts
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install fixed PDF dependencies after current admission
+        run: python -m pip install --disable-pip-version-check pypdf==6.10.0 pdfplumber==0.11.9
+      - name: Pinned issuer descriptor offline synthetic controls only; no private PDF replay or source admission
+        run: python -B tests/test_issuer_pdf_descriptor.py SyntheticControls -v
+      - name: Current capacity, evaluator and loader metadata controls; synthetic only, not Production capacity or source admission
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/memberCapacityModel.test.mjs tests/v1FundamentalRevisionSelection.test.mjs tests/v1EarningsMetadataRead.test.mjs
+      - name: Unchanged issuer R9 assertions through fresh complete R8 admission; no source activation
+        run: node --experimental-strip-types --test tests/recommendationIssuerEventReview.test.mjs
+      - name: Current Registry, Actual-only and response-period controls; not source admission
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextContracts.test.mjs tests/vnextOriginalTimestamp.test.ts tests/vnextOriginalIngress.test.mjs tests/vnextOriginalRegistryIngress.test.mjs tests/v1ActualCanonical.test.mjs tests/vnextFinancialResponsePeriod.test.mjs tests/vnextForwardCutoffRuntime.test.mjs
+  r3-evaluator-fresh-db:
+    needs: current-union
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+      - name: Admit this complete current tree before isolated database preparation
+        run: node --input-type=module -e "import {verifyIntegrationCandidate} from './tests/helpers/integrationAdmission.mjs'; verifyIntegrationCandidate();"
+      - name: Explicit local test image preparation only; no Provider or Production endpoint
+        run: docker pull postgres:17
+      - name: Synthetic earnings real-loader fixture; service SELECT-only is not Production ACL evidence
+        run: timeout 120s node --experimental-strip-types tests/v1FundamentalRevisionDatabase.integration.mjs

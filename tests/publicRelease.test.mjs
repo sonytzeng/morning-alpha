@@ -11,6 +11,7 @@ import { selectPublicPerformanceRows } from '../src/lib/performanceJournalProjec
 import { subscriberProjectionFixture } from './fixtures/subscriber-projection-v1.mjs';
 import { isolatedFunction } from './helpers/isolatedEdgeLoader.mjs';
 import { buildLineDailyFlexMessage } from '../supabase/functions/_shared/line-daily-flex-message.mjs';
+import { resolveTxfQuoteWithFallback } from '../supabase/functions/_shared/required-provider-validation.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
@@ -560,10 +561,11 @@ test('opening radar preserves the complete War Room decision contract', () => {
   assert.match(openingMarketRadar, /observation_roles: observationRoles/);
 });
 
-test('TXF discovery and quote URLs follow the Fugle futopt contract', () => {
+test('TXF discovery retains the Fugle URL contract and routes through the explicit official fallback', () => {
   const source = read('supabase/functions/fetch-market-data-v10/index.ts');
   const shared = read('supabase/functions/_shared/required-provider-validation.mjs');
-  assert.match(source, /resolveRequiredTxfQuote/);
+  assert.match(source, /resolveTxfQuoteWithFallback\([\s\S]*?\{ phase, tradingDate, observedAt \},\s*resolveTaifexRegularQuote,\s*\)/);
+  assert.match(shared, /const primary = await resolveRequiredTxfQuote\(request, options\)/);
   assert.match(shared, /const alias = 'TXF1!'/);
   assert.match(
     shared,
@@ -576,6 +578,41 @@ test('TXF discovery and quote URLs follow the Fugle futopt contract', () => {
   assert.match(source, /`tse_\$\{symbol\}\.tw`/);
   assert.match(source, /`otc_\$\{symbol\}\.tw`/);
   assert.match(source, /provider: "twse_mis"/);
+});
+
+test('TXF fallback preserves primary success, rejects non-premarket substitution and retains both failures', async () => {
+  // Synthetic responses exercise the actual shared resolver, without network.
+  const options = { phase: 'premarket', tradingDate: '2026-10-30', observedAt: '2026-10-30T06:50:00+08:00' };
+  const payload = { symbol: 'TXF1!', price: 10100, change: 100, changePercent: 1, date: '2026-10-29',
+    lastTrade: { price: 10100, time: Date.parse('2026-10-30T04:59:59+08:00') * 1000 } };
+  const mustNotFallback = async () => { throw Error('UNEXPECTED_OFFICIAL_FALLBACK'); };
+  const primary = await resolveTxfQuoteWithFallback(
+    async () => ({ status: 200, payload, error: null }), options, mustNotFallback,
+  );
+  assert.equal(primary.quote?.provider, 'fugle_futopt');
+  assert.equal(primary.quote?.raw.fallback_used, false);
+  assert.equal(primary.observations.length, 1);
+  assert.equal(primary.endpoint, 'futopt/intraday/quote/TXF1!?session=afterhours');
+
+  const denied = async () => ({ status: 403, payload: null, error: 'SYNTHETIC_FUGLE_DENIED' });
+  for (const phase of ['intraday', 'close', 'manual_backfill']) {
+    const rejected = await resolveTxfQuoteWithFallback(denied, { ...options, phase }, mustNotFallback);
+    assert.equal(rejected.quote, null);
+    assert.equal(rejected.observations.length, 1);
+    assert.equal(rejected.observations[0].status, 403);
+  }
+  let officialCalls = 0;
+  const failed = await resolveTxfQuoteWithFallback(denied, options, async identity => {
+    officialCalls++;
+    assert.equal(identity, options, 'Fallback receives the exact trading/observation identity');
+    const response = { status: 503, payload: null, error: 'SYNTHETIC_TAIFEX_UNAVAILABLE' };
+    return { quote: null, endpoint: 'synthetic-official-receipt', response,
+      observations: [{ endpoint: 'synthetic-official-receipt', ...response }] };
+  });
+  assert.equal(officialCalls, 1);
+  assert.equal(failed.quote, null, 'Two provider failures cannot fabricate an available quote');
+  assert.deepEqual(failed.observations.map(row => row.status), [403, 503]);
+  assert.deepEqual(failed.observations.map(row => row.error), ['SYNTHETIC_FUGLE_DENIED', 'SYNTHETIC_TAIFEX_UNAVAILABLE']);
 });
 
 test('home public decision copy is user-facing and internally consistent', () => {

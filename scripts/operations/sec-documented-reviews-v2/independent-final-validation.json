@@ -1,0 +1,154 @@
+{
+  "schema": "DOCUMENTED_REVIEW_V2_INDEPENDENT_FINAL_VALIDATION_V1",
+  "recorded_at": "2026-10-31T11:13:06.825486+00:00",
+  "reviewer_ref": "Codex independent /root/actual_output_review",
+  "status": "PASS_INDEPENDENT_LOCAL_VALIDATION",
+  "scope": [
+    "V2 immutable3fact replay SQL and adapters; source/quote/expiry semantics",
+    "Exact52file combined V2 plus immutable429 recovery artifact closure, types and hashes",
+    "No replacement for full72fresh actual output QA, licensing review or Owner edition publication"
+  ],
+  "source": {
+    "source_seal_sha256": "6b3cfccff75a1960196a2edd9685290f7eb66b0bd7f0dd396c84de597ca12526",
+    "facts_canonical_sha256": "53765d515cc65a5deec0514fcf8c4cae8873010f54d016cfecfec7b039c1ad94",
+    "symbol": "2330",
+    "retained_session": "2026-10-30",
+    "retained_close_twd": 2370,
+    "review_valid_until_exclusive": "2026-11-02T05:30:00.000Z",
+    "published_admitted_or_official_endorsement_granted": false
+  },
+  "sql": {
+    "path": "/workspace/scratch/3d0c86e17b1f/morning-alpha/scripts/operations/sec-documented-reviews-v2/documented-reviews-v2.candidate.sql",
+    "bytes": 47275,
+    "sha256": "ec3df9d09e5ed1fb55c85eab4e28774096cdefc51929bd3d55ab7ab30fb43b26",
+    "independent_postgres_result": {
+      "result": "PASS",
+      "checks": 52,
+      "postgres": "17.5",
+      "stage_expires_at": "2026-11-02T05:30:00.000Z",
+      "production_connections": 0,
+      "http_requests": 0,
+      "model_calls": 0,
+      "synthetic_stage_jobs": 72
+    },
+    "source_function_after_sha256": "a9074dcad28525d207b9b28f894c95392823ae44331446827f968d6f83e763c6",
+    "stage_function_after_sha256": "e744ae5fd8f0f31967e179ffdbdf3cc74672892564c0f6c454c8ff7847626b44",
+    "original_sec_validator_and_v1_projection_unchanged": true
+  },
+  "adapter_tests": {
+    "pass": 5,
+    "fail": 0,
+    "test_file_sha256": "2081bad227e3e568f549800a65d52ab1b07ac759f12a78fe5f8a8b6ee780a2dc",
+    "strict_typescript_candidate_contract_and_adapter": "PASS --strict --allowJs --moduleResolution bundler; actual imports, no shim"
+  },
+  "worker": {
+    "schema": "DOCUMENTED_REVIEW_V2_INDEPENDENT_ARTIFACT_CHECK_V1",
+    "recorded_at": "2026-10-31T11:07:44.925Z",
+    "manifest_sha256": "f33c78fff958d57b6bb3033ef942a9fafed7111a253e8a6b52bbb2c40ebb0f45",
+    "deployment_args_sha256": "32341f02927c4b29555083f3c86a9851ce2969b3da845860628a26df1adfa838",
+    "file_catalog_sha256": "6a6e75bc8a64b1c60c4480d2d6528315ee3ee2dc77f3c285ae071853c310afd2",
+    "files": 52,
+    "catalog_bytes_and_hashes_exact": true,
+    "unchanged_live_files": 45,
+    "modified_live_files": [
+      "research/daily-ai-global-market.ts",
+      "research/daily-ai-refresh.ts",
+      "supabase/functions/daily-stock-analysis-v1/index.ts"
+    ],
+    "added_files": [
+      {
+        "name": "research/documented-review-replay-v2.candidate.ts",
+        "sha256": "bab11b0e55b8a32ca73add4cb1180ebc6a22b72aaa7467fa6e9c5372f3e3c1bf",
+        "repo_byte_identical": true
+      },
+      {
+        "name": "research/documented-review-v2-contract.candidate.ts",
+        "sha256": "54868b08952c9f8d623b1a16ced6621b3b365ba1b9a8007ccc8909999de7378f",
+        "repo_byte_identical": true
+      },
+      {
+        "name": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-handler.ts",
+        "sha256": "b55eb61650fc5a5765eb8c2cfe48edb07256e87e68f23330cda3854db3928898",
+        "repo_byte_identical": true
+      },
+      {
+        "name": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-runner.ts",
+        "sha256": "5b5cd9d5f2a40135294e710281b34196bfe0bc789bbffa2665d04f71108aa18f",
+        "repo_byte_identical": true
+      }
+    ],
+    "type_assertion_erasures": [
+      {
+        "name": "research/daily-ai-global-market.ts",
+        "original_sha256": "bfe75553300a1e0d9dc1871d78336524ccfd31e05e939bf4e8fd3e8f4944bf70",
+        "candidate_sha256": "a6b9138e359a47a77a803e7c11af1fc461dad3a4fd52193ca615dc587363a094",
+        "emitted_js_sha256": "722d386e3e91f6b8d41a1b967652a9bcfaac0a8c803fa7eb0b3e3237228ad034",
+        "emitted_js_byte_identical": true,
+        "independently_recomputed": true
+      },
+      {
+        "name": "research/daily-ai-refresh.ts",
+        "original_sha256": "4dc5466aef695b24da06fb371c614c1a6094598d46678aa8ec66becce833fa7d",
+        "candidate_sha256": "bd79d2b1c6f3517e51e5ac547df8b10cbb3bfc68818adacbace3e595315084a8",
+        "emitted_js_sha256": "5fbe04e554a8f66efa2951d0bd75fdb8a415499da0b9768c6110f49cd965a95f",
+        "emitted_js_byte_identical": true,
+        "independently_recomputed": true
+      }
+    ],
+    "relative_import_closure_complete": true,
+    "import_specifiers_checked": 174,
+    "external_imports": [
+      "node:buffer",
+      "node:crypto",
+      "node:http",
+      "node:https",
+      "node:process",
+      "node:punycode",
+      "node:stream",
+      "node:url",
+      "node:zlib"
+    ],
+    "candidate_index_sha256": "f3d221e45f03ee586bac619a4f2ac02df9d32227ea5d10b60b9e9d05360429d1",
+    "source_seal_sha256": "6b3cfccff75a1960196a2edd9685290f7eb66b0bd7f0dd396c84de597ca12526",
+    "production_writes": 0,
+    "deploy": false,
+    "model_calls": 0,
+    "deno_full_52_file_check": {
+      "status": "PASS",
+      "runtime": "Deno2.9.2 / TypeScript6.0.3",
+      "binary_sha256": "5bc8a7a4a628360b391ddeac2efac7dec9e670b33156d831bf1e899070655173",
+      "command": "DENO_DIR=/workspace/scratch/3d0c86e17b1f/morning-alpha/build/sec-documented-reviews-v2/deno29-cache DENO_NO_UPDATE_CHECK=1 timeout 25s /workspace/scratch/3d0c86e17b1f/morning-alpha/build/sec-documented-reviews-v2/tools/deno check --no-config --no-lock --no-remote --no-npm --node-modules-dir=manual supabase/functions/daily-stock-analysis-v1/index.ts",
+      "cwd": "/workspace/scratch/3d0c86e17b1f/morning-alpha/build/sec-documented-reviews-v2/package-combined/source",
+      "execution_or_provider_calls": 0
+    },
+    "original_50_file_unasserted_package_deno29_status": "Two preexisting Uint8Array/BufferSource TS6 errors; superseded by root-approved two erased type assertions, whose emittedJS identity was independently recomputed. No Deno2.1.4 check is claimed."
+  },
+  "content_and_expiry_review": {
+    "active_application": "Only current merged2370 retained-close on2026-10-30, cutoff strictly before expiry and exact12SECbase +3sealedreviews.",
+    "inactive_application": "Expired/price/date/unavailable/incomplete financial base removes3own reviews from new working projection, preserves original registries/history and12SEC, returnsLONG toINSUFFICIENT. It does not carry oldNOT_SUPPORTED to a new quote.",
+    "valuation_scope": "Own fixed-three hypothetical EPS/reinvestment distribution scenarios and25%discount policy, not officialSEC valuation, company forecast, FCFE or declared payout; optimistic model may exceed2370 and lower-r sensitivity may meet policy.",
+    "stage": "Exact protected15 IDs across allpackets, source metadata/content exact, bound quote/date exact and exclusive expiry cap; body original_id uses safe JSON parse, so legal unicode escaping cannot bypass namespace detection.",
+    "legacy": "No own-review markers remains original expiry; nonJSONlegacy financial content returnsnull in detector.",
+    "existing_editions": "ON CONFLICT DO NOTHING does not retroactively shorten an already-staged row. Parent reports new052478 batch editions=0, so this validation covers newstages only.",
+    "read_expiry": "Existing memberSQL/rights gate requireexpires_at>now; client parser rejects expired edition and rendering has exactdeadline timer plusvisibility recheck. Static review only; no newmemberE2E claimed."
+  },
+  "closed_findings": [
+    "Extra unregistered SEC namespace acrosspacket accepted beforeexact15 guard: CLOSED inFINAL SQL",
+    "Legal JSON unicode-escaped own original_id could bypass rawregex legacy gate: CLOSED bysafeparser entry inFINAL SQL"
+  ],
+  "peer_review": {
+    "path": "/workspace/scratch/3d0c86e17b1f/evidence/new72-peer-stage-expiry-review-final.json",
+    "sha256": "f35646ccf681d095fea43fed10b15c9720e246a90ea42d59668a63ac700cd37e",
+    "scope": "Independent static confirmation of the two previouslyidentified guard boundaries only"
+  },
+  "limitations": [
+    "52 synthetic localPG stage jobs arefixtures, not actual research model outputs.",
+    "Recovery route execution/failure fence functionalreview belongs to release_path; this review verifies its final2module hashes/closure/Deno only.",
+    "Fullnew72 actual output QA remains18reviewed with4targetedrepairs pending; nofinal edition approval claimed here."
+  ],
+  "production_writes": 0,
+  "dispatches": 0,
+  "deploy": false,
+  "model_calls": 0,
+  "member_published": false
+}

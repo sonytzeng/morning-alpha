@@ -3,6 +3,8 @@
 import { isMarketTradingDate, previousMarketTradingDate } from '../supabase/functions/_shared/market-session-contract.mjs';
 
 export const ENTRY_VERSION = 'ENTRY_OPPORTUNITY_1.0.0';
+/** Additive scheduling correction; legacy 1.0 replay stays byte-for-byte stable. */
+export const ENTRY_PREMARKET_VERSION = 'ENTRY_OPPORTUNITY_1.1.0';
 export const STRATEGIES = ['OVERSOLD_REVERSAL', 'PULLBACK_ENTRY', 'BREAKOUT_CONTINUATION'] as const;
 export type Strategy = typeof STRATEGIES[number];
 export type EntryState = 'ENTRY_READY' | 'WAIT_CONFIRMATION' | 'AVOID_ENTRY' | 'INSUFFICIENT_EVIDENCE';
@@ -52,7 +54,8 @@ export type EntryResult = { symbol: string; name: string | null; strategy: Strat
   plan: null | { not_before: string; expires_on: string; reference_range: [number, number]; trigger: number; stop: number;
     target: number; target_basis: string; risk_distance: number; reward_space: number; reward_risk: number; max_risk: number };
   metrics: Record<string, number>; evidence_refs: string[]; v2_status: string | null; horizons: readonly number[] };
-function evaluateStock(input: EntryInput, stock: StockInput, strategy: Strategy): EntryResult {
+function evaluateStock(input: EntryInput, stock: StockInput, strategy: Strategy, barsDate = input.business_date,
+  premarketSession?: string): EntryResult {
   const cutoff = time(input.evaluation_time), bars = [...stock.bars].sort((a,b) => a.date.localeCompare(b.date));
   const market = known(input.market, cutoff) && finite(input.market.value.change_percent) &&
     typeof input.market.value.direction==='string' && input.market.value.direction.trim() &&
@@ -62,9 +65,9 @@ function evaluateStock(input: EntryInput, stock: StockInput, strategy: Strategy)
   const relative = known(stock.relative_strength, cutoff) && finite(stock.relative_strength.value) ? stock.relative_strength : null;
   const sector = known(stock.sector_return, cutoff) && finite(stock.sector_return.value) ? stock.sector_return : null;
   const events = known(stock.events_reviewed, cutoff) ? stock.events_reviewed : null;
-  const barsOK = validEntryBars(bars, input.business_date, cutoff);
+  const barsOK = validEntryBars(bars, barsDate, cutoff);
   const checks = [!!market, barsOK, !!f, !!relative, !!sector, !!events];
-  const r: EntryResult = { symbol: stock.symbol, name: stock.name, strategy, strategy_version: strategy + '_1.0.0',
+  const r: EntryResult = { symbol: stock.symbol, name: stock.name, strategy, strategy_version: strategy + (premarketSession ? '_1.1.0' : '_1.0.0'),
     status: 'INSUFFICIENT_EVIDENCE', market_direction: market?.direction ?? null, market_regime: market?.regime ?? null,
     entry_environment: 'UNASSESSED', opportunity_quality: 'UNKNOWN',
     evidence_confidence: { completeness: checks.filter(Boolean).length / checks.length, probability: null, calibration: 'INSUFFICIENT_SAMPLE' },
@@ -94,7 +97,7 @@ function evaluateStock(input: EntryInput, stock: StockInput, strategy: Strategy)
   r.metrics={atr,sma10,sma20,support,resistance,volumeRatio,extension,drawdownATR,relativeStrength:relative!.value,sectorReturn:sector!.value};
   r.entry_environment=extension>ENTRY_POLICY.extensionATR?'EXTENDED':drawdownATR>=ENTRY_POLICY.oversoldATR?'PULLBACK_OR_OVERSOLD':'BALANCED';
   if (stop>0 && stop<trigger && target>upper && risk>0) {
-    const next=nextEntrySession(input.business_date);
+    const next=premarketSession??nextEntrySession(input.business_date);
     r.plan={not_before:next,expires_on:next,reference_range:[trigger,upper],trigger,stop,target,
       target_basis:strategy==='BREAKOUT_CONTINUATION'?'PRIOR_RANGE_MEASURED_SCENARIO_NOT_FORECAST':'PRIOR_OBSERVED_RESISTANCE',
       risk_distance:risk,reward_space:reward,reward_risk:rr,max_risk:ENTRY_POLICY.maxRisk};
@@ -129,18 +132,63 @@ function evaluateStock(input: EntryInput, stock: StockInput, strategy: Strategy)
   r.opportunity_quality=bad.length?'UNFAVORABLE':wait.length?'CONDITIONAL':'CONFIRMED_RESEARCH_SETUP';
   r.reasons=[...bad,...wait,...r.reasons]; return r;
 }
-export async function evaluateEntry(input: EntryInput) {
+async function evaluateEntryVersion(input: EntryInput,version:string,premarketSession?:string) {
   if(!['HISTORICAL_REPLAY','FORWARD'].includes(input.mode)||!['REAL_RETAINED','SYNTHETIC_TEST'].includes(input.provenance)||
     !Number.isFinite(time(input.evaluation_time))||!isMarketTradingDate('TW',input.business_date)||
     new Date(time(input.evaluation_time)+8*3600000).toISOString().slice(0,10)!==input.business_date||
     !/^[a-f0-9]{64}$/.test(input.source_evidence_hash)||!input.source_revision||input.stocks.length<1||input.stocks.length>72||
     new Set(input.stocks.map(s=>s.symbol)).size!==input.stocks.length||input.stocks.some(s=>!/^\d{4,6}$/.test(s.symbol)))throw Error('ENTRY_INPUT_IDENTITY_INVALID');
-  const candidates=[...input.stocks].sort((a,b)=>a.symbol.localeCompare(b.symbol)).flatMap(s=>STRATEGIES.map(strategy=>evaluateStock(input,s,strategy)));
-  return {version:ENTRY_VERSION,source_revision:input.source_revision,source_evidence_hash:input.source_evidence_hash,
+  const candidates=[...input.stocks].sort((a,b)=>a.symbol.localeCompare(b.symbol)).flatMap(s=>STRATEGIES.map(strategy=>evaluateStock(input,s,strategy,input.business_date,premarketSession)));
+  return {version,source_revision:input.source_revision,source_evidence_hash:input.source_evidence_hash,
     evidence_hash:await entryHash(input),business_date:input.business_date,evaluation_time:input.evaluation_time,mode:input.mode,
     provenance:input.provenance,policy:ENTRY_POLICY,owner_only:true,shadow_only:true,production_eligible:false,
     market_direction_independent:true,universe:input.stocks.length,scanned:input.stocks.length,candidates,
     counts:Object.fromEntries(['ENTRY_READY','WAIT_CONFIRMATION','AVOID_ENTRY','INSUFFICIENT_EVIDENCE'].map(s=>[s,candidates.filter(c=>c.status===s).length])),
     forward_sample:0,outcome_sample:0,analysis_value:'INSUFFICIENT_SAMPLE'};
 }
+export async function evaluateEntry(input: EntryInput) {return evaluateEntryVersion(input,ENTRY_VERSION);}
+
+/** Same policy and source window as 1.0; only the tradable session is corrected.
+ * A current-session plan must be prepared strictly before that session opens.
+ * Retained 1.0 runs never enter this function implicitly. */
+export async function evaluatePremarketEntry(input: EntryInput) {
+  const cutoff=time(input.evaluation_time),open=time(input.business_date+'T09:00:00+08:00');
+  if(!Number.isFinite(cutoff)||!Number.isFinite(open)||cutoff>=open
+    ||new Date(cutoff+8*3600000).toISOString().slice(0,10)!==input.business_date)throw Error('ENTRY_PREMARKET_WINDOW_INVALID');
+  return evaluateEntryVersion(input,ENTRY_PREMARKET_VERSION,input.business_date);
+}
 export type EntryEvaluation = Awaited<ReturnType<typeof evaluateEntry>>;
+
+/** Analyze completed sessions at the actual acquisition/evaluation time. This
+ * route does not need a future premarket batch and never backdates a prediction.
+ * The existing premarket evaluateEntry contract and thresholds stay unchanged. */
+export type CompletedSessionEntryInput = Omit<EntryInput, 'business_date' | 'mode'> & { data_through: string };
+export async function evaluateCompletedSessionEntry(input: CompletedSessionEntryInput) {
+  const cutoff = time(input.evaluation_time);
+  if (!Number.isFinite(cutoff)) throw Error('COMPLETED_ENTRY_TIME_INVALID');
+  const analysisDate = new Date(cutoff + 8 * 3600000).toISOString().slice(0, 10);
+  if (!/^\d{4}-\d\d-\d\d$/.test(input.data_through) || !isMarketTradingDate('TW', input.data_through)
+    || input.data_through > analysisDate || cutoff < time(input.data_through + 'T13:30:00+08:00')
+    || !['REAL_RETAINED', 'SYNTHETIC_TEST'].includes(input.provenance)
+    || !/^[a-f0-9]{64}$/.test(input.source_evidence_hash) || !input.source_revision
+    || input.stocks.length < 1 || input.stocks.length > 72
+    || new Set(input.stocks.map(s => s.symbol)).size !== input.stocks.length
+    || input.stocks.some(s => !/^\d{4,6}$/.test(s.symbol))) throw Error('COMPLETED_ENTRY_INPUT_INVALID');
+  // barsDate is only the calendar boundary used to validate the last 20 bars.
+  // It is never used as the observation, evaluation or publication timestamp.
+  const barsDate = nextEntrySession(input.data_through);
+  // Price plans belong to the session immediately after the supplied data.
+  // Reviewing older data today must not revive an expired historical plan.
+  const evaluation: EntryInput = { ...input, business_date: input.data_through, mode: 'HISTORICAL_REPLAY' };
+  const candidates = [...input.stocks].sort((a, b) => a.symbol.localeCompare(b.symbol))
+    .flatMap(stock => STRATEGIES.map(strategy => evaluateStock(evaluation, stock, strategy, barsDate)));
+  return { version: ENTRY_VERSION + '_COMPLETED_SESSION_1', mode: 'AS_OF_RESEARCH' as const,
+    analysis_date: analysisDate, data_through: input.data_through, evaluation_time: input.evaluation_time,
+    plan_validity: cutoff < time(barsDate + 'T09:00:00+08:00') ? 'NEXT_SESSION_CONDITIONAL' : 'HISTORICAL_REFERENCE_ONLY',
+    source_revision: input.source_revision, source_evidence_hash: input.source_evidence_hash,
+    evidence_hash: await entryHash(input), provenance: input.provenance, policy: ENTRY_POLICY,
+    owner_only: true, production_eligible: false, universe: input.stocks.length, candidates,
+    counts: Object.fromEntries(['ENTRY_READY', 'WAIT_CONFIRMATION', 'AVOID_ENTRY', 'INSUFFICIENT_EVIDENCE']
+      .map(status => [status, candidates.filter(c => c.status === status).length])),
+    forward_sample: 0, outcome_sample: 0, analysis_value: 'INSUFFICIENT_SAMPLE' };
+}

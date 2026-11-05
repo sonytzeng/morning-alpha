@@ -1,0 +1,67 @@
+{
+  "schema": "DAILY_AI_RATE_LIMIT_RECOVERY_EDGE_SOURCE_RECEIPT_V1",
+  "source_files": [
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-handler.ts",
+      "bytes": 6241,
+      "sha256": "b55eb61650fc5a5765eb8c2cfe48edb07256e87e68f23330cda3854db3928898"
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-runner.ts",
+      "bytes": 2050,
+      "sha256": "5b5cd9d5f2a40135294e710281b34196bfe0bc789bbffa2665d04f71108aa18f"
+    },
+    {
+      "path": "tests/dailyStockAiRateLimitRecovery.test.mjs",
+      "bytes": 20901,
+      "sha256": "4d4e190169824591ae3c33d2de38e5b788847d9f997fc9eefa136cf569180291"
+    },
+    {
+      "path": "scripts/operations/daily-ai-rate-limit-recovery-20261031/build-worker-patch.mjs",
+      "bytes": 4253,
+      "sha256": "63c3d2d6a71fc09caf4c38a5d376d74ead9668550c1aedfe756ce51b473659a0"
+    },
+    {
+      "path": "scripts/operations/daily-ai-rate-limit-recovery-20261031/patch.test.mjs",
+      "bytes": 4147,
+      "sha256": "7c9a9d72b76ee659886992c9e71b38ae9913abdf78193fa9ba59aebe71400d13"
+    },
+    {
+      "path": "scripts/operations/daily-ai-rate-limit-recovery-20261031/OPERATOR.md",
+      "bytes": 5284,
+      "sha256": "e4f3c99bf4d0be97f74e1d7039a9f2f9a5631f38a6182759b60ccdd14db3d57c"
+    }
+  ],
+  "fixed_model": "gpt-6-astra",
+  "provider_prompt": "unchanged prompt-7:reasoning-low",
+  "system_message_sha256": "e80a1a378ba20b2da963a431c1f85fedd3a87921a469e8e2f82c5626cc022b0b",
+  "recovery_model_revision": "gpt-6-astra:DAILY_AI_STOCK_ANALYSIS_V1:prompt-7:reasoning-low:recovery-1",
+  "scope_batch_id": "0524783a79af043a70be593d2e019c435bc067f168a5b2567a831e32d78b4ddc",
+  "recovery_auto_continue": false,
+  "normal_auto_continue_requires_actual_complete": true,
+  "validations": {
+    "new_handler_runner_tests": {
+      "passed": 15,
+      "failed": 0
+    },
+    "related_provider_handler_expiry_tests_including_new": {
+      "passed": 38,
+      "failed": 0
+    },
+    "patch_builder_tests": {
+      "passed": 5,
+      "failed": 0
+    },
+    "new_modules_strict_tsc_with_actual_js_imports": "PASS",
+    "full_composed_bundle_deno_check": "PENDING_SEPARATE_PACKAGE_RECEIPT"
+  },
+  "source_index_modified_in_checkout": false,
+  "production_deployed": false,
+  "full_integration_admission": false,
+  "production_10000_member_capacity_proven": false,
+  "limitations": [
+    "Source and operation candidate only; the composed deployable artifact requires its own exact file catalog and full type check.",
+    "Tests use actual handler/runner with local synthetic transport and model responses; no live provider quota or billing conclusion.",
+    "Review-document binding alone grants no quality, source-use, licensing or publication approval."
+  ]
+}

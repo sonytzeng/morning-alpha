@@ -23,6 +23,16 @@ const date = current.business_date;
 const previousDate = previousTradingDay(date);
 const correlationId = '17083116-0000-4000-8000-000000000001';
 const input = observedAt => ({ phase: 'premarket', checkpoint: 'premarket', tradingDate: date, observedAt, correlationId });
+// Explicit synthetic cash replacements for retry/atomic contract controls.
+// Retained real ticker payloads, their dates and values remain unchanged.
+const syntheticCompletedQuote = key => ({
+  date: previousDate, symbol: key === 'TAIEX' ? 'IX0001' : '2330',
+  type: key === 'TAIEX' ? 'INDEX' : 'EQUITY', market: 'TSE', exchange: 'TWSE',
+  name: `SYNTHETIC_COMPLETED_QUOTE_${key}`,
+  closePrice: key === 'TAIEX' ? 100 : 200,
+  previousClose: key === 'TAIEX' ? 99 : 198,
+  isClose: true, lastUpdated: Date.parse(`${previousDate}T13:30:00+08:00`) * 1000,
+});
 
 async function taiwanResult(key, payload, status = 200, observedAt = `${date}T07:00:00+08:00`) {
   const resolve = key === 'TAIEX' ? resolveFugleTaiexProvider : resolveFugle2330Provider;
@@ -31,15 +41,17 @@ async function taiwanResult(key, payload, status = 200, observedAt = `${date}T07
     : { status, payload }, { tradingDate: date, phase: 'premarket', observedAt });
 }
 
-async function currentBatch(observedAt = current.capture_time) {
+async function syntheticCompletedQuoteBatch(observedAt = current.capture_time) {
+  // Other slots reuse retained responses; the two cash quotes are synthetic.
+  // This contract replay never claims a real 11/11 Production observation.
   const evidence = [];
   for (const slot of REQUIRED_PROVIDER_CONFIG) {
     const captured = current.responses[slot.key];
     let quote;
     if (slot.provider === 'finnhub') quote = normalizeRequiredFinnhubQuote(captured.payload, slot.sourceSymbol);
     else if (slot.key === 'TAIEX' || slot.key === '2330') {
-      const result = await taiwanResult(slot.key, previous.responses[slot.key].payload, 200, observedAt);
-      assert.equal(result.ok, true, `${slot.key} latest-completed-session adapter`);
+      const result = await taiwanResult(slot.key, syntheticCompletedQuote(slot.key), 200, observedAt);
+      assert.equal(result.ok, true, `${slot.key} synthetic completed-quote adapter`);
       quote = normalizeRequiredTaiwanCoreQuote(result, slot.key);
     } else {
       const result = await resolveRequiredTxfQuote(async endpoint => endpoint === captured.endpoint
@@ -73,21 +85,15 @@ test('9/17 timeline provenance is exact: old response date was rejected, first c
   }
 });
 
-test('06:50 and 07:00 accept prior/current ticker envelopes for the same latest completed Taiwan session', async () => {
+test('real prior/current ticker captures retain their original shape and are rejected as completed-quote evidence', async () => {
   for (const key of ['TAIEX', '2330']) {
-    const result = await taiwanResult(key, previous.responses[key].payload);
-    assert.equal(result.ok, true);
-    for (const minute of [410, 420, 450, 515]) {
-      const state = evaluatePremarketCoreReadiness({ key, result, tradingDate: date, previousTradingDate: previousDate, taipeiMinutes: minute });
-      assert.equal(state.state, 'PREMARKET_BASELINE_VALID');
-      assert.equal(state.failure_code, null);
-      assert.equal(state.source_business_date, previousDate);
+    for (const captured of [previous.responses[key], current.responses[key]]) {
+      assert.ok(captured.endpoint.includes('/ticker/'));
+      const result = await taiwanResult(key, captured.payload);
+      assert.equal(result.ok, false, `${key}:${captured.payload.date}`);
+      assert.equal(result.rejectedField, 'completed_close');
+      assert.equal(evaluatePremarketCoreReadiness({ key, result }).state, 'FAIL');
     }
-    const currentDay = await taiwanResult(key, current.responses[key].payload);
-    assert.equal(currentDay.ok, true);
-    assert.equal(currentDay.validation.provider_envelope_date, date);
-    assert.equal(currentDay.validation.evidence_session_date, previousDate);
-    assert.equal(currentDay.validation.session_contract.provider_session_date, previousDate);
   }
   assert.match(preflightSource, /resolveFugleTaiexProvider/);
   assert.match(fetchSource, /resolveFugleTaiexProvider/);
@@ -102,16 +108,28 @@ test('06:50 and 07:00 accept prior/current ticker envelopes for the same latest 
   assert.equal(preflightReadiness([{ key: 'TAIEX', status: 'FAIL', failure_code: 'PROVIDER_SYMBOL_INVALID' }]), 'BLOCKED');
 });
 
-test('Scenario 1: already-ready real Production capture still yields 11/11', async () => {
-  const replay = await replayProductionRealityProviderBatch();
-  assert.equal(replay.real_production_capture, true);
-  assert.equal(replay.atomic.valid, true);
-  assert.equal(replay.evidence.length, 11);
+test('SYNTHETIC completed quotes are ready at the original bounded premarket times', async () => {
+  for (const key of ['TAIEX', '2330']) for (const minute of [410, 420, 450, 515]) {
+    const time = `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
+    const result = await taiwanResult(key, syntheticCompletedQuote(key), 200, `${date}T${time}:00+08:00`);
+    assert.equal(result.ok, true);
+    const state = evaluatePremarketCoreReadiness({ key, result, tradingDate: date, previousTradingDate: previousDate, taipeiMinutes: minute });
+    assert.equal(state.state, 'PREMARKET_BASELINE_VALID');
+    assert.equal(state.failure_code, null);
+    assert.equal(state.source_business_date, previousDate);
+    assert.equal(result.validation.session_contract.provider_session_date, previousDate);
+  }
 });
 
-test('Scenario 2: latest completed session permits one fresh 11/11 batch inside bounded window', async () => {
+test('Scenario 1: legacy ticker-based replay cannot claim real 11/11 under the completed-quote adapter', async () => {
+  // The helper and its original captures are preserved. Its legacy cash
+  // contract fixture lacks the completed quote now required by the adapter.
+  await assert.rejects(replayProductionRealityProviderBatch(), /TAIEX_REALITY_ADAPTER_FAILED:PROVIDER_RESPONSE_CONTRACT_INVALID/);
+});
+
+test('SYNTHETIC Scenario 2: completed-quote contract permits one 11-slot batch inside the original bounded window', async () => {
   assert.equal(PREMARKET_LAST_COLLECTION_MINUTES, 524);
-  const rows = await currentBatch();
+  const rows = await syntheticCompletedQuoteBatch();
   assert.deepEqual(rows.map(row => row.provider_key), CHECKPOINT_PROVIDER_KEYS);
   assert.equal(validateAtomicCheckpointEvidenceRows(rows).valid, true);
   assert.equal(new Set(rows.map(row => row.correlation_id)).size, 1);
@@ -120,8 +138,8 @@ test('Scenario 2: latest completed session permits one fresh 11/11 batch inside 
   assert.match(fetchSource, /PREMARKET_READINESS_DEADLINE_EXCEEDED/);
 });
 
-test('Scenarios 2/3: real provider failures still use bounded retry; a valid prior session never enters it', async () => {
-  const validBaseline = await Promise.all(['TAIEX', '2330'].map(async key => taiwanResult(key, previous.responses[key].payload)));
+test('SYNTHETIC Scenarios 2/3: provider failure retry remains bounded while valid completed quotes are ready', async () => {
+  const validBaseline = await Promise.all(['TAIEX', '2330'].map(async key => taiwanResult(key, syntheticCompletedQuote(key))));
   assert.equal(validBaseline.every((result, index) => evaluatePremarketCoreReadiness({ key: ['TAIEX', '2330'][index], result }).state === 'PREMARKET_BASELINE_VALID'), true);
   for (const minutes of [420, 423, 450, 460, 515]) {
     const plan = buildPremarketProviderReadinessPlan({ has_report: false, premium_eligible: false, reason_codes: [], attempt: 10, taipei_minutes: minutes, provider_not_ready: true });
@@ -141,14 +159,15 @@ test('Scenarios 2/3: real provider failures still use bounded retry; a valid pri
   assert.match(migrationSource, /45 0 \* \* 1-5/);
 });
 
-test('Scenario 4: malformed data and wrong previous session never become WAITING', async () => {
+test('SYNTHETIC Scenario 4: malformed completed quotes and wrong previous session never become WAITING', async () => {
   for (const key of ['TAIEX', '2330']) {
-    const bad = structuredClone(previous.responses[key].payload);
+    const bad = syntheticCompletedQuote(key);
     bad.symbol = 'INVALID';
     const malformed = await taiwanResult(key, bad);
     const state = evaluatePremarketCoreReadiness({ key, result: malformed, tradingDate: date, previousTradingDate: previousDate, taipeiMinutes: 420 });
     assert.equal(state.state, 'FAIL');
-    const old = structuredClone(previous.responses[key].payload);
+    assert.equal(malformed.failureCode, 'PROVIDER_SYMBOL_INVALID');
+    const old = syntheticCompletedQuote(key);
     old.date = '2026-09-15';
     const older = await taiwanResult(key, old);
     assert.equal(evaluatePremarketCoreReadiness({ key, result: older, tradingDate: date, previousTradingDate: previousDate, taipeiMinutes: 420 }).state, 'FAIL');
@@ -162,8 +181,8 @@ test('Scenario 5: HTTP failure retains the existing provider failure policy', as
   assert.notEqual(classified.failure_code, 'PROVIDER_DATA_NOT_READY');
 });
 
-test('Scenario 6: repeated triggers retain one batch identity; incomplete attempts never contribute rows to the final 11', async () => {
-  const rows = await currentBatch();
+test('SYNTHETIC Scenario 6: repeated triggers retain one identity and incomplete attempts do not contribute final rows', async () => {
+  const rows = await syntheticCompletedQuoteBatch();
   const key = checkpointBatchIdempotencyKey(date, 'PREMARKET');
   const committed = new Map();
   for (let attempt = 0; attempt < 12; attempt++) {

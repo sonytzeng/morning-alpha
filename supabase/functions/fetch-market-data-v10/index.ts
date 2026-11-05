@@ -1,3 +1,4 @@
+import { resolveTaifexRegularQuote, TAIFEX_ATTRIBUTION } from '../_shared/taifex-regular-fallback.mjs';
 import { createClient as createRawClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { observeCriticalClientFactory } from '../_shared/critical-rpc-observer.ts';
 import { scheduleV2ForwardTrigger } from '../_shared/recommendation-v2-forward-trigger.ts';
@@ -49,7 +50,7 @@ import {
   normalizeRequiredTwseQuote,
   normalizeRequiredTaiwanCoreQuote,
   requiredProviderSlot,
-  resolveRequiredTxfQuote,
+  resolveTxfQuoteWithFallback,
   fetchRequiredFugleResponse,
   validateRequiredProviderEvidence,
 } from '../_shared/required-provider-validation.mjs';
@@ -76,7 +77,7 @@ const SYMBOL_DELAY_MS = 800;
 const FETCH_TIMEOUT_MS = 6_000;
 const MAX_RETRIES = 1;
 const OVERALL_TIMEOUT_MS = 60_000;
-const VERSION = "V10.20_PHASE_AWARE_TAIWAN_CASH_CONTRACT";
+const VERSION = "V10.21_TAIFEX_PRIOR_REGULAR_FALLBACK";
 const FUGLE_TAIEX_ADAPTER_MAPPING = validateFugleTaiexAdapterMapping();
 if (!FUGLE_TAIEX_ADAPTER_MAPPING.valid) throw new Error("FUGLE_TAIEX_ADAPTER_MAPPING_INVALID");
 const FUGLE_2330_ADAPTER_MAPPING = validateFugle2330AdapterMapping();
@@ -129,6 +130,7 @@ interface ProviderFailureDetail {
 }
 
 interface ProviderResponseObservation {
+  provider?: string;
   endpoint: string;
   status: number | null;
   payload: unknown;
@@ -877,12 +879,14 @@ async function fetchTaiwanCoreQuote(
   }
 
   if (config.displaySymbol === "TXF") {
-    const resolved = await resolveRequiredTxfQuote(
+    const resolved = await resolveTxfQuoteWithFallback(
       (endpoint: string) => fetchRequiredFugleResponse(endpoint, fugleApiKey),
       { phase, tradingDate, observedAt },
+      resolveTaifexRegularQuote,
     );
     const selectedObservation = resolved.response || resolved.observations.at(-1) || {};
     recorder?.({
+      provider: resolved.quote?.provider || String(resolved.observations.at(-1)?.provider || 'fugle_futopt'),
       endpoint: String(resolved.endpoint || selectedObservation.endpoint || REQUIRED_PROVIDER_CONFIG.find(item => item.key === 'TXF')?.endpoint || ''),
       status: Number.isFinite(Number(selectedObservation.status)) ? Number(selectedObservation.status) : null,
       payload: selectedObservation.payload || null,
@@ -892,7 +896,7 @@ async function fetchTaiwanCoreQuote(
     for (const observation of resolved.observations) {
       if (Number(observation.status) === 200) continue;
       failureDetails?.push({
-        provider: "fugle_futopt", symbol: "TXF", endpoint: String(observation.endpoint),
+        provider: String(observation.provider || 'fugle_futopt'), symbol: "TXF", endpoint: String(observation.endpoint),
         ...(Number.isFinite(Number(observation.status)) && Number(observation.status) > 0 ? { status: Number(observation.status) } : {}),
         failure_code: classifyRequiredProviderFailure(observation),
         error: String(observation.error || "PROVIDER_RESPONSE_CONTRACT_INVALID"),
@@ -1351,7 +1355,7 @@ Deno.serve(async (req) => {
           transportAttempt,
           attemptKey: `${canonicalCheckpoint}:${recoveryAttempt}:${transportAttempt}:${correlationId}`,
           providerKey: config.displaySymbol,
-          provider: quote?.provider || (config.market === 'TW' ? (config.displaySymbol === 'TXF' ? 'fugle_futopt' : 'fugle') : 'finnhub'),
+          provider: quote?.provider || observation?.provider || (config.market === 'TW' ? (config.displaySymbol === 'TXF' ? 'fugle_futopt' : 'fugle') : 'finnhub'),
           symbol: quote?.sourceSymbol || config.finnhubSymbol,
           endpoint: observation?.endpoint || matchingFailure?.endpoint || requiredProviderSlot(config.displaySymbol)?.endpoint || 'unknown',
           httpStatus: observation?.status ?? matchingFailure?.status ?? null,
@@ -1360,7 +1364,7 @@ Deno.serve(async (req) => {
           responses: observation?.responses || [],
           normalizedQuote: quote,
           evidence,
-          error: observation?.error || matchingFailure?.error || matchingFailure?.failure_code || null,
+          error: evidence.valid === true ? null : observation?.error || matchingFailure?.error || matchingFailure?.failure_code || null,
           contractReason: evidence.valid === true ? null : String(evidence.error || matchingFailure?.failure_code || 'PROVIDER_REQUEST_REJECTED'),
           marketPhase: phase,
           observedAt: startedAt,
@@ -1504,13 +1508,15 @@ Deno.serve(async (req) => {
           .from("market_data")
           .upsert({
             symbol: config.displaySymbol,
-            name: config.name,
+            name: quote.provider === 'taifex_open_data' ? '台指期（前一交易日一般盤）' : config.name,
             value: value,
             change_percent: changePercent,
             captured_at: capturedAt,
             updated_at: capturedAt,
             market: config.market,
-            taiwan_impact: config.taiwanImpact,
+            taiwan_impact: quote.provider === 'taifex_open_data'
+              ? `前一交易日一般盤資料；${TAIFEX_ATTRIBUTION} https://data.gov.tw/license`
+              : config.taiwanImpact,
           }, { onConflict: "symbol" });
 
         if (insertErr) {

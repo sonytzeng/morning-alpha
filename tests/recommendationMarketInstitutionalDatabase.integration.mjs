@@ -7,12 +7,14 @@ import { emptyEvidenceData } from '../supabase/functions/_shared/decision-v1-dat
 import { buildRecommendationFoundationCandidate, persistedFoundationCandidateInput } from '../supabase/functions/_shared/recommendation-foundation-candidate.ts';
 import { persistedRecommendationReaderInput } from '../supabase/functions/_shared/recommendation-stock-evidence.ts';
 const name='ma-market-flow-candidate-'+process.pid;
-const run=(args,input)=>execFileSync('docker',args,{input,encoding:'utf8',stdio:['pipe','pipe','pipe'],maxBuffer:2e6}).trim();
+const run=(args,input)=>execFileSync('docker',args,{input,encoding:'utf8',stdio:['pipe','pipe','pipe'],maxBuffer:2e6,timeout:15000}).trim();
 const sql=input=>run(['exec','-i',name,'psql','-h','127.0.0.1','-XqAt','-U','postgres','-v','ON_ERROR_STOP=1'],input);
+let owned=false,summary;
 try {
  // Bound the tiny disposable database to RAM; do not prune or resize the
  // developer's full Docker data disk or touch any existing test service.
- run(['run','-d','--name',name,'--network','none','--tmpfs','/var/lib/postgresql/data:rw,size=268435456','--env','POSTGRES_PASSWORD=isolated-only','postgres:17']);
+ run(['image','inspect','postgres:17']); // No implicit image pull or external network.
+ run(['run','-d','--name',name,'--network','none','--memory','384m','--cpus','1','--tmpfs','/var/lib/postgresql/data:rw,size=268435456','--env','POSTGRES_PASSWORD=isolated-only','postgres:17']);owned=true;
  let ready=false;for(let i=0;i<40;i++){try{sql('select 1');ready=true;break;}catch{await new Promise(r=>setTimeout(r,250));}}assert(ready);
  const schema=readFileSync(new URL('./fixtures/six-bug-schema-only-20260930.sql',import.meta.url),'utf8');
  const start=schema.indexOf('CREATE TABLE public.institutional_flows ('),end=schema.indexOf('\n);',start)+3;
@@ -46,6 +48,16 @@ try {
  const changed=structuredClone(bundle);changed.marketFlow.source_revision='0'.repeat(64);
  assert.throws(()=>finish('service_role',changed),/V2_ACQUISITION_IMMUTABLE/);
  const persisted=JSON.parse(sql(`select payload from research_private.recommendation_v2_acquisition_cache where id='${lease}'`));assert.deepEqual(persisted,bundle);
+ // Same market rows, actually reordered by PostgreSQL JSONB, must stay one
+ // private capture instead of becoming MARKET_FLOW_CONFLICT on a later read.
+ assert.notEqual(JSON.stringify(c.rows[0]),JSON.stringify(persisted.marketFlow.rows[0]));
+ const held={...source,flows:structuredClone(c.rows)},heldBefore=structuredClone(held);
+ const reread=await withMarketInstitutionalEvidence(held,id,persisted.marketFlow);
+ assert.deepEqual(reread,heldBefore);assert.deepEqual(held,heldBefore);
+ assert.equal(new Set(reread.flows.map(r=>r.id)).size,3);
+ const changedHeld=structuredClone(held);changedHeld.flows[0].raw_payload.publication_approved=true;
+ const conflict=await withMarketInstitutionalEvidence(changedHeld,id,persisted.marketFlow);
+ assert(conflict.failures.includes('MARKET_FLOW_CONFLICT'));
  const proof=await buildRecommendationFoundationCandidate({data:source,identity:id,captures:[],officialActuals:[],marketFlow:persisted.marketFlow,evidenceCutoff:persisted.acquisition_cutoff});
  const savedReport={revision_id:id.revision_id,correlation_id:id.revision_id,generated_at:id.generated_at,decision_v1:proof.decision,recommendation_stock_evidence:proof.acquisition};
  // Report's unchanged JSON serialization preserves this additive field.
@@ -58,5 +70,12 @@ try {
  assert.equal(fingerprint(),before,'cache writes never populate or relax the private flow table');
  // Exact rollback: omit the candidate adapter, retaining original empty input.
  assert.deepEqual(source,emptyEvidenceData());assert.equal(fingerprint(),before);
- console.log(JSON.stringify({scope:'ISOLATED_SQL_RLS_NOT_PRODUCTION_AUTH',fresh_db:'PASS',anon:'DENY',free_premium_raw:'DENY',memory_integration:'PASS',existing_cache_rpc:'STORED_THEN_ALREADY_STORED',immutable_payload:'PASS',saved_report_reader:'PASS',formal_business_writes:0,synthetic_cache_rows:1,security_diff:0,rollback:'PASS'}));
-} finally { try {run(['rm','-f','-v',name]);}catch{} }
+ summary={scope:'ISOLATED_SQL_RLS_NOT_PRODUCTION_AUTH',fresh_db:'PASS',anon:'DENY',free_premium_raw:'DENY',memory_integration:'PASS',existing_cache_rpc:'STORED_THEN_ALREADY_STORED',immutable_payload:'PASS',saved_report_reader:'PASS',jsonb_market_reread:'IDENTICAL_THREE_IDS',changed_authority_metadata:'DENIED',formal_business_writes:0,synthetic_cache_rows:1,security_diff:0,rollback:'PASS'};
+} finally {
+ if(owned){
+  run(['rm','-f',name]);let absent=false;
+  try{run(['inspect',name]);}catch(error){assert.equal(error.status,1);assert.match(error.stderr,/no such (?:object|container)/i);absent=true;}
+  assert(absent,'OWNED_MARKET_FLOW_TEST_CONTAINER_STILL_EXISTS');
+ }
+}
+console.log(JSON.stringify({...summary,cleanup:'VERIFIED_REMOVED'}));

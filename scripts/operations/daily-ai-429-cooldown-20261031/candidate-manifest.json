@@ -1,0 +1,25 @@
+{
+  "schema": "DAILY_AI_429_DISPATCH_BREAKER_CANDIDATE_V1",
+  "signature": "public.dispatch_daily_stock_ai_batch_v1(text)",
+  "baseline_definition_sha256": "436ec37a8a6d32169bd1bab60ebf9bc4338845588f19efac7de78a4384387db3",
+  "candidate_definition_sha256": "d0c3395e030c92b8cd55cedb53882fbb86cc07b37ac57c0d4b007db623467878",
+  "candidate_sql_sha256": "3602d8313272e391672fd52aa92e558ce6c7e72cf422d3c0c9af60ccb843cbbe",
+  "rollback_sql_sha256": "14bfdddad715a150c083b1be77deb48a3bc494abf111e2746fc283504a6df578",
+  "acl": "{postgres=X/postgres,service_role=X/postgres}",
+  "scope": [
+    "batch.id",
+    "packet_hashes symbol/input_hash",
+    "batch.cutoff",
+    "exact STOCK_AI_PROVIDER_HTTP_429 code",
+    "any model revision"
+  ],
+  "blocked_state": "BLOCKED_PROVIDER_RATE_LIMIT",
+  "automatic_unblock": false,
+  "writes_jobs": false,
+  "changes_attempts": false,
+  "changes_completed": false,
+  "external_calls_per_blocked_dispatch": 0,
+  "new_grants": false,
+  "production_change_performed": false,
+  "limitation": "Stops future normal dispatcher calls. Already queued/in-flight requests may finish. Direct authorized Edge invocation and citation-repair dispatcher are separate paths. Exhausted jobs require separately reviewed recovery; no attempt reset."
+}

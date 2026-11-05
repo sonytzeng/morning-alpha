@@ -1,0 +1,398 @@
+{
+  "schema": "MORNING_ALPHA_DAILY_STOCK_AI_PRE_HARDSTOP_SOURCE_MANIFEST_V1",
+  "revision": "7c9914dfc704788f2e2c75fe3b492b2b3b222d6b",
+  "hardstop_commit": "f0d484fbfb09e397454b8d586f04da6a65d5f213",
+  "hardstop_parent": "7c9914dfc704788f2e2c75fe3b492b2b3b222d6b",
+  "historical_only": true,
+  "current_policy_admission": false,
+  "entrypoint": "supabase/functions/daily-stock-analysis-v1/index.ts",
+  "allowed_entrypoints": [
+    "research/daily-ai-financial-refresh.ts",
+    "research/entry-official-history.ts",
+    "src/features/vnext/contracts.ts",
+    "supabase/functions/_shared/daily-stock-ai-runner.ts",
+    "supabase/functions/_shared/daily-stock-ai.ts",
+    "supabase/functions/daily-stock-analysis-v1/index.ts",
+    "supabase/functions/daily-stock-analysis-v1/intake.ts",
+    "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-handler.ts",
+    "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-runner.ts"
+  ],
+  "allowed_node_builtins": [
+    "node:buffer",
+    "node:crypto",
+    "node:http",
+    "node:https",
+    "node:process",
+    "node:punycode",
+    "node:stream",
+    "node:url",
+    "node:zlib"
+  ],
+  "files_count": 52,
+  "files": [
+    {
+      "path": "research/daily-ai-analysis.ts",
+      "mode": "100644",
+      "git_blob": "8ce66ce4a3f7982a772c30cf67929bf07b5e9263",
+      "sha256": "9f42eb4a14da53132fe3fdf84fbf11cf2d5ab7ffdf7114ea842c8436f10285e2",
+      "bytes": 8803
+    },
+    {
+      "path": "research/daily-ai-batch.ts",
+      "mode": "100644",
+      "git_blob": "a04481298951659282a622c2fe48c68c1f6875ab",
+      "sha256": "c0fcd1c3caaf354f18924d8058cae891d9716b10cf4f69157397364f59d99db9",
+      "bytes": 3877
+    },
+    {
+      "path": "research/daily-ai-financial-refresh.ts",
+      "mode": "100644",
+      "git_blob": "036502d423f7213f491254071df2950bd1e1273e",
+      "sha256": "56f1558a54452914caf78f5817abacf2a3f5c9d7b784bd164ace918e169cd920",
+      "bytes": 21477
+    },
+    {
+      "path": "research/daily-ai-global-market.ts",
+      "mode": "100644",
+      "git_blob": "136a5e3d3a5bbcd0b1aab28ca7c1dfe6cf297140",
+      "sha256": "a6b9138e359a47a77a803e7c11af1fc461dad3a4fd52193ca615dc587363a094",
+      "bytes": 19523
+    },
+    {
+      "path": "research/daily-ai-official-news.ts",
+      "mode": "100644",
+      "git_blob": "33aa2d2bd113577478d34124049db727353df2c2",
+      "sha256": "1039b9c2e2f694ffd28a1121e98ff7423b5f3fbc97b2587abe542d3b7464f270",
+      "bytes": 14259
+    },
+    {
+      "path": "research/daily-ai-packets.ts",
+      "mode": "100644",
+      "git_blob": "16007346dffa5ba95d9551e92da1c0b2e68a70ba",
+      "sha256": "5dfaf5c3aa0b5a6ace8c5d92d6ce072a58253b4f3f39769c7f62093639f3d034",
+      "bytes": 6002
+    },
+    {
+      "path": "research/daily-ai-refresh.ts",
+      "mode": "100644",
+      "git_blob": "4ecd9ba2fb9d1459efe34b98940d5f686d6f1301",
+      "sha256": "bd79d2b1c6f3517e51e5ac547df8b10cbb3bfc68818adacbace3e595315084a8",
+      "bytes": 8471
+    },
+    {
+      "path": "research/daily-ai-seed.ts",
+      "mode": "100644",
+      "git_blob": "4617a7de7f04da5b087b8d802a01783f6b21f7d2",
+      "sha256": "2a7fffe2c1d4197edf94b225c4f9ad04e5d61408096a0822292d2f5ae15add84",
+      "bytes": 3755
+    },
+    {
+      "path": "research/daily-ai-semantics.ts",
+      "mode": "100644",
+      "git_blob": "d4ad2ce08ed8e829bfda2aaa98f126b0ddae43e8",
+      "sha256": "6029b7ddf31e5784478dc7a7b2e18e8e7e87a036d73534b3eb74fe404cf881b6",
+      "bytes": 23184
+    },
+    {
+      "path": "research/documented-review-replay-v2.candidate.ts",
+      "mode": "100644",
+      "git_blob": "b5d0f9dc91ca29e00f34b76fcd6b4f1faae2545f",
+      "sha256": "bab11b0e55b8a32ca73add4cb1180ebc6a22b72aaa7467fa6e9c5372f3e3c1bf",
+      "bytes": 10081
+    },
+    {
+      "path": "research/documented-review-v2-contract.candidate.ts",
+      "mode": "100644",
+      "git_blob": "88205dda79f98155c9ee6880009d70384622caf3",
+      "sha256": "54868b08952c9f8d623b1a16ced6621b3b365ba1b9a8007ccc8909999de7378f",
+      "bytes": 1390
+    },
+    {
+      "path": "research/entry-official-history.ts",
+      "mode": "100644",
+      "git_blob": "55d623be25da037d3f2fbcc729bdab752a6c2ece",
+      "sha256": "5d48388908b08a119ca7525d7cacf5cf6de912fda16ca44ee674a649d5c93805",
+      "bytes": 12531
+    },
+    {
+      "path": "research/entry-opportunity.ts",
+      "mode": "100644",
+      "git_blob": "5bdb30261641bebfda30f79a6023b3a3d8f5155f",
+      "sha256": "30da9e781482ab1d9222a679e2e2413b47650cf5f95efc609e0a443c0dbb3031",
+      "bytes": 16620
+    },
+    {
+      "path": "research/sec-daily-financial-replay.candidate.ts",
+      "mode": "100644",
+      "git_blob": "29c7d374b49a3b1169e04c73ea316ea0d5f65ced",
+      "sha256": "594648561c1dec020b6e34ece24f0bf3cbee2c504fcb4039eb2c64db17486048",
+      "bytes": 7179
+    },
+    {
+      "path": "research/sec-quarter-financials.ts",
+      "mode": "100644",
+      "git_blob": "96d610c2718f24df2fcf542753bca65312052b8a",
+      "sha256": "f170d6ee2c1ced84f0c77db9079cd8cabdd0d76e0f3bc07737b077d07bd78ac0",
+      "bytes": 8081
+    },
+    {
+      "path": "src/features/vnext/contracts.ts",
+      "mode": "100644",
+      "git_blob": "ba204f08527192852c11e4aa5ace82f9ed38666f",
+      "sha256": "32195b3a1cd1b060324a403c9adf2109399f0d30cdbe829d5a0493f4af8a8068",
+      "bytes": 8100
+    },
+    {
+      "path": "src/features/vnext/projection.ts",
+      "mode": "100644",
+      "git_blob": "26c56b1948b6a7217fa64eab89f0b758d79be9d5",
+      "sha256": "8a238c6eacc3972f0f3927346c4081d9e2dcb4c8613bcc4cb1825a3abaf688ae",
+      "bytes": 6768
+    },
+    {
+      "path": "src/features/vnext/publicationReadiness.ts",
+      "mode": "100644",
+      "git_blob": "1289f75ff21995d5e0acb7cf404af25503d9a2b2",
+      "sha256": "76f8d26b07c92e84cef82459b8c94bc9dbcabfbaaa6e86b67036b351c6a67058",
+      "bytes": 5892
+    },
+    {
+      "path": "src/features/vnext/realResearch.ts",
+      "mode": "100644",
+      "git_blob": "051a7874ccdd5cce1ee015482c0e11ee5811d38d",
+      "sha256": "adc05e968bce6c840c132d14bec7df076d4002b031471e0175c3a9e13346125f",
+      "bytes": 10995
+    },
+    {
+      "path": "src/features/vnext/researchFunnel.ts",
+      "mode": "100644",
+      "git_blob": "edb16d591f59e4efb4c71f1a5bf64a8984a74f23",
+      "sha256": "2b8d956efdf648f735aabb23e756c84295f620db9cbda25c292b60e87baf8303",
+      "bytes": 19694
+    },
+    {
+      "path": "src/features/vnext/stockResearch.ts",
+      "mode": "100644",
+      "git_blob": "c27bfc133d674b2f9ce8dc27231f010939f7b084",
+      "sha256": "7583c0edca56aa4c225173ab5657ce894529df34efb63d745cab28c73dc887c5",
+      "bytes": 9226
+    },
+    {
+      "path": "supabase/functions/_shared/_fixed_c_worker_sdk/0bce189b17b39939428919945e6a261663cfa3fb43d7be83b97eef1655ffa196.mjs",
+      "mode": "100644",
+      "git_blob": "7bad82d5baaf1e7e3a55d7ac915106a0644a6132",
+      "sha256": "7e0f018b41f34219e619651558c019106ffccd79aa6bff76921a2c160f5fca8f",
+      "bytes": 20260
+    },
+    {
+      "path": "supabase/functions/_shared/_fixed_c_worker_sdk/8474f19a1f21e74abb020fc7894da0ae847ad881f5684adafe32f7d0262077cf.mjs",
+      "mode": "100644",
+      "git_blob": "f51a73caa6be6c6dcd27a7ae866c1f2de3b3b33c",
+      "sha256": "921c83c41a741fec993aa718ec5fd946210d709ff2ef12ae970cf5332c1f2d15",
+      "bytes": 29607
+    },
+    {
+      "path": "supabase/functions/_shared/_fixed_c_worker_sdk/855779118b7c638eea0976ec4b331a7e741f69dd35c7e97b5be927345723dc04.mjs",
+      "mode": "100644",
+      "git_blob": "e6c63679b230dcd840e7eb0049a188608b8e260a",
+      "sha256": "ca79b8f4411c3d3502d88791b079099825d3d3f6ceac0ff7ecbeee24cfacd1f6",
+      "bytes": 24217
+    },
+    {
+      "path": "supabase/functions/_shared/_fixed_c_worker_sdk/9135c3f83ea833d80bfd11156d394d0ba84f2442e97e084887e406bff42f4456.mjs",
+      "mode": "100644",
+      "git_blob": "6cb9f7bfd33cbb2f01036fe918892d8b04ee857c",
+      "sha256": "a89ecb8cf2937462a52ec455270e2bcc75069862b1932e65695b10652cc087c6",
+      "bytes": 7613
+    },
+    {
+      "path": "supabase/functions/_shared/_fixed_c_worker_sdk/98f2f4377da15fb84145ccb88d0745c482475b7004afef619afec387d83b2653.mjs",
+      "mode": "100644",
+      "git_blob": "e1b506b825062cc5839b339e04977cf3f605d36d",
+      "sha256": "04c3ba8ef60fd5ad9cca938c842c044869d8d6976a2faa796fb66d6d5f2056f2",
+      "bytes": 380
+    },
+    {
+      "path": "supabase/functions/_shared/_fixed_c_worker_sdk/9be86b9f10fafb9db714e142be218b2876d16f7a228c1cc0cd8403239abd8da3.mjs",
+      "mode": "100644",
+      "git_blob": "fe5b35a8f24aa851df960528838aacdd4d5473b4",
+      "sha256": "02d13644492c718617a2232d7217647a615e9e32ec733966066d599ceccd1afe",
+      "bytes": 3003
+    },
+    {
+      "path": "supabase/functions/_shared/_fixed_c_worker_sdk/a0943b39916396be354a3d6b9a13dcd2b7eb9fae6d00629f2b409e518f1663dd.mjs",
+      "mode": "100644",
+      "git_blob": "3ab15515f7748a3cda37b4a96f10ede59234b20d",
+      "sha256": "238cd0743827707cbc1c2d7c2cf1027dbc536fb53ec9a3fde0ff8026a3ac5385",
+      "bytes": 3205
+    },
+    {
+      "path": "supabase/functions/_shared/_fixed_c_worker_sdk/a67bcb8e00c067cc250bc24dd01da1277ed6452066387425b7b2cc11732e8867.mjs",
+      "mode": "100644",
+      "git_blob": "d217b59b4d11b6fa468c34674f91e5850cca1ab9",
+      "sha256": "2a2bdca5bcf82e1dcd4979b20576e970d00fb00c1c84a12d0087dec4122fdf3c",
+      "bytes": 13536
+    },
+    {
+      "path": "supabase/functions/_shared/_fixed_c_worker_sdk/b77ee1984adac5aca840baa3f11d3265a040c49f1ada99afefad72df1c43e353.mjs",
+      "mode": "100644",
+      "git_blob": "0ca16e12cb2a25844659c62d693186a1ccf3fbb4",
+      "sha256": "5753ec0a99414f4055f0c1f97691100f13d88e48a8443b00aebb90a512785fa2",
+      "bytes": 266119
+    },
+    {
+      "path": "supabase/functions/_shared/_fixed_c_worker_sdk/bb93fdafb91b4dd70fa236164dbf6ce27358fe93c4c9297643576dbce326a1c8.mjs",
+      "mode": "100644",
+      "git_blob": "1c178eaf03ad93be2034e49e44c857c31e66593e",
+      "sha256": "fe5d8033de9593f2f427d3786ceacc30e546a0b4d048f1915b5c636a70202b61",
+      "bytes": 13538
+    },
+    {
+      "path": "supabase/functions/_shared/_fixed_c_worker_sdk/c4510bd92ebd6222ba56cabdd658d09feeb964f64a728107a089635edd6bf7de.mjs",
+      "mode": "100644",
+      "git_blob": "df76b63de48f7e1dc6db96f11959631ff8599c43",
+      "sha256": "6a4a2baa419f90845f94c6991752c6b28e9bbd772bab96b9aa28c14daa523aaf",
+      "bytes": 59703
+    },
+    {
+      "path": "supabase/functions/_shared/_fixed_c_worker_sdk/c769f61979cd626fc8d202ae9955a3a810ae59bd552c56e138fb1daeb7e2c99b.mjs",
+      "mode": "100644",
+      "git_blob": "2875cc10f2012b5b78aea3f73ce51d9ac496bbca",
+      "sha256": "c5abc625b80aebdfcdc9b377e31f9df1d00381132f9771a411430287a23d7fb2",
+      "bytes": 226
+    },
+    {
+      "path": "supabase/functions/_shared/_fixed_c_worker_sdk/ccf2406bf8d2b9519c34c0c07dc74130ef4f7b3df582408b597e8078b222f45e.mjs",
+      "mode": "100644",
+      "git_blob": "d1aa8450335a4b515b4a504422ac1e9a2225cb06",
+      "sha256": "d6f81e9d4f4defe9a82eff4fbe9f0355415de7cfa3ca1b08cd1ddc7f6ae5bd66",
+      "bytes": 212
+    },
+    {
+      "path": "supabase/functions/_shared/_fixed_c_worker_sdk/d6476eb760b326c6efa9534e2de942be23983f472c9b8459c0effa4c263980e9.mjs",
+      "mode": "100644",
+      "git_blob": "61e73bc236f261dd4e206a251071b51d5080cd9a",
+      "sha256": "6cbe57de46220624ff4b404c5527d045f86180701d26706fce960c8a41b7746d",
+      "bytes": 310
+    },
+    {
+      "path": "supabase/functions/_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs",
+      "mode": "100644",
+      "git_blob": "7a925b8d01feaf0be30189dc2184bf28fba9655d",
+      "sha256": "4cb4017a3cb452fd73fd38066759a897e93ab5b2819432d76da8304e73731e93",
+      "bytes": 618
+    },
+    {
+      "path": "supabase/functions/_shared/daily-stock-ai-auth.ts",
+      "mode": "100644",
+      "git_blob": "bde65552f107f8ea5cc283ee186343500262c822",
+      "sha256": "c96514c7ba97b148f78a15cf525b9b07590ef41bca673ca9a32924ab2d549523",
+      "bytes": 2066
+    },
+    {
+      "path": "supabase/functions/_shared/daily-stock-ai-jobs.ts",
+      "mode": "100644",
+      "git_blob": "447d29aa8f3a6be69342895c160471965ebb41ac",
+      "sha256": "332fe688137bcee81cb246e03f3184127b6b8fe49b6ac0afcfa371a413a807e3",
+      "bytes": 2717
+    },
+    {
+      "path": "supabase/functions/_shared/daily-stock-ai-runner.ts",
+      "mode": "100644",
+      "git_blob": "94ee3e655513f394f0d154de9c62b0ae9924fc7e",
+      "sha256": "e90e6db1d5a272a85cc1df710b085dda315beefdf6aaa1e0c0526d992eb15b23",
+      "bytes": 3647
+    },
+    {
+      "path": "supabase/functions/_shared/daily-stock-ai.ts",
+      "mode": "100644",
+      "git_blob": "267af338008fbda550216566fe685ef5dae6db9b",
+      "sha256": "db71f824334fcaf56f097494aafd6a974363b336b721de93c5bfcd2b2142e32c",
+      "bytes": 15084
+    },
+    {
+      "path": "supabase/functions/_shared/market-calendar-data.json",
+      "mode": "100644",
+      "git_blob": "5302ce4486f51b28590b44e3b08afd80771169fc",
+      "sha256": "18930032917a7e3695a431b57b0f53313f1289af72d61087eca3f93fff956079",
+      "bytes": 1695
+    },
+    {
+      "path": "supabase/functions/_shared/market-session-contract.mjs",
+      "mode": "100644",
+      "git_blob": "b23daeaf4597c79878bd7f8e684723063f5d8e60",
+      "sha256": "5b41e134ffd98e8eedcff8e782b104c96b7368ad3f455ec7ac2b406e74316d44",
+      "bytes": 2994
+    },
+    {
+      "path": "supabase/functions/_shared/us-cash-session-calendar.ts",
+      "mode": "100644",
+      "git_blob": "2e2937ea9fa486434d91d332a3fa5a9665c05731",
+      "sha256": "e648996b1c26b63e6f04f00ea06ca8a3cbef5ef49fb48b87c0b81d26979a9b78",
+      "bytes": 1609
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/checkpoint.ts",
+      "mode": "100644",
+      "git_blob": "1215208c7e560697e0ab328d259dee15ccb04246",
+      "sha256": "48786a39a52599b1f40ba8151e0dc73fe3cdc55a04bea650bdb122f5bf73b11b",
+      "bytes": 2058
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/handler.ts",
+      "mode": "100644",
+      "git_blob": "731eee702dbfff96c4293583fc969ff510ce92e6",
+      "sha256": "04ec87a9e2784c11148b6d81aae01579b55552df9082d0352d6c58670560bceb",
+      "bytes": 6552
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/index.ts",
+      "mode": "100644",
+      "git_blob": "c5df95c82b1bdb58f8090c8731907f3be8be8215",
+      "sha256": "f3d221e45f03ee586bac619a4f2ac02df9d32227ea5d10b60b9e9d05360429d1",
+      "bytes": 10179
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/intake.ts",
+      "mode": "100644",
+      "git_blob": "5b6e5e5d77043e2b3e2f5751ffbd386f038ed6ae",
+      "sha256": "dbd65de0497deff78419dfcbdeff069acb09daea775f3a2bc146059771198836",
+      "bytes": 29517
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-handler.ts",
+      "mode": "100644",
+      "git_blob": "d100b3e0949aa5443234d00c402affa41a59ca15",
+      "sha256": "b55eb61650fc5a5765eb8c2cfe48edb07256e87e68f23330cda3854db3928898",
+      "bytes": 6241
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/rate-limit-recovery-runner.ts",
+      "mode": "100644",
+      "git_blob": "3ee386fa7c839a5592f476cd7984d71b6fbbedc6",
+      "sha256": "5b5cd9d5f2a40135294e710281b34196bfe0bc789bbffa2665d04f71108aa18f",
+      "bytes": 2050
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/repair-handler.ts",
+      "mode": "100644",
+      "git_blob": "f5e21933e09c6b3c1f7dcad309b1f490dac34c44",
+      "sha256": "4a9d94c5f49dcad660c8f5860bb9633a501d5e520638238096d6a0cad5e94beb",
+      "bytes": 7460
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/source-handler.ts",
+      "mode": "100644",
+      "git_blob": "308d54dc49bec4cd5ff0a913cfaa8a810067f8c5",
+      "sha256": "21a0b2250ffd574f6291904b3e61e78780dd80664105d4297b585a4a99c0be5d",
+      "bytes": 3534
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/source.ts",
+      "mode": "100644",
+      "git_blob": "67e139db7937c63ad37eca78c4fa00a45ded4a82",
+      "sha256": "499c90a74cebc3333bd1337306dc3e4c0fe7cafa70ff619efc4bf7c1ea17218b",
+      "bytes": 14275
+    }
+  ]
+}

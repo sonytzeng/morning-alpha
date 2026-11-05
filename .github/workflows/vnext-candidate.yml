@@ -1,11 +1,66 @@
 name: VNext research candidate
 on:
   pull_request:
-    branches: [main, codex/member-main-integration-20261015]
+    branches: [main, codex/member-main-integration-20261015, codex/official-source-wiring-20261020]
 permissions:
   contents: read
 jobs:
-  vnext-isolation:
+  source-academy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm ci
+      - name: Academy source controls (isolated checkout; no build race)
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node scripts/releases/observe-ci-node.mjs --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/academyV11Integrity.test.mjs
+  source-release-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm ci
+      - name: VNext, staged and news source controls (isolated checkout; no build race)
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node scripts/releases/observe-ci-node.mjs --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/vnextIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/marketNewsReportIntegrity.test.mjs
+  source-successors:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm ci
+      - name: Successor source controls (isolated checkout; no build race)
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node scripts/releases/observe-ci-node.mjs --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/currentSourceSuccessor.test.mjs tests/reviewedSourceSuccessor.test.mjs tests/recoverySourceSuccessor.test.mjs tests/ciShardSourceSuccessor.test.mjs
+      - name: Exact model source use identity and admission controls
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/modelUseSourceSuccessor.test.mjs tests/dailyAiModelSourceUse.test.mjs
+  vnext-runtime:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -20,13 +75,19 @@ jobs:
         run: npm ci
       - env:
           NODE_OPTIONS: --experimental-strip-types
-        run: node --experimental-strip-types --test tests/vnextContracts.test.mjs tests/vnextValidation.test.mjs tests/vnextRealEvidence.test.mjs tests/vnextFoundation.test.mjs tests/vnextMember.test.mjs tests/vnextPublication.test.mjs tests/vnextResearchFunnel.test.mjs tests/vnextStockResearch.test.mjs tests/vnextPublicationReview.test.mjs tests/vnextAdmission.test.mjs tests/vnextBlockers.test.mjs tests/vnextClearance.test.mjs tests/vnextDailyIntelligence.test.mjs
-      - name: Current source and live inventory negative controls (no build race)
+        run: node --experimental-strip-types --test tests/vnextContracts.test.mjs tests/vnextValidation.test.mjs tests/vnextRealEvidence.test.mjs tests/vnextFoundation.test.mjs tests/vnextMember.test.mjs tests/vnextPublication.test.mjs tests/vnextResearchFunnel.test.mjs tests/vnextStockResearch.test.mjs tests/vnextPublicationReview.test.mjs tests/vnextAdmission.test.mjs tests/vnextBlockers.test.mjs tests/vnextClearance.test.mjs tests/vnextDailyIntelligence.test.mjs tests/vnextRetainedQuarterFinancials.test.mjs tests/vnextIssuerQuarterObservations.test.mjs tests/vnextTwseDailyPrices.test.mjs
+      - name: Exact current hash ownership, strict Canonical receipt and acquisition trace controls
         env:
           NODE_OPTIONS: --experimental-strip-types
-        run: |
-          node --test tests/ciNodeObserver.test.mjs
-          node scripts/releases/observe-ci-node.mjs --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/vnextIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/marketNewsReportIntegrity.test.mjs tests/academyV11Integrity.test.mjs
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextPredictionHashBudget.test.mjs tests/vnextPrelockStageBudget.test.mjs tests/v1ActualCanonicalReceiptStatus.test.mjs tests/vnextTraceValidationBudget.test.mjs tests/vnextSharedPreimage.test.mjs tests/vnextAcquisitionHandoff.test.mjs tests/vnextDailyRuntimeRecovery.test.mjs tests/vnextForwardCutoffRuntime.test.mjs
+      - name: CI observer exit and memory reporting controls
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --test tests/ciNodeObserver.test.mjs
+      - name: Recovery source, retry, fallback and member comparison controls
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextProviderRetryAfter.test.mjs tests/vnextRevenueFallback.test.mjs tests/institutionalCaptureCompatibility.test.mjs tests/dailyAiMemberComparison.test.mjs
       - name: Build member UI candidate (no Production deployment)
         env:
           NODE_OPTIONS: --experimental-strip-types
@@ -51,8 +112,36 @@ jobs:
         run: |
           node --experimental-strip-types --test tests/vnextDailyWiring.test.mjs
           node --experimental-strip-types tests/vnextDailyDatabase.integration.mjs
+          node --experimental-strip-types tests/vnextPrewarmSql.integration.mjs
+      - name: Recovery PostgreSQL nested SOURCE and warm checkpoint controls
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: |
+          npm install --prefix "$RUNNER_TEMP/ma-recovery-pglite" --ignore-scripts --no-audit --no-fund --save-exact @electric-sql/pglite@0.3.14
+          export MA_PGLITE_MODULE="$RUNNER_TEMP/ma-recovery-pglite/node_modules/@electric-sql/pglite/dist/index.js"
+          export MA_VALIDATOR_DEFS_DIR="$GITHUB_WORKSPACE/tests/fixtures/recovery-source-validators-20261105"
+          node --experimental-strip-types --test tests/dailyAiInstitutionalIssuer16Database.integration.mjs
+          node --experimental-strip-types tests/dailyAiFullNestedLocal.integration.mjs
+          node --experimental-strip-types tests/vnextWarmPgliteLocal.integration.mjs
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
       - name: New worker and exact nonblocking hook type checks
         run: deno check --no-lock supabase/functions/vnext-daily-research-v1/index.ts supabase/functions/recommendation-v2-forward-worker-v1/index.ts supabase/functions/member-access/index.ts
+  vnext-isolation:
+    if: ${{ always() }}
+    needs: [vnext-runtime, source-academy, source-release-integrity, source-successors]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require runtime and every source shard to succeed
+        env:
+          RUNTIME_RESULT: ${{ needs.vnext-runtime.result }}
+          ACADEMY_RESULT: ${{ needs.source-academy.result }}
+          RELEASE_RESULT: ${{ needs.source-release-integrity.result }}
+          SUCCESSORS_RESULT: ${{ needs.source-successors.result }}
+        run: |
+          test "$RUNTIME_RESULT" = success
+          test "$ACADEMY_RESULT" = success
+          test "$RELEASE_RESULT" = success
+          test "$SUCCESSORS_RESULT" = success

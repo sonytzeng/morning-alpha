@@ -1,0 +1,330 @@
+{
+  "schema": "MORNING_ALPHA_FRONTEND_REQUEST_RECOVERY_REVIEWED_DELTA_V1",
+  "recorded_at": "2026-10-31T09:43:56.034161+00:00",
+  "review_scope": "Exact user-approved request timeout, identity clearing and retry patch; this receipt does not admit the full historical integration tree.",
+  "parent_commit": "31b391a84788a5e265c4b70f56b7686ae7f7956f",
+  "parent_tree": "a2d91927764ee6615f29d1aa574e1a82f9a95e92",
+  "reviewed_commit": "f535cf8e0cfcc67e2014790bc5dbf0161c3dd870",
+  "reviewed_tree": "a6dc6cf6fb76b50684c3ca6d2e4a0bac847225f2",
+  "scope_counts": {
+    "application_files": 9,
+    "test_files": 9,
+    "total_delta_files": 18,
+    "provider_files": 0,
+    "sql_files": 0
+  },
+  "preserved_parent_seals": [
+    {
+      "path": "docs/operations/evidence/core-member-integration-20261022-runtime-integrity.json",
+      "immutable_parent_commit": "31b391a84788a5e265c4b70f56b7686ae7f7956f",
+      "mode": "100644",
+      "git_blob_oid": "496709456217f08394f30328835388ff36447208",
+      "sha256": "554e96d7d84995d8bc19091bbfa7e2dfb152fec6980d32502e963f4b860c199e",
+      "unchanged_in_reviewed_commit": true
+    },
+    {
+      "path": "docs/operations/evidence/core-member-integration-20261022-v1-source-union-r15.json",
+      "immutable_parent_commit": "31b391a84788a5e265c4b70f56b7686ae7f7956f",
+      "mode": "100644",
+      "git_blob_oid": "dfec2f4913122f856fc65eb28ba2c673d47d96c6",
+      "sha256": "6c28e2c50a7ba444ba3b9b2f7386b2779eaed5166eb8adabc90f1ea0d41cf458",
+      "unchanged_in_reviewed_commit": true
+    }
+  ],
+  "files": [
+    {
+      "path": "src/components/membership/MembershipStatusCard.tsx",
+      "role": "application",
+      "operation": "MODIFY",
+      "mode": "100644",
+      "before_sha256": "6149034a28902c2e4fc3b3b13ac9f66ece7d09bc3d7956c99b9d450d0ddf8d6a",
+      "after_sha256": "e43c83feb78e455121c732769b0ad76a61d4b415a18f6e98e14cabae9a994621",
+      "before_git_blob_oid": "641e0eba5b5c69ba68e0b9f0be1e5afbc40a7c3a",
+      "after_git_blob_oid": "8a4fa6a7d9ddfe7d47962ecacb9a086979b33383"
+    },
+    {
+      "path": "src/hooks/useAccountDashboard.ts",
+      "role": "application",
+      "operation": "MODIFY",
+      "mode": "100644",
+      "before_sha256": "9cd4e24328a23a9aceee9aebd2c3adfced9309cdbd153d0a1ec97ec3ab36285f",
+      "after_sha256": "93be9c1b527924eed260af9d2a4aa61ec3020013faa416d741997b1a18e8b481",
+      "before_git_blob_oid": "a1eaede76ef03a2c8989423d9ab88ae820a73b36",
+      "after_git_blob_oid": "c144d7f539dd5a51f8cda92f00cae88bbca7108d"
+    },
+    {
+      "path": "src/hooks/useHomeDashboard.ts",
+      "role": "application",
+      "operation": "MODIFY",
+      "mode": "100644",
+      "before_sha256": "32c1d997d8725a9c036b1cfdd6a1f4d9688e038ebcc9270cd267520c163992b7",
+      "after_sha256": "b4baf4f8faa939675a01873681ffe828a8710413a1ed0fd5e183827d9d846805",
+      "before_git_blob_oid": "397aefd79fcb043248895c6628fc2f856de94379",
+      "after_git_blob_oid": "bf19212d015acba1054f0de0bea2f4c0dd9d7101"
+    },
+    {
+      "path": "src/pages/auth/AuthCallbackPage.tsx",
+      "role": "application",
+      "operation": "MODIFY",
+      "mode": "100644",
+      "before_sha256": "6d0e2ff9e3a3f452eea02d86a04873b31f9ba35d823e5b7d82b3e05c362cc4f6",
+      "after_sha256": "f03ae6924749e20d9aa360f41bfeaf69b912eaf10b348c7ced63c240932866f8",
+      "before_git_blob_oid": "7110d2d7f764bfe85615c10646b52fb05805aeee",
+      "after_git_blob_oid": "d5c205e69532dccc50ea97a689b4fef6f78a2931"
+    },
+    {
+      "path": "src/pages/report/TodayReport.tsx",
+      "role": "application",
+      "operation": "MODIFY",
+      "mode": "100644",
+      "before_sha256": "dcc11ebf664674d8f04c42e1d4098cd601242c6ddf44b8a19a373ad7f978a6ef",
+      "after_sha256": "2cafa35d012976775edb9868bb9865172b0e4fc0c5a10cac8ed2621c342574ce",
+      "before_git_blob_oid": "6a4360fb4704cfc326725b4fe3f3991af5f87444",
+      "after_git_blob_oid": "16ebfa653edfe3ca32950ef51c78dc6ff38001c2"
+    },
+    {
+      "path": "src/router/config.tsx",
+      "role": "application",
+      "operation": "MODIFY",
+      "mode": "100644",
+      "before_sha256": "48b220408680f7c6d54202e17f200495f52cabde7fa7ef4503a3088ab96b4229",
+      "after_sha256": "80fcc00bae9ce6f5db725a32b79e2a461c667fd8ca9199e176f62570c434f808",
+      "before_git_blob_oid": "461ac19360a84145c88038116cddfed48231e070",
+      "after_git_blob_oid": "4b8e3ea5167f47e2037bb340f158a0251606cd2a"
+    },
+    {
+      "path": "src/services/entitlementService.ts",
+      "role": "application",
+      "operation": "MODIFY",
+      "mode": "100644",
+      "before_sha256": "45904f3acb28a2baab7ae1b61d1ac5be4e3d317d7b07fc4335c8bcb98ec0d189",
+      "after_sha256": "08d496c58fff990e46de9e796bde4f4ea63180da5e4b90e9731a715d73d4ec47",
+      "before_git_blob_oid": "881ee7dca0ae31828e6e711d3b6c3c4376a3520b",
+      "after_git_blob_oid": "aac4ef3670c868146526c79b7ba26ebb320a2018"
+    },
+    {
+      "path": "src/services/membershipService.ts",
+      "role": "application",
+      "operation": "MODIFY",
+      "mode": "100644",
+      "before_sha256": "ea7997ae1e9ed84bb5902cb944651f2e5665768ae6afa5506f244e3779512572",
+      "after_sha256": "5271a81f1a61aca378c94f85a857acc1cd684e42e497d90a3c23ce5d353f33fa",
+      "before_git_blob_oid": "9d35191b4d728b141f437408512db4df907db296",
+      "after_git_blob_oid": "7ed05c70139ffc830d35ea4a50fcede6a69f9798"
+    },
+    {
+      "path": "src/services/requestDeadline.ts",
+      "role": "application",
+      "operation": "ADD",
+      "mode": "100644",
+      "before_sha256": null,
+      "after_sha256": "cb8bb506b0e082b55766b2e1a9ba11c2bf2001ed9a5e22ec78a38e656ea5a936",
+      "before_git_blob_oid": null,
+      "after_git_blob_oid": "5d1781d5525c2fcf6fcc77f9b8d3f7d5417cdcb2"
+    },
+    {
+      "path": "tests/accountDashboardIdentity.test.mjs",
+      "role": "test",
+      "operation": "MODIFY",
+      "mode": "100644",
+      "before_sha256": "9a1a4bc769b76f657806fc6d7832fdee3891beace9caa28f7d968d109c8c2e4d",
+      "after_sha256": "3d560beda36b6189f4df314264d067053112dc9ff24d974145f46dab45c57587",
+      "before_git_blob_oid": "e7b0275b6725d064f7fc8421e8b378eae49106d9",
+      "after_git_blob_oid": "7704c0fb42badca916a90ef3c56909a65dfc4f13"
+    },
+    {
+      "path": "tests/authCallbackRetry.test.mjs",
+      "role": "test",
+      "operation": "ADD",
+      "mode": "100644",
+      "before_sha256": null,
+      "after_sha256": "d078068dfd8843767f76d307a5a652feb71dfdb0a74ced831227987a5208cb7f",
+      "before_git_blob_oid": null,
+      "after_git_blob_oid": "1063f351661c6997f65c0018201454527d765e3b"
+    },
+    {
+      "path": "tests/homeDashboardIdentity.test.mjs",
+      "role": "test",
+      "operation": "ADD",
+      "mode": "100644",
+      "before_sha256": null,
+      "after_sha256": "ac8667b0975ae729c8e288bf4d03e7977bfff994f547c6889b6c229dd87c3888",
+      "before_git_blob_oid": null,
+      "after_git_blob_oid": "709372f2eba843444ee3750a5957d63c37a5a829"
+    },
+    {
+      "path": "tests/homeRealtimeLifecycle.test.mjs",
+      "role": "test",
+      "operation": "MODIFY",
+      "mode": "100644",
+      "before_sha256": "d90ac08f388ddf66b3c62b5bd5e592720b118d47c4c0bf86fdac28b59c7ca902",
+      "after_sha256": "3e198c313fe299192d3ac7405d5bc9e5b4fb4a4477dd19f884814f477003700f",
+      "before_git_blob_oid": "891b61162fff360f0c7d306d053dc33d96906281",
+      "after_git_blob_oid": "0e75fdf8e767444c5fbe113ba3bef98e993016c3"
+    },
+    {
+      "path": "tests/homeRealtimeSdk.test.mjs",
+      "role": "test",
+      "operation": "MODIFY",
+      "mode": "100644",
+      "before_sha256": "e1c16f15f242af025c228d95defe97b316121174ff7fb76e3a74f652a23d6403",
+      "after_sha256": "7586fab4b1f8085138efc8c5427a74fce501aa86ec06ce42c29a69de606588f9",
+      "before_git_blob_oid": "fbab211440e66218cba7b2cd126a145b7373c21f",
+      "after_git_blob_oid": "612b0e5ef3f6b4d6fb68571f5b9bf5221c02e4ed"
+    },
+    {
+      "path": "tests/publicRelease.test.mjs",
+      "role": "test",
+      "operation": "MODIFY",
+      "mode": "100644",
+      "before_sha256": "65309e3559445a3678fcd5606ed84a562255aee0f52383923c8e143c744b8675",
+      "after_sha256": "f129041524f62b079fb625ed0620c1ac92a3586c981a5c5bd60ad74027d0fea2",
+      "before_git_blob_oid": "5a9a453ca5a48f0d8c724539177188a78c0837f9",
+      "after_git_blob_oid": "1173fb7d8d8c0044ce83e89573ed80eb482bf86d"
+    },
+    {
+      "path": "tests/serviceRequestDeadline.test.mjs",
+      "role": "test",
+      "operation": "ADD",
+      "mode": "100644",
+      "before_sha256": null,
+      "after_sha256": "000ac60268b20c6b339c27a1bffe6b2aead23969125ab0a0a3604a6056458bf9",
+      "before_git_blob_oid": null,
+      "after_git_blob_oid": "9b0ddf2f3f4bccd0c51e42ab451a97d784c77e94"
+    },
+    {
+      "path": "tests/todayReportIdentityLifecycle.test.mjs",
+      "role": "test",
+      "operation": "ADD",
+      "mode": "100644",
+      "before_sha256": null,
+      "after_sha256": "6f9e3aa2ace0c4f62c20daed71a3bff7ba8f75226bc309554334730580ea76cc",
+      "before_git_blob_oid": null,
+      "after_git_blob_oid": "a9746fc80bbaa0266621eb78f48c6a03274942a3"
+    },
+    {
+      "path": "tests/txfSessionParity.test.mjs",
+      "role": "test",
+      "operation": "MODIFY",
+      "mode": "100644",
+      "before_sha256": "efcbc13dbc529f9886718b71b0315d62da564ec67a4f86b19a76f490b1bafcd0",
+      "after_sha256": "e102579c415949bd0b47ae2991563e1626b350a5bb2e18a82d7b00fd11d2bec9",
+      "before_git_blob_oid": "abe866b23fd894c4e701126d76f2a7adf2bdc99d",
+      "after_git_blob_oid": "0c95b4ae472c83c28374c8604d3958375c122156"
+    }
+  ],
+  "behavior_changes": [
+    "Report and membership fetch plus JSON body have a 15000ms deadline and AbortController; timed-out report inflight entries can be retried.",
+    "Report cache invalidation rejects session reads crossing Auth changes and prevents old response/finally from replacing a newer cache/inflight entry.",
+    "Home and Today report clear private state on Auth events, defer SDK reads outside Auth callbacks and reject obsolete responses after identity changes or unmount.",
+    "Home waits for the prior realtime channel removal before one replacement; existing seven table bindings and adaptive polling remain.",
+    "Membership card and login callback expose retry; StrictMode reuses one callback attempt and ignores disposed navigation.",
+    "TXF release tests retain Fugle URL assertions and verify existing provider fallback behavior without changing provider code."
+  ],
+  "verification": [
+    {
+      "name": "related_frontend_and_membership_regressions",
+      "test_files": [
+        "tests/authCallbackRetry.test.mjs",
+        "tests/homeDashboardIdentity.test.mjs",
+        "tests/serviceRequestDeadline.test.mjs",
+        "tests/todayReportIdentityLifecycle.test.mjs",
+        "tests/homeRealtimeLifecycle.test.mjs",
+        "tests/homeRealtimeSdk.test.mjs",
+        "tests/accountDashboardIdentity.test.mjs",
+        "tests/ownerAccountAnalysisNavigation.test.mjs",
+        "tests/membershipPolicy.test.mjs",
+        "tests/vnextMember.test.mjs",
+        "tests/vnextMemberContinuity.test.mjs",
+        "tests/dailyAiMember.test.mjs",
+        "tests/accountHistoricalFallback.test.mjs",
+        "tests/accountSubscriberProjection.test.mjs",
+        "tests/accountReportSchedule.test.mjs",
+        "tests/academyV11Member.test.mjs",
+        "tests/member-entitlement.test.mjs"
+      ],
+      "pass": 173,
+      "fail": 0,
+      "skip": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "public_release_and_existing_txf_contracts",
+      "test_files": [
+        "tests/publicRelease.test.mjs",
+        "tests/taifexRegularFallback.test.mjs",
+        "tests/txfSessionParity.test.mjs",
+        "tests/fugleTaiexProvider.test.mjs",
+        "tests/recommendationV2FugleRuntime.test.mjs",
+        "tests/productionArchitecture.test.mjs",
+        "tests/subscriberProjectionMapping.test.mjs"
+      ],
+      "pass": 122,
+      "fail": 0,
+      "skip": 0,
+      "result": "PASS"
+    },
+    {
+      "command": "npm run type-check",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run build",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run lint",
+      "result": "PASS"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "historical_integration_status": {
+    "full_integration_admission": false,
+    "historical_seals_rewritten": false,
+    "unknown_inventory_filtered": false,
+    "status": "UNRESOLVED_HISTORICAL_SOURCE_CHAIN",
+    "reason": "Current changes and earlier committed daily-AI changes do not match the older terminal source-union seal. This narrow receipt neither changes that seal nor authorizes unrelated source paths.",
+    "full_suite_attempt": {
+      "command": "node --test --test-concurrency=4 tests/*.test.mjs",
+      "completed": false,
+      "exit_code": 130,
+      "observed_reporter_results_before_bounded_stop": {
+        "pass": 450,
+        "fail": 47,
+        "skip": 0
+      },
+      "not_a_full_suite_summary": true,
+      "log_filename": "morning-alpha-test-public-20261031.log",
+      "log_sha256": "e8065652c9dac1d0053210bd7d27fc77dae9ccd45f53e97ec6ebe5c08af9d28b",
+      "blocking_open_handle_files": [
+        "tests/consolidationCurrentPayloadAuthority.test.mjs",
+        "tests/publicMarketProjection.test.mjs"
+      ]
+    },
+    "isolated_existing_harness_diagnosis": {
+      "command": "node --test --test-force-exit --test-concurrency=2 tests/consolidationCurrentPayloadAuthority.test.mjs tests/publicMarketProjection.test.mjs",
+      "pass": 19,
+      "fail": 17,
+      "skip": 0,
+      "log_filename": "morning-alpha-test-open-handles-20261031.log",
+      "log_sha256": "ceb653e77526d5e5bdaff2a34277f767d01d4aa1478b52c3319d642b5481ca01",
+      "failures": [
+        "16 actual-handler tests: existing isolatedEdge loader rejects https://esm.sh/@supabase/supabase-js@2.115.0.",
+        "1 Reader SDK boundary test: required 2.115.0, installed frontend SDK 2.57.4."
+      ]
+    }
+  },
+  "authority_limits": {
+    "source_receipt_only": true,
+    "deployment_authorization_inferred": false,
+    "database_mutation": false,
+    "membership_rights_change": false,
+    "payment_activation": false,
+    "line_send": false,
+    "cron_change": false,
+    "research_publication": false
+  }
+}

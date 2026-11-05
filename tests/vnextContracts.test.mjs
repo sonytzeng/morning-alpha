@@ -1,17 +1,25 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {HORIZONS,FROZEN_V1_REF,snapshotHash,validTime} from '../src/features/vnext/contracts.ts';
+import {HORIZONS,FROZEN_V1_REF,snapshotHash,validTime,validObservationTime} from '../src/features/vnext/contracts.ts';
 import {evidenceIssues,eventTimeline,supplyRelationStatus,evaluateObservation,publicationGate,projectObservation,lockObservation,validationReadiness} from '../src/features/vnext/engine.ts';
 import {fixture,fixtureHash,cutoff} from './fixtures/vnext.mjs';
 import {parseProjection,validProjectionTime} from '../src/features/vnext/projection.ts';
 
-test('PostgreSQL microsecond read timestamps retain precision without changing engine cutoffs',()=>{
+test('PostgreSQL microsecond read timestamps retain precision without widening shared time validation',()=>{
  const f=fixture(),row=projectObservation(f.observation,f.evidence,'WATCHING');
  const stamp='2026-10-11T06:45:26.420367+00:00';row.next_review_at=stamp;row.evidence[0].available_at=stamp;
  const parsed=parseProjection({schema:'VNEXT_PROJECTION_V1',research_only:true,tier:'owner',observations:[row],industry:{events:[],relations:[],member_publication:false}});
  assert.equal(parsed.observations[0].next_review_at,stamp);assert.equal(parsed.observations[0].evidence[0].available_at,stamp);
- assert.equal(validTime(stamp),false,'engine precision contract unchanged');
- for(const bad of ['2026-02-30T01:00:00.123456Z','2026-10-10T24:00:00.123456Z','2026-10-10T01:00:00.1234567Z'])assert.equal(validProjectionTime(bad),false);
+ assert.equal(validTime(stamp),false,'shared millisecond-only precision contract unchanged');
+ for(const fraction of ['', '.4', '.42', '.420'])assert.equal(validTime(`2026-10-11T06:45:26${fraction}+00:00`),true);
+ for(const fraction of ['.4203', '.42036', '.420367'])assert.equal(validTime(`2026-10-11T06:45:26${fraction}+00:00`),false);
+ assert.equal(validObservationTime(stamp),true,'original observations accept all six microsecond digits');
+ const tooPrecise='2026-10-11T06:45:26.4203671+00:00';
+ assert.equal(validTime(tooPrecise),false,'shared validator rejects seven fractional digits');
+ assert.equal(validObservationTime(tooPrecise),false,'original observations reject seven fractional digits');
+ for(const bad of ['2026-02-30T01:00:00.123456Z','2026-10-10T24:00:00.123456Z','2026-10-10T01:00:00.1234567Z']){
+  assert.equal(validTime(bad),false);assert.equal(validObservationTime(bad),false);assert.equal(validProjectionTime(bad),false);
+ }
 });
 
 test('industry read model cannot expose unreviewed Owner research to members or arbitrary URLs',()=>{

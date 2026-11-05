@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import {execFileSync,spawnSync} from 'node:child_process';
 import {integrationPhysicalRead as physical,integrationPhysicalMode as physicalMode,integrationInventory,integrationHash,verifyIntegrationCandidate,createSourceUnionComposition,CURRENT_INTEGRATION_MANIFEST,sourceUnionLineage} from './helpers/integrationAdmission.mjs';
 import {CI_SHARD_SOURCE_BASE,CI_SHARD_SOURCE_CATALOG,CI_SHARD_SOURCE_CATALOG_SHA256,CI_SHARD_SOURCE_MANIFEST,CI_SHARD_SOURCE_SUPPORT,ciShardSourceDefinition,ciShardSourcePriorPatch} from './helpers/ciShardSourceCatalog.mjs';
-import {ciShardPriorRead,recoveryPriorRead,reviewedSuccessorPaths} from './helpers/ciShardSourceSuccessor.mjs';
+import {ciShardPriorRead,recoveryPriorRead,reviewedSuccessorPaths} from './helpers/modelUseSourceSuccessor.mjs';
 import {RECOVERY_SOURCE_MANIFEST,RECOVERY_SOURCE_CATALOG,recoverySourceDefinition} from './helpers/recoverySourceCatalog.mjs';
+import {MODEL_USE_SOURCE_MANIFEST} from './helpers/modelUseSourceCatalog.mjs';
 import {recoveryPriorRead as physicalRecoveryPriorRead,recoveryPriorReadWithVerifiedPhysical,verifyRecoverySuccessorWithVerifiedPhysical} from './helpers/recoverySourceSuccessor.mjs';
 const root=new URL('../',import.meta.url),git=args=>execFileSync('git',['--no-replace-objects',...args],{cwd:root});
 const workflowPath='.github/workflows/vnext-candidate.yml',readJson=path=>JSON.parse(physical(path));
@@ -17,9 +18,9 @@ function fixture(){
 }
 test('CI successor appends exact engineering edits while retaining every frozen receipt and runtime helper',()=>{
  const m=verifyIntegrationCandidate(),c=ciShardSourceDefinition();assert.deepEqual(createSourceUnionComposition(),m);
- assert.equal(CURRENT_INTEGRATION_MANIFEST,CI_SHARD_SOURCE_MANIFEST);assert.equal(c.local_support_patch.length,7);
+ assert.equal(CURRENT_INTEGRATION_MANIFEST,MODEL_USE_SOURCE_MANIFEST);assert.equal(c.local_support_patch.length,7);
  for(const path of [RECOVERY_SOURCE_MANIFEST,RECOVERY_SOURCE_CATALOG])assert.deepEqual(physical(path),git(['show',CI_SHARD_SOURCE_BASE+':'+path]));
- assert.equal(readJson(RECOVERY_SOURCE_MANIFEST).files.length,945);assert.equal(m.files.length,950);assert.equal(integrationInventory().length,951);
+ assert.equal(readJson(RECOVERY_SOURCE_MANIFEST).files.length,945);assert.equal(readJson(CI_SHARD_SOURCE_MANIFEST).files.length,950);assert.equal(integrationInventory().length,m.files.length+1);
  assert.equal(integrationHash(physical(CI_SHARD_SOURCE_CATALOG)),CI_SHARD_SOURCE_CATALOG_SHA256);
  for(const path of ['tests/helpers/vnextIntegrity.mjs','scripts/releases/observe-ci-node.mjs'])assert.deepEqual(physical(path),git(['show',CI_SHARD_SOURCE_BASE+':'+path]));
  assert.doesNotMatch(physical('tests/helpers/integrationAdmission.mjs').toString(),/withIntegrationReadScope|scopeManifestSignature|snapshot_reads/);

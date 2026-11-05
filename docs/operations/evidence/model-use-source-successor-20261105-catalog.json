@@ -1,0 +1,364 @@
+{
+  "schema": "MODEL_USE_EXACT_GIT_SOURCE_SUCCESSOR_V1",
+  "base": "25df732f369350e82054bea7ba28b2115313b0d4",
+  "head": "3f84382a4fe5a3c0799f7e3a60e4dce01778b474",
+  "base_tree": "6fa4a9c6828ba0e0fce1b83673f6d88f87ae0b48",
+  "head_tree": "49af9ba2b831260c7aac80bcb7ac8c953c383276",
+  "scope_review": {
+    "kind": "EXACT_ENGINEERING_SOURCE_NOT_MODEL_RIGHTS_OR_RELEASE_APPROVAL",
+    "independent_review": false,
+    "groups": {
+      "source_use_implementation": [
+        "research/daily-ai-model-source-use.candidate.sql",
+        "research/daily-ai-model-source-use.rollback.sql",
+        "scripts/operations/model-source-use-20261105/prerequisites.sql",
+        "src/features/vnext/publicationReadiness.ts",
+        "supabase/functions/daily-stock-analysis-v1/intake.ts",
+        "supabase/functions/daily-stock-analysis-v1/model-source-review.ts"
+      ],
+      "tests_and_docs": [
+        "docs/operations/model-source-use-admission-20261105.md",
+        "docs/operations/source-rights-resource-addendum-20261105.md",
+        "scripts/operations/model-source-use-20261105/database.integration.mjs",
+        "scripts/operations/model-source-use-20261105/local-sql-result.json",
+        "tests/dailyAiModelSourceUse.test.mjs",
+        "tests/vnextPublication.test.mjs"
+      ]
+    }
+  },
+  "files": [
+    {
+      "path": "docs/operations/model-source-use-admission-20261105.md",
+      "before": null,
+      "after": {
+        "oid": "9b4bd12fd6cd5187b24b48925618b5dcc53a98b2",
+        "mode": "100644",
+        "sha256": "75d1abc23b42e4074a5ffbf0572caddcd16e3cefb169a6f97f9609b63337f4db"
+      }
+    },
+    {
+      "path": "docs/operations/source-rights-resource-addendum-20261105.md",
+      "before": null,
+      "after": {
+        "oid": "51b430f71297347b12b721f515698c5fb51bd660",
+        "mode": "100644",
+        "sha256": "5a99927b586d15f52338a686b4eb43112c3cebcdc7d95f46c50bcb04c808b87f"
+      }
+    },
+    {
+      "path": "research/daily-ai-model-source-use.candidate.sql",
+      "before": null,
+      "after": {
+        "oid": "05992998b38eeb8b8fd2e64b6e36176b1c413fcf",
+        "mode": "100644",
+        "sha256": "a0f86a2408fd5fb0f7764fd23e153c46f76b54c418403c0e3d8273e497b68d65"
+      }
+    },
+    {
+      "path": "research/daily-ai-model-source-use.rollback.sql",
+      "before": null,
+      "after": {
+        "oid": "63a19f42121f446460beec6568c822524dd510e9",
+        "mode": "100644",
+        "sha256": "6d270a65a6ea2af6b1d4e9de6f9743f11a2ec1c58bfd1fcc294e9e63eb719979"
+      }
+    },
+    {
+      "path": "scripts/operations/model-source-use-20261105/database.integration.mjs",
+      "before": null,
+      "after": {
+        "oid": "1d911c6937657f8d4067d5daf8ac7133892f3fc4",
+        "mode": "100644",
+        "sha256": "c31ba92a3ad6b1bebf90ed2165857e8132d7c1ca6f52b26dd69e51d049f2481c"
+      }
+    },
+    {
+      "path": "scripts/operations/model-source-use-20261105/local-sql-result.json",
+      "before": null,
+      "after": {
+        "oid": "71429352d3456eba4d03a89101961e44c9de0e22",
+        "mode": "100644",
+        "sha256": "28f571923c83394f579a8df1f23ddcf330dff3572e9350d075e2638d1c62d10f"
+      }
+    },
+    {
+      "path": "scripts/operations/model-source-use-20261105/prerequisites.sql",
+      "before": null,
+      "after": {
+        "oid": "e4d034410efab112edc17193c4f1b47d36561e1b",
+        "mode": "100644",
+        "sha256": "026873a0392a6e874facecdc9e39e3f951b434147df4d0d56631159858b08cc4"
+      }
+    },
+    {
+      "path": "src/features/vnext/publicationReadiness.ts",
+      "before": {
+        "oid": "1289f75ff21995d5e0acb7cf404af25503d9a2b2",
+        "mode": "100644",
+        "sha256": "76f8d26b07c92e84cef82459b8c94bc9dbcabfbaaa6e86b67036b351c6a67058"
+      },
+      "after": {
+        "oid": "0600cba90c63a53158ffb1c8ef913ba78ac20672",
+        "mode": "100644",
+        "sha256": "86509677d4a26e739e201285c75b6a1457334e3c4bae3743d81943b0e5fa11ad"
+      }
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/intake.ts",
+      "before": {
+        "oid": "57e5a733a35744c8fc6eb8287a696f74d927b069",
+        "mode": "100644",
+        "sha256": "29f53fc8ec4211e631d373c3441f1f6861a2be49764af76764bd0c5411b5f39f"
+      },
+      "after": {
+        "oid": "584c0c22a88bf32de86acc4cb8c8b3576eaea9e0",
+        "mode": "100644",
+        "sha256": "191dd9939d4b5909c3f42ebd79e281d9e8f4fbe53efa752de16ac59117463b84"
+      }
+    },
+    {
+      "path": "supabase/functions/daily-stock-analysis-v1/model-source-review.ts",
+      "before": null,
+      "after": {
+        "oid": "290f656987d5f39ca316e09dcf0f35bb31826970",
+        "mode": "100644",
+        "sha256": "c1d7785b9341ef5e4b4f05a99f084813cd2059843278e6204283fdfc356415b4"
+      }
+    },
+    {
+      "path": "tests/dailyAiModelSourceUse.test.mjs",
+      "before": null,
+      "after": {
+        "oid": "a3397cdcfac5966492a0adba6a27fa376b7d5467",
+        "mode": "100644",
+        "sha256": "40dfaee7254e71a95c3145ba3b2363753db42bca54805ce893fbd3dfa5b99730"
+      }
+    },
+    {
+      "path": "tests/vnextPublication.test.mjs",
+      "before": {
+        "oid": "6b5d7085b75be550a985e3a08259e4169e0feff7",
+        "mode": "100644",
+        "sha256": "0aadfb93d4e9dd5d58a6215b45c67efd13b5e6c76a697e10b5990d8dda07059b"
+      },
+      "after": {
+        "oid": "49965ca3ceaacd4bf7e3cc6fd3f4fc673a8f9810",
+        "mode": "100644",
+        "sha256": "47e1efec6ecca8cfcfea911ae28d3518817e70d5f91c6aa69374850dfb13ecc8"
+      }
+    }
+  ],
+  "local_support_patch": [
+    {
+      "path": ".github/workflows/vnext-candidate.yml",
+      "before": {
+        "oid": "a965412d4a86b577ccec74f67914dc4c05b3592e",
+        "mode": "100644",
+        "sha256": "e50e800db6b71fd38616fa1fe78012af525a6dbec11d0fb1695874e995c33570"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "81b3adada3adda578b275e49c3f990a5739970a9f31537a738ef2cbcd7f57652"
+      },
+      "exact_edits": [
+        {
+          "before": "        run: node scripts/releases/observe-ci-node.mjs --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/currentSourceSuccessor.test.mjs tests/reviewedSourceSuccessor.test.mjs tests/recoverySourceSuccessor.test.mjs tests/ciShardSourceSuccessor.test.mjs\n",
+          "after": "        run: node scripts/releases/observe-ci-node.mjs --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/currentSourceSuccessor.test.mjs tests/reviewedSourceSuccessor.test.mjs tests/recoverySourceSuccessor.test.mjs tests/ciShardSourceSuccessor.test.mjs\n      - name: Exact model source use identity and admission controls\n        env:\n          NODE_OPTIONS: --experimental-strip-types\n        run: node --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/modelUseSourceSuccessor.test.mjs tests/dailyAiModelSourceUse.test.mjs\n"
+        }
+      ]
+    },
+    {
+      "path": "tests/currentSourceSuccessor.test.mjs",
+      "before": {
+        "oid": "73ede2da4ec82a865114ec6a2a4cc120c8f76594",
+        "mode": "100644",
+        "sha256": "ea3be7b17d4d4e57c19659e2ced8110b7f7b767e1c42f24f0d7eaaa88725fe22"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "b35359b548f965d7ab7156648ca9b1790b89b2cea92a20143c51d07b530999be"
+      },
+      "exact_edits": [
+        {
+          "before": "import {reviewedSuccessorPaths,recoveryPriorRead} from './helpers/ciShardSourceSuccessor.mjs';\n",
+          "after": "import {reviewedSuccessorPaths,recoveryPriorRead} from './helpers/modelUseSourceSuccessor.mjs';\n"
+        }
+      ]
+    },
+    {
+      "path": "tests/reviewedSourceSuccessor.test.mjs",
+      "before": {
+        "oid": "87f5098098038033293f5242ed951c1b2b3ac3f3",
+        "mode": "100644",
+        "sha256": "050b0a1cec403cb515f97a1283264216c458b73b9eb84e421046d8a9b8fb6040"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "be33bc8718f2d707efa491a5c2002684e30af64c030e0803dd765dc4a1bfefc5"
+      },
+      "exact_edits": [
+        {
+          "before": "import {CI_SHARD_SOURCE_MANIFEST} from './helpers/ciShardSourceCatalog.mjs';\n",
+          "after": "import {CI_SHARD_SOURCE_MANIFEST} from './helpers/ciShardSourceCatalog.mjs';\nimport {MODEL_USE_SOURCE_MANIFEST} from './helpers/modelUseSourceCatalog.mjs';\n"
+        },
+        {
+          "before": "assert.equal(CURRENT_INTEGRATION_MANIFEST,CI_SHARD_SOURCE_MANIFEST);",
+          "after": "assert.equal(CI_SHARD_SOURCE_MANIFEST,'docs/operations/evidence/core-member-integration-20261105-ci-shards.json');assert.equal(CURRENT_INTEGRATION_MANIFEST,MODEL_USE_SOURCE_MANIFEST);"
+        }
+      ]
+    },
+    {
+      "path": "tests/officialPublicAdmission.test.mjs",
+      "before": {
+        "oid": "28230e1e4886877707df78f91c58f878aae14907",
+        "mode": "100644",
+        "sha256": "23267fbc24b719846e17999b6f4193235c8c29ea36f8343b6730d1021f0bb627"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "85d99e5cedd78f486617da462a5f460aff5207a13adc3ed3a5da5e54a2b46203"
+      },
+      "exact_edits": [
+        {
+          "before": "import {reviewedSuccessorPaths} from './helpers/ciShardSourceSuccessor.mjs';\nimport {ciShardSourceHash as reviewedSuccessorSourceHash} from './helpers/ciShardSourceCatalog.mjs';",
+          "after": "import {reviewedSuccessorPaths} from './helpers/modelUseSourceSuccessor.mjs';\nimport {modelUseSourceHash as reviewedSuccessorSourceHash} from './helpers/modelUseSourceCatalog.mjs';"
+        }
+      ]
+    },
+    {
+      "path": "tests/originalIngressAdmission.test.mjs",
+      "before": {
+        "oid": "35f4ebd304d06e7242ca8764c744976289841829",
+        "mode": "100644",
+        "sha256": "c9699f410f409887dd9a434c1e56aa69cecd269d04a598e416f79fa4ef0f31fe"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "f802e0a0c4a263d6267f1591b6accaae8315e35f96b32c4e49f264d0abb9e42a"
+      },
+      "exact_edits": [
+        {
+          "before": "import {reviewedSuccessorPaths} from './helpers/ciShardSourceSuccessor.mjs';\nimport {ciShardSourceHash as reviewedSuccessorSourceHash,CI_SHARD_SOURCE_MANIFEST} from './helpers/ciShardSourceCatalog.mjs';\nimport {ciShardSourceHash as currentSourceHash} from './helpers/ciShardSourceCatalog.mjs';",
+          "after": "import {reviewedSuccessorPaths} from './helpers/modelUseSourceSuccessor.mjs';\nimport {modelUseSourceHash as reviewedSuccessorSourceHash,MODEL_USE_SOURCE_MANIFEST} from './helpers/modelUseSourceCatalog.mjs';\nimport {modelUseSourceHash as currentSourceHash} from './helpers/modelUseSourceCatalog.mjs';\nimport {CI_SHARD_SOURCE_MANIFEST} from './helpers/ciShardSourceCatalog.mjs';"
+        },
+        {
+          "before": "assert.equal(INTEGRATION_MANIFEST,CI_SHARD_SOURCE_MANIFEST);",
+          "after": "assert.equal(CI_SHARD_SOURCE_MANIFEST,'docs/operations/evidence/core-member-integration-20261105-ci-shards.json');assert.equal(INTEGRATION_MANIFEST,MODEL_USE_SOURCE_MANIFEST);"
+        },
+        {
+          "before": "  [\"import {reviewedSuccessorPaths} from './helpers/ciShardSourceSuccessor.mjs';\\nimport {ciShardSourceHash as reviewedSuccessorSourceHash} from './helpers/ciShardSourceCatalog.mjs';\",",
+          "after": "  [\"import {reviewedSuccessorPaths} from './helpers/modelUseSourceSuccessor.mjs';\\nimport {modelUseSourceHash as reviewedSuccessorSourceHash} from './helpers/modelUseSourceCatalog.mjs';\", \"import {reviewedSuccessorPaths} from './helpers/ciShardSourceSuccessor.mjs';\\nimport {ciShardSourceHash as reviewedSuccessorSourceHash} from './helpers/ciShardSourceCatalog.mjs';\"],\n  [\"import {reviewedSuccessorPaths} from './helpers/ciShardSourceSuccessor.mjs';\\nimport {ciShardSourceHash as reviewedSuccessorSourceHash} from './helpers/ciShardSourceCatalog.mjs';\","
+        },
+        {
+          "before": "raw.replace(\"from './helpers/ciShardSourceSuccessor.mjs'\",\"from './helpers/unknown.mjs'\")",
+          "after": "raw.replace(\"from './helpers/modelUseSourceSuccessor.mjs'\",\"from './helpers/unknown.mjs'\")"
+        }
+      ]
+    },
+    {
+      "path": "tests/recoverySourceSuccessor.test.mjs",
+      "before": {
+        "oid": "ecf69f491914d2e3ce67063ca486b21156c4ce58",
+        "mode": "100644",
+        "sha256": "998a0f35dd491c19cf4dd01ed5578ad75d65d22f4be1c8ca2667c0b863c35fb2"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "62b204356fad6fb5a8a141a14fa490bd79d6e15beed7739d2779a24b5fa30f60"
+      },
+      "exact_edits": [
+        {
+          "before": "import {reviewedSuccessorPaths,recoveryPriorRead,ciShardPriorRead} from './helpers/ciShardSourceSuccessor.mjs';\n",
+          "after": "import {reviewedSuccessorPaths,recoveryPriorRead,ciShardPriorRead} from './helpers/modelUseSourceSuccessor.mjs';\n"
+        },
+        {
+          "before": "import {CI_SHARD_SOURCE_MANIFEST} from './helpers/ciShardSourceCatalog.mjs';\n",
+          "after": "import {CI_SHARD_SOURCE_MANIFEST} from './helpers/ciShardSourceCatalog.mjs';\nimport {MODEL_USE_SOURCE_MANIFEST} from './helpers/modelUseSourceCatalog.mjs';\n"
+        },
+        {
+          "before": "assert.equal(CURRENT_INTEGRATION_MANIFEST,CI_SHARD_SOURCE_MANIFEST);",
+          "after": "assert.equal(CI_SHARD_SOURCE_MANIFEST,'docs/operations/evidence/core-member-integration-20261105-ci-shards.json');assert.equal(CURRENT_INTEGRATION_MANIFEST,MODEL_USE_SOURCE_MANIFEST);"
+        }
+      ]
+    },
+    {
+      "path": "tests/ciShardSourceSuccessor.test.mjs",
+      "before": {
+        "oid": "40ff763db962b3999e8d8aca5fdd57a4ced9f538",
+        "mode": "100644",
+        "sha256": "1b926396ad91c038dad0b0f47ee3bbc0e8d2b32d8cc886a8796525f86ff0fc76"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "7744697ef83c7c8e317d9255ae9e64c7566b6038c1f5501868675ede8ec77134"
+      },
+      "exact_edits": [
+        {
+          "before": "import {ciShardPriorRead,recoveryPriorRead,reviewedSuccessorPaths} from './helpers/ciShardSourceSuccessor.mjs';\n",
+          "after": "import {ciShardPriorRead,recoveryPriorRead,reviewedSuccessorPaths} from './helpers/modelUseSourceSuccessor.mjs';\n"
+        },
+        {
+          "before": "import {RECOVERY_SOURCE_MANIFEST,RECOVERY_SOURCE_CATALOG,recoverySourceDefinition} from './helpers/recoverySourceCatalog.mjs';\n",
+          "after": "import {RECOVERY_SOURCE_MANIFEST,RECOVERY_SOURCE_CATALOG,recoverySourceDefinition} from './helpers/recoverySourceCatalog.mjs';\nimport {MODEL_USE_SOURCE_MANIFEST} from './helpers/modelUseSourceCatalog.mjs';\n"
+        },
+        {
+          "before": "assert.equal(CURRENT_INTEGRATION_MANIFEST,CI_SHARD_SOURCE_MANIFEST);",
+          "after": "assert.equal(CURRENT_INTEGRATION_MANIFEST,MODEL_USE_SOURCE_MANIFEST);"
+        },
+        {
+          "before": "assert.equal(m.files.length,950);assert.equal(integrationInventory().length,951);",
+          "after": "assert.equal(readJson(CI_SHARD_SOURCE_MANIFEST).files.length,950);assert.equal(integrationInventory().length,m.files.length+1);"
+        }
+      ]
+    },
+    {
+      "path": "tests/helpers/ciShardSourceSuccessor.mjs",
+      "before": {
+        "oid": "3647fc1bfb705534146ab246d6616393e3b7723d",
+        "mode": "100644",
+        "sha256": "dc3867c9f18a0d4d2d537378bdffdf90984a89e321342693ab184222393556e4"
+      },
+      "after": {
+        "mode": "100644",
+        "sha256": "b48d3c78c223a2dd53ddbd73aa6e49e37079c7f9591887f01336aacf817e3d4c"
+      },
+      "exact_edits": [
+        {
+          "before": "// Append CI execution changes after the unchanged recovery source receipts.\nimport assert from 'node:assert/strict';\nimport {createHash} from 'node:crypto';\nimport {lstatSync} from 'node:fs';\nimport * as prior from './recoverySourceSuccessor.mjs';\nimport {CI_SHARD_SOURCE_BASE,CI_SHARD_SOURCE_CATALOG,CI_SHARD_SOURCE_CATALOG_SHA256,CI_SHARD_SOURCE_MANIFEST,CI_SHARD_SOURCE_SUPPORT,ciShardSourceDefinition,ciShardSourcePriorPatch} from './ciShardSourceCatalog.mjs';\nexport const REVIEWED_SUCCESSOR_MANIFEST=CI_SHARD_SOURCE_MANIFEST;\nexport const REVIEWED_SUCCESSOR_SUPPORT=Object.freeze([...prior.REVIEWED_SUCCESSOR_SUPPORT,...CI_SHARD_SOURCE_SUPPORT]);\nconst root=new URL('../../',import.meta.url),hash=b=>createHash('sha256').update(Buffer.from(b)).digest('hex');\nexport function ciShardPriorRead(path,bytes){\n const row=ciShardSourceDefinition().local_support_patch.find(r=>r.path===path);\n if(!row||bytes===null||bytes===undefined)return bytes;\n if(typeof bytes==='string'&&Buffer.from(bytes).toString('utf8')!==bytes)return bytes;\n if(hash(bytes)!==row.after.sha256)return bytes;\n const st=lstatSync(new URL(path,root));assert(st.isFile()&&!st.isSymbolicLink(),'CI_SHARD_SOURCE_REGULAR_FILE:'+path);\n assert.equal(st.mode&0o111?'100755':'100644',row.after.mode,'CI_SHARD_SOURCE_CHANGED_MODE:'+path);\n assert.equal(hash(prior.readRecoveryRegularFile(path)),row.after.sha256,'CI_SHARD_SOURCE_CHANGED_AFTER_ADMISSION:'+path);\n const before=ciShardSourcePriorPatch(path);return typeof bytes==='string'?before.toString('utf8'):before;\n}\n// This internal adapter validates the true current physical image first. The\n// recovery verifier independently checks that it receives its fixed 748 image.\nconst recoveryPhysicalBefore=path=>ciShardPriorRead(path,prior.readRecoveryRegularFile(path));\nexport function recoveryPriorRead(path,bytes){\n const reflected=ciShardPriorRead(path,bytes);\n // A caller-supplied old image is not evidence of the current after-image.\n // Only a successful new-layer translation may enter the older reflection.\n if(ciShardSourceDefinition().local_support_patch.some(row=>row.path===path)&&reflected===bytes)return bytes;\n return prior.recoveryPriorReadWithVerifiedPhysical(path,reflected,recoveryPhysicalBefore);\n}\nexport function verifyReviewedSuccessorCatalog(read,mode){\n prior.readRecoveryRegularFile(CI_SHARD_SOURCE_CATALOG);assert.equal(mode(CI_SHARD_SOURCE_CATALOG),'100644','CI_SHARD_SOURCE_CATALOG_MODE');\n const c=ciShardSourceDefinition(read(CI_SHARD_SOURCE_CATALOG));\n for(const row of c.local_support_patch){\n  const prefix=prior.REVIEWED_SUCCESSOR_SUPPORT.includes(row.path)?'SUCCESSOR_SUPPORT_SOURCE_DRIFT:':'INTEGRATION_SOURCE_DRIFT:';\n  assert.equal(hash(read(row.path)),row.after.sha256,prefix+row.path);\n  assert.equal(hash(prior.readRecoveryRegularFile(row.path)),row.after.sha256,prefix+row.path);\n  assert.equal(mode(row.path),row.after.mode,'INTEGRATION_MODE_DRIFT:'+row.path);\n }\n prior.verifyRecoverySuccessorWithVerifiedPhysical(path=>ciShardPriorRead(path,read(path)),mode,recoveryPhysicalBefore);\n for(const pin of [c.prior_manifest,c.prior_catalog]){assert.equal(hash(read(pin.path)),pin.sha256,'CI_SHARD_SOURCE_PRIOR_DRIFT:'+pin.path);assert.equal(mode(pin.path),'100644','CI_SHARD_SOURCE_PRIOR_MODE');}\n for(const path of CI_SHARD_SOURCE_SUPPORT){prior.readRecoveryRegularFile(path);assert.equal(mode(path),'100644','CI_SHARD_SOURCE_SUPPORT_MODE');}\n}\nlet immutablePaths;\nexport function reviewedSuccessorPaths(){\n if(!immutablePaths){const c=ciShardSourceDefinition();immutablePaths=Object.freeze([...new Set([...prior.reviewedSuccessorPaths(),...c.local_support_patch.map(r=>r.path),c.prior_manifest.path,CI_SHARD_SOURCE_CATALOG,...CI_SHARD_SOURCE_SUPPORT])].sort());}\n return [...immutablePaths];\n}\nexport function reviewedSuccessorLineage(){\n const c=ciShardSourceDefinition();return {...prior.reviewedSuccessorLineage(),ci_shard_successor:{base:CI_SHARD_SOURCE_BASE,base_tree:c.base_tree,\n  prior_manifest:{...c.prior_manifest},prior_catalog:{...c.prior_catalog},catalog:{path:CI_SHARD_SOURCE_CATALOG,sha256:CI_SHARD_SOURCE_CATALOG_SHA256},\n  scope_review:structuredClone(c.scope_review),local_support_patch:c.local_support_patch.map(({path,before,after})=>({path,before:{...before},after:{...after}})),trusted_verifier_boundary:structuredClone(c.trusted_verifier_boundary),support_paths:[...CI_SHARD_SOURCE_SUPPORT],...c.authority}};\n}\nexport function applyReviewedSuccessor(expected,historicalSupport=[]){\n prior.applyReviewedSuccessor(expected,historicalSupport);const c=ciShardSourceDefinition(),support=new Set(prior.REVIEWED_SUCCESSOR_SUPPORT);\n for(const row of c.local_support_patch){if(support.has(row.path))continue;\n  assert.equal(expected.get(row.path)?.sha256??null,row.before.sha256,'CI_SHARD_SOURCE_BEFORE_COMPOSITION:'+row.path);\n  assert.equal(expected.get(row.path)?.mode??null,row.before.mode,'CI_SHARD_SOURCE_BEFORE_MODE:'+row.path);expected.set(row.path,{sha256:row.after.sha256,mode:row.after.mode});\n }\n assert(!expected.has(c.prior_manifest.path));expected.set(c.prior_manifest.path,{sha256:c.prior_manifest.sha256,mode:'100644'});\n assert(!expected.has(CI_SHARD_SOURCE_CATALOG));expected.set(CI_SHARD_SOURCE_CATALOG,{sha256:CI_SHARD_SOURCE_CATALOG_SHA256,mode:'100644'});\n for(const path of REVIEWED_SUCCESSOR_SUPPORT)expected.delete(path);\n}\n",
+          "after": "// Append CI execution changes after the unchanged recovery source receipts.\nimport assert from 'node:assert/strict';\nimport {createHash} from 'node:crypto';\nimport {lstatSync} from 'node:fs';\nimport * as prior from './recoverySourceSuccessor.mjs';\nimport {CI_SHARD_SOURCE_BASE,CI_SHARD_SOURCE_CATALOG,CI_SHARD_SOURCE_CATALOG_SHA256,CI_SHARD_SOURCE_MANIFEST,CI_SHARD_SOURCE_SUPPORT,ciShardSourceDefinition,ciShardSourcePriorPatch} from './ciShardSourceCatalog.mjs';\nexport const REVIEWED_SUCCESSOR_MANIFEST=CI_SHARD_SOURCE_MANIFEST;\nexport const REVIEWED_SUCCESSOR_SUPPORT=Object.freeze([...prior.REVIEWED_SUCCESSOR_SUPPORT,...CI_SHARD_SOURCE_SUPPORT]);\nconst root=new URL('../../',import.meta.url),hash=b=>createHash('sha256').update(Buffer.from(b)).digest('hex');\nexport function ciShardPriorRead(path,bytes){return ciShardPriorReadWithVerifiedPhysical(path,bytes,prior.readRecoveryRegularFile);}\nexport function ciShardPriorReadWithVerifiedPhysical(path,bytes,physical){\n const row=ciShardSourceDefinition().local_support_patch.find(r=>r.path===path);\n if(!row||bytes===null||bytes===undefined)return bytes;\n if(typeof bytes==='string'&&Buffer.from(bytes).toString('utf8')!==bytes)return bytes;\n if(hash(bytes)!==row.after.sha256)return bytes;\n const st=lstatSync(new URL(path,root));assert(st.isFile()&&!st.isSymbolicLink(),'CI_SHARD_SOURCE_REGULAR_FILE:'+path);\n assert.equal(st.mode&0o111?'100755':'100644',row.after.mode,'CI_SHARD_SOURCE_CHANGED_MODE:'+path);\n assert.equal(hash(physical(path)),row.after.sha256,'CI_SHARD_SOURCE_CHANGED_AFTER_ADMISSION:'+path);\n const before=ciShardSourcePriorPatch(path);return typeof bytes==='string'?before.toString('utf8'):before;\n}\n// This internal adapter validates the true current physical image first. The\n// recovery verifier independently checks that it receives its fixed 748 image.\nexport function recoveryPriorRead(path,bytes){return recoveryPriorReadWithVerifiedPhysical(path,bytes,prior.readRecoveryRegularFile);}\nexport function recoveryPriorReadWithVerifiedPhysical(path,bytes,physical){\n const reflected=ciShardPriorReadWithVerifiedPhysical(path,bytes,physical);\n // A caller-supplied old image is not evidence of the current after-image.\n // Only a successful new-layer translation may enter the older reflection.\n if(ciShardSourceDefinition().local_support_patch.some(row=>row.path===path)&&reflected===bytes)return bytes;\n return prior.recoveryPriorReadWithVerifiedPhysical(path,reflected,p=>ciShardPriorReadWithVerifiedPhysical(p,physical(p),physical));\n}\nexport function verifyReviewedSuccessorCatalog(read,mode){return verifyCiShardSuccessorWithVerifiedPhysical(read,mode,prior.readRecoveryRegularFile);}\nexport function verifyCiShardSuccessorWithVerifiedPhysical(read,mode,physical){\n physical(CI_SHARD_SOURCE_CATALOG);assert.equal(mode(CI_SHARD_SOURCE_CATALOG),'100644','CI_SHARD_SOURCE_CATALOG_MODE');\n const c=ciShardSourceDefinition(read(CI_SHARD_SOURCE_CATALOG));\n for(const row of c.local_support_patch){\n  const prefix=prior.REVIEWED_SUCCESSOR_SUPPORT.includes(row.path)?'SUCCESSOR_SUPPORT_SOURCE_DRIFT:':'INTEGRATION_SOURCE_DRIFT:';\n  assert.equal(hash(read(row.path)),row.after.sha256,prefix+row.path);\n  assert.equal(hash(physical(row.path)),row.after.sha256,prefix+row.path);\n  assert.equal(mode(row.path),row.after.mode,'INTEGRATION_MODE_DRIFT:'+row.path);\n }\n prior.verifyRecoverySuccessorWithVerifiedPhysical(path=>ciShardPriorReadWithVerifiedPhysical(path,read(path),physical),mode,p=>ciShardPriorReadWithVerifiedPhysical(p,physical(p),physical));\n for(const pin of [c.prior_manifest,c.prior_catalog]){assert.equal(hash(read(pin.path)),pin.sha256,'CI_SHARD_SOURCE_PRIOR_DRIFT:'+pin.path);assert.equal(mode(pin.path),'100644','CI_SHARD_SOURCE_PRIOR_MODE');}\n for(const path of CI_SHARD_SOURCE_SUPPORT){physical(path);assert.equal(mode(path),'100644','CI_SHARD_SOURCE_SUPPORT_MODE');}\n}\nlet immutablePaths;\nexport function reviewedSuccessorPaths(){\n if(!immutablePaths){const c=ciShardSourceDefinition();immutablePaths=Object.freeze([...new Set([...prior.reviewedSuccessorPaths(),...c.local_support_patch.map(r=>r.path),c.prior_manifest.path,CI_SHARD_SOURCE_CATALOG,...CI_SHARD_SOURCE_SUPPORT])].sort());}\n return [...immutablePaths];\n}\nexport function reviewedSuccessorLineage(){\n const c=ciShardSourceDefinition();return {...prior.reviewedSuccessorLineage(),ci_shard_successor:{base:CI_SHARD_SOURCE_BASE,base_tree:c.base_tree,\n  prior_manifest:{...c.prior_manifest},prior_catalog:{...c.prior_catalog},catalog:{path:CI_SHARD_SOURCE_CATALOG,sha256:CI_SHARD_SOURCE_CATALOG_SHA256},\n  scope_review:structuredClone(c.scope_review),local_support_patch:c.local_support_patch.map(({path,before,after})=>({path,before:{...before},after:{...after}})),trusted_verifier_boundary:structuredClone(c.trusted_verifier_boundary),support_paths:[...CI_SHARD_SOURCE_SUPPORT],...c.authority}};\n}\nexport function applyReviewedSuccessor(expected,historicalSupport=[]){\n prior.applyReviewedSuccessor(expected,historicalSupport);const c=ciShardSourceDefinition(),support=new Set(prior.REVIEWED_SUCCESSOR_SUPPORT);\n for(const row of c.local_support_patch){if(support.has(row.path))continue;\n  assert.equal(expected.get(row.path)?.sha256??null,row.before.sha256,'CI_SHARD_SOURCE_BEFORE_COMPOSITION:'+row.path);\n  assert.equal(expected.get(row.path)?.mode??null,row.before.mode,'CI_SHARD_SOURCE_BEFORE_MODE:'+row.path);expected.set(row.path,{sha256:row.after.sha256,mode:row.after.mode});\n }\n assert(!expected.has(c.prior_manifest.path));expected.set(c.prior_manifest.path,{sha256:c.prior_manifest.sha256,mode:'100644'});\n assert(!expected.has(CI_SHARD_SOURCE_CATALOG));expected.set(CI_SHARD_SOURCE_CATALOG,{sha256:CI_SHARD_SOURCE_CATALOG_SHA256,mode:'100644'});\n for(const path of REVIEWED_SUCCESSOR_SUPPORT)expected.delete(path);\n}\n"
+        }
+      ]
+    }
+  ],
+  "prior_manifest": {
+    "path": "docs/operations/evidence/core-member-integration-20261105-ci-shards.json",
+    "oid": "c6ccfee0c9ab8616e06a39cb5c9540aba1880e8c",
+    "mode": "100644",
+    "sha256": "edcb3864bd1d82a8287dc4141f67284273a88882368104daa5430ca79ca837ed"
+  },
+  "prior_catalog": {
+    "path": "docs/operations/evidence/ci-shard-source-successor-20261105-catalog.json",
+    "oid": "c232bb5fcbdf769cb4f5b776ff39fa1b8f49598b",
+    "mode": "100644",
+    "sha256": "8d33bc92a4f681c1a47e653cc8033892df958b774980dab31f3561a31daa475a"
+  },
+  "trusted_verifier_boundary": {
+    "path": "tests/helpers/integrationAdmission.mjs",
+    "before": {
+      "oid": "c3b61833f472d8fd3f3f6e2a94259d4dc9e2652c",
+      "mode": "100644",
+      "sha256": "533d66c0ee9e190dacc156205d24275e831e2266fddd15117ceefc71c86a7be3"
+    },
+    "purpose": "APPEND_MODEL_USE_SOURCE_KEEP_ALL_PRIOR_SOURCE_PINS"
+  },
+  "authority": {
+    "source_admission": false,
+    "canonical_admission": false,
+    "quality_approval": false,
+    "rights_gate_changed": false,
+    "publication_approval": false,
+    "production_authorized": false,
+    "thresholds_changed": false,
+    "existing_release_payloads_changed": false
+  }
+}

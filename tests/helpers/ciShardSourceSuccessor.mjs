@@ -7,38 +7,40 @@ import {CI_SHARD_SOURCE_BASE,CI_SHARD_SOURCE_CATALOG,CI_SHARD_SOURCE_CATALOG_SHA
 export const REVIEWED_SUCCESSOR_MANIFEST=CI_SHARD_SOURCE_MANIFEST;
 export const REVIEWED_SUCCESSOR_SUPPORT=Object.freeze([...prior.REVIEWED_SUCCESSOR_SUPPORT,...CI_SHARD_SOURCE_SUPPORT]);
 const root=new URL('../../',import.meta.url),hash=b=>createHash('sha256').update(Buffer.from(b)).digest('hex');
-export function ciShardPriorRead(path,bytes){
+export function ciShardPriorRead(path,bytes){return ciShardPriorReadWithVerifiedPhysical(path,bytes,prior.readRecoveryRegularFile);}
+export function ciShardPriorReadWithVerifiedPhysical(path,bytes,physical){
  const row=ciShardSourceDefinition().local_support_patch.find(r=>r.path===path);
  if(!row||bytes===null||bytes===undefined)return bytes;
  if(typeof bytes==='string'&&Buffer.from(bytes).toString('utf8')!==bytes)return bytes;
  if(hash(bytes)!==row.after.sha256)return bytes;
  const st=lstatSync(new URL(path,root));assert(st.isFile()&&!st.isSymbolicLink(),'CI_SHARD_SOURCE_REGULAR_FILE:'+path);
  assert.equal(st.mode&0o111?'100755':'100644',row.after.mode,'CI_SHARD_SOURCE_CHANGED_MODE:'+path);
- assert.equal(hash(prior.readRecoveryRegularFile(path)),row.after.sha256,'CI_SHARD_SOURCE_CHANGED_AFTER_ADMISSION:'+path);
+ assert.equal(hash(physical(path)),row.after.sha256,'CI_SHARD_SOURCE_CHANGED_AFTER_ADMISSION:'+path);
  const before=ciShardSourcePriorPatch(path);return typeof bytes==='string'?before.toString('utf8'):before;
 }
 // This internal adapter validates the true current physical image first. The
 // recovery verifier independently checks that it receives its fixed 748 image.
-const recoveryPhysicalBefore=path=>ciShardPriorRead(path,prior.readRecoveryRegularFile(path));
-export function recoveryPriorRead(path,bytes){
- const reflected=ciShardPriorRead(path,bytes);
+export function recoveryPriorRead(path,bytes){return recoveryPriorReadWithVerifiedPhysical(path,bytes,prior.readRecoveryRegularFile);}
+export function recoveryPriorReadWithVerifiedPhysical(path,bytes,physical){
+ const reflected=ciShardPriorReadWithVerifiedPhysical(path,bytes,physical);
  // A caller-supplied old image is not evidence of the current after-image.
  // Only a successful new-layer translation may enter the older reflection.
  if(ciShardSourceDefinition().local_support_patch.some(row=>row.path===path)&&reflected===bytes)return bytes;
- return prior.recoveryPriorReadWithVerifiedPhysical(path,reflected,recoveryPhysicalBefore);
+ return prior.recoveryPriorReadWithVerifiedPhysical(path,reflected,p=>ciShardPriorReadWithVerifiedPhysical(p,physical(p),physical));
 }
-export function verifyReviewedSuccessorCatalog(read,mode){
- prior.readRecoveryRegularFile(CI_SHARD_SOURCE_CATALOG);assert.equal(mode(CI_SHARD_SOURCE_CATALOG),'100644','CI_SHARD_SOURCE_CATALOG_MODE');
+export function verifyReviewedSuccessorCatalog(read,mode){return verifyCiShardSuccessorWithVerifiedPhysical(read,mode,prior.readRecoveryRegularFile);}
+export function verifyCiShardSuccessorWithVerifiedPhysical(read,mode,physical){
+ physical(CI_SHARD_SOURCE_CATALOG);assert.equal(mode(CI_SHARD_SOURCE_CATALOG),'100644','CI_SHARD_SOURCE_CATALOG_MODE');
  const c=ciShardSourceDefinition(read(CI_SHARD_SOURCE_CATALOG));
  for(const row of c.local_support_patch){
   const prefix=prior.REVIEWED_SUCCESSOR_SUPPORT.includes(row.path)?'SUCCESSOR_SUPPORT_SOURCE_DRIFT:':'INTEGRATION_SOURCE_DRIFT:';
   assert.equal(hash(read(row.path)),row.after.sha256,prefix+row.path);
-  assert.equal(hash(prior.readRecoveryRegularFile(row.path)),row.after.sha256,prefix+row.path);
+  assert.equal(hash(physical(row.path)),row.after.sha256,prefix+row.path);
   assert.equal(mode(row.path),row.after.mode,'INTEGRATION_MODE_DRIFT:'+row.path);
  }
- prior.verifyRecoverySuccessorWithVerifiedPhysical(path=>ciShardPriorRead(path,read(path)),mode,recoveryPhysicalBefore);
+ prior.verifyRecoverySuccessorWithVerifiedPhysical(path=>ciShardPriorReadWithVerifiedPhysical(path,read(path),physical),mode,p=>ciShardPriorReadWithVerifiedPhysical(p,physical(p),physical));
  for(const pin of [c.prior_manifest,c.prior_catalog]){assert.equal(hash(read(pin.path)),pin.sha256,'CI_SHARD_SOURCE_PRIOR_DRIFT:'+pin.path);assert.equal(mode(pin.path),'100644','CI_SHARD_SOURCE_PRIOR_MODE');}
- for(const path of CI_SHARD_SOURCE_SUPPORT){prior.readRecoveryRegularFile(path);assert.equal(mode(path),'100644','CI_SHARD_SOURCE_SUPPORT_MODE');}
+ for(const path of CI_SHARD_SOURCE_SUPPORT){physical(path);assert.equal(mode(path),'100644','CI_SHARD_SOURCE_SUPPORT_MODE');}
 }
 let immutablePaths;
 export function reviewedSuccessorPaths(){

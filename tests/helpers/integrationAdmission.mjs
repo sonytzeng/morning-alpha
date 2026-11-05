@@ -10,8 +10,8 @@ import {URL} from 'node:url';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {REVIEWED_SUCCESSOR_MANIFEST,REVIEWED_SUCCESSOR_SUPPORT,reviewedSuccessorPaths,reviewedSuccessorLineage,verifyReviewedSuccessorCatalog,applyReviewedSuccessor,recoveryPriorRead,ciShardPriorRead} from './ciShardSourceSuccessor.mjs';
-export {REVIEWED_SUCCESSOR_MANIFEST as CURRENT_INTEGRATION_MANIFEST} from './ciShardSourceSuccessor.mjs';
+import {REVIEWED_SUCCESSOR_MANIFEST,REVIEWED_SUCCESSOR_SUPPORT,reviewedSuccessorPaths,reviewedSuccessorLineage,verifyReviewedSuccessorCatalog,applyReviewedSuccessor,recoveryPriorRead,ciShardPriorRead,modelUsePriorRead} from './modelUseSourceSuccessor.mjs';
+export {REVIEWED_SUCCESSOR_MANIFEST as CURRENT_INTEGRATION_MANIFEST} from './modelUseSourceSuccessor.mjs';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
@@ -1140,6 +1140,10 @@ const REVIEWED_SUCCESSOR_SUPPORT_PINS=Object.freeze([
  Object.freeze({path:'tests/helpers/ciShardSourceCatalog.mjs',sha256:'8d769924f25ed6fca511fc707fd55e771dca2e982b688a4f4136fbffbb7927ed'}),
  Object.freeze({path:'tests/helpers/ciShardSourceSuccessor.mjs',sha256:'dc3867c9f18a0d4d2d537378bdffdf90984a89e321342693ab184222393556e4'}),
  Object.freeze({path:'tests/ciShardSourceSuccessor.test.mjs',sha256:'1b926396ad91c038dad0b0f47ee3bbc0e8d2b32d8cc886a8796525f86ff0fc76'}),
+ // Model-use engineering verifier pins; all eleven predecessor pins stay fixed.
+ Object.freeze({path:'tests/helpers/modelUseSourceCatalog.mjs',sha256:'348621d72003a4a4f0bb3da466fc793666026ca9d41aa59e86ff0be705970492'}),
+ Object.freeze({path:'tests/helpers/modelUseSourceSuccessor.mjs',sha256:'f48fbacebbe1595d75412cca6963d7c461c0a4b1079353d73887c575225641ca'}),
+ Object.freeze({path:'tests/modelUseSourceSuccessor.test.mjs',sha256:'0a54659e674ae8506bbf7ffc0cc973d4155d654335dcf7d186fcea394317e0b9'}),
 ]);
 const git=args=>execFileSync('git',['--no-replace-objects',...args],{cwd:root,encoding:'utf8',maxBuffer:64e6});
 export const integrationHash=b=>createHash('sha256').update(b).digest('hex');
@@ -1703,7 +1707,7 @@ function verifySourceUnionBoundary(read,mode){
  for(const row of REVIEWED_SUCCESSOR_SUPPORT_PINS){
   assert.match(row.sha256,/^[a-f0-9]{64}$/,'SUCCESSOR_SUPPORT_REVIEW_REQUIRED');
   const bytes=read(row.path);
-  const index=REVIEWED_SUCCESSOR_SUPPORT_PINS.indexOf(row),priorBytes=index<5?recoveryPriorRead(row.path,bytes):index<8?ciShardPriorRead(row.path,bytes):bytes;
+  const index=REVIEWED_SUCCESSOR_SUPPORT_PINS.indexOf(row),priorBytes=index<5?recoveryPriorRead(row.path,bytes):index<8?ciShardPriorRead(row.path,bytes):index<11?modelUsePriorRead(row.path,bytes):bytes;
   assert.equal(integrationHash(priorBytes),row.sha256,'SUCCESSOR_SUPPORT_SOURCE_DRIFT:'+row.path);
  }
  sourceUnionLineage();

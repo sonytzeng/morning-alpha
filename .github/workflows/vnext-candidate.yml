@@ -56,6 +56,10 @@ jobs:
         env:
           NODE_OPTIONS: --experimental-strip-types
         run: node scripts/releases/observe-ci-node.mjs --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/currentSourceSuccessor.test.mjs tests/reviewedSourceSuccessor.test.mjs tests/recoverySourceSuccessor.test.mjs tests/ciShardSourceSuccessor.test.mjs
+      - name: Exact model source use identity and admission controls
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/modelUseSourceSuccessor.test.mjs tests/dailyAiModelSourceUse.test.mjs
   vnext-runtime:
     runs-on: ubuntu-latest
     timeout-minutes: 45

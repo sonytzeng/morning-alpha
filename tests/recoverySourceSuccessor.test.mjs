@@ -9,8 +9,9 @@ import {integrationPhysicalRead as physical,integrationPhysicalMode as physicalM
 import {CURRENT_SOURCE_MANIFEST,CURRENT_SOURCE_CATALOG} from './helpers/currentSourceCatalog.mjs';
 import {RECOVERY_SOURCE_BASE,RECOVERY_SOURCE_HEAD,RECOVERY_SOURCE_CATALOG,RECOVERY_SOURCE_CATALOG_SHA256,RECOVERY_SOURCE_MANIFEST,RECOVERY_SOURCE_SUPPORT,recoverySourceDefinition,recoverySourceHash,recoverySourcePriorPatch} from './helpers/recoverySourceCatalog.mjs';
 import {reviewedSuccessorPaths as recoveryReviewedSuccessorPaths,readRecoveryRegularFile} from './helpers/recoverySourceSuccessor.mjs';
-import {reviewedSuccessorPaths,recoveryPriorRead,ciShardPriorRead} from './helpers/ciShardSourceSuccessor.mjs';
+import {reviewedSuccessorPaths,recoveryPriorRead,ciShardPriorRead} from './helpers/modelUseSourceSuccessor.mjs';
 import {CI_SHARD_SOURCE_MANIFEST} from './helpers/ciShardSourceCatalog.mjs';
+import {MODEL_USE_SOURCE_MANIFEST} from './helpers/modelUseSourceCatalog.mjs';
 const root=new URL('../',import.meta.url),git=args=>execFileSync('git',['--no-replace-objects',...args],{cwd:root});
 const readJson=p=>JSON.parse(physical(p));
 function fixture(){
@@ -22,7 +23,7 @@ function fixture(){
 }
 test('recovery appends the exact sixteen-file committed delta after the unchanged 903-file predecessor',()=>{
  const live=verifyIntegrationCandidate(),m=readJson(RECOVERY_SOURCE_MANIFEST),c=recoverySourceDefinition();assert.deepEqual(createSourceUnionComposition(),live);
- assert.equal(RECOVERY_SOURCE_MANIFEST,'docs/operations/evidence/core-member-integration-20261105-recovery-source.json');assert.equal(CURRENT_INTEGRATION_MANIFEST,CI_SHARD_SOURCE_MANIFEST);assert.equal(c.base,RECOVERY_SOURCE_BASE);assert.equal(c.head,RECOVERY_SOURCE_HEAD);assert.equal(c.files.length,16);
+ assert.equal(RECOVERY_SOURCE_MANIFEST,'docs/operations/evidence/core-member-integration-20261105-recovery-source.json');assert.equal(CI_SHARD_SOURCE_MANIFEST,'docs/operations/evidence/core-member-integration-20261105-ci-shards.json');assert.equal(CURRENT_INTEGRATION_MANIFEST,MODEL_USE_SOURCE_MANIFEST);assert.equal(c.base,RECOVERY_SOURCE_BASE);assert.equal(c.head,RECOVERY_SOURCE_HEAD);assert.equal(c.files.length,16);
  assert.deepEqual(physical(CURRENT_SOURCE_MANIFEST),git(['show',RECOVERY_SOURCE_BASE+':'+CURRENT_SOURCE_MANIFEST]));assert.equal(readJson(CURRENT_SOURCE_MANIFEST).files.length,903);
  assert.deepEqual(physical(CURRENT_SOURCE_CATALOG),git(['show',RECOVERY_SOURCE_BASE+':'+CURRENT_SOURCE_CATALOG]));
  const additions=c.files.filter(r=>r.before===null).length,priorInventory=[...new Set([...readJson(INTEGRATION_MANIFEST).files.map(r=>r.path),...recoveryReviewedSuccessorPaths()])].sort();

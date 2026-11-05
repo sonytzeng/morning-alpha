@@ -3,13 +3,13 @@ import {HORIZONS,sourceSafe,hashValid,type Horizon} from './contracts.ts';
 import {researchCard,factIssues,type RealStock} from './realResearch.ts';
 import {validProjectionTime} from './projection.ts';
 
-export const RIGHTS_REVIEW_VERSION='VNEXT_RIGHTS_20261010_1';
+export const RIGHTS_REVIEW_VERSION='VNEXT_RIGHTS_20261105_2';
 export type SourceRights={
  id:string;title:string;dataset:string;resource:string;api:string;license:string;attribution:string;
 };
 // Exact dataset/resource mapping, independently checked against data.gov.tw and
 // both exchanges' Swagger. A hostname or an API subscription is NOT a license.
-export const OPEN_DATA_RIGHTS:readonly SourceRights[]=[
+export const OPEN_DATA_RIGHTS:readonly SourceRights[]=[...[
  {id:'18415',title:'上市公司每日重大訊息',code:'t187ap04_L',exchange:'TWSE'},
  {id:'18418',title:'上櫃公司每日重大訊息',code:'t187ap04_O',exchange:'TPEX'},
  {id:'18420',title:'上市公司每月營業收入彙總表',code:'t187ap05_L',exchange:'TWSE'},
@@ -19,7 +19,24 @@ export const OPEN_DATA_RIGHTS:readonly SourceRights[]=[
 ].map(r=>({id:r.id,title:r.title,dataset:`https://data.gov.tw/dataset/${r.id}`,
  resource:`https://mopsfin.twse.com.tw/opendata/${r.code}.csv`,
  api:r.exchange==='TWSE'?`https://openapi.twse.com.tw/v1/opendata/${r.code}`:`https://www.tpex.org.tw/openapi/v1/mopsfin_${r.code}`,
- license:'https://data.gov.tw/license',attribution:`資料來源：金融監督管理委員會證券期貨局／${r.exchange==='TWSE'?'臺灣證券交易所':'證券櫃檯買賣中心'}，${r.title}；政府資料開放授權條款第1版。` }));
+ license:'https://data.gov.tw/license',attribution:`資料來源：金融監督管理委員會證券期貨局／${r.exchange==='TWSE'?'臺灣證券交易所':'證券櫃檯買賣中心'}，${r.title}；政府資料開放授權條款第1版。` })),
+ // 2026-11-05 addendum: exact dataset resources and named operations in the
+ // exchanges' current Swagger documents. No host/path-prefix or query grant.
+ // These as-reported statements and daily ratios do not prove four comparable
+ // quarters, current forecasts, an executable price or publication approval.
+ ...[
+  {id:'91998',title:'上市公司綜合損益表(一般業)',exchange:'TWSE',
+   resource:'https://mopsfin.twse.com.tw/opendata/t187ap06_L_ci.csv',
+   api:'https://openapi.twse.com.tw/v1/opendata/t187ap06_L_ci'},
+  {id:'11764',title:'上市個股日本益比、殖利率及股價淨值比（依日期查詢）',exchange:'TWSE',
+   resource:'https://www.twse.com.tw/rwd/zh/afterTrading/BWIBBU_d?response=open_data',
+   api:'https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_d'},
+  {id:'11373',title:'上櫃股票個股本益比、殖利率、股價淨值比',exchange:'TPEX',
+   resource:'https://www.tpex.org.tw/web/stock/aftertrading/peratio_analysis/pera_result.php?l=zh-tw&o=data',
+   api:'https://www.tpex.org.tw/openapi/v1/tpex_mainboard_peratio_analysis'},
+ ].map(r=>({id:r.id,title:r.title,dataset:`https://data.gov.tw/dataset/${r.id}`,resource:r.resource,api:r.api,
+  license:'https://data.gov.tw/license',attribution:`資料來源：金融監督管理委員會證券期貨局／${r.exchange==='TWSE'?'臺灣證券交易所':'證券櫃檯買賣中心'}，${r.title}；政府資料開放授權條款第1版。` })),
+];
 
 export function sourceRights(source:string){
  const grant=OPEN_DATA_RIGHTS.find(r=>source===r.resource||source===r.api);

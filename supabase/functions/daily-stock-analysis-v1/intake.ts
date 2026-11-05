@@ -6,6 +6,7 @@ import type {StockAnalysisSelector,StoredStockAnalysisBatch} from './handler.ts'
 import {MARKET_CALENDAR_VERSION} from '../_shared/market-session-contract.mjs';
 import {dailyAiExpectedTaiwanNight} from '../../../research/daily-ai-global-market.ts';
 import {bindQuarantinedIssuerSource,hasQuarantinedIssuerFacts,hasQuarantinedIssuerEvidence,ISSUER_QUARANTINE_GAP,type QuarantinedIssuerSourcePolicy} from '../../../research/quarantined-issuer-source.ts';
+import {readFinancialModelUseReviewedBatch} from './model-source-review.ts';
 
 type Rpc=(name:string,args:Record<string,unknown>,signal:AbortSignal)=>Promise<unknown>;
 const object=(v:unknown):Record<string,unknown>=>{
@@ -270,7 +271,7 @@ export async function loadOrIntakeDailyStockAiBatch(selector:StockAnalysisSelect
  stopped(signal);
  const args='batch_id' in selector?{p_batch_id:selector.batch_id,p_cutoff:null}:{p_batch_id:null,p_cutoff:selector.cutoff};
  const retained=await rpc('load_daily_stock_ai_batch_v1',args,signal);stopped(signal);
- if(retained!==null){rejectRestrictedAnalysisSources(retained);return retained as StoredStockAnalysisBatch;}
+ if(retained!==null)return admitRetainedAnalysisSources(retained,rpc,signal);
  if(!('cutoff' in selector))return null;
  const raw=await rpc('load_daily_stock_ai_handoff_v1',{p_cutoff:selector.cutoff},signal);stopped(signal);
  if(raw===null)return null;
@@ -282,9 +283,19 @@ export async function loadOrIntakeDailyStockAiBatch(selector:StockAnalysisSelect
  if(loaded===null)throw Error('AI_INTAKE_RELOAD_UNCONFIRMED');
  const batch=object(loaded);
  if(batch.id!==seed.metadata.payload_hash||batch.cutoff!==selector.cutoff)throw Error('AI_INTAKE_RELOAD_MISMATCH');
- rejectRestrictedAnalysisSources(loaded);
+ const admitted=await admitRetainedAnalysisSources(loaded,rpc,signal);
  // The handler revalidates all 72 packets and source times before any model.
- return loaded as StoredStockAnalysisBatch;
+ return admitted;
+}
+async function admitRetainedAnalysisSources(value:unknown,rpc:Rpc,signal:AbortSignal):Promise<StoredStockAnalysisBatch>{
+ try{rejectRestrictedAnalysisSources(value);return value as StoredStockAnalysisBatch;}
+ catch(error){
+  if(!(error instanceof Error)||error.message!=='AI_INTAKE_RESTRICTED_FINANCIAL_SOURCE')throw error;
+ }
+ // Financial review never overrides restricted news/market source rules.
+ rejectRestrictedAnalysisSources(value,true);
+ return readFinancialModelUseReviewedBatch(value,
+  (id,s)=>rpc('load_daily_stock_ai_model_source_use_v1',{p_batch_id:id},s),signal);
 }
 /** Apply the commercial source restriction to already retained V1 batches too;
  * changing the collector alone must not allow an old queued packet to run. */
@@ -296,15 +307,15 @@ function restrictedNewsSource(source:string,content:Record<string,unknown>){
  let host='';try{host=new URL(source).hostname;}catch{/* Source validity is checked separately. */}
  return host==='udn.com'||host.endsWith('.udn.com')||typeof content.provider==='string'&&content.provider.toUpperCase()==='GNEWS';
 }
-function rejectRestrictedAnalysisSources(value:unknown){
+function rejectRestrictedAnalysisSources(value:unknown,financialReviewPending=false){
  const batch=object(value);if(!Array.isArray(batch.packets))return;
  for(const value of batch.packets){const packet=object(value);
-  if(Array.isArray(packet.data_gaps)&&packet.data_gaps.includes(ISSUER_QUARANTINE_GAP))throw Error('AI_INTAKE_RESTRICTED_FINANCIAL_SOURCE');
+  if(!financialReviewPending&&Array.isArray(packet.data_gaps)&&packet.data_gaps.includes(ISSUER_QUARANTINE_GAP))throw Error('AI_INTAKE_RESTRICTED_FINANCIAL_SOURCE');
   if(!Array.isArray(packet.evidence))continue;
   for(const value of packet.evidence){const e=object(value);
-   if(hasQuarantinedIssuerEvidence(e))throw Error('AI_INTAKE_RESTRICTED_FINANCIAL_SOURCE');
+   if(!financialReviewPending&&hasQuarantinedIssuerEvidence(e))throw Error('AI_INTAKE_RESTRICTED_FINANCIAL_SOURCE');
    if(typeof e.source!=='string')continue;
-   if(e.kind==='FINANCIAL'&&restrictedFinancialSource(e.source))throw Error('AI_INTAKE_RESTRICTED_FINANCIAL_SOURCE');
+   if(!financialReviewPending&&e.kind==='FINANCIAL'&&restrictedFinancialSource(e.source))throw Error('AI_INTAKE_RESTRICTED_FINANCIAL_SOURCE');
    if(e.kind==='NEWS'){
     let content:Record<string,unknown>={};
     try{const parsed=JSON.parse(String(e.content));if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))content=parsed as Record<string,unknown>;}catch{/* Older plain-text evidence has no provider field. */}

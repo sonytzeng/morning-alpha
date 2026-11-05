@@ -7,9 +7,27 @@ const at='2026-10-10T12:00:00.000Z';
 // Synthetic protocol controls ONLY, never investment efficacy or member content.
 const fact={id:'SYNTHETIC',symbol:'2330',kind:'REVENUE',source:OPEN_DATA_RIGHTS[2].api,evidence_hash:'a'.repeat(64),published_at:at,first_seen_at:at,available_at:at,as_of:at,period:'202609',summary:'SYNTHETIC_PROTOCOL_ONLY',values:{},limitations:[]};
 const stock={symbol:'2330',company:'協定測試，非真實研究',sector:'',facts:[fact],coverage:{}};
-test('six specifically mapped datasets allow conditional OGL use, not publication approval',()=>{
- assert.equal(OPEN_DATA_RIGHTS.length,6);for(const r of OPEN_DATA_RIGHTS){assert.equal(sourceRights(r.api).status,'OPEN_DATA_WITH_ATTRIBUTION');assert.equal(sourceRights(r.resource).grant.id,r.id);assert(r.attribution);}
+test('nine specifically mapped datasets allow conditional OGL use, not publication approval',()=>{
+ assert.equal(OPEN_DATA_RIGHTS.length,9);for(const r of OPEN_DATA_RIGHTS){assert.equal(sourceRights(r.api).status,'OPEN_DATA_WITH_ATTRIBUTION');assert.equal(sourceRights(r.resource).grant.id,r.id);assert(r.attribution);}
  assert.equal(publicationDossier(stock,at)[1].member_eligible,false);
+});
+test('income and daily valuation APIs resolve to their own exact datasets',()=>{
+ const cases=[
+  ['https://openapi.twse.com.tw/v1/opendata/t187ap06_L_ci','91998'],
+  ['https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_d','11764'],
+  ['https://www.tpex.org.tw/openapi/v1/tpex_mainboard_peratio_analysis','11373'],
+ ];
+ for(const [source,id] of cases){const right=sourceRights(source);assert.equal(right.grant.id,id);assert.equal(right.grant.dataset,'https://data.gov.tw/dataset/'+id);
+  for(const other of [source+'?date=20200101',source+'/',source+'/extra',source.replace('https://','http://'),source.replace('.tw/','.tw.evil.test/')])assert.equal(sourceRights(other).status,'LICENSING_UNVERIFIED');
+ }
+});
+test('open financial-resource attribution does not remove data or publication checks',()=>{
+ const source='https://openapi.twse.com.tw/v1/opendata/t187ap06_L_ci';
+ const row=publicationDossier({...stock,facts:[{...fact,kind:'EPS',source,published_at:null}]},at).find(c=>c.horizon==='LONG');
+ assert.equal(row.rights[0].status,'OPEN_DATA_WITH_ATTRIBUTION');assert.equal(row.rights[0].grant.id,'91998');
+ assert(row.evidence_issues.some(i=>i.reason==='MISSING_PUBLISHED_AT'));
+ assert(row.blockers.includes('PUBLICATION_REVIEW_REQUIRED'));assert(row.blockers.includes('PREDICTION_NOT_CREATED'));
+ assert.equal(row.member_eligible,false);assert.equal(row.evidence_ready,false);
 });
 test('same domain, other dataset, query, historical endpoint and lookalike host do not inherit rights',()=>{
  for(const url of [OPEN_DATA_RIGHTS[0].api+'?date=20200101',OPEN_DATA_RIGHTS[0].api+'/extra',OPEN_DATA_RIGHTS[0].api.replace('twse.com.tw','twse.com.tw.evil.test'),'https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&stockNo=2330','https://www.tpex.org.tw/www/zh-tw/afterTrading/dailyQuotes'])assert.equal(sourceRights(url).status,'LICENSING_UNVERIFIED');

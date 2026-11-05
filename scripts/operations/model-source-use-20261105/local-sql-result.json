@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "checks": 101,
+  "phase": "least privilege, no raw updates and no browser clock",
+  "candidate_sha256": "a0f86a2408fd5fb0f7764fd23e153c46f76b54c418403c0e3d8273e497b68d65",
+  "rollback_sha256": "6d270a65a6ea2af6b1d4e9de6f9743f11a2ec1c58bfd1fcc294e9e63eb719979",
+  "synthetic_reviews_only": true,
+  "real_source_approval": false,
+  "native_network_race_test": false,
+  "production_writes": 0,
+  "model_calls": 0,
+  "member_published": false
+}

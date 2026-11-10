@@ -98,8 +98,6 @@ export function evaluateResearch(input:FunnelInput,horizon:Horizon):ResearchEval
   if(!gaps.length){metrics.positive_revenue_months=revenues.filter(f=>Number(f.values.yoy_percent)>0).length;metrics.net_shares=institutions.reduce((s,f)=>s+Number(f.values.net_shares),0);
    if(metrics.positive_revenue_months!==3)reject.push('REVENUE_TREND_NOT_SUPPORTED');if(metrics.net_shares<=0)reject.push('INSTITUTIONAL_DIRECTION_NOT_SUPPORTED');}
   reason='連續營收與法人股數方向支持後續數週追蹤，但還不是訂單或產業受惠的證明。';
-  confirmation='下一次營收仍支持成長，且法人方向未反轉，再重新檢查研究假設。';
-  invalidation='若後續營收轉弱或法人累計方向反轉，停止沿用原來的中期觀察。';
   risk='不以單月資料認定趨勢；沒有訂單、展望或供應鏈證據就不寫相關理由。';
  }else{
   const eps=take(input.facts,'EPS',4),margin=take(input.facts,'MARGIN',4),capex=take(input.facts,'CAPEX',4);
@@ -121,6 +119,20 @@ export function evaluateResearch(input:FunnelInput,horizon:Horizon):ResearchEval
  if(new Set(used.map(f=>f.id)).size!==used.length)gaps.push('EVIDENCE_ID_DUPLICATE');
  if(used.some(f=>f.published_at===null))warnings.push('EXACT_PUBLICATION_TIME_UNKNOWN_OBSERVED_AFTER_RECEIPT_ONLY');
  const state:ResearchState=gaps.length?'INSUFFICIENT':reject.length?'REJECTED':'QUALIFIED';
+ // Conditions follow the final state, including late duplicate-evidence gaps.
+ // A rejected net-sell case must turn net-buy before observation can resume.
+ if(horizon==='MEDIUM'){
+  if(state==='INSUFFICIENT'){
+   confirmation='先補齊並核對連續營收、對齊交易日的法人股數與資料來源，再重新判斷中期條件。';
+   invalidation='資料尚未齊備，不沿用已有可靠中期判斷的假設；資料更正或補齊後重新評估。';
+  }else if(state==='REJECTED'){
+   confirmation='等待最近連續三個月營收年增皆為正，且對齊最近十個交易日的法人累計為買超，再重新評估是否列入中期觀察。';
+   invalidation='目前仍在等待；營收、法人方向或原始資料改變時重新評估等待原因，不把等待視為已確認的布局條件。';
+  }else{
+   confirmation='下一次更新時，重新核對最近連續三個月營收年增皆為正，且對齊最近十個交易日的法人累計仍為買超，再決定是否續列中期觀察。';
+   invalidation='若營收年增不再全部為正、法人累計不再買超，或原始資料更正，停止沿用原中期觀察並重評。';
+  }
+ }
  return {symbol:input.symbol,company:input.company,horizon,version:RESEARCH_FUNNEL_VERSION,state,evaluated:!gaps.length,
   reasons:unique(gaps.length?gaps:reject).sort(),warnings:unique(warnings),used,metrics,cutoff:input.cutoff,through:input.through,
   next_review_at:input.next_session+'T13:30:00+08:00',reason:state==='QUALIFIED'?reason:state==='INSUFFICIENT'?'必要資料不足，暫時無法可靠判斷。':'資料足以評估，但未符合這個觀察模型；不代表股票沒有其他機會。',

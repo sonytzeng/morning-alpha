@@ -78,3 +78,33 @@ test('abort, wrong business date and uncovered calendar stop before network work
  assert.equal(calls,10);assert(out.additionalGaps.includes('PRICE_REFRESH_BACKLOG_OLDER_SESSIONS_NOT_FETCHED'));assert(out.inputs.every(s=>s.bars.length>=5&&s.bars.length<20));assert(out.inputs.every(s=>out.gapsBySymbol[s.symbol].includes('PRICE_20_SESSION_COVERAGE_MISSING')));
  await assert.rejects(()=>refreshDailyAiPrices({...common,inputs:retained(),businessDate:'2099-10-31',clock:()=>'2099-10-31T03:30:00Z',signal:new AbortController().signal}),/AI_REFRESH_CALENDAR_UNCOVERED/);
 });
+
+test('an older missing session remains repairable after it leaves the five-session refresh window',async()=>{
+ const inputs=retained('2026-10-30'),missing='2026-10-15';
+ inputs[60].bars=inputs[60].bars.filter(b=>b.date!==missing);
+ const before=structuredClone(inputs),calls=[];
+ const out=await refreshDailyAiPrices({inputs,businessDate:'2026-10-31',clock:()=>now,signal:new AbortController().signal,
+  fetcher:async url=>{calls.push(url);return Response.json(payload(url));}});
+ assert.equal(calls.length,1);assert(calls[0].includes('2026%2F10%2F15'));
+ assert.equal(out.inputs[60].bars.length,20);
+ assert(!out.gapsBySymbol['1060'].includes('PRICE_20_SESSION_COVERAGE_MISSING'));
+ for(const s of out.inputs){for(const old of before.find(x=>x.symbol===s.symbol).bars.filter(b=>s.expected_sessions.includes(b.date)))
+  assert.deepEqual(s.bars.find(b=>b.date===old.date),old);}
+ assert.deepEqual(inputs,before);
+});
+
+test('TPEx receives twelve seconds within a shared twenty-eight-second acquisition budget; TWSE stays at six',async t=>{
+ const timeouts=[];t.mock.method(AbortSignal,'timeout',ms=>{timeouts.push(ms);return new AbortController().signal;});
+ const out=await refreshDailyAiPrices({inputs:retained(),businessDate:'2026-10-31',clock:()=>now,signal:new AbortController().signal,
+  fetcher:async url=>Response.json(payload(url))});
+ assert.equal(out.receipts.length,4);
+ assert.equal(timeouts.filter(ms=>ms===12000).length,2);assert.equal(timeouts.filter(ms=>ms===6000).length,2);
+});
+
+test('exhausted acquisition budget does not start another external request or invent a recovered bar',async t=>{
+ let step=0,calls=0;t.mock.method(performance,'now',()=>step++===0?0:28001);
+ const out=await refreshDailyAiPrices({inputs:retained(),businessDate:'2026-10-31',clock:()=>now,signal:new AbortController().signal,
+  fetcher:async()=>{calls++;throw Error('UNEXPECTED');}});
+ assert.equal(calls,0);assert(out.receipts.every(r=>r.state==='UNAVAILABLE'));
+ assert(out.inputs.every(s=>out.gapsBySymbol[s.symbol].includes('PRICE_20_SESSION_COVERAGE_MISSING')));
+});

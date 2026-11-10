@@ -3,6 +3,7 @@
  * source-use rights. Independent quality/time/source-use reviews remain required.
  */
 import {createHash} from 'node:crypto';
+import {Buffer} from 'node:buffer';
 import {validateAnalysisPacket} from './daily-ai-analysis.ts';
 import {validateStockAnalysisClaim,validateStockAnalysisCondition} from './daily-ai-semantics.ts';
 import {snapshotHash,hashValid,validObservationTime,compareTime} from '../src/features/vnext/contracts.ts';
@@ -109,7 +110,8 @@ export async function validateReviewedAnalysisSnapshot(batchPayloadText,body,{no
   const seen=new Set();
   for(const source of card.sources){
    keys(source,SOURCE_KEYS,'OFFLINE_SOURCE_KEYS');const original=evidence.get(source.id);
-   if(!original||seen.has(source.id)||!cited.has(source.id)||!await same(source,sourceProjection(original)))fail('OFFLINE_SOURCE_BINDING');
+   const expected=original?sourceProjection(original):null;
+   if(!expected||seen.has(source.id)||!cited.has(source.id)||SOURCE_KEYS.some(key=>source[key]!==expected[key]))fail('OFFLINE_SOURCE_BINDING');
    seen.add(source.id);sourceBindings++;
   }
   if(seen.size!==cited.size)fail('OFFLINE_SOURCE_SET');

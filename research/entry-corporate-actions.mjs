@@ -16,6 +16,17 @@ export const ACTION_SOURCES=[
  {kind:'PAR_VALUE_CHANGE',exchange:'TPEX',base:'https://www.tpex.org.tw/www/zh-tw/bulletin/pvChgRslt',fields:['恢復買賣日期','證券代號','證券名稱','最後交易日之收盤價格','恢復買賣開始參考價']},
 ];
 const eventDate=v=>officialDate(String(v).replace('年','/').replace('月','/').replace('日',''));
+// Only an explicit per-share cash label may populate TWSE cash. Combined
+// rights values and the difference between reference prices are not dividends.
+const twseCashLabels=new Set(['每股現金股利','每股配發現金股利','(每股配發現金股利)除息','現金股利(元/股)','現金股利（元／股）']);
+function twseCashPerShare(fields,row){
+ const positions=fields.flatMap((field,index)=>twseCashLabels.has(field)?[index]:[]);
+ if(positions.length>1)throw Error('ACTION_CASH_FIELD_AMBIGUOUS');
+ if(positions.length===0)return null;
+ const raw=String(row[positions[0]]??'').trim(),value=officialNumber(raw.replace(/\s*元[／/]股$/,''));
+ if(value!==null&&value<0)throw Error('ACTION_CASH_FIELD_INVALID');
+ return value;
+}
 export function parseActionInventory(spec,p,symbols,source,at,from,through){
  if(!ACTION_SOURCES.includes(spec)||!Number.isFinite(Date.parse(at)))throw Error('ACTION_SOURCE_INVALID');
  if(String(p.stat).toLowerCase()!=='ok')throw Error('ACTION_PROVIDER_NOT_OK');
@@ -24,7 +35,8 @@ export function parseActionInventory(spec,p,symbols,source,at,from,through){
  return table.data.flatMap(r=>{
   if(!Array.isArray(r))throw Error('ACTION_ROW_INVALID');const symbol=String(r[1]).trim();if(!symbols.includes(symbol))return [];
   const date=eventDate(r[0]);if(!date||date<from||date>through)throw Error('ACTION_DATE_OUTSIDE_WINDOW');
-  const cash=spec.kind==='EX_RIGHT'&&spec.exchange==='TPEX'&&table.fields[13]==='現金股利'?officialNumber(r[13]):null;
+  const cash=spec.kind!=='EX_RIGHT'?null:spec.exchange==='TWSE'?twseCashPerShare(table.fields,r)
+   :table.fields[13]==='現金股利'?officialNumber(r[13]):null;
   const stockPer1000=spec.kind==='EX_RIGHT'&&spec.exchange==='TPEX'&&table.fields[14]==='每仟股無償配股'?officialNumber(r[14]):null;
   return [{symbol,kind:spec.kind,exchange:spec.exchange,effective_date:date,source_ref:source,available_at:at,
    before_reference:officialNumber(r[3]),after_reference:officialNumber(r[4]),cash_per_share:cash,

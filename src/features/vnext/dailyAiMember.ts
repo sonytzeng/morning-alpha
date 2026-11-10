@@ -38,7 +38,7 @@ export function parseDailyAiMember(value:unknown,expectedBusinessDate?:string,no
  if(p.edition===null){if(values.length)throw Error('AI_MEMBER_EMPTY_EDITION');return {schema:'VNEXT_AI_MEMBER_EDITION_V1',tier,business_date,research_only:true,edition:null,cards:[]};}
  const e=object(p.edition),edition:DailyAiMemberEdition={id:hash(e.id),edition_date:day(e.edition_date),data_through:day(e.data_through),
   evidence_cutoff:time(e.evidence_cutoff),prepared_at:time(e.prepared_at),expires_at:time(e.expires_at),mode:'AS_OF_RESEARCH',forecast:false,performance_available:false};
- if(e.analysis_origin!==undefined)edition.analysis_origin=one(e.analysis_origin,['MODEL_GENERATED','OFFLINE_REVIEWED']);
+ if(e.analysis_origin!==undefined)edition.analysis_origin=one<DailyAiAnalysisOrigin>(e.analysis_origin,['MODEL_GENERATED','OFFLINE_REVIEWED']);
  if(e.mode!=='AS_OF_RESEARCH'||e.forecast!==false||e.performance_available!==false)throw Error('AI_MEMBER_SCOPE');
  const cutoff=Date.parse(edition.evidence_cutoff),prepared=Date.parse(edition.prepared_at);
  if(cutoff>prepared||prepared>now||Date.parse(edition.expires_at)<=now||Date.parse(edition.expires_at)<=prepared

@@ -1,19 +1,21 @@
-import {useCallback,useEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useRef,useState,type ComponentType} from 'react';
 import {supabase} from '@/lib/supabase';
 import type {AcademyAccess} from '@/pages/academy/useAcademyAccess';
 import {HORIZONS,type Horizon} from '@/features/vnext/contracts';
 import {dailyAiOwnerPriceCanApprove,dailyAiOwnerPriceCanRevoke,dailyAiOwnerPriceDeadlineMs,dailyAiOwnerPriceReviewRequest,
  parseDailyAiOwnerPricePlans,parseDailyAiOwnerPriceReviewResult,type DailyAiOwnerPriceAction,type DailyAiOwnerPricePlans as Preview,type DailyAiOwnerPriceRow} from '@/features/vnext/dailyAiOwnerPricePlans';
+import {dailyAiPriceDisplay,DAILY_AI_PRICE_PRECISION_PENDING} from '@/features/vnext/dailyAiPriceDisplay';
 import './daily-ai-member.css';
 
 type Scope={identity:string;generation:number;accessSignal:AbortSignal;editionId:string;controller:AbortController};
 type Command={scope:Scope;args:ReturnType<typeof dailyAiOwnerPriceReviewRequest>};
+type CalculationSelection={scope:Scope;epoch:number;row:DailyAiOwnerPriceRow;error:boolean;
+ Component:ComponentType<{access:AcademyAccess;row:DailyAiOwnerPriceRow;onClose:()=>void}>|null};
 class PriceRequestFailure extends Error{
  readonly kind:'SCOPE'|'REJECTED'|'UNKNOWN';
  constructor(kind:PriceRequestFailure['kind']){super('OWNER_PRICE_REQUEST_'+kind);this.kind=kind;}
 }
 const date=(value:string)=>new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date(value));
-const money=(value:number)=>new Intl.NumberFormat('zh-TW',{maximumFractionDigits:2}).format(value);
 const label=(value:string|undefined)=>value==='PASS'?'通過':value==='FAIL'?'未通過':'待完成';
 async function bounded<T>(signal:AbortSignal,perform:(inner:AbortSignal)=>PromiseLike<T>):Promise<T>{
  if(signal.aborted)throw new PriceRequestFailure('UNKNOWN');
@@ -33,7 +35,7 @@ function checkResponse(error:unknown){
  throw new PriceRequestFailure(code==='P0001'||code==='PGRST202'||code==='42883'||/^(?:22|23)[A-Z0-9]{3}$/.test(code)?'REJECTED':'UNKNOWN');
 }
 
-export function DailyAiOwnerPricePreview({data,busy=false,blocked=false,onReview}:{data:Preview;busy?:boolean;blocked?:boolean;onReview:(row:DailyAiOwnerPriceRow,action:DailyAiOwnerPriceAction)=>void}){
+export function DailyAiOwnerPricePreview({data,busy=false,blocked=false,onReview,onInspectCalculation}:{data:Preview;busy?:boolean;blocked?:boolean;onReview:(row:DailyAiOwnerPriceRow,action:DailyAiOwnerPriceAction)=>void;onInspectCalculation?:(row:DailyAiOwnerPriceRow)=>void}){
  const [horizon,setHorizon]=useState<Horizon>('SHORT'),[limit,setLimit]=useState(9),[now,setNow]=useState(Date.now);
  const deadlines=data.plans.flatMap(row=>[row.body.expires_at,...(row.review?[row.review.expires_at]:[])])
   .map(dailyAiOwnerPriceDeadlineMs).filter(expiry=>Number.isFinite(expiry)&&expiry>now);
@@ -47,15 +49,18 @@ export function DailyAiOwnerPricePreview({data,busy=false,blocked=false,onReview
  if(!data.plans.length)return <p role="status">本版尚無已送入審查的價格候選。這裡不會自行產生數字或代填審查。</p>;
  return <div className="dam"><p>價格計畫須逐筆獨立核准；研究版核准不會自動核准新的價格。</p>
   <div className="vnext-horizons dam-periods" aria-label="Owner 價格預覽期間">{(Object.keys(HORIZONS) as Horizon[]).map(h=><button key={h} aria-pressed={horizon===h} onClick={()=>{setHorizon(h);setLimit(9);}}><strong>{HORIZONS[h].label}</strong><small>{data.plans.filter(row=>row.body.horizon===h).length} 個價格候選</small></button>)}</div>
-  <div className="vnext-grid">{rows.slice(0,limit).map(row=>{const p=row.body,r=row.review,pub=row.publication,approved=pub?.action==='APPROVE'&&pub.review_id===r?.id;
+  <div className="vnext-grid">{rows.slice(0,limit).map(row=>{const p=row.body,display=dailyAiPriceDisplay(p),r=row.review,pub=row.publication,approved=pub?.action==='APPROVE'&&pub.review_id===r?.id;
    return <article className="vnext-card dam-card" key={row.plan_hash}><h4>{p.symbol} · {HORIZONS[p.horizon].label}</h4>
-    <p>研究區間 NT${money(p.entry_range[0])}～{money(p.entry_range[1])}；超過 NT${money(p.wait_above)} 先等待。</p>
-    {p.stop_kind==='PRICE'&&p.stop!==null?<p>停止參考價：NT${money(p.stop)}</p>:null}<p>停止／重評條件：{p.invalidation}</p><p>{p.basis}</p>
+    {display?<><p>研究區間 NT${display.entry_range[0]}～{display.entry_range[1]}；超過 NT${display.wait_above} 先等待。</p>
+     {display.stop!==null?<p>停止參考價：NT${display.stop}</p>:null}</>:<><p role="status">{DAILY_AI_PRICE_PRECISION_PENDING}</p>
+     <details><summary>核對候選原始數值</summary><p>以下是候選原值，不能據此認定來源精度或交易單位已核定。</p>
+      <pre>{JSON.stringify({entry_range:p.entry_range,wait_above:p.wait_above,stop:p.stop},null,2)}</pre></details></>}<p>停止／重評條件：{p.invalidation}</p><p>{p.basis}</p>
     <p>資料核對 {date(p.as_of)}；有效至 {date(p.expires_at)}（台北）。{dailyAiOwnerPriceDeadlineMs(p.expires_at)<=now?'已到期，只供私人核對。':''}</p>
     <p>獨立審查：品質 {label(r?.quality)} · 時效 {label(r?.time_status)} · 來源用途 {label(r?.source_use)} · 方法 {label(r?.methodology)}</p>
     <p>{pub?`最近紀錄：${pub.action==='APPROVE'?'已核准':'已撤回'}（${date(pub.occurred_at)}）。`:'尚無價格發布紀錄。'}{approved?'會員是否可讀仍依研究版、來源及有效期決定。':''}</p>
     <details><summary>價格方法與審查識別</summary><p>研究方法：{p.method}</p><p>計畫：<code>{row.plan_hash}</code></p><p>版本：<code>{p.edition_id}</code></p>
      <p>引用：{p.evidence_ids.join('、')}</p>{r?<><p>審查：<code>{r.id}</code>；文件：<code>{r.document_hash}</code></p><p>審查時間 {date(r.reviewed_at)}；有效至 {date(r.expires_at)}。</p></>:<p>尚未收到獨立價格審查，無法核准。</p>}</details>
+    {onInspectCalculation?<p><button type="button" aria-controls="owner-price-calculation-detail" onClick={()=>onInspectCalculation(row)}>核對公式、假設與來源</button></p>:null}
     <button disabled={busy||blocked||approved||!dailyAiOwnerPriceCanApprove(row,now)} onClick={()=>onReview(row,'APPROVE')}>核准此價格計畫</button>{' '}
     <button disabled={busy||blocked||!dailyAiOwnerPriceCanRevoke(row)} onClick={()=>onReview(row,'REVOKE')}>撤回此價格計畫</button>
    </article>;})}</div>
@@ -65,12 +70,13 @@ export function DailyAiOwnerPricePreview({data,busy=false,blocked=false,onReview
 
 export default function DailyAiOwnerPricePlans({access,editionId}:{access:AcademyAccess;editionId:string|null}){
  const [revision,setRevision]=useState(0),[result,setResult]=useState<{scope:Scope;epoch:number;data:Preview}|null>(null),[error,setError]=useState(false),[denied,setDenied]=useState(false),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[uncertain,setUncertain]=useState(false);
+ const [calculation,setCalculation]=useState<CalculationSelection|null>(null);
  const props=useRef({access,editionId});props.current={access,editionId};
  const boundary=useRef<Scope|null>(null),epoch=useRef(0),pending=useRef(false),command=useRef<Command|null>(null),rendered=useRef(result);rendered.current=result;
  const current=useCallback((scope:Scope)=>{const p=props.current,a=p.access;return boundary.current===scope&&!scope.controller.signal.aborted&&a.kind==='member'&&a.catalog.tier==='owner'
   &&!a.signal.aborted&&a.signal===scope.accessSignal&&a.id===scope.identity&&a.generation===scope.generation&&p.editionId===scope.editionId;},[]);
  useEffect(()=>{
-  setResult(null);setError(false);setDenied(false);setNotice('');setBusy(false);setUncertain(false);pending.current=false;command.current=null;
+  setResult(null);setError(false);setDenied(false);setNotice('');setBusy(false);setUncertain(false);setCalculation(null);pending.current=false;command.current=null;
   if(access.kind!=='member'||access.catalog.tier!=='owner'||access.signal.aborted||!editionId)return;
   const scope:Scope={identity:access.id,generation:access.generation,accessSignal:access.signal,editionId,controller:new AbortController()};boundary.current=scope;
   const abort=()=>{scope.controller.abort();if(boundary.current===scope){epoch.current++;command.current=null;pending.current=false;setResult(null);setBusy(false);setUncertain(false);setNotice('');}};
@@ -112,10 +118,23 @@ export default function DailyAiOwnerPricePlans({access,editionId}:{access:Academ
   if(!snapshot||!scope||!current(scope)||snapshot.scope!==scope||snapshot.epoch!==epoch.current||!snapshot.data.plans.includes(row)||pending.current||command.current||denied)return;
   try{const selected:Command={scope,args:dailyAiOwnerPriceReviewRequest(row,scope.editionId,action,crypto.randomUUID())};command.current=selected;void perform(selected);}catch{/* A stale candidate cannot send a write. */}
  };
+ const inspectCalculation=(row:DailyAiOwnerPriceRow)=>{
+  const snapshot=rendered.current,scope=boundary.current;
+  if(!snapshot||!scope||!current(scope)||snapshot.scope!==scope||snapshot.epoch!==epoch.current||!snapshot.data.plans.includes(row)||denied)return;
+  const selected:CalculationSelection={scope,epoch:snapshot.epoch,row,error:false,Component:null};setCalculation(selected);
+  // Load the private inspector only when requested. Each read is still bound
+  // to the same current Owner session, edition, row and read epoch.
+  void import('./DailyAiOwnerPriceCalculation').then(module=>{
+   if(current(scope)&&rendered.current===snapshot&&snapshot.epoch===epoch.current)setCalculation(previous=>previous===selected?{...selected,Component:module.default}:previous);
+  }).catch(()=>{if(current(scope)&&rendered.current===snapshot&&snapshot.epoch===epoch.current)setCalculation(previous=>previous===selected?{...selected,error:true}:previous);});
+ };
+ const selectedCalculation=data&&result&&calculation?.scope===result.scope&&calculation.epoch===result.epoch&&data.plans.includes(calculation.row)?calculation:null;
+ const Calculation=selectedCalculation?.Component;
  if(!owner||!editionId)return null;
  return <section className="vnext-section" aria-labelledby="owner-price-plans-heading"><h3 id="owner-price-plans-heading">本版價格計畫 · 私人預覽與核准</h3>
   <button disabled={busy} onClick={refresh}>重新讀取價格候選</button><p role="status">{notice}</p>
   {uncertain&&command.current&&current(command.current.scope)?<button disabled={busy||denied} onClick={()=>{const selected=command.current;if(selected)void perform(selected);}}>以原請求重試確認</button>:null}
-  {denied?<p role="status">目前無法確認 Owner 價格權限，私人候選已隱藏。</p>:error?<p role="status">目前無法讀取完整價格候選，無法核准。</p>:!data?<p role="status">正在讀取本版價格及四項獨立審查。</p>:<DailyAiOwnerPricePreview key={data.edition_id} data={data} busy={busy} blocked={uncertain} onReview={submit}/>}
+  {selectedCalculation?(Calculation?<Calculation access={access} row={selectedCalculation.row} onClose={()=>setCalculation(null)}/>:<p role="status">{selectedCalculation.error?'計算明細暫時無法開啟，價格與獨立審查狀態未變更。':'正在開啟這份價格的私人計算明細。'}</p>):null}
+  {denied?<p role="status">目前無法確認 Owner 價格權限，私人候選已隱藏。</p>:error?<p role="status">目前無法讀取完整價格候選，無法核准。</p>:!data?<p role="status">正在讀取本版價格及四項獨立審查。</p>:<DailyAiOwnerPricePreview key={data.edition_id} data={data} busy={busy} blocked={uncertain} onReview={submit} onInspectCalculation={inspectCalculation}/>}
  </section>;
 }

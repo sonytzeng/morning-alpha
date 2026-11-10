@@ -7,6 +7,7 @@ import * as ownerPrices from '../src/features/vnext/dailyAiOwnerPricePlans.ts';
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
 import {hashDailyAiPricePlanBody} from '../src/features/vnext/dailyAiPricePlan.ts';
 import * as contracts from '../src/features/vnext/contracts.ts';
+import * as priceDisplay from '../src/features/vnext/dailyAiPriceDisplay.ts';
 
 const NOW=Date.parse('2026-11-01T10:00:00Z'),OWNER='00000000-0000-0000-0000-000000000001',OTHER='00000000-0000-0000-0000-000000000002';
 const REVIEW='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',OLD_REVIEW='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',KEY='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
@@ -94,6 +95,7 @@ function harness({initialAccess=access(),editionId=EDITION,previewData=null}={})
   document:{addEventListener:(name,fn)=>{assert.equal(name,'visibilitychange');visibility.add(fn);},removeEventListener:(name,fn)=>{assert.equal(name,'visibilitychange');visibility.delete(fn);}},
   require(name){if(name==='react')return hooks;if(name==='react/jsx-runtime')return {jsx,jsxs:jsx};if(name==='@/lib/supabase')return {supabase:transport};if(name==='@/features/vnext/contracts')return contracts;
    if(name==='@/features/vnext/dailyAiOwnerPricePlans')return {...ownerPrices,parseDailyAiOwnerPricePlans:(value,edition,user)=>{const operation=ownerPrices.parseDailyAiOwnerPricePlans(value,edition,user,clock);parses.push(operation);return operation;},dailyAiOwnerPriceReviewRequest:(row,edition,action,key)=>ownerPrices.dailyAiOwnerPriceReviewRequest(row,edition,action,key,clock)};
+   if(name==='@/features/vnext/dailyAiPriceDisplay')return priceDisplay;
    if(name.endsWith('.css'))return {};throw Error('UNAPPROVED_OWNER_PRICE_IMPORT:'+name);}
  },{filename:file});
  function render(){let loops=0;do{assert(++loops<30);dirty=false;cursor=0;tree=currentPreview?exports.DailyAiOwnerPricePreview({data:currentPreview,onReview:()=>{}}):exports.default({access:currentAccess,editionId:currentEdition});while(queued.length)queued.shift()();}while(dirty);return tree;}

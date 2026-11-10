@@ -4,6 +4,7 @@ import {previousMarketTradingDate, coveredCalendarDate, isMarketTradingDate} fro
 import {RECOMMENDATION_UNIVERSE} from '../../../supabase/functions/_shared/recommendation-stock-evidence.ts';
 import {historyUrl, parseOfficialHistory, tpexDailyUrl, parseTpexDaily, twseDailyUrl, parseTwseDaily, companyDirectory, type Exchange} from '../../../research/entry-official-history.ts';
 import {parseRevenue, parseInstitutional, parseFinancial, parseIndex, parseEventIndex, ACTION_SOURCES, parseActionInventory} from './dailyParsers.mjs';
+import {captureActionResponse,validateActionResponseCapture,assertActionReceiptSize,type ActionResponseCapture} from './dailyActionCapture.ts';
 import type {AcquiredResearch} from './dailyIntelligence.ts';
 import type {DailyBar, ResearchFact, FunnelInput} from './researchFunnel.ts';
 import {RESEARCH_RULES,traceIssues} from './researchFunnel.ts';
@@ -55,7 +56,8 @@ export type SourceTask={key:string;kind:string;url:string;format:'json'|'text';s
  from?:string;through?:string;form?:Record<string,string>;action_index?:number;max_age_days:number;
  financial_response_contract?:'MOPS_RESPONSE_PERIOD_V1';benchmark_response_contract?:'TWSE_OPENAPI_INDEX_V1'};
 export type SourceReceipt={task:SourceTask;first_seen_at:string;available_at:string;published_at:null;as_of:string;
- version:string;raw_hash:string;payload_hash:string;payload:Record<string,unknown>;status:'OK'|'UNAVAILABLE';reason:string|null};
+ version:string;raw_hash:string;payload_hash:string;payload:Record<string,unknown>;status:'OK'|'UNAVAILABLE';reason:string|null;
+ raw_response?:ActionResponseCapture};
 const day=(at:string)=>new Date(Date.parse(at)+8*3600000).toISOString().slice(0,10);
 export function sessionsBefore(before:string,count=250){
  if(!coveredCalendarDate('TW',before)||!isMarketTradingDate('TW',before)||!Number.isInteger(count)||count<1||count>250)throw Error('CALENDAR_SCOPE');
@@ -184,8 +186,13 @@ export async function fetchSource(task:SourceTask,fetcher:typeof fetch,clock:()=
  const reader=r.body!.getReader(),parts:Uint8Array[]=[];let size=0;
  try{for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>8_000_000)throw Error('SOURCE_SIZE_LIMIT');parts.push(value);}}finally{await reader.cancel();}
  const bytes=new Uint8Array(size);let pos=0;for(const part of parts){bytes.set(part,pos);pos+=part.length;}
- const text=new TextDecoder().decode(bytes),at=clock(),payload=await normalizeSource(task,task.format==='json'?JSON.parse(text):text,at);
- return {task,first_seen_at:at,available_at:at,published_at:null,as_of:at,version:ADAPTER_VERSION,raw_hash:await snapshotHash(text),payload_hash:await snapshotHash(payload),payload,status:'OK',reason:null};
+ const capture=task.kind==='ACTION'?captureActionResponse(bytes):undefined;
+ const text=capture?.text??new TextDecoder().decode(bytes),at=clock(),payload=await normalizeSource(task,task.format==='json'?JSON.parse(text):text,at);
+ const receipt:SourceReceipt={task,first_seen_at:at,available_at:at,published_at:null,as_of:at,version:ADAPTER_VERSION,
+  raw_hash:await snapshotHash(text),payload_hash:await snapshotHash(payload),payload,status:'OK',reason:null,
+  ...(capture?{raw_response:capture}:{})};
+ if(capture){await validateActionResponseCapture(capture,receipt.raw_hash);assertActionReceiptSize(receipt);}
+ return receipt;
 }
 export async function assembleDaily(date:string,companies:Company[],receipts:SourceReceipt[],cutoff:string,market:EntryInput['market']=null):Promise<AcquiredResearch>{
  const dates=sessionsBefore(date),through=dates.at(-1)!;
@@ -194,7 +201,13 @@ export async function assembleDaily(date:string,companies:Company[],receipts:Sou
  // avoiding 230 unused bars per stock in every checkpoint and validation.
  const dailyPriceDates=new Set(dates.slice(-20));
  if(day(cutoff)!==date)throw Error('CUTOFF_DATE_MISMATCH');
- const valid=receipts.filter(r=>r.status==='OK');for(const r of valid)if(Date.parse(r.available_at)>Date.parse(cutoff)||r.payload_hash!==await snapshotHash(r.payload))throw Error('SOURCE_REVISION_INVALID');
+ const valid=receipts.filter(r=>r.status==='OK');for(const r of valid){
+  if(Date.parse(r.available_at)>Date.parse(cutoff)||r.payload_hash!==await snapshotHash(r.payload))throw Error('SOURCE_REVISION_INVALID');
+  if(r.raw_response!==undefined){
+   if(r.task.kind!=='ACTION')throw Error('ACTION_RESPONSE_SCOPE');
+   await validateActionResponseCapture(r.raw_response,r.raw_hash);assertActionReceiptSize(r);
+  }
+ }
  const sourceIssues:{kind:string;key:string;reason:string}[]=[];
  // Old immutable receipts remain preserved, but a request-derived quarter is
  // not upgraded by merely loading it through the newer adapter. Only future

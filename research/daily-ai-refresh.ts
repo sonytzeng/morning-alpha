@@ -8,12 +8,17 @@ const stopped=(signal:AbortSignal)=>{if(signal.aborted)throw Error('AI_REFRESH_A
 const taipeiDay=(at:string)=>new Date(Date.parse(at)+8*3600000).toISOString().slice(0,10);
 const digest=async(bytes:Uint8Array)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes as BufferSource)),v=>v.toString(16).padStart(2,'0')).join('');
 const day=(s:string)=>/^\d{4}-\d\d-\d\d$/.test(s)&&validObservationTime(s+'T00:00:00Z');
-async function read(response:Response){
- if(!response.ok||Number(response.headers.get('content-length'))>2000000)throw Error('AI_REFRESH_HTTP');
+// TPEx dailyQuotes includes warrants and can exceed 2 MB even for an ordinary
+// trading day. Keep a fixed per-exchange bound; other source readers stay put.
+const responseByteLimits={TWSE:2000000,TPEX:4000000} as const;
+const responseTimeoutMs={TWSE:6000,TPEX:12000} as const;
+const acquisitionBudgetMs=28000;
+async function read(response:Response,maxBytes:number){
+ if(!response.ok||Number(response.headers.get('content-length'))>maxBytes)throw Error('AI_REFRESH_HTTP');
  const reader=response.body?.getReader();if(!reader)throw Error('AI_REFRESH_BODY');
  const parts:Uint8Array[]=[];let size=0;
  try{for(;;){const p=await reader.read();if(p.done)break;size+=p.value.byteLength;
-  if(size>2000000)throw Error('AI_REFRESH_SIZE');parts.push(p.value);
+  if(size>maxBytes)throw Error('AI_REFRESH_SIZE');parts.push(p.value);
  }}finally{try{await reader.cancel();}catch{/* Transport may already be aborted. */}reader.releaseLock();}
  const bytes=new Uint8Array(size);let offset=0;for(const p of parts){bytes.set(p,offset);offset+=p.byteLength;}
  return bytes;
@@ -46,20 +51,28 @@ export async function refreshDailyAiPrices(input:{inputs:FunnelInput[];businessD
  if(!through||!day(previous)||previous>through)throw Error('AI_REFRESH_DATA_DATE');
  const expected=sessionsThrough(through,20),recent=sessionsThrough(through,5);
  const additionalGaps=['FINANCIAL_DATA_RETAINED_NOT_REFRESHED','INSTITUTIONAL_DATA_RETAINED_NOT_REFRESHED'];
- if(previous<recent[0]&&previous!==previousMarketTradingDate('TW',recent[0]))additionalGaps.push('PRICE_REFRESH_BACKLOG_OLDER_SESSIONS_NOT_FETCHED');
  const stocks=structuredClone(input.inputs),gapsBySymbol:Record<string,string[]>={},markets=new Map(stocks.map(s=>[s.symbol,exchange(s)]));
  for(const s of stocks){gapsBySymbol[s.symbol]=[];if(markets.get(s.symbol)===null)gapsBySymbol[s.symbol].push('PRICE_EXCHANGE_CLASSIFICATION_UNCONFIRMED');}
  // A partial refresh advances the edition's common target date, while some
  // stocks can still lack that day's observation. Retry those holes on the next
  // intake instead of treating the target date as proof that all bars exist.
- const tasks=recent.flatMap(date=>(['TWSE','TPEX'] as const).filter(market=>stocks.some(s=>markets.get(s.symbol)===market
+ // Prioritize current sessions, then repair older holes still required by the
+ // unchanged twenty-session model. Never exceed the previous ten-call bound.
+ const required=expected.flatMap(date=>(['TWSE','TPEX'] as const).filter(market=>stocks.some(s=>markets.get(s.symbol)===market
   &&(date>previous||!s.bars.some(b=>b.date===date)))).map(market=>({date,market})));
+ const ordered=required.sort((a,b)=>Number(b.date>=recent[0])-Number(a.date>=recent[0])
+  ||(a.date>=recent[0]?a.date.localeCompare(b.date):b.date.localeCompare(a.date))||a.market.localeCompare(b.market));
+ const tasks=ordered.slice(0,10);
+ if(ordered.length>tasks.length)additionalGaps.push('PRICE_REFRESH_BACKLOG_OLDER_SESSIONS_NOT_FETCHED');
+ const deadline=performance.now()+acquisitionBudgetMs;
  const receipts:Receipt[]=new Array(tasks.length);let cursor=0;
  const worker=async()=>{for(;;){const index=cursor++;if(index>=tasks.length)return;stopped(input.signal);
   const {date,market}=tasks[index],source=market==='TWSE'?twseDailyUrl(date):tpexDailyUrl(date),selected=stocks.filter(s=>markets.get(s.symbol)===market);
   try{
-   const response=await input.fetcher(source,{method:'GET',redirect:'error',signal:AbortSignal.any([input.signal,AbortSignal.timeout(6000)])});
-   const bytes=await read(response);stopped(input.signal);const received_at=input.clock();
+   const remaining=Math.floor(deadline-performance.now());
+   if(remaining<=0)throw Error('AI_REFRESH_BUDGET');
+   const response=await input.fetcher(source,{method:'GET',redirect:'error',signal:AbortSignal.any([input.signal,AbortSignal.timeout(Math.min(responseTimeoutMs[market],remaining))])});
+   const bytes=await read(response,responseByteLimits[market]);stopped(input.signal);const received_at=input.clock();
    if(!validObservationTime(received_at)||Date.parse(received_at)<Date.parse(began))throw Error('AI_REFRESH_CLOCK');
    const hash=await digest(bytes),payload=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
    const parsed=(market==='TWSE'?parseTwseDaily:parseTpexDaily)(payload,date,selected.map(s=>s.symbol),received_at);

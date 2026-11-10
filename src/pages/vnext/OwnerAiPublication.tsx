@@ -3,6 +3,8 @@ import {supabase} from '@/lib/supabase';
 import type {AcademyAccess} from '@/pages/academy/useAcademyAccess';
 import {HORIZONS,type Horizon} from '@/features/vnext/contracts';
 import {DAILY_AI_MEMBER_STATES,dailyAiAnalysisOrigin} from '@/features/vnext/dailyAiMember';
+import type {DailyAiMemberCard} from '@/features/vnext/dailyAiMember';
+import type {OwnerLongPreparationScope} from '@/features/vnext/dailyAiOwnerLongPreparation';
 import {dailyAiGapLabel} from '@/features/vnext/dailyAiCopy';
 import {dailyAiOwnerCanApprove,dailyAiOwnerCanRevoke,dailyAiOwnerReviewRequest,parseDailyAiOwner,parseDailyAiOwnerReviewResult,type DailyAiOwnerAction,type DailyAiOwnerAudience,type DailyAiOwnerResearch} from '@/features/vnext/dailyAiOwner';
 import DailyAiOwnerPricePlans from './DailyAiOwnerPricePlans';
@@ -11,7 +13,7 @@ import './daily-ai-member.css';
 const date=(value:string)=>new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value));
 const status=(value:string|undefined)=>value==='PASS'?'通過':value==='FAIL'?'未通過':'待完成';
 
-export function OwnerAiEditionReview({data,busy=false,onReview}:{data:DailyAiOwnerResearch;busy?:boolean;onReview:(action:DailyAiOwnerAction,audience:DailyAiOwnerAudience)=>void}){
+export function OwnerAiEditionReview({data,busy=false,onReview,onInspectLongPreparation}:{data:DailyAiOwnerResearch;busy?:boolean;onReview:(action:DailyAiOwnerAction,audience:DailyAiOwnerAudience)=>void;onInspectLongPreparation?:(card:DailyAiMemberCard)=>void}){
  const [horizon,setHorizon]=useState<Horizon>('SHORT'),[query,setQuery]=useState(''),[limit,setLimit]=useState(9),[audience,setAudience]=useState<DailyAiOwnerAudience>('premium'),[now,setNow]=useState(Date.now);
  useEffect(()=>{const update=()=>setNow(Date.now()),timer=setInterval(update,15000);document.addEventListener('visibilitychange',update);return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',update);};},[]);
  const e=data.edition,r=data.review,publication=data.publication;
@@ -42,27 +44,40 @@ export function OwnerAiEditionReview({data,busy=false,onReview}:{data:DailyAiOwn
   <div className="vnext-horizons dam-periods" aria-label="Owner 預覽研究期間">{(Object.keys(HORIZONS) as Horizon[]).map(h=><button key={h} aria-pressed={horizon===h} onClick={()=>{setHorizon(h);setQuery('');setLimit(9);}}><strong>{HORIZONS[h].label}</strong><span>{HORIZONS[h].duration}</span><small>{data.cards.filter(c=>c.horizon===h).length} 檔</small></button>)}</div>
   <h4>目前預覽：{HORIZONS[horizon].label}</h4><label className="dam-search">搜尋本期間股票<input value={query} placeholder="公司或代號" onChange={event=>{setQuery(event.target.value);setLimit(9);}}/></label>
   <p role="status">符合條件 {rows.length} 檔；每張卡片只顯示所選期間的分析。</p>
-  <div className="vnext-grid">{rows.slice(0,limit).map(c=><article className="vnext-card dam-card" key={c.symbol}><div className="dam-card-top"><span className="dam-period-badge">{HORIZONS[c.horizon].label}</span><span className={`dam-status dam-status-${c.status.toLowerCase()}`}>{DAILY_AI_MEMBER_STATES[c.status]}</span></div><h4>{c.company} {c.symbol}</h4><h5>{offlineReviewed?'離線審核分析與理由':'AI 判斷與理由'}</h5><p>{c.reason.text}</p><h5>接下來確認</h5><p>{c.confirmation}</p><h5>取消或重評條件</h5><p>{c.invalidation}</p><h5>反面證據</h5>{c.counter_evidence?.length?<ul>{c.counter_evidence.map((claim,i)=><li key={i}>{claim.text}</li>)}</ul>:<p>本版未列出具名反面證據。</p>}{c.gaps.length>0&&<><h5>資料缺口</h5><ul>{c.gaps.map((gap,i)=><li key={i}>{dailyAiGapLabel(gap)}</li>)}</ul></>}<details><summary>核對來源與時間（{c.sources?.length??0}）</summary><ul>{c.sources?.map(s=><li key={s.id}><a href={s.source} target="_blank" rel="noopener noreferrer">{s.id} · {new URL(s.source).hostname}</a><p>{s.published_at?`原發布 ${date(s.published_at)}`:'原發布時間未確認，僅依實際收到後的資料研究。'}；可用時間 {date(s.available_at)}。</p></li>)}</ul></details></article>)}</div>
+  <div className="vnext-grid">{rows.slice(0,limit).map(c=><article className="vnext-card dam-card" key={c.symbol}><div className="dam-card-top"><span className="dam-period-badge">{HORIZONS[c.horizon].label}</span><span className={`dam-status dam-status-${c.status.toLowerCase()}`}>{DAILY_AI_MEMBER_STATES[c.status]}</span></div><h4>{c.company} {c.symbol}</h4><h5>{offlineReviewed?'離線審核分析與理由':'AI 判斷與理由'}</h5><p>{c.reason.text}</p><h5>接下來確認</h5><p>{c.confirmation}</p><h5>取消或重評條件</h5><p>{c.invalidation}</p><h5>反面證據</h5>{c.counter_evidence?.length?<ul>{c.counter_evidence.map((claim,i)=><li key={i}>{claim.text}</li>)}</ul>:<p>本版未列出具名反面證據。</p>}{c.gaps.length>0&&<><h5>資料缺口</h5><ul>{c.gaps.map((gap,i)=><li key={i}>{dailyAiGapLabel(gap)}</li>)}</ul></>}{c.horizon==='LONG'&&c.status==='INSUFFICIENT'&&onInspectLongPreparation&&<p><button type="button" onClick={()=>onInspectLongPreparation(c)}>長期估值準備</button></p>}<details><summary>核對來源與時間（{c.sources?.length??0}）</summary><ul>{c.sources?.map(s=><li key={s.id}><a href={s.source} target="_blank" rel="noopener noreferrer">{s.id} · {new URL(s.source).hostname}</a><p>{s.published_at?`原發布 ${date(s.published_at)}`:'原發布時間未確認，僅依實際收到後的資料研究。'}；可用時間 {date(s.available_at)}。</p></li>)}</ul></details></article>)}</div>
   {rows.length>limit&&<button onClick={()=>setLimit(value=>value+9)}>再看 9 檔</button>}
  </div>;
 }
 
 type Scope={identity:string;generation:number;accessSignal:AbortSignal;controller:AbortController};
+type LongSelection={scope:Scope;data:DailyAiOwnerResearch;request:OwnerLongPreparationScope;error:boolean;Component:(typeof import('./DailyAiOwnerLongPreparation'))['default']|null};
 export default function OwnerAiPublication({access}:{access:AcademyAccess}){
  const [revision,setRevision]=useState(0),[result,setResult]=useState<{identity:string;generation:number;data:DailyAiOwnerResearch}|null>(null),[error,setError]=useState(false),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
+ const [longSelection,setLongSelection]=useState<LongSelection|null>(null),currentData=useRef<DailyAiOwnerResearch|null>(null);
  const currentAccess=useRef(access),scope=useRef<Scope|null>(null),pending=useRef(false);currentAccess.current=access;
  const current=useCallback((candidate:Scope)=>{const a=currentAccess.current;return scope.current===candidate&&!candidate.controller.signal.aborted&&a.kind==='member'&&a.catalog.tier==='owner'&&!a.signal.aborted&&a.signal===candidate.accessSignal&&a.id===candidate.identity&&a.generation===candidate.generation;},[]);
  useEffect(()=>{setNotice('');},[access]);
  useEffect(()=>{
-  setResult(null);setError(false);setBusy(false);pending.current=false;
+  setResult(null);setError(false);setBusy(false);setLongSelection(null);pending.current=false;
   if(access.kind!=='member'||access.catalog.tier!=='owner'||access.signal.aborted)return;
   const candidate:Scope={identity:access.id,generation:access.generation,accessSignal:access.signal,controller:new AbortController()};scope.current=candidate;
-  const abort=()=>{candidate.controller.abort();if(scope.current===candidate){setResult(null);setBusy(false);setNotice('');}};access.signal.addEventListener('abort',abort,{once:true});
+  const abort=()=>{candidate.controller.abort();if(scope.current===candidate){setResult(null);setBusy(false);setNotice('');setLongSelection(null);}};access.signal.addEventListener('abort',abort,{once:true});
   void(async()=>{try{const response=await supabase.rpc('get_daily_ai_owner_research_v1').abortSignal(candidate.controller.signal);if(!current(candidate))return;if(response.error)throw Error('AI_OWNER_READ');const data=parseDailyAiOwner(response.data);if(current(candidate))setResult({identity:candidate.identity,generation:candidate.generation,data});}catch{if(current(candidate))setError(true);}})();
   return()=>{access.signal.removeEventListener('abort',abort);candidate.controller.abort();if(scope.current===candidate)scope.current=null;};
  },[access,revision,current]);
  const owner=access.kind==='member'&&access.catalog.tier==='owner'&&!access.signal.aborted;
  const data=owner&&access.kind==='member'&&result?.identity===access.id&&result.generation===access.generation?result.data:null;
+ currentData.current=data;
+ const inspectLongPreparation=async(card:DailyAiMemberCard)=>{
+  const candidate=scope.current,owned=data;
+  if(!candidate||!current(candidate)||!owned?.edition||currentData.current!==owned||!owned.cards.includes(card)||card.horizon!=='LONG'||card.status!=='INSUFFICIENT')return;
+  const selection:LongSelection={scope:candidate,data:owned,request:{edition:owned.edition,card},error:false,Component:null};setLongSelection(selection);
+  try{const module=await import('./DailyAiOwnerLongPreparation');
+   if(current(candidate)&&currentData.current===owned)setLongSelection(previous=>previous===selection?{...selection,Component:module.default}:previous);
+  }catch{if(current(candidate)&&currentData.current===owned)setLongSelection(previous=>previous===selection?{...selection,error:true}:previous);}
+ };
+ const activeSelection=longSelection&&longSelection.scope===scope.current&&current(longSelection.scope)&&longSelection.data===data?longSelection:null;
+ const LongPreparation=activeSelection?.Component??null;
  const submit=async(action:DailyAiOwnerAction,audience:DailyAiOwnerAudience)=>{
   const candidate=scope.current;if(!data||!candidate||!current(candidate)||pending.current)return;
   let args:ReturnType<typeof dailyAiOwnerReviewRequest>;try{args=dailyAiOwnerReviewRequest(data,action,audience,crypto.randomUUID());}catch{return;}
@@ -72,5 +87,5 @@ export default function OwnerAiPublication({access}:{access:AcademyAccess}){
   finally{if(current(candidate)){pending.current=false;setBusy(false);setRevision(value=>value+1);}}
  };
  if(!owner)return null;
- return <section className="vnext-section" aria-labelledby="owner-daily-ai-heading"><h2 id="owner-daily-ai-heading">{dailyAiAnalysisOrigin(data?.edition)==='OFFLINE_REVIEWED'?'離線審核分析':'每日 AI 股票研究'} · 會員發布</h2><button disabled={busy} onClick={()=>{setNotice('');setRevision(value=>value+1);}}>{dailyAiAnalysisOrigin(data?.edition)==='OFFLINE_REVIEWED'?'重新讀取離線分析審查':'重新讀取每日 AI 審查'}</button><p role="status">{data?notice:''}</p>{error?<p role="status">目前無法取得完整版本或審查結果，無法核准。</p>:!data?<p role="status">正在讀取完整研究與實際發布條件。</p>:<><OwnerAiEditionReview key={data.edition?.id??'empty'} data={data} busy={busy} onReview={submit}/><DailyAiOwnerPricePlans access={access} editionId={data.edition?.id??null}/></>}</section>;
+ return <section className="vnext-section" aria-labelledby="owner-daily-ai-heading"><h2 id="owner-daily-ai-heading">{dailyAiAnalysisOrigin(data?.edition)==='OFFLINE_REVIEWED'?'離線審核分析':'每日 AI 股票研究'} · 會員發布</h2><button disabled={busy} onClick={()=>{setNotice('');setRevision(value=>value+1);}}>{dailyAiAnalysisOrigin(data?.edition)==='OFFLINE_REVIEWED'?'重新讀取離線分析審查':'重新讀取每日 AI 審查'}</button><p role="status">{data?notice:''}</p>{error?<p role="status">目前無法取得完整版本或審查結果，無法核准。</p>:!data?<p role="status">正在讀取完整研究與實際發布條件。</p>:<>{activeSelection&&(LongPreparation?<LongPreparation access={access} scope={activeSelection.request} onClose={()=>setLongSelection(null)}/>:<p role="status">{activeSelection.error?'長期估值準備元件暫時無法載入；選股與發布狀態未變更。':'正在開啟長期估值準備。'}</p>)}<OwnerAiEditionReview key={data.edition?.id??'empty'} data={data} busy={busy} onReview={submit} onInspectLongPreparation={inspectLongPreparation}/><DailyAiOwnerPricePlans access={access} editionId={data.edition?.id??null}/></>}</section>;
 }

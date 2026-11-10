@@ -1,5 +1,5 @@
 import {canonical} from './entry-opportunity.ts';
-import {validObservationTime} from '../src/features/vnext/contracts.ts';
+import {compareTime,hashValid,validObservationTime} from '../src/features/vnext/contracts.ts';
 import type {FunnelInput,ResearchFact} from '../src/features/vnext/researchFunnel.ts';
 
 export const DAILY_AI_FINANCIAL_URLS={
@@ -113,6 +113,26 @@ function optionalValuationNumber(raw:unknown){
  if(typeof raw==='string'&&['','-','--','N/A'].includes(raw.trim()))return null;
  const value=num(raw);if(value===null)throw Error('AI_FINANCIAL_REFRESH_VALUATION_NUMBER');return value;
 }
+/** A transport capture is not a new financial observation when its complete
+ * canonical company row and mapped financial body are unchanged. Keep the
+ * original observation bytes; the new response remains in proof.responses.
+ * The whole response hash/length may change because another company changed.
+ * No raw-row field (including export date, unit or version) is ignored. */
+async function sameFinancialObservation(fact:ResearchFact,body:Record<string,unknown>,receivedAt:string):Promise<boolean>{
+ const {id,evidence_hash,...previous}=fact as ResearchFact&Record<string,unknown>;
+ const observed=previous.source_received_at;
+ if(typeof observed!=='string'||!validObservationTime(observed)||compareTime(observed,receivedAt)>0
+  ||previous.first_seen_at!==observed||previous.available_at!==observed||previous.as_of!==observed
+  ||typeof previous.source_sha256!=='string'||!hashValid(previous.source_sha256)||typeof previous.source_bytes!=='number'
+  ||!Number.isSafeInteger(previous.source_bytes)||previous.source_bytes<2
+  ||!hashValid(evidence_hash)||evidence_hash!==await digest(canonical(previous))
+  ||id!==`official-open-api:${body.symbol}:${body.kind}:${body.period}:${evidence_hash}`)return false;
+ // Compare every semantic and provenance field against the current mapper,
+ // substituting only the already-verified original transport receipt fields.
+ const expected={...body,first_seen_at:observed,available_at:observed,as_of:observed,
+  source_received_at:observed,source_sha256:previous.source_sha256,source_bytes:previous.source_bytes};
+ return canonical(previous)===canonical(expected);
+}
 const commonGaps=['PUBLICATION_TIME_UNKNOWN_NEW_FINANCIALS_ARE_RECEIPT_TIME_OBSERVATIONS','EPS_REPORTED_QUARTER_LABEL_SINGLE_VS_YTD_NOT_PROVEN_NO_TTM_OR_DIFFERENCING',
  'FOUR_CONSECUTIVE_SINGLE_QUARTER_EPS_SERIES_NOT_ESTABLISHED_BY_NEW_OPEN_DATA','CAPEX_DEMAND_MOAT_VALUATION_REQUIRE_SEPARATE_EVIDENCE'];
 /** Exact as-reported re-observation of five official open datasets. The source
@@ -138,8 +158,9 @@ export async function refreshDailyAiFinancials(input:{inputs:FunnelInput[];busin
    source_locator:isValuation?{company_code:stock.symbol,quote_date_as_reported:row.Date,financial_year_quarter_as_reported:row.FiscalYearQuarter??null,dividend_year_as_reported:row.DividendYear??null,row_sha256:rowHash}:
     {company_code:stock.symbol,reported_year_roc:field(row,'年度','Year'),reported_quarter:row['季別'],source_export_date_not_publication:field(row,'出表日期','Date'),row_sha256:rowHash},
    data_quality_status:isValuation?'OFFICIAL_OPEN_API_OBSERVED_AFTER_RECEIPT_PUBLICATION_UNKNOWN_AS_REPORTED_VALUATION':'OFFICIAL_OPEN_API_OBSERVED_AFTER_RECEIPT_PUBLICATION_UNKNOWN_AS_REPORTED_PERIOD_BASIS_NOT_INFERRED',actual_only:true,historical_knowledge:false,source_admitted:false,member_publication_approved:false};
-  const body_text=canonical(body),hash=await digest(body_text),id=`official-open-api:${stock.symbol}:${kind}:${label.period}:${hash}`;
   const old=stock.facts.filter(f=>f.kind===kind&&f.period===label.period&&f.source===receipt.source&&f.id.startsWith('official-open-api:'));
+  if(old.length===1&&await sameFinancialObservation(old[0],body,receipt.received_at!))return;
+  const body_text=canonical(body),hash=await digest(body_text),id=`official-open-api:${stock.symbol}:${kind}:${label.period}:${hash}`;
   stock.facts=stock.facts.filter(f=>!old.includes(f));
   for(const f of old)removed.push({symbol:stock.symbol,id:f.id,source:f.source,kind:f.kind,period:f.period,evidence_hash:f.evidence_hash,
    reason:'OFFICIAL_API_SAME_REPORTED_PERIOD_SUPERSEDED_BY_NEW_RECEIPT'});

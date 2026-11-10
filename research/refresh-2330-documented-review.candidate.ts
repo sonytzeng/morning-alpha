@@ -4,6 +4,7 @@
 import {snapshotHash,validObservationTime} from '../src/features/vnext/contracts.ts';
 import {evaluateResearch,traceIssues,type FunnelInput,type ResearchFact} from '../src/features/vnext/researchFunnel.ts';
 import {parseSecQuarterFinancials,type SecQuarterDocument} from './sec-quarter-financials.ts';
+import {coveredCalendarDate,isMarketTradingDate,previousMarketTradingDate} from '../supabase/functions/_shared/market-session-contract.mjs';
 
 export type ReviewPrimaryDocument=SecQuarterDocument|{period:'2025-FY';kind:'annual';url:string;bytes:number;sha256:string;received_at:string;body:string};
 type PriorReview={facts:ResearchFact[];facts_sha256:string;source_seal_sha256:string;review_valid_until:string};
@@ -25,7 +26,19 @@ export async function refresh2330DocumentedReview(args:{input:FunnelInput;docume
  if(input.symbol!=='2330'||!validObservationTime(created_at)||!validObservationTime(review_valid_until)
   ||Date.parse(created_at)>=Date.parse(review_valid_until))fail('TIME_SCOPE');
  const today=new Date(Date.parse(created_at)+8*3600000).toISOString().slice(0,10);
- if(input.next_session!==today||input.through>=today||review_valid_until!==today+'T13:30:00+08:00')fail('SESSION_SCOPE');
+ // A newly reviewed weekend snapshot is bound to the next actual session,
+ // not to a fictional Sunday trading day. Never extend the prior review.
+ if(!coveredCalendarDate('TW',today)||!coveredCalendarDate('TW',input.through))fail('SESSION_SCOPE');
+ const latest=isMarketTradingDate('TW',today)&&Date.parse(created_at)>=Date.parse(today+'T17:05:00+08:00')
+  ?today:previousMarketTradingDate('TW',today);
+ if(input.through!==latest)fail('SESSION_SCOPE');
+ let next=input.through;
+ for(let i=0;i<30;i++){
+  next=new Date(Date.parse(next+'T00:00:00Z')+86400000).toISOString().slice(0,10);
+  if(!coveredCalendarDate('TW',next))fail('SESSION_SCOPE');
+  if(isMarketTradingDate('TW',next))break;
+ }
+ if(!isMarketTradingDate('TW',next)||input.next_session!==next||review_valid_until!==next+'T13:30:00+08:00')fail('SESSION_SCOPE');
  if(prior.source_seal_sha256!==priorSeal||prior.facts_sha256!==priorFacts||prior.facts.length!==3
   ||await snapshotHash(prior.facts.slice().sort((x,y)=>x.id.localeCompare(y.id)))!==priorFacts
   ||prior.facts.some(f=>f.values.policy_id!==policy))fail('PRIOR_POLICY_SEAL');
@@ -33,7 +46,8 @@ export async function refresh2330DocumentedReview(args:{input:FunnelInput;docume
  if(bars.length!==1||bars[0].close<=0||!Number.isFinite(bars[0].close)||traceIssues(bars[0],created_at).length)fail('QUOTE_SCOPE');
  if(documents.length!==9||new Set(documents.map(d=>d.period+':'+d.kind)).size!==9)fail('DOCUMENT_SCOPE');
  for(const d of documents)if(!validObservationTime(d.received_at)||Date.parse(d.received_at)>Date.parse(created_at)
-  ||Date.parse(d.received_at)<=Date.parse(prior.review_valid_until))fail('FRESH_RECEIPT_REQUIRED');
+  ||Date.parse(d.received_at)<=Date.parse(prior.review_valid_until)
+  ||new Date(Date.parse(d.received_at)+8*3600000).toISOString().slice(0,10)!==today)fail('FRESH_RECEIPT_REQUIRED');
  const financials=[];
  const operating=[];
  for(const period of periods){
@@ -73,16 +87,18 @@ export async function refresh2330DocumentedReview(args:{input:FunnelInput;docume
   financial_basis:'TIFRS_CONSOLIDATED_SINGLE_QUARTER_NOT_NORMALIZED',annual_basis:'IFRS_AS_ISSUED_BY_IASB_CONTEXT_ONLY_NOT_MIXED_WITH_QUARTERLY_EPS',
   source_admitted:false,member_publication_approved:false,methodology_promoted:false};
  const reviewHash=await snapshotHash(review),facts=[];
+ const latestOperating=operating.at(-1)!;
+ const margins=financials.filter(f=>f.kind==='MARGIN'),latestMargin=Number(margins.at(-1)!.values.value),previousMargin=Number(margins.at(-2)!.values.value);
  for(const kind of ['DEMAND','MOAT','VALUATION']){
   const primary=kind==='MOAT'?annual:documents.find(d=>d.period==='2026-Q3'&&d.kind===(kind==='DEMAND'?'release':'presentation'))!;
   const values:ResearchFact['values']={verdict:kind==='VALUATION'?'NOT_SUPPORTED':'SUPPORTED',policy_id:policy,review_hash:reviewHash,
    classification:'CONDITIONAL_OWN_ANALYSIS_NOT_ISSUER_OR_REGULATOR_VERDICT',publication_status:'NOT_APPROVED',review_price_session:input.through,review_price_close_twd:price,
    historical_reference_only:'TRUE',actual_fcfe_verified:'FALSE',earnings_normalization:'REPORTED_NOT_NORMALIZED',
-   analysis_zh:kind==='DEMAND'?'四季已實現營收年增皆正，最新季先進製程占晶圓營收79%，支持有限範圍的需求研究假設。公司下季展望不能視為實現訂單。':kind==='MOAT'?
+   analysis_zh:kind==='DEMAND'?`四季已實現營收年增皆正，最新季先進製程占晶圓營收${latestOperating.leading_edge_wafer_revenue_percent}%，支持有限範圍的需求研究假設。公司下季展望不能視為實現訂單。`:kind==='MOAT'?
     '原件所列研發投入、製造規模與先進節點實際收入支持可觀察的技術及規模優勢；不表示永久壟斷或可保證超額報酬。':
     `保留${input.through}收盤${price}元高於三個固定情境各自的25%折讓門檻，這個條件式方法採等待。情境與要求報酬均為分析假設。`,
    counter_evidence_zh:kind==='DEMAND'?'僅四季已實現表現，沒有多年綁約訂單；匯率與產品組合影響營收。':kind==='MOAT'?
-    '最新季毛利率66.4%低於前季67.7%；競爭、海外廠成本與技術轉換仍可能侵蝕經濟利益。':
+    `最新季毛利率${latestMargin}%，前季${previousMargin}%；競爭、海外廠成本與技術轉換仍可能侵蝕經濟利益。`:
     '樂觀模型值高於保留價格，但25%折讓門檻未成立；要求報酬改變可翻轉判斷，未正常化EPS與高終值占比仍是限制。',
    confirmation_zh:'下一季財務、需求與投入資本後現金流仍支持，並以當時新價格重評。',
    invalidation_zh:'報價日期、價格、季度財務或有效期改變即停止沿用本三筆，必須重新審查。'};

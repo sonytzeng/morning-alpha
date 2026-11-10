@@ -1,0 +1,104 @@
+{
+  "calendar": {
+    "TW": {
+      "from": "2025-01-01",
+      "closed": [
+        "2025-01-01",
+        "2025-01-23",
+        "2025-01-24",
+        "2025-01-27",
+        "2025-01-28",
+        "2025-01-29",
+        "2025-01-30",
+        "2025-01-31",
+        "2025-02-28",
+        "2025-04-03",
+        "2025-04-04",
+        "2025-05-01",
+        "2025-05-30",
+        "2025-05-31",
+        "2025-09-28",
+        "2025-09-29",
+        "2025-10-06",
+        "2025-10-10",
+        "2025-10-24",
+        "2025-10-25",
+        "2025-12-25",
+        "2026-01-01",
+        "2026-02-12",
+        "2026-02-13",
+        "2026-02-15",
+        "2026-02-16",
+        "2026-02-17",
+        "2026-02-18",
+        "2026-02-19",
+        "2026-02-20",
+        "2026-02-27",
+        "2026-02-28",
+        "2026-04-03",
+        "2026-04-04",
+        "2026-04-05",
+        "2026-04-06",
+        "2026-05-01",
+        "2026-06-19",
+        "2026-09-25",
+        "2026-09-28",
+        "2026-10-09",
+        "2026-10-10",
+        "2026-10-25",
+        "2026-10-26",
+        "2026-12-25"
+      ],
+      "through": "2026-12-31",
+      "preserved_exceptional_closures": [
+        "2026-07-10",
+        "2026-10-23"
+      ]
+    },
+    "US": {
+      "from": "2025-12-01",
+      "closed": [
+        "2025-12-25",
+        "2026-01-01",
+        "2026-01-19",
+        "2026-02-16",
+        "2026-04-03",
+        "2026-05-25",
+        "2026-06-19",
+        "2026-07-03",
+        "2026-09-07",
+        "2026-11-26",
+        "2026-12-25"
+      ],
+      "through": "2026-12-31",
+      "early_close": [
+        "2025-12-24",
+        "2026-11-27",
+        "2026-12-24"
+      ]
+    },
+    "sources": {
+      "TW2025": "https://www.twse.com.tw/holidaySchedule/holidaySchedule?response=json&date=20250101",
+      "TW2026": "https://www.twse.com.tw/holidaySchedule/holidaySchedule?response=html",
+      "US2026": "https://www.nasdaq.com/market-activity/stock-market-holiday-schedule",
+      "US2025December": "https://www.nasdaqtrader.com/TraderNews.aspx?id=ETA2025-99"
+    },
+    "version": "OFFICIAL_MARKET_CALENDAR_20261023_EXCEPTION_V1",
+    "global8_source_symbols": {
+      "DXY": "UUP",
+      "SOX": "SOXX",
+      "SPX": "SPY",
+      "TSM": "TSM",
+      "VIX": "VXX",
+      "IXIC": "QQQ",
+      "NVDA": "NVDA",
+      "US10Y": "IEF"
+    }
+  },
+  "ticker_acl": [
+    "postgres=X/postgres",
+    "service_role=X/postgres"
+  ],
+  "ticker_body": "\ndeclare local_time timestamp:=clock_timestamp() at time zone 'Asia/Taipei';minute_of_day integer;\nbegin\n minute_of_day:=extract(hour from local_time)::integer*60+extract(minute from local_time)::integer;\n if minute_of_day<410 or minute_of_day>540 then return jsonb_build_object('state','OUTSIDE_WINDOW','member_published',false);end if;\n begin perform vnext_private.resume_zero_paid_stock_draft_v1();exception when others then null;end;\n return public.enqueue_daily_stock_ai_intake_v1();\nend ",
+  "calendar_definition": "CREATE OR REPLACE FUNCTION public.market_calendar_session_v1(p_market text, p_date date)\n RETURNS boolean\n LANGUAGE sql\n IMMUTABLE\n SET search_path TO ''\nAS $function$\n  select coalesce(p_date between (c->>'from')::date and (c->>'through')::date\n    and extract(isodow from p_date) between 1 and 5\n    and not (c->'closed' ? p_date::text)\n    and not (coalesce(c->'preserved_exceptional_closures','[]'::jsonb) ? p_date::text), false)\n  from (select public.authoritative_market_calendar_v1()->p_market as c) calendar;\n$function$\n"
+}

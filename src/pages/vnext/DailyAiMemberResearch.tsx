@@ -3,6 +3,7 @@ import {HORIZONS,compareTime,type Horizon} from '@/features/vnext/contracts';
 import {DAILY_AI_MEMBER_STATES,dailyAiAnalysisOrigin,type DailyAiMemberCard,type DailyAiMemberSource,type DailyAiMemberResearch as Research,type DailyAiMemberState} from '@/features/vnext/dailyAiMember';
 import {dailyAiAnalysisText,dailyAiGapLabel} from '@/features/vnext/dailyAiCopy';
 import {dailyAiPricePlanForCard,type DailyAiMemberPricePlans,type DailyAiPricePlan} from '@/features/vnext/dailyAiPricePlan';
+import {dailyAiPriceDisplay,DAILY_AI_PRICE_PRECISION_PENDING} from '@/features/vnext/dailyAiPriceDisplay';
 import './daily-ai-member.css';
 import './daily-ai-comparison.css';
 
@@ -11,20 +12,20 @@ const states=Object.keys(DAILY_AI_MEMBER_STATES) as DailyAiMemberState[];
 export type DailyAiMemberViewState={filter:DailyAiMemberState|'ALL';query:string;limit:number};
 const order:Record<DailyAiMemberState,number>={WATCH:0,WAIT:1,AVOID:2,INSUFFICIENT:3};
 const date=(value:string)=>new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value));
-const money=(value:number)=>new Intl.NumberFormat('zh-TW',{maximumFractionDigits:2}).format(value);
 // PostgreSQL may retain microseconds; a browser timer must use the first
 // representable millisecond at or after that exact deadline.
 const sourceKinds={NEWS:'新聞／公告',MARKET:'市場資料',FINANCIAL:'財務資料',PRICE:'價格資料'};
 const priceDeadlineMs=(value:string)=>{const ms=Date.parse(value);return Number.isFinite(ms)&&compareTime(value,new Date(ms).toISOString())>0?ms+1:ms;};
 function PricePlan({plan,status,sources}:{plan:DailyAiPricePlan;status:DailyAiMemberState;sources:readonly DailyAiMemberSource[]}){
+ const display=dailyAiPriceDisplay(plan);
  return <section className="dam-price-plan" aria-label="條件式價格研究"><h4>條件式價格研究</h4>
   <p>{status==='WAIT'?'目前仍在等待確認；價格進入區間後，仍需核對上方確認條件。':'研究區間用來追蹤條件，仍需核對事件與風險。'}</p>
-  <dl><div><dt>研究區間</dt><dd>NT${money(plan.entry_range[0])}～{money(plan.entry_range[1])}</dd></div>
-   <div><dt>超過先等</dt><dd>NT${money(plan.wait_above)} 以上先等待重評</dd></div>
-   {plan.stop_kind==='PRICE'&&plan.stop!==null?<div><dt>停止參考價</dt><dd>NT${money(plan.stop)}</dd></div>:null}
-  </dl>
+  {display?<dl><div><dt>研究區間</dt><dd>NT${display.entry_range[0]}～{display.entry_range[1]}</dd></div>
+   <div><dt>超過先等</dt><dd>NT${display.wait_above} 以上先等待重評</dd></div>
+   {display.stop!==null?<div><dt>停止參考價</dt><dd>NT${display.stop}</dd></div>:null}
+  </dl>:<p role="status">{DAILY_AI_PRICE_PRECISION_PENDING}</p>}
   <p className="dam-price-invalidation"><strong>停止／重評條件：</strong>{plan.invalidation}</p>
-  <p className="dam-summary-note">條件式研究；關注與等待狀態均不代表買進指令。</p>
+  <p className="dam-summary-note">條件式研究；關注與等待狀態均不代表買進指令，研究價格不等於可下單報價。</p>
   <details><summary>價格依據與有效期</summary><p>{plan.basis}</p><p>研究方法：{plan.method}</p>
    <p>價格計畫核對：{date(plan.as_of)}；有效至 {date(plan.expires_at)}（台北）。</p>
    <ul>{sources.map(source=><li key={source.id}><a href={source.source} target="_blank" rel="noopener noreferrer">{new URL(source.source).hostname}</a>
@@ -123,9 +124,9 @@ export default function DailyAiMemberResearch({data,pricePlans=null,pricePlansUn
       <tbody>
        <tr><th scope="row">期間與狀態</th>{compared.map(card=><td key={card.symbol}>{HORIZONS[card.horizon].duration}<br/>{DAILY_AI_MEMBER_STATES[card.status]}</td>)}</tr>
        <tr><th scope="row">研究理由</th>{compared.map(card=><td key={card.symbol}>{dailyAiAnalysisText(card.reason.text)}</td>)}</tr>
-       <tr><th scope="row">價格區間與等待</th>{compared.map(card=>{const plan=dailyAiPricePlanForCard(pricePlans?.tier===data.tier?pricePlans:null,card,edition.id,now,priceSubjectUserId);return <td key={card.symbol}>{plan?<><p>研究區間：NT${money(plan.entry_range[0])}～{money(plan.entry_range[1])}</p><p>NT${money(plan.wait_above)} 以上先等待重評</p><p>依據：{plan.basis}</p><p>核對：{date(plan.as_of)}；有效至 {date(plan.expires_at)}</p></>:pricePlansUnavailable?'價格計畫暫時無法核對。':'本版未提供已驗證價格區間。'}</td>;})}</tr>
+       <tr><th scope="row">價格區間與等待</th>{compared.map(card=>{const plan=dailyAiPricePlanForCard(pricePlans?.tier===data.tier?pricePlans:null,card,edition.id,now,priceSubjectUserId);const display=plan?dailyAiPriceDisplay(plan):null;return <td key={card.symbol}>{plan?<>{display?<><p>研究區間：NT${display.entry_range[0]}～{display.entry_range[1]}</p><p>NT${display.wait_above} 以上先等待重評</p></>:<p>{DAILY_AI_PRICE_PRECISION_PENDING}</p>}<p>依據：{plan.basis}</p><p>核對：{date(plan.as_of)}；有效至 {date(plan.expires_at)}</p></>:pricePlansUnavailable?'價格計畫暫時無法核對。':'本版未提供已驗證價格區間。'}</td>;})}</tr>
        <tr><th scope="row">確認條件</th>{compared.map(card=><td key={card.symbol}>{dailyAiAnalysisText(card.confirmation)}</td>)}</tr>
-       <tr><th scope="row">失效與重評</th>{compared.map(card=>{const plan=dailyAiPricePlanForCard(pricePlans?.tier===data.tier?pricePlans:null,card,edition.id,now,priceSubjectUserId);return <td key={card.symbol}><p>{dailyAiAnalysisText(card.invalidation)}</p>{plan&&<><p>價格計畫：{plan.invalidation}</p>{plan.stop_kind==='PRICE'&&plan.stop!==null&&<p>停止參考價：NT${money(plan.stop)}</p>}</>}</td>;})}</tr>
+       <tr><th scope="row">失效與重評</th>{compared.map(card=>{const plan=dailyAiPricePlanForCard(pricePlans?.tier===data.tier?pricePlans:null,card,edition.id,now,priceSubjectUserId);const display=plan?dailyAiPriceDisplay(plan):null;return <td key={card.symbol}><p>{dailyAiAnalysisText(card.invalidation)}</p>{plan&&<><p>價格計畫：{plan.invalidation}</p>{display&&display.stop!==null&&<p>停止參考價：NT${display.stop}</p>}</>}</td>;})}</tr>
        <tr><th scope="row">反面證據</th>{compared.map(card=><td key={card.symbol}>{card.counter_evidence===null?'此方案僅提供研究摘要。':card.counter_evidence.length?<ul>{card.counter_evidence.map((claim,i)=><li key={i}>{dailyAiAnalysisText(claim.text)}</li>)}</ul>:'本版未列具名反面證據，不代表沒有風險。'}</td>)}</tr>
        <tr><th scope="row">資料時間</th>{compared.map(card=><td key={card.symbol}><p>台股收盤截至：{edition.data_through}</p><p>證據截止：{date(edition.evidence_cutoff)}</p><p>研究有效至：{date(edition.expires_at)}</p></td>)}</tr>
        <tr><th scope="row">新聞與資料來源</th>{compared.map(card=><td key={card.symbol}>{card.sources===null?'此方案僅提供研究摘要。':card.sources.length?<><ul>{card.sources.map(source=><li key={source.id}><a href={source.source} target="_blank" rel="noopener noreferrer">{sourceKinds[source.kind]} · {new URL(source.source).hostname}</a><p>{source.published_at?`原發布：${date(source.published_at)}`:'原發布時間未確認'}；可用：{date(source.available_at)}</p></li>)}</ul>{!card.sources.some(source=>source.kind==='NEWS')&&<p>本卡未列已核對的新聞來源。</p>}</>:'本卡尚無可列出的資料來源。'}</td>)}</tr>

@@ -1,0 +1,618 @@
+{
+  "schema": "MORNING_ALPHA_PRICE_DELIVERY_APPROVAL_SCOPE_V1",
+  "release_id": "MA_PRICE_DELIVERY_20261110_V4_ACTION_V1",
+  "prepared_at": "2026-11-10T16:39:37.077499+00:00",
+  "project_id": "cttfzgvhiewfckydcrci",
+  "production_authorized": false,
+  "production_actions_performed": 0,
+  "function_deployments_sequential": [
+    {
+      "function": "daily-stock-draft-v1",
+      "expected_version": 2,
+      "expected_ezbr_sha256": "5d62ef7bc6f06cf803318ccd290460a4ac573583d47a595b2f3d652e89f45176",
+      "verify_jwt": false,
+      "candidate_path": "/workspace/scratch/d2498b73122f/price-delivery-release-v4/daily-stock-draft-v1.candidate.json",
+      "candidate_sha256": "02791fe4a32bff3d433c63fc725afdf8ed881289e2dfd1cbdb16c040089ee8eb",
+      "rollback_path": "/workspace/scratch/d2498b73122f/price-delivery-release-v4/daily-stock-draft-v1.rollback.json",
+      "rollback_sha256": "6e7ade3e2bafcee790440e693664c86ca8ddffa95d010b05aa36f581fde19def"
+    },
+    {
+      "function": "daily-stock-source-financial-v1",
+      "expected_version": 1,
+      "expected_ezbr_sha256": "c6dd30e1198b4719512a5cf71acd4026153e3a50e4f9f65392bd85e3488559e3",
+      "verify_jwt": false,
+      "candidate_path": "/workspace/scratch/d2498b73122f/price-delivery-release-v4/daily-stock-source-financial-v1.candidate.json",
+      "candidate_sha256": "316d3ccdbf4b589f0c355cbd1ae852735e87a1bac0e98a89555171dd2e6f826b",
+      "rollback_path": "/workspace/scratch/d2498b73122f/price-delivery-release-v4/daily-stock-source-financial-v1.rollback.json",
+      "rollback_sha256": "9ab8d4f0803b578c37a7c9ef1d87d97d9800f389960d14a433687fa22542e0d8"
+    },
+    {
+      "function": "vnext-daily-research-v1",
+      "expected_version": 18,
+      "expected_ezbr_sha256": "5010f08a7122a740f43a6ddce11cc8b53932cc394e03dcfe8c9a354892b21982",
+      "verify_jwt": true,
+      "candidate_path": "/workspace/scratch/d2498b73122f/action-response-capture-release-v1/vnext-daily-research-v1.candidate.json",
+      "candidate_sha256": "8a8df0f9eb991cbede0f18f94e51e4b84aa27da4b920997ede835a71b1258b60",
+      "rollback_path": "/workspace/scratch/d2498b73122f/action-response-capture-release-v1/vnext-daily-research-v1.rollback.json",
+      "rollback_sha256": "c70ad5299272a5257ff9219b2bee7d4733944c7d1e8133f5273a7863428407d4"
+    }
+  ],
+  "sql_migrations": [
+    {
+      "path": "research/daily-ai-price-workflow.candidate.sql",
+      "sha256": "dad9456b3f531da81e5c70d18567e385c604672fe83bb22c54fbfe3b9c1307ec"
+    },
+    {
+      "path": "research/daily-ai-long-preparations.candidate.sql",
+      "sha256": "72f0447226f97e81d65eeff65446b238237b716425b34ba1b1a833bf78704e2f"
+    },
+    {
+      "path": "research/daily-ai-price-resume.candidate.sql",
+      "sha256": "11efeee30e3a0831f77ba0d399307540ddebeb83c724af1d2a591d2477303fe6"
+    },
+    {
+      "path": "research/member-price-set-read.candidate.sql",
+      "sha256": "96aa8ea292a5c5fb49a500bdcde0c822b77a43274c51913f42606be58cbcd5c6"
+    }
+  ],
+  "source_capture_extra_sql": false,
+  "initial_valuation_policy": {
+    "proposal_version": "MA_2330_VALUATION_PROPOSAL_20261110_1",
+    "proposal_symbol": "2330",
+    "condition": "Only when the current card has no registered calculation input and no method profile; four reported diluted EPS quarters are required.",
+    "medium": "Reported four-quarter diluted EPS sum × PE 16/20/24; 25% entry discount on the conservative/base scenarios.",
+    "long": "Five-year EPS growth 6%/12%/18%; payout 25%; required returns 12%/10%/9%; terminal PE 12/16/20; 25% conservative/base entry discount.",
+    "status": "Explicit internal assumptions for independent review. No method approval, investment-performance claim or member publication is created.",
+    "existing_profiles": "Existing or expired profiles are never replaced by this initial proposal.",
+    "other_symbols": "Require their own explicit company-specific parameters."
+  },
+  "activation": "Existing scheduled workers may create private calculation inputs, pending plans and raw successful ACTION receipts. Existing source/method/content/publication checks continue to determine member visibility.",
+  "approval_rule": "Repository AGENTS.md requires independent explicit authorization for Deploy and Migration. Commit and Push require their own explicit authorization.",
+  "readdy_frontend": {
+    "source_ready": true,
+    "live_baseline_verified": false,
+    "published": false,
+    "site": "https://morningalphatw.com",
+    "route": "/vnext/publication",
+    "project_id": "f1fd69c3-51fe-40d6-a2e3-b8f62112861e",
+    "scope": "Owner calculation and initial LONG review preparation UI; current Live source comparison and browser acceptance remain unverified."
+  },
+  "validation": {
+    "npm_type_check": "PASS",
+    "npm_build": "PASS",
+    "npm_lint": "PASS",
+    "git_diff_check": "PASS",
+    "exact_price_bundle_daily_flow_tests": 23,
+    "owner_tests": 48,
+    "short_history_replay_tests": 16,
+    "independent_short_counterexamples": 11,
+    "action_capture_tests": 9,
+    "sql_integration_phases": 42,
+    "runtime": "Node v24.22.1",
+    "repository_requested_node": "^22.12.0",
+    "deno_checked": false,
+    "financial_bundle_provider_fixture_skips": 2,
+    "production_load_test_performed": false
+  },
+  "short_research": {
+    "verified_price_sessions": 266,
+    "through": "2026-11-09",
+    "posthoc_windows": 756,
+    "known_action_exclusions": 244,
+    "missing_complete_action_coverage": 496,
+    "incomplete_outcome_windows": 16,
+    "modelled_return_observations": 0,
+    "strategy_calibrated": false,
+    "prospective_validation_protocol_established": false
+  },
+  "git": {
+    "branch": "codex/recommendation-delivery-20261107",
+    "head": "8ba80195deeddfbaf748e03bf9f740d901149499",
+    "origin_main": "7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3",
+    "shallow_checkout": true,
+    "github_compare": "main is an ancestor of HEAD; GitHub reports main 107 commits behind HEAD, with no upstream-only changes.",
+    "commit_performed": false,
+    "push_performed": false,
+    "merge_performed": false
+  },
+  "rollback": "Use each full saved function rollback, guarded resumer/member-reader rollback SQL, and preserve immutable research data.",
+  "cron_changes_performed": false,
+  "git_delivery_proposal": {
+    "branch": "codex/stock-price-delivery-20261110",
+    "base_commit": "8ba80195deeddfbaf748e03bf9f740d901149499",
+    "commit_message": "feat(research): add calculated prices and daily review delivery",
+    "files": [
+      {
+        "path": "research/daily-ai-financial-inputs.ts",
+        "sha256": "5440326f30e7dd682fb95b716c30738e1ad09108e523abe8c596dd2d55e09ff3",
+        "bytes": 25058
+      },
+      {
+        "path": "research/daily-ai-financial-refresh.ts",
+        "sha256": "169c889ce8465f689271af2573f33ab3b308fec6279d30890662cd118ad703e4",
+        "bytes": 23202
+      },
+      {
+        "path": "research/daily-ai-institutional-refresh.ts",
+        "sha256": "436ebe0cc1055695581d2d3dfbe88bd51e02f1ad4880245b43e897255e00ec95",
+        "bytes": 20378
+      },
+      {
+        "path": "research/daily-ai-long-author-preparation.mjs",
+        "sha256": "6e381c3584320d0a40e599492f6668e981eb74fed58442d5b55b0d63133df16b",
+        "bytes": 2993
+      },
+      {
+        "path": "research/daily-ai-long-preparations.candidate.sql",
+        "sha256": "72f0447226f97e81d65eeff65446b238237b716425b34ba1b1a833bf78704e2f",
+        "bytes": 23283
+      },
+      {
+        "path": "research/daily-ai-long-rationale.ts",
+        "sha256": "0c9d015240e613de8df4f00caf7522567ebe9adefcb4dbf14f78af1cb0d2a346",
+        "bytes": 26299
+      },
+      {
+        "path": "research/daily-ai-price-calculation.ts",
+        "sha256": "553578be6d26cfd026d057c2726f94a84a87a514dbb52f5f651b276b7d7802e1",
+        "bytes": 44677
+      },
+      {
+        "path": "research/daily-ai-price-producer.mjs",
+        "sha256": "fbae10bb4ff84c37e9b904c978764ba702b1be89e740d7f8b31357cdfa13b4a9",
+        "bytes": 13036
+      },
+      {
+        "path": "research/daily-ai-price-profile.ts",
+        "sha256": "df0f6e6eb31bb5b9c2468f8de5038ea3eb79806ef8a4da6f3f4772ef7f71b322",
+        "bytes": 17074
+      },
+      {
+        "path": "research/daily-ai-price-resume.candidate.sql",
+        "sha256": "11efeee30e3a0831f77ba0d399307540ddebeb83c724af1d2a591d2477303fe6",
+        "bytes": 10403
+      },
+      {
+        "path": "research/daily-ai-price-resume.rollback.sql",
+        "sha256": "8c379b10a9bcd3846b0ed105f624a2f00c398fc5b76b1d9ae281499bcba7a784",
+        "bytes": 4287
+      },
+      {
+        "path": "research/daily-ai-price-work.mjs",
+        "sha256": "1e4baa907ed7c4b182bcbc1d35ec1e85fb21e19af7665d1bc2ac745ed32927fe",
+        "bytes": 27109
+      },
+      {
+        "path": "research/daily-ai-price-workflow.candidate.sql",
+        "sha256": "dad9456b3f531da81e5c70d18567e385c604672fe83bb22c54fbfe3b9c1307ec",
+        "bytes": 61047
+      },
+      {
+        "path": "research/daily-ai-refresh.ts",
+        "sha256": "2a2f74577a151d4c454fa4281f70801dade4d795aedead5fc9d061d0c92f2106",
+        "bytes": 9393
+      },
+      {
+        "path": "research/daily-ai-short-calibration.ts",
+        "sha256": "9d2f6280baba1c1ae67b601a091b94c9f72beff0a2ddc524befc553fa75b1625",
+        "bytes": 23315
+      },
+      {
+        "path": "research/daily-ai-short-replay.ts",
+        "sha256": "e25d2c65718337c3881ada7c559b71798ddb8f0affc2e9af605bd336ef51de33",
+        "bytes": 12366
+      },
+      {
+        "path": "research/daily-ai-short-retained-history.ts",
+        "sha256": "1db356dc1d072dc64c14ceebe0fd5ed21e4d3d6285e717b8f9d0f55a3333b77d",
+        "bytes": 7085
+      },
+      {
+        "path": "research/daily-ai-trading-day-guard.candidate.sql",
+        "sha256": "572401b529622a0dac36384fd63f27fdf0131cab7b9ca9f8dcb099255ff072e2",
+        "bytes": 1565
+      },
+      {
+        "path": "research/daily-ai-trading-day-guard.rollback.sql",
+        "sha256": "01450a939b2cc114a0c0fcffe648b443d6f170786f39de03bbad96f5c7c990d0",
+        "bytes": 942
+      },
+      {
+        "path": "research/daily-ai-valuation-policy-proposal.ts",
+        "sha256": "3db48bd98c9a68d98d3948d319318ba39e6014a24eb1c40d055f6e1be18368b6",
+        "bytes": 5245
+      },
+      {
+        "path": "research/daily-ai-zero-paid-author.mjs",
+        "sha256": "8978fe70ff0e2a212c27ae838636bb8c5ec598ebc1a410e7b88d4f8c85caf075",
+        "bytes": 14838
+      },
+      {
+        "path": "research/entry-corporate-actions.mjs",
+        "sha256": "8bfc04eed8a12c6b12b9b0beb325f68f271c664209dabc31658eca09649dfb24",
+        "bytes": 9208
+      },
+      {
+        "path": "research/member-price-set-read.candidate.sql",
+        "sha256": "96aa8ea292a5c5fb49a500bdcde0c822b77a43274c51913f42606be58cbcd5c6",
+        "bytes": 4789
+      },
+      {
+        "path": "research/member-price-set-read.rollback.sql",
+        "sha256": "15571eeeb0fa0915caf3fca7815bb52cf116d0891952d8f925e46d31d128489c",
+        "bytes": 4314
+      },
+      {
+        "path": "research/prepare-price-plan-candidate.mjs",
+        "sha256": "49869b478efafb157e22e97bdd7f11e1adbabbc5f0af4f9e6a0cd422dc0bd7dc",
+        "bytes": 3784
+      },
+      {
+        "path": "research/refresh-2330-documented-review.candidate.ts",
+        "sha256": "de89e0451367a2a12bd17c1704d44e8236690d0790b07b1211b22a7372c7d7d9",
+        "bytes": 11685
+      },
+      {
+        "path": "research/reviewed-snapshot-validator.mjs",
+        "sha256": "67b46b15afe063f7c26399429f9a248d578cf849ec246c111196101b7af1839a",
+        "bytes": 14427
+      },
+      {
+        "path": "scripts/operations/calculate-daily-prices.mjs",
+        "sha256": "d701d9a707d8d2f2889cf545b56b5d3e8d27b7a08b6546ca19f8c9e54ddb4c31",
+        "bytes": 2866
+      },
+      {
+        "path": "scripts/operations/check-short-calibration.mjs",
+        "sha256": "57602c1aa8aa1d1d6fcb856de6e40eccf8225fe1562a88cdb31add94a747c279",
+        "bytes": 1696
+      },
+      {
+        "path": "scripts/operations/check-valuation-policy-arithmetic.py",
+        "sha256": "18e8085cf2c9a0774b4cc12e737fc77a2ffad5725cae763b2481bd31e8d3e018",
+        "bytes": 11042
+      },
+      {
+        "path": "scripts/operations/prepare-action-response-capture-release.mjs",
+        "sha256": "f4f18ff5bc6610ffb6f8777a36075d18a9e24dd654e15e50136a4aa856b59b5a",
+        "bytes": 8177
+      },
+      {
+        "path": "scripts/operations/prepare-price-delivery-release.mjs",
+        "sha256": "be6cef0c5d954ef4dc44ccb3295d91b0833cc95ee33f2d5a68a72420f74cc749",
+        "bytes": 8218
+      },
+      {
+        "path": "scripts/operations/recommendation-delivery-20261107/calendar-baseline.json",
+        "sha256": "6ad74e0f40782f15eebcc729136380f6cb20020c3e65828d4e63dd2aa85df638",
+        "bytes": 3480
+      },
+      {
+        "path": "scripts/operations/replay-short-history.mjs",
+        "sha256": "d127c630dd384c3371cfb95716a10ed96fbbab68af61d83c13b4b2636843ce60",
+        "bytes": 3598
+      },
+      {
+        "path": "src/features/vnext/dailyActionCapture.ts",
+        "sha256": "b4798e79723b3c813caa84dbbd52568eb5d06870a9d244729aaddc7398f2f54e",
+        "bytes": 3592
+      },
+      {
+        "path": "src/features/vnext/dailyAdapter.ts",
+        "sha256": "44d8a4b1e98618d7a269435e97f4efd1ded0dfa92894ff79260bc8008269ac10",
+        "bytes": 29052
+      },
+      {
+        "path": "src/features/vnext/dailyAiMember.ts",
+        "sha256": "c9bbbaeedb5c3454bf008c1f42bd54197a64c1a3bc0feec8fa049d5b75bf8ee9",
+        "bytes": 7624
+      },
+      {
+        "path": "src/features/vnext/dailyAiOwnerLongPreparation.ts",
+        "sha256": "baa963698e649faba40f77d1d62cb57c50dea07b8751dc4d788c398283e58492",
+        "bytes": 9234
+      },
+      {
+        "path": "src/features/vnext/dailyAiOwnerPriceCalculation.ts",
+        "sha256": "9ff809341b93ec5099e8d6676ad024bc6c0b6f0eeb71f5908a5c153c5628dd9b",
+        "bytes": 23665
+      },
+      {
+        "path": "src/features/vnext/dailyAiPriceDisplay.ts",
+        "sha256": "e23d4843cf1bc4670f3cb9258f07b5a65119ca1cd4c4d6693e1967dcb84f04b7",
+        "bytes": 1443
+      },
+      {
+        "path": "src/features/vnext/dailyAiPricePlan.ts",
+        "sha256": "71770736cb209dff2d3a1feb07bb14c8a79d5d7fde1ce1170fd526cc0eb026b1",
+        "bytes": 15728
+      },
+      {
+        "path": "src/features/vnext/dailyParsers.mjs",
+        "sha256": "a2cb6d497412ccf8fb2180b4def6eec1cce42ddbca1ca92e7e2d39dca77c4c65",
+        "bytes": 18499
+      },
+      {
+        "path": "src/features/vnext/publicationReadiness.ts",
+        "sha256": "a55c6f6bc0d9a1ee558ae85cc69ff17f0cdfc7f23f45a4eab59f1836a31dac8f",
+        "bytes": 8764
+      },
+      {
+        "path": "src/features/vnext/researchFunnel.ts",
+        "sha256": "95cba327d014dc1e706943897a455b51397e520da7255dd9d1d3ec34bf17b25b",
+        "bytes": 20663
+      },
+      {
+        "path": "src/pages/vnext/DailyAiMemberResearch.tsx",
+        "sha256": "945c6d955d72f11d94d3fb818f882595885761660bda2930f7e9df9ac281e301",
+        "bytes": 22327
+      },
+      {
+        "path": "src/pages/vnext/DailyAiOwnerLongPreparation.tsx",
+        "sha256": "15aaf9deeb87d45f735c78e17b1f608b5bb5064a185a97cb89977abe3a392574",
+        "bytes": 7591
+      },
+      {
+        "path": "src/pages/vnext/DailyAiOwnerPriceCalculation.tsx",
+        "sha256": "c1c93c79937990cbe368a7fb49b500db523f5da1f9d1f7bcfaffbefed07e57c5",
+        "bytes": 16627
+      },
+      {
+        "path": "src/pages/vnext/DailyAiOwnerPricePlans.tsx",
+        "sha256": "b9c378ace599f7622dfc9421f3bacafbc0d8dbe97ca075c21430ab45390845eb",
+        "bytes": 15475
+      },
+      {
+        "path": "src/pages/vnext/OwnerAiPublication.tsx",
+        "sha256": "538665d1e8ab5796df0768112d491c6e0e859e79f00dbfd4bc9eb5c06b8e553c",
+        "bytes": 13778
+      },
+      {
+        "path": "src/pages/vnext/daily-ai-owner-calculation.css",
+        "sha256": "701ce4d0c2163aa63e4ae86eb9198ca2662e71ab229199390cd1266201bb8dfa",
+        "bytes": 2776
+      },
+      {
+        "path": "supabase/functions/daily-stock-analysis-v1/financial-refresh.ts",
+        "sha256": "d12bee2c79bca6510d808d2858f8bd986c506a775898462289499a4f469d48a9",
+        "bytes": 1871
+      },
+      {
+        "path": "supabase/functions/daily-stock-analysis-v1/financial-stage.ts",
+        "sha256": "a58a5e87a34be3bc0ae19baf2d86e36df6148bcf6b63825e6f0c34ee9af5c1fd",
+        "bytes": 6459
+      },
+      {
+        "path": "supabase/functions/daily-stock-analysis-v1/zero-paid-draft.ts",
+        "sha256": "19d0915d1d0cc75f1986bcff85f02d9de3e6018d58cbcb10c91e7d10e0d64dc4",
+        "bytes": 8663
+      },
+      {
+        "path": "supabase/functions/daily-stock-draft-v1/index.ts",
+        "sha256": "96a00a107e9006c1f737a0666c86a795d5f375ef273797e0661bbf302ae84111",
+        "bytes": 984
+      },
+      {
+        "path": "supabase/functions/daily-stock-source-financial-v1/index.ts",
+        "sha256": "518352bed9c745e644df5fbc56b22c004c8c274aead9cc7c50e7dbcdd4bd4fdd",
+        "bytes": 1212
+      },
+      {
+        "path": "tests/browser/owner-price-calculation-preview.css",
+        "sha256": "a188c2127104d46ae1059cea73cb32cc101182b479dcfc99949550d5ad7895f2",
+        "bytes": 645
+      },
+      {
+        "path": "tests/browser/ownerPriceCalculation.vite.ts",
+        "sha256": "07e7aa4db215d5af11d897e8c29d5aea42b7bd0678bfc0f7064057dd230e2270",
+        "bytes": 3116
+      },
+      {
+        "path": "tests/browser/ownerPriceCalculationHarness.tsx",
+        "sha256": "c8861959080788fb7dd6005c693b08d7a2dca30759543fffeef1fb56de70006c",
+        "bytes": 2363
+      },
+      {
+        "path": "tests/browser/ownerPriceCalculationSupabaseMock.ts",
+        "sha256": "2aea1c75160dc525a0f3fed9201fe4316e9607f4ddc815af901480caab05d75a",
+        "bytes": 1352
+      },
+      {
+        "path": "tests/browser/renderOwnerPriceCalculationPreview.mjs",
+        "sha256": "96ee8baa3b8d35532a2e3f0b5f5e3de2f5156eebaea2119534f67b8bf5685b45",
+        "bytes": 4901
+      },
+      {
+        "path": "tests/dailyAiCalculatedPriceDelivery.integration.mjs",
+        "sha256": "1571345bc85ac14a326d144c1a4a8058cd7abc0b44a803ca1dcf8c5bd494b7f7",
+        "bytes": 8658
+      },
+      {
+        "path": "tests/dailyAiFinancialInputs.test.mjs",
+        "sha256": "29eb858239f76f5911609e81e8d6d21332c0272facc2aa4890245df7bda030f5",
+        "bytes": 19802
+      },
+      {
+        "path": "tests/dailyAiFinancialObservation.test.mjs",
+        "sha256": "11fdcd92c85cf73d110f6cf8f82e1572696a6327466716d0213c45097e383b2e",
+        "bytes": 11060
+      },
+      {
+        "path": "tests/dailyAiFinancialRefresh.test.mjs",
+        "sha256": "87ccf79540c4af640b9905da7e5271babd246cf85dca18180301f442d2b8a5c3",
+        "bytes": 23810
+      },
+      {
+        "path": "tests/dailyAiLongPreparations.integration.mjs",
+        "sha256": "56d9a750175e6c432d3d5733df30a46798fa273ba188c7c39f76de9116e344c6",
+        "bytes": 14543
+      },
+      {
+        "path": "tests/dailyAiLongRationale.test.mjs",
+        "sha256": "d8e47c725445479e40a41773f334a16a08d92a4f77766a906a96a4c244b8eaaa",
+        "bytes": 17272
+      },
+      {
+        "path": "tests/dailyAiOwnerLongPreparation.test.mjs",
+        "sha256": "bf2a8b78f467db1626ff07f964672dfc3b570825ff5b2f5642761b04481b0f0b",
+        "bytes": 21645
+      },
+      {
+        "path": "tests/dailyAiOwnerPriceCalculation.test.mjs",
+        "sha256": "c448e04abbdba1a4e32e0041b63df19bef8b5ff4df675f03aa691f41d4d4ef71",
+        "bytes": 14156
+      },
+      {
+        "path": "tests/dailyAiOwnerPricePlans.test.mjs",
+        "sha256": "bd1bac310b3b38d2d73661e38bdf7c7528de03871bb9697bf59a30c47b493d86",
+        "bytes": 20164
+      },
+      {
+        "path": "tests/dailyAiPriceCalculation.test.mjs",
+        "sha256": "cdb12bfa1d3d474aaa04e39d5ca9e8382175208bc5d3630e5f5e4ecd7de06fbc",
+        "bytes": 17367
+      },
+      {
+        "path": "tests/dailyAiPriceCliProfile.test.mjs",
+        "sha256": "2ec1c71eb02f7659ed5318e92d86c48e44ffdbba9cde6643cbbba03885ebff73",
+        "bytes": 9532
+      },
+      {
+        "path": "tests/dailyAiPriceDividendWorkflow.integration.mjs",
+        "sha256": "9a2581ac69d027b606d3cdc458c6a5c35701f1fa2d41e5540afe777708c9fe29",
+        "bytes": 10307
+      },
+      {
+        "path": "tests/dailyAiPriceProducer.test.mjs",
+        "sha256": "5081caa9c82cff511e0913d58a6cfc4a0346d36e4547b49159bc16f59c025be2",
+        "bytes": 10818
+      },
+      {
+        "path": "tests/dailyAiPriceProfile.test.mjs",
+        "sha256": "56ddc1657b47c345efdefd8f3a25eb37a9a3423a7619b1479ac8ea0ee5ab7f8e",
+        "bytes": 18926
+      },
+      {
+        "path": "tests/dailyAiPriceProposalBootstrap.integration.mjs",
+        "sha256": "5ebfa1a64eaf010cfc77779abc413d5ad08b57e8821122a8426ba038a854287a",
+        "bytes": 9339
+      },
+      {
+        "path": "tests/dailyAiPriceResume.integration.mjs",
+        "sha256": "493b3abd81c20310b4bc6fa6d0d271427736144e20b371e6fd6fe6615f4255ce",
+        "bytes": 14925
+      },
+      {
+        "path": "tests/dailyAiPriceWork.test.mjs",
+        "sha256": "71cd702af9419ee5a9227d2bc5dd38e5f08df0f1a3dd5f0dd6ff6f3c8a60b5ea",
+        "bytes": 34338
+      },
+      {
+        "path": "tests/dailyAiPriceWorkflow.integration.mjs",
+        "sha256": "997454fd7815403f7f987c837e8d9d4e39cf131cd2824a357c78c03e3db7b080",
+        "bytes": 42969
+      },
+      {
+        "path": "tests/dailyAiRefresh.test.mjs",
+        "sha256": "73bf8310379bc4244b328257ce711022962bef26a95b8ebda9208f3d25423d1a",
+        "bytes": 12057
+      },
+      {
+        "path": "tests/dailyAiShortCalibration.test.mjs",
+        "sha256": "d8fbb0cdaa1452b386a6fbfdf9806e93a573123c2d641abe535d18bae4791d7b",
+        "bytes": 8788
+      },
+      {
+        "path": "tests/dailyAiShortReplay.test.mjs",
+        "sha256": "6a462110c0e502b08c47d759d3e7941bf3d2e2463c56ade153c4b8ee74d87482",
+        "bytes": 7665
+      },
+      {
+        "path": "tests/dailyAiShortRetainedHistory.test.mjs",
+        "sha256": "0b177bd320e2eb18ee5dfecd586319f25ea751a61ca8eaedf70d8557fc9cd970",
+        "bytes": 3102
+      },
+      {
+        "path": "tests/dailyAiTradingDayGuard.integration.mjs",
+        "sha256": "1b77fd14e8642f016d2687c2dd6c81221d6c64e81a5558d8e1ba58558fdb802a",
+        "bytes": 4012
+      },
+      {
+        "path": "tests/dailyAiValuationPolicyProposal.test.mjs",
+        "sha256": "44f2528e9dd4ff1e5152bc6c589e07b46d9c82eb18dfe2d540be8bb01a6e1893",
+        "bytes": 3409
+      },
+      {
+        "path": "tests/fixtures/action-source-runtime.saved.sql",
+        "sha256": "7d51f4bad913db7019b2320f7cce91c0cf731918aa04468ac731b00b489d239c",
+        "bytes": 16471
+      },
+      {
+        "path": "tests/fixtures/member-price-reader.saved.sql",
+        "sha256": "079825ab1665166756e9bc60c70fae7146e052df3f36498e3f87661c5c998655",
+        "bytes": 4009
+      },
+      {
+        "path": "tests/fixtures/price-delivery-member-reader.saved.sql",
+        "sha256": "3de5d70f077eca9acb95ba5be4d413f33a7a88c750718ad06b211a1349f460b5",
+        "bytes": 2054
+      },
+      {
+        "path": "tests/fixtures/price-work-resumer.saved.sql",
+        "sha256": "115e20bdf978c9ef53ceccd181378911ffa78fedf0aace1edb32bd0e997d6e04",
+        "bytes": 4028
+      },
+      {
+        "path": "tests/helpers/dailyAiCalculatedPriceFixture.mjs",
+        "sha256": "3a9f4380dce50a144ab625ae54f71fcfb52adc8147f66852dbe225f6eb3844af",
+        "bytes": 13435
+      },
+      {
+        "path": "tests/helpers/dailyAiLongPreparationFixture.mjs",
+        "sha256": "f27b4665370ab9173133aecf6dcad9451b2fa4ef195f58927ecd82618d24075d",
+        "bytes": 7986
+      },
+      {
+        "path": "tests/helpers/dailyAiOwnerPriceCalculationFixture.mjs",
+        "sha256": "ffb183f47197d08f52d14b45f91f4cbe9020c0ab2ad4da069cbf14f251e4b5bf",
+        "bytes": 6528
+      },
+      {
+        "path": "tests/memberPriceSetRead.integration.mjs",
+        "sha256": "a6a85c69515b9682d530422e05496b7f5a41d8a2a2b4564401210f68ac3d0d50",
+        "bytes": 12498
+      },
+      {
+        "path": "tests/priceDeliveryIntegration.mjs",
+        "sha256": "6e4245c35948b5f33df3c2fbf7cf88f5a28427c9d6b79561891dd9ecd6b11424",
+        "bytes": 15268
+      },
+      {
+        "path": "tests/priceDeliveryUiHarness.mjs",
+        "sha256": "cab184585ef7016fd3e09195818486f06345322460d81ff576ae63e08ab60ad1",
+        "bytes": 4868
+      },
+      {
+        "path": "tests/vnextActionCaptureDatabase.integration.mjs",
+        "sha256": "e32bddfd2af5434708b3fd14076416fb83a97eb4cfb84864a6af93c200686a97",
+        "bytes": 6352
+      },
+      {
+        "path": "tests/vnextActionResponseCapture.test.mjs",
+        "sha256": "841cf0507049722f6fb9033e2d90b1855228de3116aa2ed9e6639a1d41a5a5bd",
+        "bytes": 9728
+      },
+      {
+        "path": "tests/vnextPublication.test.mjs",
+        "sha256": "4bfe62de940096300fd7f32d7602f0afe7961545f454d4c615a174f8188e5f85",
+        "bytes": 8288
+      }
+    ],
+    "additional_scope_file": "scripts/operations/recommendation-delivery-20261110/release-scope.json",
+    "scope": "The current stock-recommendation work, including the preserved earlier delivery changes and this turn implementation. Dedicated branch only.",
+    "commit_authorized": false,
+    "push_authorized": false,
+    "merge_authorized": false,
+    "readdy_publish_authorized": false
+  }
+}

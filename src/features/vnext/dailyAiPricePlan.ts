@@ -82,13 +82,12 @@ export async function hashDailyAiPricePlanBody(value:DailyAiPricePlan|DailyAiPri
  return snapshotHash(dailyAiPricePlanBody(value));
 }
 
-/** Strict pure verifier. Missing legacy data is null; malformed/revoked/stale
- * data throws a fixed code. The caller must not display rejected raw values. */
-export async function verifyDailyAiPricePlan(value:unknown,context:DailyAiPricePlanContext,now=Date.now()):Promise<DailyAiPricePlan|null>{
- const current=nowText(now);if(value===null||value===undefined)return null;
- // Own inputs before the first await: later mutations cannot race hash checks.
- const r=record(structuredClone(value)),owned=structuredClone(context);
- exact(r,[...bodyKeys,'plan_hash','review']);
+/** Private preparation only: validates the exact existing body contract without
+ * inventing a PASS review. VERIFIED is the legacy storage schema label, not a
+ * reviewer decision. This function neither calculates prices nor grants rights. */
+export function validateDailyAiPricePlanBody(value:unknown,context:DailyAiPricePlanContext,now=Date.now()):DailyAiPricePlanBody{
+ const current=nowText(now),r=record(structuredClone(value)),owned=structuredClone(context);
+ exact(r,bodyKeys);
  const edition=owned.edition,card=owned.card;
  if(!edition||!card||!hashValid(edition.id)||!/^\d{4,6}$/.test(card.symbol)
   ||!Object.hasOwn(HORIZONS,card.horizon)||!allowedStatus(card.status))throw Error('AI_PRICE_PLAN_CONTEXT');
@@ -120,16 +119,26 @@ export async function verifyDailyAiPricePlan(value:unknown,context:DailyAiPriceP
  const asOf=time(r.as_of),expires=time(r.expires_at);
  if(!atMost(cutoff,asOf)||!atMost(asOf,current)||!before(current,expires)||!before(asOf,expires)
   ||!atMost(expires,editionExpiry))throw Error('AI_PRICE_PLAN_CHRONOLOGY');
- const review=record(r.review);exact(review,['status','plan_hash','reviewed_at','document_hash']);
- const planHash=hash(r.plan_hash),reviewHash=hash(review.plan_hash),reviewed=time(review.reviewed_at),documentHash=hash(review.document_hash);
- if(review.status!=='PASS'||reviewHash!==planHash||!atMost(asOf,reviewed)||!atMost(prepared,reviewed)
-  ||!atMost(reviewed,current)||!before(reviewed,expires))throw Error('AI_PRICE_PLAN_REVIEW');
  const body:DailyAiPricePlanBody={schema:'DAILY_AI_PRICE_PLAN_V1',edition_id:edition.id,symbol:card.symbol,horizon:card.horizon,
   status:'VERIFIED',currency:'TWD',method:text(r.method,200),basis:text(r.basis),entry_range:[low,high],wait_above:wait,
   stop_kind:r.stop_kind,stop,stop_evidence_ids:stopIds,invalidation:text(r.invalidation),evidence_ids:evidenceIds,
   as_of:asOf,expires_at:expires,buy_ready:false};
- if(await snapshotHash(body)!==planHash)throw Error('AI_PRICE_PLAN_HASH_MISMATCH');
  Object.freeze(body.entry_range);Object.freeze(body.evidence_ids);Object.freeze(body.stop_evidence_ids);
+ return Object.freeze(body);
+}
+
+/** Strict member verifier retains its independent review/hash/time gates. */
+export async function verifyDailyAiPricePlan(value:unknown,context:DailyAiPricePlanContext,now=Date.now()):Promise<DailyAiPricePlan|null>{
+ const current=nowText(now);if(value===null||value===undefined)return null;
+ const r=record(structuredClone(value)),owned=structuredClone(context);
+ exact(r,[...bodyKeys,'plan_hash','review']);
+ const body=validateDailyAiPricePlanBody(dailyAiPricePlanBody(r as unknown as DailyAiPricePlan),owned,now);
+ const asOf=body.as_of,expires=body.expires_at,prepared=owned.edition.prepared_at;
+ const review=record(r.review);exact(review,['status','plan_hash','reviewed_at','document_hash']);
+ const planHash=hash(r.plan_hash),reviewHash=hash(review.plan_hash),reviewed=time(review.reviewed_at),documentHash=hash(review.document_hash);
+ if(review.status!=='PASS'||reviewHash!==planHash||!atMost(asOf,reviewed)||!atMost(prepared,reviewed)
+  ||!atMost(reviewed,current)||!before(reviewed,expires))throw Error('AI_PRICE_PLAN_REVIEW');
+ if(await snapshotHash(body)!==planHash)throw Error('AI_PRICE_PLAN_HASH_MISMATCH');
  return Object.freeze({...body,plan_hash:planHash,review:Object.freeze({status:'PASS',plan_hash:reviewHash,reviewed_at:reviewed,document_hash:documentHash})});
 }
 

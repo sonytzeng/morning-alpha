@@ -7,9 +7,21 @@ const at='2026-10-10T12:00:00.000Z';
 // Synthetic protocol controls ONLY, never investment efficacy or member content.
 const fact={id:'SYNTHETIC',symbol:'2330',kind:'REVENUE',source:OPEN_DATA_RIGHTS[2].api,evidence_hash:'a'.repeat(64),published_at:at,first_seen_at:at,available_at:at,as_of:at,period:'202609',summary:'SYNTHETIC_PROTOCOL_ONLY',values:{},limitations:[]};
 const stock={symbol:'2330',company:'協定測試，非真實研究',sector:'',facts:[fact],coverage:{}};
-test('nine specifically mapped datasets allow conditional OGL use, not publication approval',()=>{
- assert.equal(OPEN_DATA_RIGHTS.length,9);for(const r of OPEN_DATA_RIGHTS){assert.equal(sourceRights(r.api).status,'OPEN_DATA_WITH_ATTRIBUTION');assert.equal(sourceRights(r.resource).grant.id,r.id);assert(r.attribution);}
+test('thirteen specifically mapped datasets allow conditional OGL use, not publication approval',()=>{
+ assert.equal(OPEN_DATA_RIGHTS.length,13);for(const r of OPEN_DATA_RIGHTS){if(r.api!==null)assert.equal(sourceRights(r.api).status,'OPEN_DATA_WITH_ATTRIBUTION');assert.equal(sourceRights(r.resource).grant.id,r.id);assert(r.attribution);}
  assert.equal(publicationDossier(stock,at)[1].member_eligible,false);
+});
+test('daily price and ex-dividend CSV grants cover only the recorded resource, without guessed APIs or history queries',()=>{
+ const ids=['11549','11370','11371','89748'];
+ for(const id of ids){const grant=OPEN_DATA_RIGHTS.find(row=>row.id===id);assert(grant);assert.equal(grant.api,null);
+  assert.equal(sourceRights(grant.resource).grant.dataset,'https://data.gov.tw/dataset/'+id);
+  for(const changed of [grant.resource+'&date=20261109',grant.resource.replace('response=open_data','response=json')+'&extra=1',
+   grant.resource.replace('https://','http://'),grant.resource.replace('.tw/','.tw.evil.test/')])
+   assert.equal(sourceRights(changed).status,'LICENSING_UNVERIFIED');
+ }
+ for(const unverified of ['', 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL',
+  'https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261101&stockNo=2330'])
+  assert.equal(sourceRights(unverified).status,'LICENSING_UNVERIFIED');
 });
 test('income and daily valuation APIs resolve to their own exact datasets',()=>{
  const cases=[

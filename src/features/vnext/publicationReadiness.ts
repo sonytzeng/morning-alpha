@@ -3,9 +3,9 @@ import {HORIZONS,sourceSafe,hashValid,type Horizon} from './contracts.ts';
 import {researchCard,factIssues,type RealStock} from './realResearch.ts';
 import {validProjectionTime} from './projection.ts';
 
-export const RIGHTS_REVIEW_VERSION='VNEXT_RIGHTS_20261105_2';
+export const RIGHTS_REVIEW_VERSION='VNEXT_RIGHTS_20261110_1';
 export type SourceRights={
- id:string;title:string;dataset:string;resource:string;api:string;license:string;attribution:string;
+ id:string;title:string;dataset:string;resource:string;api:string|null;license:string;attribution:string;
 };
 // Exact dataset/resource mapping, independently checked against data.gov.tw and
 // both exchanges' Swagger. A hostname or an API subscription is NOT a license.
@@ -36,10 +36,26 @@ export const OPEN_DATA_RIGHTS:readonly SourceRights[]=[...[
    api:'https://www.tpex.org.tw/openapi/v1/tpex_mainboard_peratio_analysis'},
  ].map(r=>({id:r.id,title:r.title,dataset:`https://data.gov.tw/dataset/${r.id}`,resource:r.resource,api:r.api,
   license:'https://data.gov.tw/license',attribution:`資料來源：金融監督管理委員會證券期貨局／${r.exchange==='TWSE'?'臺灣證券交易所':'證券櫃檯買賣中心'}，${r.title}；政府資料開放授權條款第1版。` })),
+ // 2026-11-10: the exact CSV resources linked by the four data.gov.tw
+ // dataset records. No equivalent API is inferred when its current Swagger
+ // cannot be verified. Daily snapshots do not grant a different historical
+ // query endpoint; an ex-right/dividend announcement is not complete proof
+ // that a historical price window has no corporate actions.
+ ...[
+  {id:'11549',title:'上市個股日成交資訊',exchange:'TWSE',
+   resource:'https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=open_data'},
+  {id:'11370',title:'上櫃股票行情',exchange:'TPEX',
+   resource:'https://www.tpex.org.tw/web/stock/aftertrading/DAILY_CLOSE_quotes/stk_quote_result.php?l=zh-tw&o=data'},
+  {id:'11371',title:'上櫃股票收盤行情',exchange:'TPEX',
+   resource:'https://www.tpex.org.tw/web/stock/aftertrading/otc_quotes_no1430/stk_wn1430_result.php?l=zh-tw&o=data&se=EW'},
+  {id:'89748',title:'上市股票除權除息預告表',exchange:'TWSE',
+   resource:'https://www.twse.com.tw/exchangeReport/TWT48U_ALL?response=open_data'},
+ ].map(r=>({id:r.id,title:r.title,dataset:`https://data.gov.tw/dataset/${r.id}`,resource:r.resource,api:null,
+  license:'https://data.gov.tw/license',attribution:`資料來源：金融監督管理委員會證券期貨局／${r.exchange==='TWSE'?'臺灣證券交易所':'證券櫃檯買賣中心'}，${r.title}；政府資料開放授權條款第1版。` })),
 ];
 
 export function sourceRights(source:string){
- const grant=OPEN_DATA_RIGHTS.find(r=>source===r.resource||source===r.api);
+ const grant=OPEN_DATA_RIGHTS.find(r=>source===r.resource||r.api!==null&&source===r.api);
  if(grant)return {status:'OPEN_DATA_WITH_ATTRIBUTION' as const,grant,reason:'指定資料集可依授權及來源標示使用；不代表研究已通過發布審查。'};
  if(!sourceSafe(source))return {status:'LICENSING_UNVERIFIED' as const,grant:null,reason:'來源無法安全核對，不能公開。'};
  const host=new URL(source).hostname;

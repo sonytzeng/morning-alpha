@@ -9,6 +9,7 @@ import * as contracts from '../src/features/vnext/contracts.ts';
 import * as member from '../src/features/vnext/dailyAiMember.ts';
 import * as copy from '../src/features/vnext/dailyAiCopy.ts';
 import * as pricePlans from '../src/features/vnext/dailyAiPricePlan.ts';
+import * as priceDisplay from '../src/features/vnext/dailyAiPriceDisplay.ts';
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
 
 const file='src/pages/vnext/DailyAiMemberResearch.tsx';
@@ -40,6 +41,7 @@ function harness(initial=research(),initialPrices=null){
  let clock=START,data=initial,prices=initialPrices,subject=priceSubject,cursor=0,tree,dirty=false,unmounted=false,sequence=0,updates=0;
  const state=[],effects=[],pending=[],timers=new Map(),listeners=new Set();
  const hooks={
+  useMemo(fn,deps){const index=cursor++,old=state[index];if(!old||deps.some((value,i)=>!Object.is(value,old.deps[i])))state[index]={value:fn(),deps};return state[index].value;},
   useState(initial){const index=cursor++;if(!(index in state))state[index]=typeof initial==='function'?initial():initial;
    return [state[index],value=>{assert(!unmounted,'no state updates after unmount');updates++;const next=typeof value==='function'?value(state[index]):value;
     if(!Object.is(state[index],next)){state[index]=next;dirty=true;}}];},
@@ -57,6 +59,7 @@ function harness(initial=research(),initialPrices=null){
    if(name==='@/features/vnext/contracts')return contracts;if(name==='@/features/vnext/dailyAiMember')return member;
    if(name==='@/features/vnext/dailyAiCopy')return copy;if(name.endsWith('.css'))return {};
    if(name==='@/features/vnext/dailyAiPricePlan')return pricePlans;
+   if(name==='@/features/vnext/dailyAiPriceDisplay')return priceDisplay;
    throw Error('UNAPPROVED_EXPIRY_IMPORT:'+name);}
  },{filename:file});
  function render(){assert(!unmounted);let attempts=0;do{assert(++attempts<20);dirty=false;cursor=0;tree=exports.default({data,pricePlans:prices,priceSubjectUserId:subject});
@@ -102,7 +105,7 @@ test('price plan disappears exactly at its earlier deadline while approved resea
  assert.equal(h.priceSections.length,1);assert(h.text.includes('NT$100～105'));assert(h.text.includes('NT$105 以上先等待重評'));assert(h.text.includes('目前仍在等待確認'));
  assert(h.text.includes('停止參考價'));assert(h.text.includes('這些數字僅供隔離到期測試'));assert(h.text.includes('關注與等待狀態均不代表買進指令'));
  h.advance(1332);assert.equal(h.priceSections.length,1);h.advance(1);assert.equal(h.priceSections.length,0);assert.equal(h.articles.length,1);
- assert(h.text.includes('本版未提供已驗證的買進區間'));h.visibilityAt(START+500);assert.equal(h.priceSections.length,0,'backward clocks cannot revive a withdrawn plan');h.unmount();
+ assert(h.text.includes('本版未提供已核准價格區間'));h.visibilityAt(START+500);assert.equal(h.priceSections.length,0,'backward clocks cannot revive a withdrawn plan');h.unmount();
 });
 test('edition and subject changes cannot reuse prior price plans and fresh earlier deadlines replace old timers',async()=>{
  const data=research(START+10000),plans=await verifiedPlans(data,START+7000),h=harness(data,plans);

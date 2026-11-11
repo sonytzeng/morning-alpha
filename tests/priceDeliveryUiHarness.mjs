@@ -17,7 +17,8 @@ const text=node=>Array.isArray(node)?node.map(text).join(''):node&&typeof node==
 export function renderPriceDelivery({data,plans,subject,horizon,now=Date.now()+2}){
  const props={data,pricePlans:plans,priceSubjectUserId:subject,selectedHorizon:horizon};
  let cursor=0,dirty=false,tree;const states=[],effects=[],pending=[];
- const hooks={useState(initial){const i=cursor++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;
+ const hooks={useMemo(fn,deps){const i=cursor++,old=states[i];if(!old||deps.some((value,j)=>!Object.is(value,old.deps[j])))states[i]={value:fn(),deps};return states[i].value;},
+ useState(initial){const i=cursor++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;
   return [states[i],next=>{next=typeof next==='function'?next(states[i]):next;if(!Object.is(next,states[i])){states[i]=next;dirty=true;}}];},
  useEffect(fn,deps){const i=cursor++,old=effects[i];if(!old||deps.some((v,j)=>!Object.is(v,old.deps[j]))){const effect={deps};effects[i]=effect;pending.push(()=>{old?.cleanup?.();effect.cleanup=fn();});}}};
  class Clock extends Date{constructor(...args){super(...(args.length?args:[now]));}static now(){return now;}}

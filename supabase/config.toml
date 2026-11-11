@@ -51,3 +51,8 @@ verify_jwt = false
 # No existing function/Auth/RLS setting is changed.
 [functions.vnext-daily-research-v1]
 verify_jwt = true
+
+# Candidate: validates GitHub OIDC inside the function, pins repository IDs/main
+# and the sole scheduled workflow. It can stage private editions, never publish.
+[functions.taiwan-market-worker-v2]
+verify_jwt = false

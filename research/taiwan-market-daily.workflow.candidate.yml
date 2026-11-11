@@ -1,0 +1,130 @@
+# CANDIDATE ONLY: outside .github/workflows; no schedule is active.
+# Separate approval covers SQL, private seed import, OIDC gateway deployment,
+# this exact workflow activation and the encrypted 90-day artifact policy.
+# The repository is public. No source cache, result JSON or plaintext research
+# is uploaded or placed in Actions cache. Keys stay in the private database and
+# trusted worker memory. Native Node 22/OIDC/90-minute completion is not verified.
+name: Morning Alpha Taiwan market daily preparation
+
+on:
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: Taipei schedule identity (cutoff remains the actual time)
+        required: true
+        type: choice
+        options:
+          - PREMARKET
+          - POSTCLOSE
+  schedule:
+    - cron: '40 22 * * 0-4'
+    - cron: '30 10 * * 1-5'
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+concurrency:
+  group: morning-alpha-taiwan-market-daily
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      NODE_OPTIONS: --experimental-strip-types --max-old-space-size=2048
+    steps:
+      - name: Record one deadline before checkout and setup
+        shell: bash
+        run: echo "TAIWAN_MARKET_JOB_DEADLINE_MS=$(( ($(date +%s) + 88 * 60) * 1000 ))" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install the retained-source HTML parser
+        run: python -m pip install 'lxml==6.1.1'
+
+      - name: Restore the private checkpoint and issue this run's key
+        id: checkpoint
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          node scripts/operations/taiwan-market-checkpoint.mjs start
+          --output "$RUNNER_TEMP/taiwan-market-daily"
+          --control "$RUNNER_TEMP/taiwan-market-checkpoint-control"
+
+      - name: Prepare and stage at most two known-safe segments
+        env:
+          REQUESTED_SLOT: ${{ inputs.slot }}
+          REQUESTED_SCHEDULE: ${{ github.event.schedule }}
+        shell: bash
+        run: |
+          case "$REQUESTED_SLOT:$REQUESTED_SCHEDULE" in
+            PREMARKET:*|:'40 22 * * 0-4') slot=PREMARKET ;;
+            POSTCLOSE:*|:'30 10 * * 1-5') slot=POSTCLOSE ;;
+            *) echo 'TAIWAN_CHECKPOINT_UNSUPPORTED_SCHEDULE' >&2; exit 1 ;;
+          esac
+          node scripts/operations/taiwan-market-checkpoint.mjs work \
+            --output "$RUNNER_TEMP/taiwan-market-daily" \
+            --control "$RUNNER_TEMP/taiwan-market-checkpoint-control" --slot "$slot"
+
+      # All subprocess stdout/stderr stays in the encrypted local journal.
+      # A failed/unknown work result is archived, but is never reported success.
+      - name: Stream the full audit and compact resume copies through AES-GCM
+        id: archive
+        timeout-minutes: 8
+        if: always() && steps.checkpoint.outcome == 'success'
+        run: >-
+          node scripts/operations/taiwan-market-checkpoint.mjs prepare
+          --output "$RUNNER_TEMP/taiwan-market-daily"
+          --control "$RUNNER_TEMP/taiwan-market-checkpoint-control"
+          --cipher-directory "$RUNNER_TEMP/taiwan-market-ciphertext"
+
+      - name: Upload authenticated audit ciphertext
+        id: audit
+        timeout-minutes: 2
+        if: always() && steps.archive.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: taiwan-market-audit-${{ steps.archive.outputs.checkpoint_id }}
+          path: ${{ runner.temp }}/taiwan-market-ciphertext/audit.bin
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
+      - name: Upload authenticated resume ciphertext
+        id: resume
+        timeout-minutes: 2
+        if: always() && steps.archive.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: taiwan-market-resume-${{ steps.archive.outputs.checkpoint_id }}
+          path: ${{ runner.temp }}/taiwan-market-ciphertext/resume.bin
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
+      - name: Read back both uploads and atomically advance the private pointer
+        id: seal
+        timeout-minutes: 7
+        if: always() && steps.audit.outcome == 'success' && steps.resume.outcome == 'success'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          AUDIT_ARTIFACT_ID: ${{ steps.audit.outputs.artifact-id }}
+          RESUME_ARTIFACT_ID: ${{ steps.resume.outputs.artifact-id }}
+        run: >-
+          node scripts/operations/taiwan-market-checkpoint.mjs seal
+          --control "$RUNNER_TEMP/taiwan-market-checkpoint-control"
+          --audit-artifact-id "$AUDIT_ARTIFACT_ID" --resume-artifact-id "$RESUME_ARTIFACT_ID"
+
+      - name: Require confirmed completion and a sealed checkpoint
+        timeout-minutes: 1
+        if: always() && steps.checkpoint.outcome == 'success'
+        run: >-
+          node scripts/operations/taiwan-market-checkpoint.mjs finish
+          --control "$RUNNER_TEMP/taiwan-market-checkpoint-control"

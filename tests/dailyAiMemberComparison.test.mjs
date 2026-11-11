@@ -9,42 +9,46 @@ import * as contracts from '../src/features/vnext/contracts.ts';
 import * as member from '../src/features/vnext/dailyAiMember.ts';
 import * as copy from '../src/features/vnext/dailyAiCopy.ts';
 import * as pricePlans from '../src/features/vnext/dailyAiPricePlan.ts';
+import * as priceDisplay from '../src/features/vnext/dailyAiPriceDisplay.ts';
 const start=Date.parse('2026-11-04T08:00:00Z'),subject='00000000-0000-0000-0000-000000000001';
 const filename='src/pages/vnext/DailyAiMemberResearch.tsx';
 const compiled=ts.transpileModule(readFileSync(new URL('../'+filename,import.meta.url),'utf8'),{fileName:filename,
  compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
-function fixture(){return {schema:'VNEXT_AI_MEMBER_EDITION_V1',tier:'premium',business_date:'2026-11-04',research_only:true,
+function fixture(symbolCount=4){return {schema:'VNEXT_AI_MEMBER_EDITION_V1',tier:'premium',business_date:'2026-11-04',research_only:true,
  edition:{id:'a'.repeat(64),edition_date:'2026-11-04',data_through:'2026-11-03',evidence_cutoff:'2026-11-04T07:00:00Z',prepared_at:'2026-11-04T07:30:00Z',expires_at:'2026-11-04T08:00:10Z',mode:'AS_OF_RESEARCH',forecast:false,performance_available:false},
- cards:Array.from({length:4},(_,i)=>['SHORT','MEDIUM','LONG'].map(horizon=>({symbol:String(1000+i),company:'合成公司'+i,horizon,status:'WAIT',
+ cards:Array.from({length:symbolCount},(_,i)=>['SHORT','MEDIUM','LONG'].map(horizon=>({symbol:String(1000+i),company:'合成公司'+i,horizon,status:'WAIT',
  reason:{text:horizon+'合成理由',evidence_ids:['P1']},confirmation:'等待核對',invalidation:'新公告否定時重評',gaps:['COMPANY_NEWS_NOT_CAPTURED'],sources:[],counter_evidence:[],classification:'INFERENCE'}))).flat()};}
 const jsx=(type,props)=>typeof type==='function'?type(props):({type,props});
 const find=(node,type)=>Array.isArray(node)?node.flatMap(n=>find(n,type)):!node||typeof node!=='object'?[]:[...(node.type===type?[node]:[]),...find(node.props?.children,type)];
 const content=node=>Array.isArray(node)?node.map(content).join(''):node&&typeof node==='object'?content(node.props?.children):node??'';
 function harness(data=fixture()){
- let props={data,priceSubjectUserId:subject,selectedHorizon:'SHORT'},clock=start,cursor=0,dirty=false,tree;
+ let props={data,priceSubjectUserId:subject,selectedHorizon:'SHORT'},clock=start,cursor=0,dirty=false,tree,serializations=0;
  const states=[],effects=[],pending=[],listeners=new Set(),timeouts=new Set();
- const hooks={useState(initial){const index=cursor++;if(!(index in states))states[index]=typeof initial==='function'?initial():initial;
+ const hooks={useMemo(fn,deps){const index=cursor++,old=states[index];if(!old||deps.some((value,i)=>!Object.is(value,old.deps[i])))states[index]={value:fn(),deps};return states[index].value;},
+ useState(initial){const index=cursor++;if(!(index in states))states[index]=typeof initial==='function'?initial():initial;
   return [states[index],next=>{next=typeof next==='function'?next(states[index]):next;if(!Object.is(next,states[index])){states[index]=next;dirty=true;}}];},
  useEffect(fn,deps){const index=cursor++,old=effects[index];if(!old||deps.some((v,i)=>!Object.is(v,old.deps[i]))){const effect={deps,cleanup:old?.cleanup};effects[index]=effect;pending.push(()=>{old?.cleanup?.();effect.cleanup=fn();});}}};
  class Clock extends Date{constructor(...args){super(...(args.length?args:[clock]));}static now(){return clock;}}
- const exports={};vm.runInNewContext(compiled,{exports,Date:Clock,Intl,URL,setInterval:()=>0,clearInterval:()=>{},
+ const exports={};vm.runInNewContext(compiled,{exports,Date:Clock,Intl,URL,JSON:{...JSON,stringify(...args){serializations++;return JSON.stringify(...args);}},setInterval:()=>0,clearInterval:()=>{},
  setTimeout(fn,ms){const timer={fn,due:clock+ms};timeouts.add(timer);return timer;},clearTimeout:timer=>timeouts.delete(timer),
  document:{addEventListener:(name,fn)=>listeners.add(fn),removeEventListener:(name,fn)=>listeners.delete(fn)},
  require(name){if(name==='react')return hooks;if(name==='react/jsx-runtime')return {jsx,jsxs:jsx};
  if(name==='@/features/vnext/contracts')return contracts;if(name==='@/features/vnext/dailyAiMember')return member;
  if(name==='@/features/vnext/dailyAiCopy')return copy;if(name==='@/features/vnext/dailyAiPricePlan')return pricePlans;
+ if(name==='@/features/vnext/dailyAiPriceDisplay')return priceDisplay;
  if(name.endsWith('.css'))return {};throw Error(name);}});
  const render=()=>{let iterations=0;do{assert(++iterations<20);dirty=false;cursor=0;tree=exports.default(props);while(pending.length)pending.shift()();}while(dirty);return tree;};
- render();return {get data(){return props.data;},get text(){return content(tree);},get tables(){return find(tree,'table');},get choices(){return find(tree,'input').filter(n=>n.props.type==='checkbox');},
+ render();return {get data(){return props.data;},get text(){return content(tree);},get tables(){return find(tree,'table');},get choices(){return find(tree,'input').filter(n=>n.props.type==='checkbox');},get articles(){return find(tree,'article');},get buttons(){return find(tree,'button');},get serializations(){return serializations;},
  choose(index){const event=this.choices[index].props.onChange;event();render();return ()=>{event();render();};},
  replace(change){props={...props,...change};render();},
+  click(label){const button=find(tree,'button').find(node=>content(node)===label);assert(button,label);button.props.onClick();render();},
  selectTwo(){this.choose(0);this.choose(1);assert.equal(this.tables.length,1);},
  at(next){clock=next;for(const timer of [...timeouts])if(timer.due<=clock){timeouts.delete(timer);timer.fn();}for(const fn of listeners)fn();render();},
  unmount(){for(const effect of effects.filter(Boolean))effect.cleanup?.();}};
 }
 
 test('comparison accepts only2–3 current-period cards and never treats missing prices as a price',()=>{
- const h=harness();h.selectTwo();assert(h.text.includes('本版未提供已驗證價格區間'));
+ const h=harness();h.selectTwo();assert(h.text.includes('本版未提供已核准價格區間'));
  h.choose(2);assert.equal(h.choices[3].props.disabled,true);assert.equal(find(h.tables[0],'th').filter(n=>n.props.scope==='col').length,4);
  assert(!content(h.tables[0]).includes('MEDIUM合成理由'));assert(!content(h.tables[0]).includes('LONG合成理由'));h.unmount();
 });
@@ -67,4 +71,35 @@ test('verified price expiry clears comparison and cannot display the prior numer
  const h=harness(),plan={schema:'DAILY_AI_PRICE_PLAN_V1',edition_id:h.data.edition.id,symbol:'1000',horizon:'SHORT',status:'VERIFIED',currency:'TWD',method:'SYNTHETIC_TEST',basis:'合成價格依據',entry_range:[100,105],wait_above:105,stop_kind:'PRICE',stop:95,stop_evidence_ids:['P1'],invalidation:'合成重評條件',evidence_ids:['P1'],as_of:'2026-11-04T07:30:00Z',expires_at:'2026-11-04T08:00:04Z',buy_ready:false,plan_hash:'d'.repeat(64),review:{status:'PASS',plan_hash:'d'.repeat(64),reviewed_at:'2026-11-04T07:40:00Z',document_hash:'e'.repeat(64)}};
  h.replace({pricePlans:{schema:'VNEXT_AI_MEMBER_PRICE_PLANS_V1',edition_id:h.data.edition.id,tier:'premium',subject_user_id:subject,research_only:true,plans:[plan],source_sets:[]}});
  h.selectTwo();assert(content(h.tables[0]).includes('NT$100～105'));h.at(start+4000);assert.equal(h.tables.length,0);h.selectTwo();assert(!content(h.tables[0]).includes('NT$100～105'));h.unmount();
+});
+
+test('large synthetic render keeps 9-card increments and does not serialize the full scope again on clock or selection changes',()=>{
+ // Rendering capacity only: the V1 transport/parser still rejects this larger
+ // universe. A separately versioned server contract is required before use.
+ const h=harness(fixture(2000));assert.equal(h.articles.length,9);
+ const initial=h.serializations;assert.equal(initial,2);
+ h.click('再看 9 檔');assert.equal(h.articles.length,18);assert.equal(h.serializations,initial);
+ h.selectTwo();assert.equal(h.serializations,initial);
+ h.at(start+1);assert.equal(h.serializations,initial);assert.equal(h.tables.length,1);
+ h.replace({refreshing:true});assert.equal(h.serializations,initial);assert.equal(h.articles.length,18);
+ h.unmount();
+});
+
+test('loading, transport failure, free summary and expiry give distinct recoverable price states',()=>{
+ const h=harness();let refreshed=0;
+ h.replace({pricePlansLoading:true,checkedAt:new Date(start).toISOString(),onRefresh:()=>refreshed++});
+ assert(h.text.includes('正在核對本版已核准價格計畫'));assert(!h.text.includes('本版未提供已核准價格區間'));
+ h.replace({pricePlansLoading:false,pricePlansUnavailable:true});
+ assert(h.text.includes('不代表本版沒有價格計畫'));h.click('重新核對價格');assert.equal(refreshed,1);
+ h.replace({data:{...h.data,tier:'free',cards:h.data.cards.map(card=>({...card,sources:null,counter_evidence:null}))},pricePlansUnavailable:false});
+ assert(h.text.includes('免費摘要未包含價格計畫'));assert(!h.text.includes('本版未提供已核准價格區間'));
+ h.at(start+10000);assert.equal(h.articles.length,0);h.click('重新核對版本');assert.equal(refreshed,2);
+ h.unmount();
+});
+
+test('a retained earlier edition keeps its source date separate from the successful read timestamp',()=>{
+ const data=fixture();data.edition.edition_date='2026-11-03';
+ const h=harness(data);h.replace({checkedAt:'2026-11-04T08:00:00Z'});
+ assert(h.text.includes('目前可讀的是 2026-11-03 研究版本'));assert(h.text.includes('台股收盤資料截至 2026-11-03'));
+ assert(h.text.includes('上次成功核對可讀版本'));assert(h.text.includes('這不是行情更新時間'));h.unmount();
 });

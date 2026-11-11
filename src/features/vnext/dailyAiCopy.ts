@@ -98,5 +98,46 @@ export function dailyAiAnalysisText(value:string):string{
  return value.replaceAll('AS_REPORTED','來源原報口徑').replaceAll('TTM','近四季合計');
 }
 export function dailyAiGapLabel(gap:string):string{
+ const annual=/^(\d{4})_(ANNUAL_INCOME_REQUIRED|ANNUAL_BALANCE_REQUIRED|ANNUAL_CASHFLOW_REQUIRED|ANNUAL_QUALITY_FIELDS_REQUIRED|CASHFLOW_BALANCE_RECONCILIATION_REVIEW_REQUIRED)$/.exec(gap);
+ if(annual){const meanings:Record<string,string>={ANNUAL_INCOME_REQUIRED:'年度損益表尚待取得或確認。',
+  ANNUAL_BALANCE_REQUIRED:'年度資產負債表尚待取得或確認。',ANNUAL_CASHFLOW_REQUIRED:'年度現金流量表尚待取得或確認。',
+  ANNUAL_QUALITY_FIELDS_REQUIRED:'年度獲利、權益或現金流欄位仍未齊全。',
+  CASHFLOW_BALANCE_RECONCILIATION_REVIEW_REQUIRED:'現金餘額與前後期數字未對上，需核對財報重編或分類調整。'};
+  return annual[1]+' 年'+meanings[annual[2]];}
+ const marketLabels:Record<string,string>={
+  SAME_DATE_PRICE_AND_EXPLICIT_FINANCIAL_PERIOD_REQUIRED:'股價與官方估值需屬同一交易日，且財報年季須明確，才能比較同業。',
+  EXPECTED_COMPLETED_SESSION_HISTORY_REQUIRED:'歷史行情尚未接到最近一個完整交易日。',
+  CORPORATE_ACTION_COVERAGE_REQUIRED:'歷史期間的除權息、減資或股本變動尚未完整核對。',
+  EMERGING_QUOTE_EXECUTION_MODEL_REQUIRED:'興櫃採議價交易，需另核對買賣報價、價差與可成交量。',
+  PRICE_HISTORY_61_COMPLETE_SESSIONS_REQUIRED:'尚缺連續 61 個完整交易日，無法計算所需價格趨勢。',
+  RAW_HISTORY_HAS_CORPORATE_ACTION_DISCONTINUITY:'期間內有公司事件造成價格跳動，未還原行情暫不採作短期訊號。',
+  VALID_CURRENT_PRICE_REQUIRED:'本次尚未取得可核對的有效交易價格。',
+  EXPECTED_COMPLETED_SESSION_QUOTE_REQUIRED:'最新價格未更新到本次應有的完成交易日。',
+  AT_LEAST_FIVE_COMPARABLE_PEERS_REQUIRED:'同市場、同產業、同日且同期別的其他可比公司不足 5 家。',
+  FINANCIAL_SECTOR_CAPITAL_ADEQUACY_AND_ASSET_QUALITY_REVIEW_REQUIRED:'金融業需另核對資本適足與資產品質，未套用一般公司的現金流門檻。',
+  VERIFIED_MONTHLY_REVENUE_COMPARISON_REQUIRED:'尚缺可核對的月營收及去年同月比較。',
+  COMPLETE_CONSECUTIVE_MARKET_SESSIONS_REQUIRED:'行情序列有交易日缺件，需補齊後再計算趨勢。',
+  RECENT_REPORTED_FINANCIAL_PERIOD_REQUIRED:'最新可用財報已超出本方法的更新期限。',
+  SAME_PERIOD_VERIFIED_POSITIVE_EQUITY_REQUIRED:'需取得同一期、資產負債可對帳且權益為正的財報。',
+  PERIOD_IDENTIFIED_REPORTED_EARNINGS_REQUIRED:'獲利資料的申報年季或每股盈餘尚未確認。',
+  SECURITY_CLASS_SPECIFIC_PRICE_METHOD_REQUIRED:'這類證券需要對應的價格與財務方法，未直接套用一般普通股。',
+  UNAMBIGUOUS_CURRENT_COMPLETED_SESSION_CLOSE_REQUIRED:'最新交易日的收盤價缺件或有相互衝突的原始紀錄，需先確認。',
+  CURRENT_COMPLETED_SESSION_TWD_CLOSE_REQUIRED:'尚缺最近完成交易日、具收件時間的有效新臺幣收盤價。',
+  OFFICIAL_TPEX_DAILY_CLOSE_SOURCE_REQUIRED:'這項價格方法需要可核對原始列的櫃買中心每日收盤價。',
+  EXPLICIT_REPORTED_BALANCE_BVPS_REQUIRED:'尚缺有明確年季的原始資產負債表與每股參考淨值。',
+  BALANCE_PERIOD_WITHIN_180_DAYS_REQUIRED:'每股淨值所屬季末距報價日已超過 180 天，需取得較新的財報。',
+  EXPLICIT_UNAMBIGUOUS_REPORTED_BVPS_FIELD_REQUIRED:'原財報中的每股參考淨值欄位尚未明確對應。',
+  REPORTED_BVPS_UNIT_MAPPING_REQUIRED:'每股淨值的幣別與單位尚未完成原文核對。',
+  POSITIVE_REPORTED_BVPS_REQUIRED:'原財報每股淨值不是正數，不能套用這項同業 P/B 價格方法。',
+  AMBIGUOUS_LATEST_BALANCE_BVPS:'同一期、同次收件的每股淨值存在衝突，需核對原始申報。',
+  COMPLETE_ACTION_COVERAGE_FROM_BALANCE_END_REQUIRED:'尚未完整核對財報季末至報價日的五類公司事件。',
+  UNCLASSIFIED_ACTION_AFTER_BALANCE_END:'財報季末後有尚未確認種類的公司事件，需釐清對股數與淨值的影響。',
+  UNADJUSTED_SHARE_CHANGE_AFTER_BALANCE_END:'財報季末後發生配股、分割、現金增資或減資，原每股淨值尚未調整，暫停這項價格計算。',
+  EXISTING_LONG_ANNUAL_QUALITY_ELIGIBLE_REQUIRED:'尚未通過連續三年的獲利、權益、現金流與原始財報核對，暫無長期品質估值。',
+  FINANCIAL_SECTOR_QUALITY_METHOD_REQUIRED:'金融業需要專用的資本適足與資產品質方法，未套用一般公司的品質估值。',
+  AT_LEAST_FIVE_OTHER_COMPARABLE_BVPS_PEERS_REQUIRED:'同市場、同產業、同交易日、同財報年季且完成公司事件核對的其他可比公司不足 5 家。',
+  ORDINARY_COMPANY_EQUITY_REQUIRED:'這項價格方法僅適用公司普通股，其他證券須採專用方法。',
+ };
+ if(marketLabels[gap])return marketLabels[gap];
  return gapLabels[gap]??(/^[A-Z][A-Z0-9_]{7,}$/.test(gap)?'這項資料尚待確認，需補齊後再評估。':dailyAiAnalysisText(gap));
 }

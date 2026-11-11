@@ -28,9 +28,10 @@ const BEFORE=Date.parse('2026-10-18T15:59:59.990Z'),AFTER=BEFORE+20;
 const TODAY='2026-10-18',TOMORROW='2026-10-19';
 const research=(date=TODAY,tier='premium')=>({schema:'VNEXT_MEMBER_V1',research_only:true,tier,business_date:date,observations:[],history:[],watchlist:[]});
 const access=(id='A',generation=1,tier='premium')=>({kind:'member',id,generation,signal:new AbortController().signal,catalog:{tier}});
-const jsx=(type,props)=>({type,props});
+const jsx=(type,props)=>typeof type==='function'?type(props):({type,props});
 const find=(node,type)=>Array.isArray(node)?node.flatMap(n=>find(n,type)):!node||typeof node!=='object'?[]:
  [...(node.type===type?[node]:[]),...find(node.props?.children,type)];
+const text=node=>Array.isArray(node)?node.map(text).join(''):node&&typeof node==='object'?text(node.props?.children):node??'';
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 const retained=JSON.parse(readFileSync(new URL('./fixtures/public-projection/production-20261002.json',import.meta.url)));
 const model=buildPublicMarketReadModel(publicMarketInput(retained.public_response.payload,
@@ -87,6 +88,9 @@ function harness({now=BEFORE,initialAccess=access(),account=false,ownerReview=fa
    if(name==='./CompletedResearch')return {default:'CompletedResearch'};
    if(name==='./OwnerDailyResearch')return {default:'OwnerDailyResearch'};
    if(name==='./DailyAiMemberResearch')return {default:'DailyAiMemberResearch'};
+   // This suite retains its V1 continuity scope after the V2 boundary selects
+   // fallback. Actual V2 reads and gates run in dailyAiMarketUiV2.test.mjs.
+   if(name==='./DailyAiMarketMemberEntry')return {default:({fallback})=>fallback()};
    if(name.endsWith('.css'))return {};
    throw Error('UNAPPROVED_MEMBER_COMPONENT_IMPORT:'+name);
   }},{filename:file});
@@ -99,6 +103,7 @@ function harness({now=BEFORE,initialAccess=access(),account=false,ownerReview=fa
   get ownerDaily(){return find(render(),'OwnerDailyResearch')[0]?.props;},
   get dailyAi(){return find(render(),'DailyAiMemberResearch')[0]?.props;},
   get public(){return find(render(),'PublicExperience')[0]?.props;},
+  get text(){return text(render());},
   get retries(){return retries;},
   setAccess(value){currentAccess=value;render();},
   setClock(value){clock=value;},
@@ -157,6 +162,33 @@ test('AI empty edition starts one approved legacy read and public transport rema
  assert.deepEqual(researchCalls(h).map(r=>r.name),[AI,'get_vnext_member_v1']);
  assert.deepEqual(JSON.parse(JSON.stringify(h.publicCalls[0].args)),{headers:{Authorization:''},body:{report_date:null}});h.unmount();
 });
+test('an AI edition, account page and Owner review do not request an unused public market payload',async()=>{
+ for(const tier of ['premium','free','owner']){
+  const h=harness({now:STABLE_NOW,initialAccess:access('A',1,tier)});
+  assert.equal(h.publicCalls.length,0);await h.resolve(h.call(AI),aiEdition(tier));
+  assert(h.dailyAi);assert.equal(h.publicCalls.length,0);h.advance(30000);assert.equal(h.publicCalls.length,0);h.unmount();
+ }
+ const account=harness({account:true});await account.resolve(account.call('get_vnext_member_v1'),research());
+ assert.equal(account.publicCalls.length,0);account.unmount();
+ const owner=harness({ownerReview:true,initialAccess:access('A',1,'owner')});assert.equal(owner.publicCalls.length,0);owner.unmount();
+});
+test('visible legacy fallback explains the absence of a new readable edition and reuses its same-day public result',async()=>{
+ const h=await legacyHarness({now:STABLE_NOW});await h.resolve(h.call('get_vnext_member_v1'),research('2026-10-30'));
+ assert(h.text.includes('目前尚無可讀取的每日研究新版'));assert(h.text.includes('上次成功核對可讀版本'));
+ await h.resolve(h.publicCalls[0],publicPayload);h.visibility('hidden');h.visibility('visible');h.advance(100);
+ await absentAi(h,'premium','2026-10-30');await h.resolve(h.call('get_vnext_member_v1'),research('2026-10-30'));
+ assert.equal(h.publicCalls.length,1);assert.equal(h.member.market.date,'2026-10-02');h.unmount();
+});
+test('manual version retry is bounded and retains the last verified edition while checking prices again',async()=>{
+ const h=harness({now:STABLE_NOW});await h.resolve(h.call(AI),aiEdition());
+ assert.equal(h.dailyAi.pricePlansLoading,true);assert.equal(h.dailyAi.pricePlansUnavailable,false);
+ await h.reject(h.call(PRICE));assert.equal(h.dailyAi.pricePlansLoading,false);assert.equal(h.dailyAi.pricePlansUnavailable,true);
+ const data=h.dailyAi.data,checkedAt=h.dailyAi.checkedAt,before=researchCalls(h).length;
+ h.setClock(STABLE_NOW+1000);h.dailyAi.onRefresh();h.render();h.dailyAi.onRefresh();h.render();
+ assert.equal(researchCalls(h).length,before+1);assert.equal(h.dailyAi.data,data);assert.equal(h.dailyAi.refreshing,true);
+ await h.resolve(h.call(AI),unchangedDelta());assert.equal(h.dailyAi.data,data);assert.notEqual(h.dailyAi.checkedAt,checkedAt);
+ assert.equal(h.dailyAi.refreshing,false);assert.equal(h.dailyAi.pricePlansLoading,true);assert.equal(h.publicCalls.length,0);h.unmount();
+});
 test('access signal abort fences a pending private response before the Auth hook rerenders',async()=>{
  const controller=new AbortController(),initialAccess={...access(),signal:controller.signal};
  const h=await legacyHarness({initialAccess}),old=h.call('get_vnext_member_v1');controller.abort();h.render();
@@ -210,12 +242,12 @@ test('legacy deadline and unmount reject late private responses and clear timers
  assert.equal(h.member,undefined);h.unmount();assert.equal(h.timers,0);
  const unmounted=await legacyHarness(),late=unmounted.call('get_vnext_member_v1');unmounted.unmount();late.resolve(research());await settle();assert.equal(unmounted.timers,0);
 });
-test('StrictMode setup-cleanup-setup accepts only second AI/public continuations and their fallback',async()=>{
- const h=harness();await settle();const oldAi=h.call(AI),oldPublic=h.publicCalls[0];h.strictEffectReplay();await settle();
- assert.equal(h.rpc.filter(r=>r.name===AI).length,2);assert.equal(h.rpc.filter(r=>r.name==='get_vnext_member_v1').length,0);assert.equal(h.publicCalls.length,2);
- await h.resolve(oldAi,noEdition());await h.resolve(oldPublic,publicPayload);assert.equal(h.member,undefined);assert(!h.call('get_vnext_member_v1'));
+test('StrictMode accepts only second AI continuation and defers public transport until fallback is visible',async()=>{
+ const h=harness();await settle();const oldAi=h.call(AI);h.strictEffectReplay();await settle();
+ assert.equal(h.rpc.filter(r=>r.name===AI).length,2);assert.equal(h.rpc.filter(r=>r.name==='get_vnext_member_v1').length,0);assert.equal(h.publicCalls.length,0);
+ await h.resolve(oldAi,noEdition());assert.equal(h.member,undefined);assert(!h.call('get_vnext_member_v1'));
  await absentAi(h);await h.resolve(h.call('get_vnext_member_v1'),research());assert.equal(h.member.data.business_date,TODAY);assert.equal(h.member.market,null);
- await h.resolve(h.publicCalls[1],publicPayload);assert.equal(h.member.market.date,'2026-10-02');h.unmount();assert.equal(h.timers,0);
+ assert.equal(h.publicCalls.length,1);await h.resolve(h.publicCalls[0],publicPayload);assert.equal(h.member.market.date,'2026-10-02');h.unmount();assert.equal(h.timers,0);
 });
 test('only Owner fallback dispatches completed-session RPC and renders its validated 72-stock result',async()=>{
  for(const tier of ['premium','free','owner']){

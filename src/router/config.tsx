@@ -36,8 +36,10 @@ const AlphaCoachPage = lazy(() => import("../pages/alpha-coach/page"));
 const AcademyPage = lazy(() => import("../pages/academy/page"));
 const StockObservations = lazy(() => import("../pages/vnext/MemberPage"));
 const OwnerPublication = lazy(() => import("../pages/vnext/OwnerPublication"));
+const OwnerMarketReview = lazy(() => import("../pages/vnext/OwnerMarketReview"));
 
 const routes: RouteObject[] = [
+  {path: "/stocks/market-review", element: <DeferredRoute><OwnerMarketReview /></DeferredRoute>},
   {path: "/stocks/review", element: <DeferredRoute><StockObservations ownerReview /></DeferredRoute>},
   {
     path: "/vnext/publication",

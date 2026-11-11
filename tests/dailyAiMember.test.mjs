@@ -65,7 +65,7 @@ test('actual component starts in a single horizon, shows gaps and source dates, 
   Date.now=()=>now;const {default:Page}=await server.ssrLoadModule('/src/pages/vnext/DailyAiMemberResearch.tsx');
   const data=parseDailyAiMember(fixture(),'2026-10-31',now),html=renderToStaticMarkup(React.createElement(Page,{data}));
   assert(html.includes('目前查看：短期觀察'));assert(html.includes('SHORT期間測試判斷'));assert(!html.includes('MEDIUM期間測試判斷'));assert(!html.includes('LONG期間測試判斷'));
-  assert(html.includes('2026-10-30'));assert(html.includes('還缺哪些資料'));assert(html.includes('本版未提供已驗證的買進區間'));
+  assert(html.includes('2026-10-30'));assert(html.includes('還缺哪些資料'));assert(html.includes('本版未提供已核准價格區間'));
   assert(html.includes('https://www.twse.com.tw/test'));assert(!html.includes('目標價'));
   assert.equal((html.match(/class="vnext-card dam-card"/g)||[]).length,9);
   const expanded=renderToStaticMarkup(React.createElement(Page,{data,viewState:{filter:'ALL',query:'',limit:72}}));
